@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import asyncio
-import contextlib
 import logging
 import sys
 
@@ -39,9 +38,17 @@ def main(argv):
         try:
             # cancel router tasks
             vr.stop()
-            all_tasks = asyncio.gather(*asyncio.all_tasks(loop), return_exceptions=True)
-            with contextlib.suppress(asyncio.CancelledError):
-                loop.run_until_complete(all_tasks)
+            vr_stop = asyncio.gather(vr.get_stop_task(), return_exceptions=True)
+            loop.run_until_complete(vr_stop)
+
+            # make sure if all task is finished (router task and every others in this loop)
+            all_tasks = asyncio.all_tasks(loop)
+            if not all_tasks:
+                logging.info('All task in loop is finished')
+            else:
+                logging.error('Some of the tasks in curent loop is still running')
+                raise RuntimeError
+
             loop.run_until_complete(loop.shutdown_asyncgens())
         finally:
             loop.close()
@@ -57,7 +64,6 @@ def main(argv):
 if __name__ == '__main__':
     retcode = main(sys.argv)
     sys.exit(retcode)
-
 
     # @DATACLAS zrobic klase do danych,
     # jak najszybciej przesywac przez 0mq dane nie JSON nie sownik

@@ -67,16 +67,27 @@ class ValueRouter:
 
     def _start_main_task(self):
         logger.info('start main task')
-        self._main_task = asyncio.create_task(self._main(), name=self._main_task_name)
+        self._main_task = self._current_loop.create_task(self._main(), name=self._main_task_name)
         logger.info('start ping task')
-        self._ping_task = asyncio.create_task(self._ping(), name=self._ping_task_name)
+        self._ping_task = self._current_loop.create_task(self._ping(), name=self._ping_task_name)
 
-    def start(self):
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:  # 'RuntimeError: There is no current event loop...'
-            loop = None
-        if loop and loop.is_running():
+    def start(self, loop=None):
+        """
+        This method starts the router's event loop on the asynchronous task and runs it in the current async loop.
+        It is possible to pass a previously created loop as an argument of the method. Otherwise, the currently
+        running loop is downloaded.
+        :param loop: async loop
+        :return:
+        """
+        if not loop:
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:  # 'RuntimeError: There is no current event loop...'
+                loop = None
+        if not self.is_stopped():
+            logger.error('Can not start router because is already workng.')
+            return
+        if loop and not loop.is_closed():
             self._current_loop = loop  # remember async loop with router working
             self._start_main_task()
             logger.info('Router is running')
@@ -84,6 +95,15 @@ class ValueRouter:
             logger.error('Can not start router because async loop not found.')
 
     async def main_coroutine(self):
+        """
+        This method is coroutine responsible for starting the server and waiting for it to finish running and then
+        shutting down all tasks if they were not terminated earlier. Warning! this method catches error
+        asyncio.CancelledError and shuts down the server securely. Canceling it turns off the entire server.
+        :return:
+        """
+        if not self.is_stopped():
+            logger.error('Can not start router because is already workng.')
+            return
         self._current_loop = asyncio.get_running_loop()  # this is called from loop so it is not possible to loop was
         # closed and throw exception
         self._start_main_task()
@@ -124,6 +144,12 @@ class ValueRouter:
             logger.warning(f'Can not find any task for cancel. Tasks are already canceled or finished')
 
     def stop(self):
+        """
+        This method is responsible for canceling all router tasks and then creating a special task that is to wait
+        for all canceled previously to close and the server to shut down properly. shutdown job should never be
+        canceled as this may lead to incorrect niepoprawnego wyłączenia rutera..
+        :return:
+        """
         if self.is_stopped():
             logger.info(f'The router {self.name} is already stop')
             return
@@ -196,6 +222,12 @@ class ValueRouter:
         logger.info(f'Router {self.name} was stopped.')
 
     async def wait_for_stop(self):
+        """
+        This method is a corutin that waits for the server to shutdown properly after calling the 'stop()' method.
+        Additionally, it checks the server shutdown process. Instead, you can use the 'get_stop_task()' method which
+        returns a job instance to shutdown the router and wait for it to complete but it is not recommended.
+        :return:
+        """
         if self.is_stopped():
             logger.info(f'The router {self.name} is already stopped')
             return
@@ -214,6 +246,10 @@ class ValueRouter:
             raise RuntimeError  # probably newer happen
 
     def is_stopped(self):
+        """
+        This method returns true if the router is stopped.
+        :return: true if router is stopped or false if don't.
+        """
         if self._current_loop:
             tasks = [self._main_task, self._ping_task, self._message_tasks, self._stop_task]
             for t in tasks:
@@ -224,6 +260,13 @@ class ValueRouter:
         return True
 
     def get_stop_task(self):
+        """
+        This method returns an instance of the task that waits for the router to shut down correctly, provided the
+        'stop()' method has been run beforehand. If the stop () method has not been run before or the router has
+        already been shut down properly, None will be returned. It is recommended to use the 'wait_for_stop()' instead
+        this method.
+        :return: asyncio task
+        """
         return self._stop_task
 
     def __del__(self):
