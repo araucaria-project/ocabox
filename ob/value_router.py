@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import signal
 
 import zmq
 from zmq.asyncio import Context, Poller
@@ -11,12 +10,12 @@ logger = logging.getLogger(__name__)
 class ValueRouter:
     __name__ = 'ValueRouter'
 
-    def __init__(self, name=None):
+    def __init__(self, name: str = None, port: int = 5559):
         self.name = name if name else ValueRouter.__name__
         # OMQ
-        self.context = Context.instance()
+        self.context = Context()  # TODO Context.instance() ? jeden czy wiele kontekstów?
         self.frontend = self.context.socket(zmq.ROUTER)
-        self.frontend.bind("tcp://*:5559")
+        self.frontend.bind(f"tcp://*:{port}")
         # Tasks
         self._main_task_name = f'{self.name}_main_task'
         self._main_task = None
@@ -66,6 +65,11 @@ class ValueRouter:
                 self._message_tasks.append(task)
 
     def _start_main_task(self):
+        for task in asyncio.all_tasks(self._current_loop):
+            if task.get_name().startswith(self.name):
+                logger.error(f'Router name conflict. Could not start router {self.name} because a router with that '
+                             f'name is already running in the async loop.')
+                raise ValueError
         logger.info('start main task')
         self._main_task = self._current_loop.create_task(self._main(), name=self._main_task_name)
         logger.info('start ping task')
@@ -84,11 +88,13 @@ class ValueRouter:
                 loop = asyncio.get_running_loop()
             except RuntimeError:  # 'RuntimeError: There is no current event loop...'
                 loop = None
-        if not self.is_stopped():
-            logger.error('Can not start router because is already workng.')
-            return
         if loop and not loop.is_closed():
-            self._current_loop = loop  # remember async loop with router working
+            if not self._current_loop:
+                self._current_loop = loop  # remember async loop with router working
+            if not self.is_stopped():
+                logger.error('Can not start router because is already workng.')
+                return
+            self._current_loop = loop  # assign again after checking 'is_stopped()'
             self._start_main_task()
             logger.info('Router is running')
         else:
@@ -256,7 +262,7 @@ class ValueRouter:
                 if t and t in asyncio.all_tasks(self._current_loop):
                     return False
         else:
-            logger.warning(f'Can not find async loop for this router. Probably this router was newer started.')
+            logger.info(f'Can not find async loop for this router. Probably this router was newer started.')
         return True
 
     def get_stop_task(self):
@@ -272,3 +278,4 @@ class ValueRouter:
     def __del__(self):
         if not self.is_stopped():
             self.stop()
+        self.context.destroy()  # without this zmq not close socket when router is destroy

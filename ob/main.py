@@ -46,7 +46,7 @@ def main(argv):
             if not all_tasks:
                 logging.info('All task in loop is finished')
             else:
-                logging.error('Some of the tasks in curent loop is still running')
+                logging.error('Some of the tasks in current loop is still running')
                 raise RuntimeError
 
             loop.run_until_complete(loop.shutdown_asyncgens())
