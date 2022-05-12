@@ -1,6 +1,6 @@
 import unittest
 
-from ob.address import Address
+from ob.data_colection.address import Address
 
 
 class AddressTest(unittest.TestCase):

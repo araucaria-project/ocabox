@@ -3,7 +3,7 @@ import asyncio
 import logging
 import sys
 
-from value_router import ValueRouter
+from router.value_router import ValueRouter
 
 
 async def stop_router_timeout(vrr):
@@ -21,7 +21,7 @@ async def gather_coro(c, c2):
 def main(argv):
     logging.basicConfig(level=logging.INFO)
 
-    vr = ValueRouter()
+    vr = ValueRouter(None)
     coro = vr.main_coroutine()
 
     try:

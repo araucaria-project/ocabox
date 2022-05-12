@@ -1,8 +1,12 @@
 import asyncio
 import logging
+from typing import List
 
 import zmq
 from zmq.asyncio import Context, Poller
+
+from ob.router.message_serializer import MessageSerializer
+from ob.router.request_solver_interface import RequestSolverInterface
 
 logger = logging.getLogger(__name__)
 
@@ -10,8 +14,10 @@ logger = logging.getLogger(__name__)
 class ValueRouter:
     __name__ = 'ValueRouter'
 
-    def __init__(self, name: str = None, port: int = 5559):
+    def __init__(self, request_solver: RequestSolverInterface, name: str = None, port: int = 5559):
         self.name = name if name else ValueRouter.__name__
+        # request solver
+        self.request_solver: RequestSolverInterface = request_solver
         # OMQ
         self.context = Context()  # TODO Context.instance() ? jeden czy wiele kontekstów?
         self.frontend = self.context.socket(zmq.ROUTER)
@@ -23,7 +29,7 @@ class ValueRouter:
         self._ping_task = None
         self._message_task_name = f'{self.name}_message_task'
         self._message_tasks = []
-        self._stop_task_name = f'{self.name}_stop_task'
+        # self._stop_task_name = f'{self.name}_stop_task'
         self._stop_task = None
         # async loop
         self._current_loop = None  # remember async loop with router working
@@ -34,13 +40,69 @@ class ValueRouter:
             logger.info(f'{self.name}: Listening...')
 
     # w przyszłości zmienić to na pobieranie warotości z teleskopu
-    async def my_coroutine(self):
+    async def my_coroutine(self, data):
+        # TODO jak task zwraca błąd np valueerror to trzeba go przechwycić gdzieś bo task moze tylko zwracac cancelederror
         await asyncio.sleep(2)
+        for d in data:
+            print(d.get('question'))
         print("My Coroutine 2s")
+        return [MessageSerializer({'answer': 'word'})]
+
+    async def _solve_request(self, data: List[dict]):
+        # TODO COMPLETE THIS FUNCTION
+        pass
+
+    @staticmethod
+    def _open_envelope(multipart):
+        if len(multipart) < 3:
+            logger.error(f'Wrong multipart because is shorter than 3')
+            raise ValueError
+        target = multipart[0]
+        empty = multipart[1]
+        data = multipart[2:]
+        if not target:
+            logger.error(f'Wrong port address in multipart.')
+            raise ValueError
+        if empty:
+            logger.error(f'Empty byte in multipart is not empty')
+            raise ValueError
+        if not data:
+            logger.error(f'No data in multipart')
+            raise ValueError
+        messages = []
+        for d in data:
+            messages.append(MessageSerializer.from_bytes(d))
+        return target, messages
+
+    @staticmethod
+    def _pack_to_envelope(target: bytes, data: list):
+        if not target:
+            logger.error(f'Wrong port address for multipart.')
+            raise ValueError
+        if not data:
+            data = [MessageSerializer({})]
+            logger.error(f'No data to send. Task send empty bit to client. ')
+
+        envelope = [target, b'']
+        for d in data:
+            if not isinstance(d, MessageSerializer) or not d.is_correct():
+                raise ValueError
+            envelope.append(d.to_byte())
+        return envelope
 
     async def _send_back(self, message):
-        await self.my_coroutine()
-        self.frontend.send_multipart([message.result()[0], b'', b"world"])
+        try:
+            target, data_list = self._open_envelope(message)
+        except ValueError:
+            # Don't answer for incorrect requests. Close task.
+            return
+        answer = await self.my_coroutine(data_list)
+        try:
+            answer_envelope = ValueRouter._pack_to_envelope(target, answer)
+        except ValueError:
+            # Don't answer for incorrect requests. Close task.
+            return
+        self.frontend.send_multipart(answer_envelope)
         try:
             task = asyncio.current_task()
             self._message_tasks.remove(task)
@@ -54,13 +116,8 @@ class ValueRouter:
         while True:
             i += 1
             events = await poller.poll()
-
             if self.frontend in dict(events):
-                message = self.frontend.recv_multipart()
-                print(f'get message {message.result()} ')
-
-                # await self.frontend.send_multipart([message.result()[0], b'', b"world"])
-                # await self.send_back(message)
+                message = await self.frontend.recv_multipart()
                 task = asyncio.create_task(self._send_back(message), name=self._message_task_name)
                 self._message_tasks.append(task)
 
@@ -173,7 +230,7 @@ class ValueRouter:
                 logger.info(f'Router {self.name} is already stopping now, please wait a moment for stopped.')
             else:
                 self._stop_router_tasks()
-                self._stop_task = loop.create_task(self._wait_for_stop(), name=self._stop_task_name)
+                self._stop_task = loop.create_task(self._wait_for_stop())
         else:
             # TODO It should never happened. However, if it does, need to think about restarting the loop and end tasks
             logger.error(f'Router {self.name} is not stopped and can not find running loop. Something go wrong')

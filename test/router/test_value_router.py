@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import unittest
-from ob.value_router import ValueRouter
+from ob.router.value_router import ValueRouter
 
 logger = logging.getLogger(__name__)
 
@@ -39,8 +39,8 @@ class ValueRouterTest(unittest.TestCase):
         """
         name1 = 'router1'
         name2 = 'router1'
-        vr = ValueRouter(name=name1, port=5559)
-        vr2 = ValueRouter(name=name2, port=5558)
+        vr = ValueRouter(None, name=name1, port=5559)
+        vr2 = ValueRouter(None, name=name2, port=5558)
 
         async def coro():
             vr.start()
@@ -57,7 +57,7 @@ class ValueRouterTest(unittest.TestCase):
         :return:
         """
         name1 = 'router1'
-        vr = ValueRouter(name=name1)
+        vr = ValueRouter(None, name=name1)
 
         async def coro():
             vr.start()
@@ -76,7 +76,7 @@ class ValueRouterTest(unittest.TestCase):
         :return:
         """
         name1 = 'router1'
-        vr = ValueRouter(name=name1, port=5559)
+        vr = ValueRouter(None, name=name1, port=5559)
 
         async def coro():
             vr.start()
@@ -102,7 +102,7 @@ class ValueRouterTest(unittest.TestCase):
         :return:
         """
         name1 = 'router1'
-        vr = ValueRouter(name=name1, port=5559)
+        vr = ValueRouter(None, name=name1, port=5559)
 
         async def coro():
             vr.start()

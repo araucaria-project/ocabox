@@ -1,8 +1,8 @@
 from datetime import datetime
 from abc import ABC, abstractmethod
 
-from ob.address import Address
-from ob.value import Value
+from ob.data_colection.address import Address
+from ob.data_colection.value import Value
 
 
 class ValueSet(ABC):

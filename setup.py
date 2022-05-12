@@ -13,7 +13,9 @@ setup(
     include_package_data=True,
     python_requires='>=3.8',
     install_requires=[
-
+        'setuptools~=62.1.0',
+        'pyzmq~=22.3.0',
+        'msgpack~=1.0.3',
     ],
     dependency_links=[
 

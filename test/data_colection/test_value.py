@@ -1,7 +1,7 @@
 import unittest
 from datetime import datetime
 
-from ob.value import Value
+from ob.data_colection.value import Value
 
 
 class ValueTest(unittest.TestCase):
