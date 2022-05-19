@@ -6,5 +6,8 @@ from ob.data_colection.value_set import ValueSet
 
 
 class ValueStorage(ValueSet):
+
+    _MODE = 's'
+
     def getValue(self, address: Address, ts: datetime, delta: int) -> Value or None:
         pass

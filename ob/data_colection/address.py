@@ -24,3 +24,15 @@ class Address:
 
     def __iter__(self):
         return iter(self.components)
+
+    def __getitem__(self, item):
+        return self.components[item]
+
+    def __len__(self):
+        return len(self.components)
+
+    def get_last_index(self):
+        return len(self.components) - 1
+
+    def __copy__(self):
+        return Address(self.__str__())

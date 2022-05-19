@@ -3,7 +3,7 @@ import asyncio
 import logging
 import sys
 
-from router.value_router import ValueRouter
+from ob.router.value_router import ValueRouter
 
 
 async def stop_router_timeout(vrr):
