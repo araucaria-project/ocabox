@@ -5,6 +5,13 @@ from ob.data_colection.address import Address
 
 class AddressTest(unittest.TestCase):
 
+    def test_address_create(self):
+        d = {'adr': 'aaa.bbb.ccc', 'trash': 343}
+        a = Address(**d)
+        self.assertTrue(hasattr(a, 'adr'))
+        self.assertEqual(a.adr, d['adr'].split('.'))
+        self.assertFalse(hasattr(a, 'trash'))
+
     def test_address_eq(self):
         """
         Test equal two Address objects.
@@ -38,6 +45,12 @@ class AddressTest(unittest.TestCase):
         sl = s.split('.')
         for index, item in enumerate(a1):
             self.assertEqual(item, sl[index])
+
+    def test_to_dict(self):
+        d_init = {'adr': 'aaa.bbb.ccc'}
+        a = Address(**d_init)
+        dic = a.to_dict()
+        self.assertEqual(d_init, dic)
 
 
 if __name__ == '__main__':
