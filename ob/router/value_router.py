@@ -66,7 +66,7 @@ class ValueRouter:
             raise ValueError
         messages = []
         for d in data:
-            messages.append(MessageSerializer.from_bytes(d))
+            messages.append(MessageSerializer.unpack_b(d))
         return target, messages
 
     @staticmethod
@@ -75,14 +75,14 @@ class ValueRouter:
             logger.error(f'Wrong port address for multipart.')
             raise ValueError
         if not data:
-            data = [MessageSerializer({})]
+            data = [{}]
             logger.error(f'No data to send. Task send empty bit to client. ')
 
         envelope = [target, b'']
         for d in data:
-            if not isinstance(d, MessageSerializer) or not d.is_correct():
+            if not isinstance(d, dict) or not MessageSerializer.is_correct(d):
                 raise ValueError
-            envelope.append(d.to_byte())
+            envelope.append(MessageSerializer.pack_b(d))
         return envelope
 
     async def _send_back(self, message):

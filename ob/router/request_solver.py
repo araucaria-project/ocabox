@@ -11,17 +11,17 @@ logger = logging.getLogger(__name__)
 
 class RequestSolver(RequestSolverInterface):
 
-    def __init__(self, data_provider):
+    def __init__(self, data_provider: ValueBroker):
         self.data_provider: ValueBroker = data_provider
 
     async def get_answer(self, request: List[dict]) -> List[dict]:
         response = []
         for r in request:
             try:
-                v_request = ValueRequest.from_dict(**r)
-            except ValueError:  # TODO na razie zostaje przechwytywanie  ale jak ValueRequest zacznie obsługiwać błędy to zmienić to
+                v_request = ValueRequest.from_dict(r)
+            except (ValueError, AddressError):  # TODO na razie zostaje przechwytywanie  ale jak ValueRequest zacznie obsługiwać błędy to zmienić to
                 logger.error('Can not convert request dictionary to request object.')
-                raise
+                raise ValueError
             # TODO tutaj powinien przechwycic błędy z providera i jeśli sa spowodowane złym zapytaniem to
             #  wypluć ValueError (na złe pytania nie odpowiadamy) a jeśli płyną ze złej konfiguracji to nasza wina
             #  więc coś trzeba odpowiedzieć. a może nie trzeba? MIKOŁAJ

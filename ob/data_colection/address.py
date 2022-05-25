@@ -1,6 +1,8 @@
 class Address:
 
     def __init__(self, adr: str, **kwargs):
+        if not isinstance(adr, str):
+            raise AddressError(adr, message='wrong type address.')
         self.adr = adr.split('.') if adr else []
 
     @classmethod

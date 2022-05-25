@@ -3,6 +3,9 @@ import asyncio
 import logging
 import sys
 
+from ob.data_colection.value_broker import ValueBroker
+from ob.data_colection.value_cache import ValueCache
+from ob.router.request_solver import RequestSolver
 from ob.router.value_router import ValueRouter
 
 
@@ -21,7 +24,10 @@ async def gather_coro(c, c2):
 def main(argv):
     logging.basicConfig(level=logging.INFO)
 
-    vr = ValueRouter(None)
+    vc = ValueCache(None,'sample_telescope')
+    vb = ValueBroker([vc])
+    rr = RequestSolver(vb)
+    vr = ValueRouter(rr)
     coro = vr.main_coroutine()
 
     try:

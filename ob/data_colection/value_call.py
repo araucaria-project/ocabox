@@ -1,9 +1,9 @@
 import logging
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, fields, field
 from datetime import datetime
 from typing import ClassVar
 
-from ob.data_colection.address import Address
+from ob.data_colection.address import Address, AddressError
 from ob.data_colection.value import Value
 
 logger = logging.getLogger(__name__)
@@ -54,16 +54,18 @@ class ValueExchange:
 class ValueRequest(ValueExchange):
     # master keys that store essential data
     STANDARD_KEYS: ClassVar[list] = list(set(ValueExchange.STANDARD_KEYS + ['address', 'timestamp', 'delta']))
-    address: str or Address
+    address: str or Address or dict
     timestamp: datetime or float
     delta: float
-    index: int = 0
+    index: int = field(init=False, default=0)
 
     def __post_init__(self):
-        if isinstance(self.address, str):
-            self.address = Address(self.address)
         if isinstance(self.address, dict):
             self.address = Address(**self.address)
+        elif isinstance(self.address, Address):
+            pass
+        else:
+            self.address = Address(self.address)  # I know, wrong typing but it must be so, raise AddressError here
         if isinstance(self.timestamp, float):
             self.timestamp = datetime.fromtimestamp(self.timestamp)
 
@@ -76,9 +78,12 @@ class ValueResponse(ValueExchange):
     value: Value or None
 
     def __post_init__(self):
-        if isinstance(self.address, str):
-            self.address = Address(self.address)
         if isinstance(self.address, dict):
             self.address = Address(**self.address)
+        elif isinstance(self.address, Address):
+            pass
+        else:
+            self.address = Address(self.address)  # I know, wrong typing but it must be so, raise AddressError here
+
         if isinstance(self.value, dict):
             self.value = Value(**self.value)

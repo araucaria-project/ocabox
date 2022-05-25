@@ -62,11 +62,12 @@ class MessageSerializer:
         """
         return self._data.get(key)
 
-    def is_correct(self):
+    @staticmethod
+    def is_correct(data: dict):
         """
         This method checks if the data is correct.
         :return: true if data is correct and false if not
         """
-        if not isinstance(self._data, dict):
+        if not isinstance(data, dict):
             return False
         return True
