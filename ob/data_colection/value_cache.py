@@ -33,7 +33,7 @@ class ValueCache(ValueSet):
 
     def _find_in_known_values(self, value_name, ts: datetime, delta: float) -> Value or None:
         # check if the value is in cache
-        for n, v in self.source:
+        for n, v in self.known_values:
             if n == value_name:
                 #  check that the value meets the requirements
                 t_delta = timedelta(seconds=delta)

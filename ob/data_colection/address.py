@@ -49,3 +49,13 @@ class Address:
                 v = '.'.join(self.adr)
             d[k] = v
         return d
+
+
+class AddressError(Exception):
+
+    def __init__(self, address: Address or str = '', message="The address is incorrect"):
+        self.address = address
+        if address:
+            message = f'The address {str(address)} is incorrect'
+        self.message = message
+        super().__init__(self.message)

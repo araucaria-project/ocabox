@@ -18,6 +18,7 @@ class ValueExchange:
     def from_dict(cls, dict_):
         # TODO czy podczas tworzenia klast z słownika jak nie ma w nimwszystkich potrzebnych wartości to ma być błąd
         #  czy jakoś go obsłurzyc? MIKOŁAJ
+        #  Jak przechwytywać to zmienić też w RequestSolver.get_answer
         """
         Cteate this class from given dict of fields. The dictionary must have all the necessary fields.
         Redundant fields are ignored.
@@ -54,7 +55,7 @@ class ValueRequest(ValueExchange):
     # master keys that store essential data
     STANDARD_KEYS: ClassVar[list] = list(set(ValueExchange.STANDARD_KEYS + ['address', 'timestamp', 'delta']))
     address: str or Address
-    timestamp: datetime
+    timestamp: datetime or float
     delta: float
     index: int = 0
 

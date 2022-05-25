@@ -39,18 +39,13 @@ class ValueRouter:
             await asyncio.sleep(1)
             logger.info(f'{self.name}: Listening...')
 
-    # w przyszłości zmienić to na pobieranie warotości z teleskopu
-    async def my_coroutine(self, data):
-        # TODO jak task zwraca błąd np valueerror to trzeba go przechwycić gdzieś bo task moze tylko zwracac cancelederror
-        await asyncio.sleep(2)
-        for d in data:
-            print(d.get('question'))
-        print("My Coroutine 2s")
-        return [MessageSerializer({'answer': 'word'})]
-
-    async def _solve_request(self, data: List[dict]):
-        # TODO COMPLETE THIS FUNCTION
-        pass
+    async def _solve_request(self, data: List[dict]) -> List[dict] or None:
+        answer = None
+        if self.request_solver:
+            answer = await self.request_solver.get_answer(data)
+        else:
+            logger.error(f"Can not find request solver. The router can't send response to client.")
+        return answer
 
     @staticmethod
     def _open_envelope(multipart):
@@ -91,23 +86,37 @@ class ValueRouter:
         return envelope
 
     async def _send_back(self, message):
+        def remove_task_inner():
+            try:
+                task = asyncio.current_task()
+                self._message_tasks.remove(task)
+            except ValueError:
+                logger.error('Unexpected ValueError. Can not remove task from task list.')
         try:
             target, data_list = self._open_envelope(message)
         except ValueError:
             # Don't answer for incorrect requests. Close task.
+            remove_task_inner()
             return
-        answer = await self.my_coroutine(data_list)
+        try:
+            answer = await self._solve_request(data_list)
+        except ValueError:
+            # Don't answer for incorrect requests. Close task.
+            remove_task_inner()
+            return
+        except Exception as e:
+            remove_task_inner()
+            logger.error(f"Router encountered an unexpected error while generating response. Task was closed and "
+                         f"don't send response. Error message: {str(e)}")
+            return
         try:
             answer_envelope = ValueRouter._pack_to_envelope(target, answer)
         except ValueError:
             # Don't answer for incorrect requests. Close task.
+            remove_task_inner()
             return
         self.frontend.send_multipart(answer_envelope)
-        try:
-            task = asyncio.current_task()
-            self._message_tasks.remove(task)
-        except ValueError:
-            logger.error('Unexpected ValueError. Can not remove task from task list.')
+        remove_task_inner()
 
     async def _main(self):
         poller = Poller()

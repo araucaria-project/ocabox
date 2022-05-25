@@ -1,21 +1,26 @@
 import copy
 import logging
 from abc import ABC, abstractmethod
-
+from ob.data_colection.address import AddressError
 from ob.data_colection.value import Value
-from ob.data_colection.value_broker import ValueBroker
+
 from ob.data_colection.value_call import ValueRequest, ValueResponse
+import typing
+
+if typing.TYPE_CHECKING:    # TODO CZY TAKI ZABIEG JKEST OK, to chroni przed importem cyklicznym MIKOŁAJ
+    from ob.data_colection.value_broker import ValueBroker
+
 
 logger = logging.getLogger(__name__)
 
 
 class ValueSet(ABC):
 
-    def __init__(self, source, source_address: str, subcontractor: ValueBroker = None):
-        self.source = source  # źrudło z kąd pobieramy dane no IRIS czy MIKE czy jakiś iny teleskop
-        self._source_address = 'Default'  # this is to remember that there is such a variable
+    def __init__(self, source, source_address: str, subcontractor: 'ValueBroker' = None):
+        self.source = source
+        self._source_address: str = 'Default'  # this is to remember that there is such a variable
         self._set_source_address(source_address)  # here variable self._source_address is changed
-        self.subcontractor: ValueBroker = subcontractor
+        self.subcontractor: 'ValueBroker' = subcontractor
 
     @abstractmethod
     def get_value(self, request: ValueRequest) -> Value or None:
@@ -55,11 +60,14 @@ class ValueSet(ABC):
     def _is_last_target(request: ValueRequest):
         """
         The method checks if the current class is the last target of the query.
+        If address is to short raise AddressError
         :param request: ValueRequest
         :return: True if the query response must be taken from this class.
         """
         if len(request.address) - request.index == 1:
             return True
+        if len(request.address) - request.index < 1:
+            raise AddressError(request.address, message=f'Address <{str(request.address)}> is to short.')
         return False
 
     def get_response(self, request: ValueRequest) -> ValueResponse:
@@ -67,15 +75,22 @@ class ValueSet(ABC):
         This is the main method that will be called to get a response to a given request. It requires a defined
         get_value() method to work properly. If there are any problems reading the address, an empty response will be
         returned.
+        If address is incorrect raise AddressError
         :param request: ValueRequest
         :return: ValueResponse
         """
         # get value from here
-        if self._is_last_target(request):
+        if self._is_last_target(request):  # Here can raise AddressError
             address = copy.copy(request.address)  # copy address because the request is forwarded and can be edited
             v = self.get_value(request)
             if v:
                 return ValueResponse(address, v)
             return ValueResponse(address, None)
         # get response from next provider in tree if address is incorrect then broker should solve this
-        return self.subcontractor.get_response(request)
+        if self.subcontractor:
+            return self.subcontractor.get_response(request)
+        else:
+            return ValueResponse(request.address, None)
+            # TODO Don't known provider, return empty response or raise
+            #  error and don't ansvear MIKOŁAJ
+            # raise AddressError(request.address, message=f'Can not find target for address <{str(request.address)}>.')
