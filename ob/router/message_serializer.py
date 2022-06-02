@@ -5,7 +5,6 @@ import msgpack
 logger = logging.getLogger(__name__)
 
 
-# TODO chy chcem odziedziczyć go po słowiku?
 class MessageSerializer:
     SERIALIZER_NAME = 'msgpack'
 

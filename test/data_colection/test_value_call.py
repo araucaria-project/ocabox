@@ -2,6 +2,7 @@ import unittest
 from datetime import datetime, timedelta
 
 from ob.data_colection.address import Address
+from ob.data_colection.response_error import ResponseError
 from ob.data_colection.value import Value
 from ob.data_colection.value_call import ValueRequest, ValueResponse
 
@@ -51,7 +52,7 @@ class ValueResponseTest(unittest.TestCase):
         self.assertIsInstance(vr.address, Address)
         self.assertIsInstance(vr.value, Value)
 
-        value_dict = {'v': 234, 'ts': datetime(2022, 3, 15, 12, 40, 53), 'type': None}
+        value_dict = {'v': 234, 'ts': datetime(2022, 3, 15, 12, 40, 53), 'type': None, 'status': False, 'error': None}
         d = {'address': 'aaa.bbb.ccc', 'value': value_dict, 'trash': 54}
         vr = ValueResponse.from_dict(d)
         self.assertTrue(hasattr(vr, 'address'))
@@ -64,8 +65,11 @@ class ValueResponseTest(unittest.TestCase):
 
     def test_to_dict(self):
         value_dict = {'v': 234, 'ts': datetime(2022, 3, 15, 12, 40, 53).timestamp(), 'type': None}
-        expected_dict = {'address': {'adr': 'aaa.bbb.ccc'}, 'value': value_dict}
-        vr = ValueResponse(expected_dict['address'], Value(**value_dict))
+        expected_dict = {'address': {'adr': 'aaa.bbb.ccc'}, 'value': value_dict, 'status': False,
+                         'error': {'code': 230, 'message': 'message error', 'source_name': 'sample_source',
+                                   'severity': 'NORMAL'}}
+        vr = ValueResponse(expected_dict['address'], Value(**value_dict), expected_dict['status'],
+                           expected_dict['error'])
         out_dict = vr.to_dict()
         self.assertNotIsInstance(out_dict['address'], Address, msg='Object Address has not implemented '
                                                                    'method to_dict()')
@@ -73,6 +77,10 @@ class ValueResponseTest(unittest.TestCase):
                                                                'method to_dict()')
         self.assertNotIsInstance(out_dict['value']['ts'], datetime)
         self.assertDictEqual(out_dict, expected_dict)
+        self.assertFalse(out_dict['status'])
+        self.assertNotIsInstance(out_dict['error'], ResponseError, msg='Object ResponseError has not implemented '
+                                                                       'method to_dict()')
+        self.assertDictEqual(out_dict['error'], expected_dict['error'])
 
 
 if __name__ == '__main__':

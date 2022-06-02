@@ -16,8 +16,6 @@ class Address:
             return a
         if isinstance(a, str):
             return Address(a)
-
-        # TODO Narazie tworzy dares z stringa i innego adressy, jakie są inne możliwości?
         raise ValueError(a)
 
     def __eq__(self, other):

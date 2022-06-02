@@ -2,35 +2,39 @@ import logging
 from typing import List
 
 from ob.data_colection.address import AddressError
+from ob.data_colection.base_components.address_dispatcher import AddressDispatcher
+from ob.data_colection.response_error import ResponseError
 from ob.data_colection.value_call import ValueRequest, ValueResponse
-from ob.data_colection.value_set import ValueSet
 
 logger = logging.getLogger(__name__)
 
 
-class ValueBroker:
+class ValueBroker(AddressDispatcher):
 
-    def __init__(self, list_providers: List[ValueSet] = None):
-        self._list_providers: List[ValueSet] = list_providers if list_providers and \
-                                                                 isinstance(list_providers, list) else []
+    def __init__(self, source_name: str, list_providers: List[AddressDispatcher] = None):
+        super().__init__(source_name)
+        self._list_providers: List[AddressDispatcher] = list_providers if list_providers and isinstance(list_providers,
+                                                                                                        list) else []
 
     def get_response(self, request: ValueRequest) -> ValueResponse:
         """
         This method return response for given request.
-        If request has incorrect (wrong format or wrong type) address this method raise AddressError
         If request is correct but broker can't find data provider then return empty answer
         :param request:
         :return:
         """
-        provider = self._get_provider(request)  # Here can raise AddressError
+        try:
+            provider = self._get_provider(request)  # Here can raise AddressError
+        except AddressError:
+            re = ResponseError(1001, '', self._source_name)
+            logger.info(f'Wrong format request address {request.address} - make error response')
+            return ValueResponse(request.address, None, False, re)  # address is damaged
         if not provider:
-            logger.warning(f'Unrecognised address: {request.address} lever: {request.index}')
-            return ValueResponse(request.address, None)
-            # TODO Don't known provider, return empty response or raise
-            #  error and don't ansvear MIKOŁAJ
-            # raise AddressError(request.address, message=f'Wrong address <{str(request.address)}> . Unknown provider')
+            re = ResponseError(1002, '', self._source_name)
+            logger.info(f'Unrecognised provider: {request.address} lever: {request.index}')
+            return ValueResponse(request.address, None, False, re)  # address is unknown
         request.index += 1
-        response = provider.get_response(request)  # Here can raise AddressError
+        response = provider.get_response(request)
         return response
 
     def _get_provider(self, v_req: ValueRequest):
@@ -48,14 +52,14 @@ class ValueBroker:
             raise AddressError(address)
         provider = None
         for p in self._list_providers:
-            if p.get_source_address() == provider_name:
+            if p.get_source_name() == provider_name:
                 provider = p
                 break
         return provider
 
-    def add_provider(self, provider: ValueSet, force: bool = False):
+    def add_provider(self, provider: AddressDispatcher, force: bool = False):
         for p in self._list_providers:
-            if p.get_source_address() == provider.get_source_address():
+            if p.get_source_name() == provider.get_source_name():
                 if force:
                     logger.warning(f'One with the same address has already been found in the list of provider. '
                                    f'It will be removed from the list.')
@@ -70,7 +74,7 @@ class ValueBroker:
     def get_list_providers(self):
         return self._list_providers
 
-    def remove_provider(self, provider: ValueSet):
+    def remove_provider(self, provider: AddressDispatcher):
         try:
             self._list_providers.remove(provider)
             return True

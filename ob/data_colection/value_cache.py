@@ -14,7 +14,6 @@ class ValueCache(ValueSet):
 
     def __init__(self, source, source_address: str, subcontractor: ValueBroker = None):
         super().__init__(source, source_address, subcontractor)
-        # todo source dla tego to bedzie klasa ktura dzwoni do alpaki
         self.known_values: List[Tuple[str, Value]] = []  # list pair (name :str, value: Value)
 
     def get_source(self):

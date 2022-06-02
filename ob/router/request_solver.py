@@ -15,6 +15,7 @@ class RequestSolver(RequestSolverInterface):
         self.data_provider: ValueBroker = data_provider
 
     async def get_answer(self, request: List[dict]) -> List[dict]:
+        # TODO zabezpieczyć się przed NotImplementedError
         response = []
         for r in request:
             try:

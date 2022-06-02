@@ -52,7 +52,7 @@ class ValueBrokerTest(unittest.TestCase):
         Test correct initialize object
         :return:
         """
-        vb = ValueBroker()
+        vb = ValueBroker('DefaultBroker')
         self.assertIsInstance(vb.get_list_providers(), list)
         self.assertTrue(vb.get_list_providers() == [])
 
@@ -61,11 +61,11 @@ class ValueBrokerTest(unittest.TestCase):
         Test provider from broker.
         :return:
         """
-        vb = ValueBroker([self.vp1, self.vp2])
+        vb = ValueBroker('DefaultBroker', [self.vp1, self.vp2])
         # good provider
-        request = ValueRequest('.'.join([self.vp1.get_source_address(), self.v1[0]]), self.v1[1].ts.timestamp(), 20)
+        request = ValueRequest('.'.join([self.vp1.get_source_name(), self.v1[0]]), self.v1[1].ts.timestamp(), 20)
         provider = vb._get_provider(request)
-        self.assertEqual(provider.get_source_address(), self.vp1.get_source_address())
+        self.assertEqual(provider.get_source_name(), self.vp1.get_source_name())
         self.assertIs(provider, self.vp1)
         # nonexistent provider
         request = ValueRequest('.'.join(['nonexistent_provider', self.v1[0]]), self.v1[1].ts.timestamp(), 20)
@@ -80,7 +80,7 @@ class ValueBrokerTest(unittest.TestCase):
         Test add provider.
         :return:
         """
-        vb = ValueBroker([self.vp1])
+        vb = ValueBroker('DefaultBroker', [self.vp1])
         # correct added new provider
         effect = vb.add_provider(self.vp2)
         self.assertTrue(effect)
@@ -99,9 +99,9 @@ class ValueBrokerTest(unittest.TestCase):
         Test get response from broker.
         :return:
         """
-        vb = ValueBroker([self.vp1, self.vp2])
+        vb = ValueBroker('DefaultBroker', [self.vp1, self.vp2])
         # good request
-        request = ValueRequest('.'.join([self.vp1.get_source_address(), self.v1[0]]), self.v1[1].ts.timestamp(), 20)
+        request = ValueRequest('.'.join([self.vp1.get_source_name(), self.v1[0]]), self.v1[1].ts.timestamp(), 20)
         response = vb.get_response(request)
         self.assertEqual(response.value, self.v1[1])
         # wrong request - provider not exist
@@ -110,7 +110,7 @@ class ValueBrokerTest(unittest.TestCase):
         self.assertEqual(response.address, request.address)
         self.assertIsNone(response.value)
         # wrong request - address is to long, ValueSet cant find next broker
-        request = ValueRequest('.'.join([self.vp1.get_source_address(), 'nonexistent_provider', self.v1[0]]),
+        request = ValueRequest('.'.join([self.vp1.get_source_name(), 'nonexistent_provider', self.v1[0]]),
                                self.v1[1].ts.timestamp(), 20)
         response = vb.get_response(request)
         self.assertEqual(response.address, request.address)
