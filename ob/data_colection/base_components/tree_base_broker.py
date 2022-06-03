@@ -1,33 +1,38 @@
 import logging
-from typing import List, Protocol
+from typing import List, Protocol, runtime_checkable
 
 from ob.data_colection.address import AddressError
 from ob.data_colection.base_components.address_dispatcher import AddressDispatcher, AddressedProtocol
-from ob.data_colection.base_components.tree_component import TreeComponent, ProvidesResponseProtocol
+from ob.data_colection.base_components.tree_component import TreeComponent, ProvidesResponseProtocol, \
+    AddressedResponderProtocol
 from ob.data_colection.response_error import ResponseError
 from ob.data_colection.value_call import ValueRequest, ValueResponse
 
 logger = logging.getLogger(__name__)
 
 
-class AddressedResponderProtocol (ProvidesResponseProtocol, AddressedProtocol, Protocol):
-    pass
-
-
 class TreeBaseBroker(TreeComponent):
     """
     B0
+
+    :ivar _list_providers: list all next providers in tree
+
+    :param component_name: this is name of tree component, used for debug
+    :param list_providers: list all next providers in tree
+
+    Conforms to:
+        AddressedResponderProtocol
     """
 
     def __init__(self, component_name: str, list_providers: List[AddressedResponderProtocol] = None, **kwargs):
         super().__init__(component_name=component_name, **kwargs)
-        # TODO jak typowć podwójne klasy bo potrzebuje żeby było jednocześnie TreeComponent and AddressDispatcher
-        self._list_providers: List[AddressedResponderProtocol] = \
-            list_providers if list_providers and isinstance(list_providers, list) else []
+        self._list_providers: List[AddressedResponderProtocol] = list_providers \
+            if list_providers and isinstance(list_providers, list) else []
 
     def get_response(self, request: ValueRequest) -> ValueResponse:
         """
         This method return response for given request.
+
         :param request: ValueRequest
         :return: ValueResponse
         """
@@ -49,7 +54,9 @@ class TreeBaseBroker(TreeComponent):
         """
         This method return provider for give address if is known.
         If request has incorrect address this method raise AddressError
-        :param v_req:
+
+        :param v_req: ValueRequest
+        :raise AddressError: if is wrong format address
         :return: return provider if exist or None if not
         """
         index = v_req.index
@@ -67,10 +74,11 @@ class TreeBaseBroker(TreeComponent):
 
     def add_provider(self, provider: AddressedResponderProtocol, force: bool = False):
         """
-        This method add new provider to list
+        This method add new provider to list.
+
         :param provider: provider
         :param force: if true, method add provider even if exist provider with the same source name and remove old
-        provider. Default false
+            provider. Default false
         :return: True if success remove and false if not
         """
         for p in self._list_providers:
@@ -89,6 +97,7 @@ class TreeBaseBroker(TreeComponent):
     def get_list_providers(self):
         """
         Method return all providers
+
         :return: list all providers
         """
         return self._list_providers
@@ -96,6 +105,7 @@ class TreeBaseBroker(TreeComponent):
     def remove_provider(self, provider: AddressedResponderProtocol):
         """
         This method remove given provider from list providers
+
         :param provider: provider to remove from list
         :return: True if success remove and false if not
         """

@@ -1,6 +1,6 @@
 import logging
 from abc import ABC
-from ob.data_colection.base_components.tree_component import TreeComponent
+from ob.data_colection.base_components.tree_component import TreeComponent, ProvidesResponseProtocol
 from ob.data_colection.response_error import ResponseError
 from ob.data_colection.value import Value
 from ob.data_colection.value_call import ValueRequest, ValueResponse
@@ -11,15 +11,24 @@ logger = logging.getLogger(__name__)
 class TreeBaseProvider(TreeComponent, ABC):
     """
     P0
+
+    :param component_name: this is name of tree component, used for debug
+    :param subcontractor: instance of next component in tree
+
+    :ivar _subcontractor: instance of next component in tree
+
+    Conforms to:
+        ProvidesResponseProtocol
     """
 
-    def __init__(self, component_name: str, subcontractor: TreeComponent = None, **kwargs):
+    def __init__(self, component_name: str, subcontractor: ProvidesResponseProtocol = None, **kwargs):
         super().__init__(component_name=component_name, **kwargs)
-        self._subcontractor: TreeComponent = subcontractor
+        self._subcontractor: ProvidesResponseProtocol = subcontractor
 
     def get_value(self, request: ValueRequest) -> Value or None:
         """
         This is the main method to generate the Value that is returned in response
+
         :param request: ValueRequest
         :return: Value
         """
@@ -30,7 +39,7 @@ class TreeBaseProvider(TreeComponent, ABC):
         This is the main method that will be called to get a response to a given request. It requires a defined
         get_value() method to work properly. If there are any problems reading the address, an empty response will be
         returned.
-        If address is incorrect raise AddressError
+
         :param request: ValueRequest
         :return: ValueResponse
         """

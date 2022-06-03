@@ -1,23 +1,36 @@
 import logging
 
+from ob.data_colection.base_components.address_dispatcher import AddressDispatcher
 from ob.data_colection.base_components.tree_base_provider import TreeBaseProvider
-from ob.data_colection.base_components.tree_component import TreeComponent
+from ob.data_colection.base_components.tree_component import ProvidesResponseProtocol
 from ob.data_colection.value import Value
 from ob.data_colection.value_call import ValueRequest, ValueResponse
 
 logger = logging.getLogger(__name__)
 
 
-class TreeProvider(TreeBaseProvider):
+class TreeProvider(TreeBaseProvider, AddressDispatcher):
     """
     PX
+
+    :param component_name: this is name of tree component, used for debug
+    :param source_name: This is a component name with will be used to decode address
+    :param subcontractor: instance of next component in tree
+
+    :ivar _subcontractor: instance of next component in tree
+
+    Conforms to:
+        ProvidesResponseProtocol
     """
-    def __init__(self, component_name: str, source_name: str, subcontractor: TreeComponent = None, **kwargs):
+    def __init__(self, component_name: str, source_name: str, subcontractor: ProvidesResponseProtocol = None,
+                 **kwargs):
         super().__init__(component_name=component_name, subcontractor=subcontractor, source_name=source_name, **kwargs)
 
     def get_value(self, request: ValueRequest) -> Value or None:
+        # docstring is imported from parent
         raise NotImplementedError
 
     def get_response(self, request: ValueRequest) -> ValueResponse:
+        # docstring is imported from parent
         request.index += 1
         return super().get_response(request)

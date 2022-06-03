@@ -5,23 +5,14 @@ from typing import Protocol, runtime_checkable
 logger = logging.getLogger(__name__)
 
 
-@runtime_checkable
-class AddressedProtocol(Protocol):
-    def get_source_name(self) -> str:
-        """
-        This method return name of this class to use when decoding the query address.
-        :return: name of that class instance
-        """
-        pass
-
-
 class AddressDispatcher(ABC):
     """
     This class represents one component in the tree. All components except first must have a name.
-    First component is initial so his name are not included in address.
+    First component is initial so his name are not included in address
 
-    Attributes:
-        _source_name (str): This is a component name with will b used to decode address
+    :ivar _source_name: This is a component name with will be used to decode address
+
+    :param source_name: This is a component name with will be used to decode address
 
     Conforms:
         AddressedProtocol
@@ -34,8 +25,10 @@ class AddressDispatcher(ABC):
     def _set_source_name(self, source_name: str):
         """
         This method sets the name of this class to use when decoding the query address
+
         :param source_name: name for that class
-        :return:
+        :raise ValueError: if source_name has wrong format or is None
+        :return: None
         """
         if not source_name:
             logger.warning(f"Name of the component is None, so will be set to default name.")
@@ -49,6 +42,19 @@ class AddressDispatcher(ABC):
     def get_source_name(self) -> str:
         """
         This method return name of this class to use when decoding the query address.
-        :return: name of that class instance
+
+        :return: name of that component with will be used to decode address
         """
         return self._source_name
+
+
+@runtime_checkable  # this is need only for pycharm check correct code
+class AddressedProtocol(Protocol):
+    def get_source_name(self) -> str:
+        """
+        This method return name of this class to use when decoding the query address.
+
+        :return: name of that component with will be used to decode address
+        """
+        pass
+
