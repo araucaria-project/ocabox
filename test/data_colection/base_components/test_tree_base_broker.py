@@ -7,7 +7,7 @@ from ob.data_colection.base_components.tree_base_broker import TreeBaseBroker
 from ob.data_colection.base_components.tree_component import ProvidesResponseProtocol
 from ob.data_colection.base_components.tree_provider import TreeProvider
 from ob.data_colection.value import Value
-from ob.data_colection.value_call import ValueRequest, ValueResponse
+from ob.data_colection.value_call import ValueRequest
 
 
 class TreeBaseBrokerTest(unittest.TestCase):
@@ -44,7 +44,6 @@ class TreeBaseBrokerTest(unittest.TestCase):
     def test_init(self):
         """
         Test correct initialize object
-        :return:
         """
         vb = TreeBaseBroker('DefaultBroker')
         self.assertIsInstance(vb.get_list_providers(), list)
@@ -53,7 +52,6 @@ class TreeBaseBrokerTest(unittest.TestCase):
     def test_get_provider(self):
         """
         Test provider from broker.
-        :return:
         """
         vb = TreeBaseBroker('DefaultBroker', [self.vp1, self.vp2])
         # good provider
@@ -72,14 +70,13 @@ class TreeBaseBrokerTest(unittest.TestCase):
     def test_add_provider(self):
         """
         Test add provider.
-        :return:
         """
         vb = TreeBaseBroker('DefaultBroker', [self.vp1])
         # correct added new provider
         effect = vb.add_provider(self.vp2)
         self.assertTrue(effect)
         self.assertEqual(vb.get_list_providers(), [self.vp1, self.vp2])
-        # try add again the same provider
+        # try to add again the same provider
         effect = vb.add_provider(self.vp2)
         self.assertFalse(effect)
         self.assertEqual(vb.get_list_providers(), [self.vp1, self.vp2])
@@ -91,7 +88,6 @@ class TreeBaseBrokerTest(unittest.TestCase):
     def test_get_response(self):
         """
         Test get response from broker.
-        :return:
         """
         vb = TreeBaseBroker('DefaultBroker', [self.vp1, self.vp2])
         # good request

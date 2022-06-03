@@ -1,6 +1,7 @@
 class Address:
 
     def __init__(self, adr: str, **kwargs):
+        super().__init__(**kwargs)
         if not isinstance(adr, str):
             raise AddressError(adr, message='wrong type address.')
         self.adr = adr.split('.') if adr else []
@@ -9,6 +10,7 @@ class Address:
     def as_address(cls, a):
         """
         This method convert given value to Address object.
+
         :param a: value in anny type
         :return: Address
         """

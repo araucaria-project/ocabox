@@ -28,5 +28,7 @@ class TreeBroker(TreeBaseBroker, AddressDispatcher):
 
     def get_response(self, request: ValueRequest) -> ValueResponse:
         # docstring is imported from parent
+        # TODO Czy sprawdzać czy adres jest tego komponentu jest poprawny? Poprzedni elemęt decyduje gdzie wysłać
+        #  zapytanie ale może oszukać czy sprawdzać to? MIKOŁAJ
         request.index += 1
         return super().get_response(request)
