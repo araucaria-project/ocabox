@@ -1,8 +1,8 @@
 import logging
 from typing import List
 
-from ob.data_colection.address import AddressError
 from ob.data_colection.base_components.address_dispatcher import AddressDispatcher
+from ob.data_colection.coded_error import AddressError
 from ob.data_colection.response_error import ResponseError
 from ob.data_colection.value_call import ValueRequest, ValueResponse
 
@@ -25,8 +25,8 @@ class ValueBroker(AddressDispatcher):
         """
         try:
             provider = self._get_provider(request)  # Here can raise AddressError
-        except AddressError:
-            re = ResponseError(1001, '', self._source_name)
+        except AddressError as e:
+            re = ResponseError(e.code, '', self._source_name)
             logger.info(f'Wrong format request address {request.address} - make error response')
             return ValueResponse(request.address, None, False, re)  # address is damaged
         if not provider:
@@ -49,7 +49,7 @@ class ValueBroker(AddressDispatcher):
         try:
             provider_name = address[index]
         except IndexError:
-            raise AddressError(address)
+            raise AddressError(address, 1001)
         provider = None
         for p in self._list_providers:
             if p.get_source_name() == provider_name:

@@ -1,0 +1,135 @@
+import logging
+from abc import ABC
+from typing import List, Tuple
+
+from ob.data_colection.address import Address
+from ob.data_colection.value import Value
+
+logger = logging.getLogger(__name__)
+
+
+class BaseCodedError(Exception, ABC):
+    """
+    This is a base exception with code.
+
+    :ivar message: Error message
+    :ivar code: Error code
+    :cvar CODE_GROUP: Number of error group, must be the number of whole thousands
+    :cvar _KNOWN_LOCAL_CODES: List of known errors with local codes (codes without number of group can be number
+        between 1 and 999)
+    :cvar ERROR_CODE: This is list of pair (code, description)
+
+    :param code: Error code
+    :param message: Error message
+    """
+    CODE_GROUP: int = 0
+    # This is list of pair (code, description) code can be number between 1 and 999
+    _KNOWN_LOCAL_CODES: List[Tuple[int, str]] = []
+    ERROR_CODE: List[Tuple[int, str]] = [(c + CODE_GROUP, d) for c, d in _KNOWN_LOCAL_CODES]
+
+    def __init__(self, code: int = 0, message: str = "", **kwargs):
+        if message:
+            message = message
+        elif code != 0:
+            message = f'Error code {str(code)} - {self.get_code_description(code)}'
+        else:
+            message = "Default error."
+        self.message = message
+        self.code = code
+        super().__init__(self.message)
+
+    @classmethod
+    def is_code_known(cls, code: int) -> bool:
+        """
+        Method returns true if given code is known
+        :param code: code to check
+        :return: true if code is known and false if not
+        """
+        for c, m in cls.ERROR_CODE:
+            if code == c:
+                return True
+        return False
+
+    @classmethod
+    def get_code_description(cls, code) -> str:
+        """
+        Method returns description for given code if code is known or empty string if not.
+        :param code: code
+        :return: description for given code or empty string
+        """
+        for c, m in cls.ERROR_CODE:
+            if code == c:
+                return m
+        return ''
+
+
+class OBValueError(BaseCodedError):
+    """
+    This is a base exception with code for Value errors.
+
+    :ivar message: Error message
+    :ivar code: Error code
+    :ivar value: value
+    :cvar CODE_GROUP: Number of error group, must be the number of whole thousands
+    :cvar _KNOWN_LOCAL_CODES: List of known errors with local codes (codes without number of group can be number
+        between 1 and 999)
+    :cvar ERROR_CODE: This is list of pair (code, description)
+
+    :param value: value
+    :param code: Error code
+    :param message: Error message
+    """
+    CODE_GROUP: int = 2000
+    _KNOWN_LOCAL_CODES = [(1, 'Value error')]
+
+    def __init__(self, value: Value or str = '', code: int = 0, message: str = "", **kwargs):
+        self.value = value
+        super().__init__(message=message, code=code, **kwargs)
+
+
+class OBStructureError(BaseCodedError):
+    """
+    This is a base exception with code for project structure errors.
+
+    :ivar message: Error message
+    :ivar code: Error code
+    :cvar CODE_GROUP: Number of error group, must be the number of whole thousands
+    :cvar _KNOWN_LOCAL_CODES: List of known errors with local codes (codes without number of group can be number
+        between 1 and 999)
+    :cvar ERROR_CODE: This is list of pair (code, description)
+
+    :param code: Error code
+    :param message: Error message
+    """
+    CODE_GROUP: int = 3000
+    _KNOWN_LOCAL_CODES = [(1, 'Wrong tree architecture, unexpected end of the branch, no next component')]
+
+    def __init__(self, code: int = 0, message="", **kwargs):
+        super().__init__(message=message, code=code, **kwargs)
+
+
+class AddressError(BaseCodedError):
+    """
+    This is a base exception with code for Value errors.
+
+    :ivar message: Error message
+    :ivar code: Error code
+    :ivar address: address
+    :cvar CODE_GROUP: Number of error group, must be the number of whole thousands
+    :cvar _KNOWN_LOCAL_CODES: List of known errors with local codes (codes without number of group can be number
+        between 1 and 999)
+    :cvar ERROR_CODE: This is list of pair (code, description)
+
+    :param address: address
+    :param code: Error code
+    :param message: Error message
+    """
+    CODE_GROUP: int = 1000
+    _KNOWN_LOCAL_CODES = [(1, 'Wrong address format'),
+                          (2, 'Non-existent address')]
+
+    def __init__(self, address: Address or str = '', code: int = 0, message="", **kwargs):
+        self.address = address
+        if address and (isinstance(address, Address) or isinstance(address, str)):
+            message = f'The address {str(address)} is incorrect'
+        super().__init__(message=message, code=code, **kwargs)

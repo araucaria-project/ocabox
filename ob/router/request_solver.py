@@ -1,7 +1,7 @@
 import logging
 from typing import List
 
-from ob.data_colection.address import AddressError
+from ob.data_colection.coded_error import AddressError
 from ob.data_colection.value_broker import ValueBroker
 from ob.data_colection.value_call import ValueRequest, ValueResponse
 from ob.router.request_solver_interface import RequestSolverInterface

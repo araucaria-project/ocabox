@@ -1,16 +1,14 @@
 import logging
 
+from ob.data_colection.coded_error import OBValueError, OBStructureError, AddressError
+
 logger = logging.getLogger(__name__)
 
 
 class ResponseError:
 
     SEVERITY_LEVELS = ['NORMAL', 'CRITICAL']
-
-    ERROR_CODE = [(1001, 'Wrong address format'),
-                  (1002, 'Non-existent address'),
-                  (2001, 'Value error'),
-                  (3001, 'Wrong tree architecture, unexpected end of the branch, no next component')]
+    SUPPORTED_ERRORS = [OBValueError, OBStructureError, AddressError]
 
     def __init__(self, code: int, message: str, component_name: str, severity: str = 'NORMAL'):
         self.code: int = code
@@ -31,16 +29,24 @@ class ResponseError:
         return f'ResponseError ({self.severity}) code: {str(self.code)} - ' \
                f'{self.message if self.message else self.get_code_description(self.code)}'
 
-    @staticmethod
-    def is_code_known(code: int):
-        for c, m in ResponseError.ERROR_CODE:
-            if code == c:
+    @classmethod
+    def is_code_known(cls, code: int):
+        for e in cls.SUPPORTED_ERRORS:
+            if e.is_code_known(code):
                 return True
         return False
 
-    @staticmethod
-    def get_code_description(code):
-        for c, m in ResponseError.ERROR_CODE:
-            if code == c:
-                return m
+    @classmethod
+    def get_code_description(cls, code):
+        for e in cls.SUPPORTED_ERRORS:
+            desc = e.get_code_description(code)
+            if desc:
+                return desc
         return ''
+
+    @classmethod
+    def get_code_error(cls, code):
+        for e in cls.SUPPORTED_ERRORS:
+            if e.is_code_known(code):
+                return e
+        return None

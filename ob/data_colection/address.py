@@ -1,9 +1,16 @@
+import logging
+
+from ob.data_colection.coded_error import AddressError
+
+logger = logging.getLogger(__name__)
+
+
 class Address:
 
     def __init__(self, adr: str, **kwargs):
         super().__init__(**kwargs)
         if not isinstance(adr, str):
-            raise AddressError(adr, message='wrong type address.')
+            raise AddressError(adr, code=1001, message='wrong type address.')
         self.adr = adr.split('.') if adr else []
 
     @classmethod
@@ -51,13 +58,3 @@ class Address:
                 v = '.'.join(self.adr)
             d[k] = v
         return d
-
-
-class AddressError(Exception):
-
-    def __init__(self, address: Address or str = '', message="The address is incorrect"):
-        self.address = address
-        if address:
-            message = f'The address {str(address)} is incorrect'
-        self.message = message
-        super().__init__(self.message)

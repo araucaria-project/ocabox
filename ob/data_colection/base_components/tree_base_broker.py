@@ -1,10 +1,10 @@
 import logging
 from typing import List, Protocol, runtime_checkable
 
-from ob.data_colection.address import AddressError
 from ob.data_colection.base_components.address_dispatcher import AddressDispatcher, AddressedProtocol
 from ob.data_colection.base_components.tree_component import TreeComponent, ProvidesResponseProtocol, \
     AddressedResponderProtocol
+from ob.data_colection.coded_error import AddressError
 from ob.data_colection.response_error import ResponseError
 from ob.data_colection.value_call import ValueRequest, ValueResponse
 
@@ -39,8 +39,8 @@ class TreeBaseBroker(TreeComponent):
         ss: TreeComponent and AddressDispatcher
         try:
             provider = self._get_provider(request)  # Here can raise AddressError
-        except AddressError:
-            re = ResponseError(1001, '', repr(self))
+        except AddressError as e:
+            re = ResponseError(e.code, '', repr(self))
             logger.info(f'Wrong format request address {request.address} - make error response')
             return ValueResponse(request.address, None, False, re)  # address is damaged
         if not provider:
@@ -64,7 +64,7 @@ class TreeBaseBroker(TreeComponent):
         try:
             provider_name = address[index]
         except IndexError:
-            raise AddressError(address)
+            raise AddressError(address, 1001)
         provider = None
         for p in self._list_providers:
             if p.get_source_name() == provider_name:
