@@ -5,12 +5,11 @@ from typing import List, Tuple
 from ob.data_colection.value import Value
 from ob.data_colection.value_broker import ValueBroker
 from ob.data_colection.value_call import ValueRequest, ValueResponse
-from ob.data_colection.value_set import ValueSet
 
 logger = logging.getLogger(__name__)
 
 
-class ValueCache(ValueSet):
+class ValueCache():
 
     def __init__(self, source, source_address: str, subcontractor: ValueBroker = None):
         super().__init__(source, source_address, subcontractor)

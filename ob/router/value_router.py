@@ -6,7 +6,7 @@ import zmq
 from zmq.asyncio import Context, Poller
 
 from ob.router.message_serializer import MessageSerializer
-from ob.router.request_solver_interface import RequestSolverInterface
+from ob.router.base_request_solver import BaseRequestSolver
 
 logger = logging.getLogger(__name__)
 
@@ -14,10 +14,10 @@ logger = logging.getLogger(__name__)
 class ValueRouter:
     __name__ = 'ValueRouter'
 
-    def __init__(self, request_solver: RequestSolverInterface, name: str = None, port: int = 5559):
+    def __init__(self, request_solver: BaseRequestSolver, name: str = None, port: int = 5559):
         self.name = name if name else ValueRouter.__name__
         # request solver
-        self.request_solver: RequestSolverInterface = request_solver
+        self.request_solver: BaseRequestSolver = request_solver
         # OMQ
         self.context = Context()  # TODO Context.instance() ? jeden czy wiele kontekstów?
         self.frontend = self.context.socket(zmq.ROUTER)

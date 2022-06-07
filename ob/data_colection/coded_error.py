@@ -80,3 +80,12 @@ class OBStructureError(BaseCodedError):
 
     def __init__(self, code: int = 0, message="", **kwargs):
         super().__init__(message=message, code=code, **kwargs)
+
+
+class OBOtherError(BaseCodedError):
+    CODE_GROUP = 4000
+    _KNOWN_LOCAL_CODES = [(1, 'Wrong request'),
+                          (2, 'Application do not answer')]
+
+    def __init__(self, code: int = 0, message="", **kwargs):
+        super().__init__(message=message, code=code, **kwargs)

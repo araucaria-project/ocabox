@@ -1,9 +1,8 @@
 import logging
-from typing import List, Protocol, runtime_checkable
+from typing import List
 
-from ob.data_colection.base_components.address_dispatcher import AddressDispatcher, AddressedProtocol
-from ob.data_colection.base_components.tree_component import TreeComponent, ProvidesResponseProtocol, \
-    AddressedResponderProtocol
+from ob.data_colection.base_components.address_dispatcher import AddressDispatcher
+from ob.data_colection.base_components.tree_component import TreeComponent, AddressedResponderProtocol
 from ob.data_colection.address import AddressError
 from ob.data_colection.response_error import ResponseError
 from ob.data_colection.value_call import ValueRequest, ValueResponse

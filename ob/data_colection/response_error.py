@@ -1,7 +1,7 @@
 import logging
 
 from ob.data_colection.address import AddressError
-from ob.data_colection.coded_error import OBStructureError
+from ob.data_colection.coded_error import OBStructureError, OBOtherError
 from ob.data_colection.value import OBValueError
 
 logger = logging.getLogger(__name__)
@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 class ResponseError:
 
     SEVERITY_LEVELS = ['NORMAL', 'CRITICAL']
-    SUPPORTED_ERRORS = [OBValueError, OBStructureError, AddressError]
+    SUPPORTED_ERRORS = [OBValueError, OBStructureError, AddressError, OBOtherError]
 
     def __init__(self, code: int, message: str, component_name: str, severity: str = 'NORMAL'):
         self.code: int = code

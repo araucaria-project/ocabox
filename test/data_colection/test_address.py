@@ -12,6 +12,9 @@ class AddressTest(unittest.TestCase):
         self.assertEqual(a.adr, d['adr'].split('.'))
         self.assertFalse(hasattr(a, 'trash'))
 
+        a = Address(adr='')
+        self.assertIsInstance(a, Address)
+
     def test_address_eq(self):
         """
         Test equal two Address objects.
