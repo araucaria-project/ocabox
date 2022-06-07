@@ -1,6 +1,6 @@
 import logging
 
-from ob.data_colection.coded_error import AddressError
+from ob.data_colection.coded_error import BaseCodedError
 
 logger = logging.getLogger(__name__)
 
@@ -8,7 +8,6 @@ logger = logging.getLogger(__name__)
 class Address:
 
     def __init__(self, adr: str, **kwargs):
-        super().__init__(**kwargs)
         if not isinstance(adr, str):
             raise AddressError(adr, code=1001, message='wrong type address.')
         self.adr = adr.split('.') if adr else []
@@ -58,3 +57,30 @@ class Address:
                 v = '.'.join(self.adr)
             d[k] = v
         return d
+
+
+class AddressError(BaseCodedError):
+    """
+    This is a base exception with code for Value errors.
+
+    :ivar message: Error message
+    :ivar code: Error code
+    :ivar address: address
+    :cvar CODE_GROUP: Number of error group, must be the number of whole thousands
+    :cvar _KNOWN_LOCAL_CODES: List of known errors with local codes (codes without number of group can be number
+        between 1 and 999)
+    :cvar ERROR_CODE: This is list of pair (code, description)
+
+    :param address: address
+    :param code: Error code
+    :param message: Error message
+    """
+    CODE_GROUP: int = 1000
+    _KNOWN_LOCAL_CODES = [(1, 'Wrong address format'),
+                          (2, 'Non-existent address')]
+
+    def __init__(self, address: Address or str = '', code: int = 0, message="", **kwargs):
+        self.address = address
+        if address and (isinstance(address, Address) or isinstance(address, str)):
+            message = f'The address {str(address)} is incorrect'
+        super().__init__(message=message, code=code, **kwargs)

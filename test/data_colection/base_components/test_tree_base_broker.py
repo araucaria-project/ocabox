@@ -6,7 +6,7 @@ from typing import List, Tuple
 from ob.data_colection.base_components.tree_base_broker import TreeBaseBroker
 from ob.data_colection.base_components.tree_component import ProvidesResponseProtocol
 from ob.data_colection.base_components.tree_provider import TreeProvider
-from ob.data_colection.coded_error import AddressError
+from ob.data_colection.address import AddressError
 from ob.data_colection.value import Value
 from ob.data_colection.value_call import ValueRequest
 

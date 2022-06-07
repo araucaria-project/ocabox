@@ -2,7 +2,7 @@ import logging
 from typing import List
 
 from ob.data_colection.base_components.address_dispatcher import AddressDispatcher
-from ob.data_colection.coded_error import AddressError
+from ob.data_colection.address import AddressError
 from ob.data_colection.response_error import ResponseError
 from ob.data_colection.value_call import ValueRequest, ValueResponse
 

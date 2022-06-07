@@ -1,5 +1,5 @@
 import unittest
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from ob.data_colection.address import Address
 from ob.data_colection.response_error import ResponseError
@@ -66,7 +66,7 @@ class ValueResponseTest(unittest.TestCase):
     def test_to_dict(self):
         value_dict = {'v': 234, 'ts': datetime(2022, 3, 15, 12, 40, 53).timestamp(), 'type': None}
         expected_dict = {'address': {'adr': 'aaa.bbb.ccc'}, 'value': value_dict, 'status': False,
-                         'error': {'code': 230, 'message': 'message error', 'source_name': 'sample_source',
+                         'error': {'code': 230, 'message': 'message error', 'component_name': 'sample_source',
                                    'severity': 'NORMAL'}}
         vr = ValueResponse(expected_dict['address'], Value(**value_dict), expected_dict['status'],
                            expected_dict['error'])

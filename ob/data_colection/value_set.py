@@ -1,8 +1,8 @@
 import copy
 import logging
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from ob.data_colection.base_components.address_dispatcher import AddressDispatcher
-from ob.data_colection.coded_error import AddressError
+from ob.data_colection.address import AddressError
 from ob.data_colection.value import Value
 
 from ob.data_colection.value_call import ValueRequest, ValueResponse
