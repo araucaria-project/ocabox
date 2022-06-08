@@ -16,6 +16,7 @@ class RequestSolver(BaseRequestSolver):
         super(RequestSolver, self).__init__(data_provider, **kwargs)
 
     async def get_answer(self, request: List[dict]) -> List[dict]:
+        # docstring is imported from parent
         response = []
         for r in request:
             # try to load data into ValueRequest object
@@ -29,7 +30,7 @@ class RequestSolver(BaseRequestSolver):
                 response.append(v_response.to_dict())
                 continue
             # Can not find value provider application
-            if not self.data_provider:
+            if not self.data_provider or not isinstance(self.data_provider, ProvidesResponseProtocol):
                 logger.error('Can not find value provider application.')
                 re = ResponseError(4002, '', repr(self), 'CRITICAL')
                 v_response = ValueResponse('', None, False, re)

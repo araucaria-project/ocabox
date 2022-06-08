@@ -35,7 +35,6 @@ class TreeBaseBroker(TreeComponent):
         :param request: ValueRequest
         :return: ValueResponse
         """
-        ss: TreeComponent and AddressDispatcher
         try:
             provider = self._get_provider(request)  # Here can raise AddressError
         except AddressError as e:
