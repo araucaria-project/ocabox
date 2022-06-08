@@ -24,10 +24,10 @@ class BaseCodedError(Exception, ABC):
     _KNOWN_LOCAL_CODES: List[Tuple[int, str]] = []
     ERROR_CODE: List[Tuple[int, str]] = [(c + CODE_GROUP, d) for c, d in _KNOWN_LOCAL_CODES]
 
-    def __init__(self, code: int = 0, message: str = "", **kwargs):
+    def __init__(self, code: int = CODE_GROUP, message: str = "", **kwargs):
         if message:
             message = message
-        elif code != 0:
+        elif code != self.CODE_GROUP:
             message = f'Error code {str(code)} - {self.get_code_description(code)}'
         else:
             message = "Default error."
@@ -78,7 +78,7 @@ class OBStructureError(BaseCodedError):
     _KNOWN_LOCAL_CODES = [(1, 'Wrong tree architecture, unexpected end of the branch, no next component'),
                           (2, 'Component has not implemented method or method work incorrect')]
 
-    def __init__(self, code: int = 0, message="", **kwargs):
+    def __init__(self, code: int = CODE_GROUP, message="", **kwargs):
         super().__init__(message=message, code=code, **kwargs)
 
 
@@ -87,5 +87,5 @@ class OBOtherError(BaseCodedError):
     _KNOWN_LOCAL_CODES = [(1, 'Wrong request'),
                           (2, 'Application do not answer')]
 
-    def __init__(self, code: int = 0, message="", **kwargs):
+    def __init__(self, code: int = CODE_GROUP, message="", **kwargs):
         super().__init__(message=message, code=code, **kwargs)

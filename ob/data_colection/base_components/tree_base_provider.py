@@ -55,11 +55,11 @@ class TreeBaseProvider(TreeComponent, ABC):
         """
         try:
             v = self.get_value(request)
-            if not isinstance(v, Value):
-                logger.error(f'Method get_value() returned wrong type, expected Value or None')
-                re = ResponseError(2002, 'Can not create value', repr(self))
-                return ValueResponse(request.address, None, False, re)
-            return ValueResponse(request.address, v, True)
+            if isinstance(v, Value) or v is None:
+                return ValueResponse(request.address, v, True)
+            logger.error(f'Method get_value() returned wrong type, expected Value or None')
+            re = ResponseError(2002, 'Can not create value', repr(self))
+            return ValueResponse(request.address, None, False, re)
         except OBStructureError:
             if self._subcontractor:
                 try:

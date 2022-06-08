@@ -1,7 +1,6 @@
 import logging
 from typing import List
 
-from ob.data_colection.base_components.address_dispatcher import AddressDispatcher
 from ob.data_colection.base_components.tree_component import TreeComponent, AddressedResponderProtocol
 from ob.data_colection.address import AddressError
 from ob.data_colection.response_error import ResponseError

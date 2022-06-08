@@ -3,6 +3,7 @@ import logging
 from ob.data_colection.base_components.address_dispatcher import AddressDispatcher
 from ob.data_colection.base_components.tree_base_provider import TreeBaseProvider
 from ob.data_colection.base_components.tree_component import ProvidesResponseProtocol
+from ob.data_colection.coded_error import OBStructureError
 from ob.data_colection.value import Value
 from ob.data_colection.value_call import ValueRequest, ValueResponse
 
@@ -28,7 +29,7 @@ class TreeProvider(TreeBaseProvider, AddressDispatcher):
 
     def get_value(self, request: ValueRequest) -> Value or None:
         # docstring is imported from parent
-        raise NotImplementedError
+        super().get_value(request=request)
 
     def get_response(self, request: ValueRequest) -> ValueResponse:
         # docstring is imported from parent

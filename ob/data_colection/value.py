@@ -64,6 +64,6 @@ class OBValueError(BaseCodedError):
     _KNOWN_LOCAL_CODES = [(1, 'Default Value error'),
                           (2, 'Error creating value')]
 
-    def __init__(self, value: Value or str = '', code: int = 0, message: str = "", **kwargs):
+    def __init__(self, value: Value or None = None, code: int = CODE_GROUP, message: str = "", **kwargs):
         self.value = value
         super().__init__(message=message, code=code, **kwargs)

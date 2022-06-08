@@ -79,7 +79,7 @@ class AddressError(BaseCodedError):
     _KNOWN_LOCAL_CODES = [(1, 'Wrong address format'),
                           (2, 'Non-existent address')]
 
-    def __init__(self, address: Address or str = '', code: int = 0, message="", **kwargs):
+    def __init__(self, address: Address or str = '', code: int = CODE_GROUP, message="", **kwargs):
         self.address = address
         if address and (isinstance(address, Address) or isinstance(address, str)):
             message = f'The address {str(address)} is incorrect'
