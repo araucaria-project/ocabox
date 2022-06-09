@@ -27,7 +27,7 @@ class TreeBaseBroker(TreeComponent):
         self._list_providers: List[AddressedResponderProtocol] = list_providers \
             if list_providers and isinstance(list_providers, list) else []
 
-    def get_response(self, request: ValueRequest) -> ValueResponse:
+    async def get_response(self, request: ValueRequest) -> ValueResponse:
         """
         This method return response for given request.
 
@@ -44,7 +44,7 @@ class TreeBaseBroker(TreeComponent):
             re = ResponseError(1002, '', repr(self))
             logger.info(f'Unrecognised provider: {request.address} lever: {request.index}')
             return ValueResponse(request.address, None, False, re)  # address is unknown
-        response = provider.get_response(request)
+        response = await provider.get_response(request)
         return response
 
     def _get_provider(self, v_req: ValueRequest):

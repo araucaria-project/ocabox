@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import unittest
 from typing import List, Tuple
@@ -12,7 +13,7 @@ from ob.data_colection.value_call import ValueRequest
 class TreeBaseProviderTest(unittest.TestCase):
     class SampleTestValueProvider(TreeBaseProvider):
 
-        def get_value(self, request: ValueRequest) -> Value or None:
+        async def get_value(self, request: ValueRequest) -> Value or None:
             address = request.address
             value_name = address[address.get_last_index()]
             for n, v in self.test_values:
@@ -29,7 +30,7 @@ class TreeBaseProviderTest(unittest.TestCase):
             if value_name == 'wrong_type':
                 return 34
             if value_name == 'crash':
-                raise RuntimeError
+                raise ValueError
             return None
 
         def __init__(self, component_name: str, test_values: List[Tuple[str, Value]],
@@ -58,7 +59,7 @@ class TreeBaseProviderTest(unittest.TestCase):
 
         request = ValueRequest('.'.join([self.sample_address_prefix, self.v1[0]]), self.v1[1].ts.timestamp(), 20)
         request.index = self.start_index  # set manually index
-        response = tbp.get_response(request)
+        response = asyncio.run(tbp.get_response(request))
         self.assertEqual(response.value, self.v1[1])
         self.assertTrue(response.status)
         self.assertIsNone(response.error)
@@ -71,7 +72,7 @@ class TreeBaseProviderTest(unittest.TestCase):
         tbp = TreeBaseProvider('component_sample_name', None)
         request = ValueRequest('.'.join([self.sample_address_prefix, self.v1[0]]), self.v1[1].ts.timestamp(), 20)
         request.index = self.start_index  # set manually index
-        response = tbp.get_response(request)
+        response = asyncio.run(tbp.get_response(request))
         self.assertEqual(response.value, None)
         self.assertFalse(response.status)
         self.assertEqual(response.error.code, 3001)
@@ -85,7 +86,7 @@ class TreeBaseProviderTest(unittest.TestCase):
         # without specific code
         request = ValueRequest('.'.join([self.sample_address_prefix, 'address_error']), self.v1[1].ts.timestamp(), 20)
         request.index = self.start_index  # set manually index
-        response = tbp.get_response(request)
+        response = asyncio.run(tbp.get_response(request))
         self.assertEqual(response.value, None)
         self.assertFalse(response.status)
         self.assertEqual(response.error.code, AddressError.CODE_GROUP)  # code CODE_GROUP means no code was specified
@@ -94,7 +95,7 @@ class TreeBaseProviderTest(unittest.TestCase):
         request = ValueRequest('.'.join([self.sample_address_prefix, 'address_error_coded']),
                                self.v1[1].ts.timestamp(), 20)
         request.index = self.start_index  # set manually index
-        response = tbp.get_response(request)
+        response = asyncio.run(tbp.get_response(request))
         self.assertEqual(response.value, None)
         self.assertFalse(response.status)
         self.assertEqual(response.error.code, 20)
@@ -108,7 +109,7 @@ class TreeBaseProviderTest(unittest.TestCase):
         # without specific code
         request = ValueRequest('.'.join([self.sample_address_prefix, 'value_error']), self.v1[1].ts.timestamp(), 20)
         request.index = self.start_index  # set manually index
-        response = tbp.get_response(request)
+        response = asyncio.run(tbp.get_response(request))
         self.assertEqual(response.value, None)
         self.assertFalse(response.status)
         self.assertEqual(response.error.code, OBValueError.CODE_GROUP)  # code CODE_GROUP means no code was specified
@@ -117,7 +118,7 @@ class TreeBaseProviderTest(unittest.TestCase):
         request = ValueRequest('.'.join([self.sample_address_prefix, 'value_error_coded']),
                                self.v1[1].ts.timestamp(), 20)
         request.index = self.start_index  # set manually index
-        response = tbp.get_response(request)
+        response = asyncio.run(tbp.get_response(request))
         self.assertEqual(response.value, None)
         self.assertFalse(response.status)
         self.assertEqual(response.error.code, 10)
@@ -130,7 +131,7 @@ class TreeBaseProviderTest(unittest.TestCase):
         tbp = self.vp1
         request = ValueRequest('.'.join([self.sample_address_prefix, 'wrong_type']), self.v1[1].ts.timestamp(), 20)
         request.index = self.start_index  # set manually index
-        response = tbp.get_response(request)
+        response = asyncio.run(tbp.get_response(request))
         self.assertEqual(response.value, None)
         self.assertFalse(response.status)
         self.assertEqual(response.error.code, 2002)
@@ -143,7 +144,7 @@ class TreeBaseProviderTest(unittest.TestCase):
         tbp = self.vp1
         request = ValueRequest('.'.join([self.sample_address_prefix, 'crash']), self.v1[1].ts.timestamp(), 20)
         request.index = self.start_index  # set manually index
-        self.assertRaises(Exception, tbp.get_response, request)
+        self.assertRaises(ValueError, asyncio.run, tbp.get_response(request))
 
 
 if __name__ == '__main__':

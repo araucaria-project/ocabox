@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import unittest
 from typing import List, Tuple
@@ -15,7 +16,7 @@ class TreeBaseBrokerTest(unittest.TestCase):
 
     class SampleTestValueProvider(TreeProvider):
 
-        def get_value(self, request: ValueRequest) -> Value or None:
+        async def get_value(self, request: ValueRequest) -> Value or None:
             address = request.address
             value_name = address[address.get_last_index()]
             for n, v in self.test_values:
@@ -93,12 +94,12 @@ class TreeBaseBrokerTest(unittest.TestCase):
         vb = TreeBaseBroker('DefaultBroker', [self.vp1, self.vp2])
         # good request
         request = ValueRequest('.'.join([self.vp1.get_source_name(), self.v1[0]]), self.v1[1].ts.timestamp(), 20)
-        response = vb.get_response(request)
+        response = asyncio.run(vb.get_response(request))
         self.assertTrue(response.status)
         self.assertEqual(response.value, self.v1[1])
         # wrong request - provider not exist
         request = ValueRequest('.'.join(['nonexistent_provider', self.v1[0]]), self.v1[1].ts.timestamp(), 20)
-        response = vb.get_response(request)
+        response = asyncio.run(vb.get_response(request))
         self.assertEqual(response.address, request.address)
         self.assertIsNone(response.value)
         self.assertFalse(response.status)

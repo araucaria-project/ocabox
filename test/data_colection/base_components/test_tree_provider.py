@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import unittest
 
@@ -32,7 +33,7 @@ class TreeProviderTest(unittest.TestCase):
         # test when is no next provider and get_value() method compels to call nex provider
         request = ValueRequest('.'.join([self.sample_address_prefix, self.v1[0]]), self.v1[1].ts.timestamp(), 20)
         request.index = self.start_index-1  # set manually index
-        response = tbp.get_response(request)
+        response = asyncio.run(tbp.get_response(request))
         self.assertEqual(response.value, self.v1[1])
         self.assertTrue(response.status)
         self.assertIsNone(response.error)

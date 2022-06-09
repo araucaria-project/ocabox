@@ -28,7 +28,7 @@ class TreeBaseProvider(TreeComponent, ABC):
         super().__init__(component_name=component_name, **kwargs)
         self._subcontractor: ProvidesResponseProtocol = subcontractor
 
-    def get_value(self, request: ValueRequest) -> Value or None:
+    async def get_value(self, request: ValueRequest) -> Value or None:
         """
         This is the main method of generating a return value from a response.
         A method can raise an OBStructureError error if the address is not directed to that component but to components
@@ -44,7 +44,7 @@ class TreeBaseProvider(TreeComponent, ABC):
         """
         raise OBStructureError
 
-    def get_response(self, request: ValueRequest) -> ValueResponse:
+    async def get_response(self, request: ValueRequest) -> ValueResponse:
         """
         This is the main method that will be called to get a response to a given request. It requires a defined
         get_value() method to work properly. If there are any problems reading the address, an empty response will be
@@ -54,7 +54,7 @@ class TreeBaseProvider(TreeComponent, ABC):
         :return: ValueResponse
         """
         try:
-            v = self.get_value(request)
+            v = await self.get_value(request)
             if isinstance(v, Value) or v is None:
                 return ValueResponse(request.address, v, True)
             logger.error(f'Method get_value() returned wrong type, expected Value or None')
@@ -63,7 +63,7 @@ class TreeBaseProvider(TreeComponent, ABC):
         except OBStructureError:
             if self._subcontractor:
                 try:
-                    return self._subcontractor.get_response(request)
+                    return await self._subcontractor.get_response(request)
                 except AttributeError:
                     re = ResponseError(3002, '', repr(self), 'CRITICAL')
                     logger.warning(f"Provider try call subcontractor but he doesn't has method get_response()")

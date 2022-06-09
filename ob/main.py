@@ -3,8 +3,8 @@ import asyncio
 import logging
 import sys
 
-from ob.data_colection.value_broker import ValueBroker
-from ob.data_colection.value_cache import ValueCache
+from ob.data_colection.base_components.tree_base_broker import TreeBaseBroker
+from ob.data_colection.base_components.tree_provider import TreeProvider
 from ob.router.request_solver import RequestSolver
 from ob.router.value_router import ValueRouter
 
@@ -24,8 +24,8 @@ async def gather_coro(c, c2):
 def main(argv):
     logging.basicConfig(level=logging.INFO)
 
-    vc = ValueCache(None,'sample_telescope')
-    vb = ValueBroker([vc])
+    vc = TreeProvider('sample_provider_1', 'sample_telescope')
+    vb = TreeBaseBroker('sample_broker_1', [vc])
     rr = RequestSolver(vb)
     vr = ValueRouter(rr)
     coro = vr.main_coroutine()

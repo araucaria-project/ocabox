@@ -25,7 +25,7 @@ class TreeComponent(ABC):
         self._component_name: str = component_name  # this is name of tree component, used for debug and errors
 
     @abstractmethod
-    def get_response(self, request: ValueRequest) -> ValueResponse:
+    async def get_response(self, request: ValueRequest) -> ValueResponse:
         """
         This method return response for given request.
 
@@ -43,7 +43,7 @@ class TreeComponent(ABC):
 class ProvidesResponseProtocol(Protocol):
     _component_name: str
 
-    def get_response(self, request: ValueRequest) -> ValueResponse:
+    async def get_response(self, request: ValueRequest) -> ValueResponse:
         """
         This method return response for given request.
 
@@ -56,4 +56,3 @@ class ProvidesResponseProtocol(Protocol):
 @runtime_checkable
 class AddressedResponderProtocol (ProvidesResponseProtocol, AddressedProtocol, Protocol):
     pass
-

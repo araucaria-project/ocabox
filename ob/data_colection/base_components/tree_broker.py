@@ -26,9 +26,9 @@ class TreeBroker(TreeBaseBroker, AddressDispatcher):
         super().__init__(component_name=component_name, list_providers=list_providers, source_name=source_name,
                          **kwargs)
 
-    def get_response(self, request: ValueRequest) -> ValueResponse:
+    async def get_response(self, request: ValueRequest) -> ValueResponse:
         # docstring is imported from parent
         # TODO Czy sprawdzać czy adres jest tego komponentu jest poprawny? Poprzedni elemęt decyduje gdzie wysłać
         #  zapytanie ale może oszukać czy sprawdzać to? MIKOŁAJ
         request.index += 1
-        return super().get_response(request)
+        return await super().get_response(request)

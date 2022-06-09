@@ -39,7 +39,7 @@ class RequestSolver(BaseRequestSolver):
             # try to get response
             # get_response method shouldn't raise any errors !!!
             try:
-                v_response = self.data_provider.get_response(v_request)
+                v_response = await self.data_provider.get_response(v_request)
             except Exception as e:
                 logger.error(f'{str(e)}')
                 re = ResponseError(4002, '', repr(self), 'CRITICAL')

@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import unittest
 
@@ -32,13 +33,13 @@ class TreeBrokerTest(unittest.TestCase):
         # good request
         request = ValueRequest('.'.join([broker_source_name, self.vp1.get_source_name(), self.v1[0]]),
                                self.v1[1].ts.timestamp(), 20)
-        response = vb.get_response(request)
+        response = asyncio.run(vb.get_response(request))
         self.assertTrue(response.status)
         self.assertEqual(response.value, self.v1[1])
         # wrong request - provider not exist
         request = ValueRequest('.'.join([broker_source_name, 'nonexistent_provider', self.v1[0]]),
                                self.v1[1].ts.timestamp(), 20)
-        response = vb.get_response(request)
+        response = asyncio.run(vb.get_response(request))
         self.assertEqual(response.address, request.address)
         self.assertIsNone(response.value)
         self.assertFalse(response.status)

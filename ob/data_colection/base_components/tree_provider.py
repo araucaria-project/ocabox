@@ -3,7 +3,6 @@ import logging
 from ob.data_colection.base_components.address_dispatcher import AddressDispatcher
 from ob.data_colection.base_components.tree_base_provider import TreeBaseProvider
 from ob.data_colection.base_components.tree_component import ProvidesResponseProtocol
-from ob.data_colection.coded_error import OBStructureError
 from ob.data_colection.value import Value
 from ob.data_colection.value_call import ValueRequest, ValueResponse
 
@@ -27,11 +26,11 @@ class TreeProvider(TreeBaseProvider, AddressDispatcher):
                  **kwargs):
         super().__init__(component_name=component_name, subcontractor=subcontractor, source_name=source_name, **kwargs)
 
-    def get_value(self, request: ValueRequest) -> Value or None:
+    async def get_value(self, request: ValueRequest) -> Value or None:
         # docstring is imported from parent
-        super().get_value(request=request)
+        return await super().get_value(request=request)
 
-    def get_response(self, request: ValueRequest) -> ValueResponse:
+    async def get_response(self, request: ValueRequest) -> ValueResponse:
         # docstring is imported from parent
         request.index += 1
-        return super().get_response(request)
+        return await super().get_response(request)
