@@ -6,6 +6,7 @@ from typing import ClassVar
 from ob.data_colection.address import Address
 from ob.data_colection.response_error import ResponseError
 from ob.data_colection.value import Value
+from ob.ob_config import SingletonConfig
 
 logger = logging.getLogger(__name__)
 
@@ -13,13 +14,10 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ValueExchange:
     STANDARD_KEYS: ClassVar[list] = []  # master keys that store essential data
-    _CONVERTING_TYPES: ClassVar[list] = [Address, Value, ResponseError]  # TODO klasa po której te wszystkie dziedzicza i mająwszystkie to_dict()
+    _CONVERTING_TYPES: ClassVar[list] = [Address, Value, ResponseError]
 
     @classmethod
     def from_dict(cls, dict_):
-        # TODO czy podczas tworzenia klast z słownika jak nie ma w nimwszystkich potrzebnych wartości to ma być błąd
-        #  czy jakoś go obsłurzyc? MIKOŁAJ
-        #  Jak przechwytywać to zmienić też w RequestSolver.get_answer
         """
         Cteate this class from given dict of fields. The dictionary must have all the necessary fields.
         Redundant fields are ignored.
@@ -52,8 +50,8 @@ class ValueRequest(ValueExchange):
     # master keys that store essential data
     STANDARD_KEYS: ClassVar[list] = list(set(ValueExchange.STANDARD_KEYS + ['address', 'timestamp', 'delta']))
     address: str or Address or dict
-    timestamp: datetime or float  # now
-    delta: float  #todo z konfiguracji domyslna wartosc
+    timestamp: datetime or float or None = None  # default - now
+    delta: float or None = None  # default - get from config
     index: int = field(init=False, default=0)
 
     def __post_init__(self):
@@ -65,13 +63,17 @@ class ValueRequest(ValueExchange):
         else:
             self.address = Address(self.address)  # I know, wrong typing but it must be so, raise AddressError here
         # check date
-        if isinstance(self.timestamp, float):
+        if self.timestamp is None:
+            self.timestamp = datetime.now()
+        elif isinstance(self.timestamp, float):
             self.timestamp = datetime.fromtimestamp(self.timestamp)
         elif isinstance(self.timestamp, datetime):
             pass
         else:
             raise ValueError
         # check delta
+        if self.delta is None:
+            self.delta = SingletonConfig.get_config()[type(self).__name__]['delta'].get()
         self.delta = float(self.delta)  # this raise ValueError if is wrong type
 
 
@@ -80,7 +82,7 @@ class ValueResponse(ValueExchange):
     # master keys that store essential data
     STANDARD_KEYS: ClassVar[list] = list(set(ValueExchange.STANDARD_KEYS + ['address', 'value', 'status', 'error']))
     address: str or Address
-    value: Value or None
+    value: Value or None = None
     status: bool = field(default=True)  # if false that mean response has some errors
     error: ResponseError or None = field(default=None)
 

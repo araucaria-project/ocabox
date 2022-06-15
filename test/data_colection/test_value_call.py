@@ -5,6 +5,7 @@ from ob.data_colection.address import Address
 from ob.data_colection.response_error import ResponseError
 from ob.data_colection.value import Value
 from ob.data_colection.value_call import ValueRequest, ValueResponse
+from ob.ob_config import OBConfig
 
 
 class ValueExchangeTest(unittest.TestCase):
@@ -12,6 +13,13 @@ class ValueExchangeTest(unittest.TestCase):
 
 
 class ValueRequestTest(unittest.TestCase):
+
+    def setUp(self):
+        super().setUp()
+        self._cfg = OBConfig()
+
+    def tearDown(self) -> None:
+        super().tearDown()
 
     def test_from_dict(self):
         """
@@ -26,6 +34,8 @@ class ValueRequestTest(unittest.TestCase):
         self.assertFalse(hasattr(vr, 'trash'))
         self.assertIsInstance(vr.address, Address)
         self.assertIsInstance(vr.timestamp, datetime)
+        d = {'timestamp': datetime.now()}
+        vr = ValueRequest.from_dict(d)
 
     def test_to_dict(self):
         expected_dict = {'address': {'adr': 'aaa.bbb.ccc'},
@@ -36,6 +46,15 @@ class ValueRequestTest(unittest.TestCase):
         self.assertNotIsInstance(out_dict['address'], Address, msg='Object Address has not implemented '
                                                                    'method to_dict()')
         self.assertDictEqual(out_dict, expected_dict)
+
+    def test_default_config(self):
+        expected_delta = self._cfg.config['ValueRequest']['delta'].get()
+        vr = ValueRequest('aaa.bbb.ccc')
+        # delta
+        self.assertEqual(expected_delta, vr.delta)
+        self.assertTrue(type(vr.delta) == int or float)
+        # timestamp
+        self.assertTrue(isinstance(vr.timestamp, datetime))
 
 
 class ValueResponseTest(unittest.TestCase):

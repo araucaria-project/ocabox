@@ -47,7 +47,7 @@ def main(argv):
             vr_stop = asyncio.gather(vr.get_stop_task(), return_exceptions=True)
             loop.run_until_complete(vr_stop)
 
-            # make sure if all task is finished (router task and every others in this loop)
+            # make sure if all task is finished (router task and every other in this loop)
             all_tasks = asyncio.all_tasks(loop)
             if not all_tasks:
                 logging.info('All task in loop is finished')

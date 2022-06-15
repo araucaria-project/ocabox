@@ -44,7 +44,7 @@ class Value:
         return d
 
 
-class OBValueError(BaseCodedError):
+class TreeValueError(BaseCodedError):
     """
     This is a base exception with code for Value errors.
 

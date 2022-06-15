@@ -6,7 +6,7 @@ from typing import List, Tuple
 from ob.data_colection.address import AddressError
 from ob.data_colection.base_components.tree_base_provider import TreeBaseProvider
 from ob.data_colection.base_components.tree_component import ProvidesResponseProtocol
-from ob.data_colection.value import Value, OBValueError
+from ob.data_colection.value import Value, TreeValueError
 from ob.data_colection.value_call import ValueRequest
 
 
@@ -24,9 +24,9 @@ class TreeBaseProviderTest(unittest.TestCase):
             if value_name == 'address_error':
                 raise AddressError
             if value_name == 'value_error_coded':
-                raise OBValueError(None, 10, '')
+                raise TreeValueError(None, 10, '')
             if value_name == 'value_error':
-                raise OBValueError
+                raise TreeValueError
             if value_name == 'wrong_type':
                 return 34
             if value_name == 'crash':
@@ -102,7 +102,7 @@ class TreeBaseProviderTest(unittest.TestCase):
 
     def test_get_response_value_error(self):
         """
-        test when get_value() method call OBValueError
+        test when get_value() method call TreeValueError
         :return:
         """
         tbp = self.vp1
@@ -112,7 +112,7 @@ class TreeBaseProviderTest(unittest.TestCase):
         response = asyncio.run(tbp.get_response(request))
         self.assertEqual(response.value, None)
         self.assertFalse(response.status)
-        self.assertEqual(response.error.code, OBValueError.CODE_GROUP)  # code CODE_GROUP means no code was specified
+        self.assertEqual(response.error.code, TreeValueError.CODE_GROUP)  # code CODE_GROUP means no code was specified
 
         # with specific code
         request = ValueRequest('.'.join([self.sample_address_prefix, 'value_error_coded']),

@@ -3,9 +3,9 @@ from abc import ABC
 
 from ob.data_colection.address import AddressError
 from ob.data_colection.base_components.tree_component import TreeComponent, ProvidesResponseProtocol
-from ob.data_colection.coded_error import OBStructureError
+from ob.data_colection.coded_error import TreeStructureError
 from ob.data_colection.response_error import ResponseError
-from ob.data_colection.value import Value, OBValueError
+from ob.data_colection.value import Value, TreeValueError
 from ob.data_colection.value_call import ValueRequest, ValueResponse
 
 logger = logging.getLogger(__name__)
@@ -31,18 +31,18 @@ class TreeBaseProvider(TreeComponent, ABC):
     async def get_value(self, request: ValueRequest) -> Value or None:
         """
         This is the main method of generating a return value from a response.
-        A method can raise an OBStructureError error if the address is not directed to that component but to components
-        deeper in the tree. The method can also raise OBValueError, AddressError errors if you encounter any problems
+        A method can raise an TreeStructureError error if the address is not directed to that component but to components
+        deeper in the tree. The method can also raise TreeValueError, AddressError errors if you encounter any problems
         generating the response. The errors may contain the appropriate error codes. This will send an error response
         to the client.
 
         :param request: ValueRequest
-        :raise OBStructureError: when method can't provide value and algorythm should looking a value in sub provider
-        :raise OBValueError: when the value cannot be generated and an error response should be returned to the client
+        :raise TreeStructureError: when method can't provide value and algorythm should looking a value in sub provider
+        :raise TreeValueError: when the value cannot be generated and an error response should be returned to the client
         :raise AddressError: when address is wrong or damaged
         :return: Value
         """
-        raise OBStructureError
+        raise TreeStructureError
 
     async def get_response(self, request: ValueRequest) -> ValueResponse:
         """
@@ -60,7 +60,7 @@ class TreeBaseProvider(TreeComponent, ABC):
             logger.error(f'Method get_value() returned wrong type, expected Value or None')
             re = ResponseError(2002, 'Can not create value', repr(self))
             return ValueResponse(request.address, None, False, re)
-        except OBStructureError:
+        except TreeStructureError:
             if self._subcontractor:
                 try:
                     return await self._subcontractor.get_response(request)
@@ -73,7 +73,7 @@ class TreeBaseProvider(TreeComponent, ABC):
                 re = ResponseError(3001, '', repr(self), 'CRITICAL')
                 logger.info(f'Provider try call subcontractor but he does not exist')
                 return ValueResponse(request.address, None, False, re)
-        except OBValueError as e:
+        except TreeValueError as e:
             re = ResponseError(e.code, e.message, repr(self))
             return ValueResponse(request.address, None, False, re)
         except AddressError as e:

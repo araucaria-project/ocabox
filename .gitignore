@@ -3,3 +3,6 @@
 ob/__pycache__/
 
 ob/router/__pycache__/
+
+ob/configuration/*
+!ob/configuration/.gitkeep

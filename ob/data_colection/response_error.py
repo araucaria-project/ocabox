@@ -1,8 +1,8 @@
 import logging
 
 from ob.data_colection.address import AddressError
-from ob.data_colection.coded_error import OBStructureError, OBOtherError
-from ob.data_colection.value import OBValueError
+from ob.data_colection.coded_error import TreeStructureError, TreeOtherError
+from ob.data_colection.value import TreeValueError
 
 logger = logging.getLogger(__name__)
 
@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 class ResponseError:
 
     SEVERITY_LEVELS = ['NORMAL', 'CRITICAL']
-    SUPPORTED_ERRORS = [OBValueError, OBStructureError, AddressError, OBOtherError]
+    SUPPORTED_ERRORS = [TreeValueError, TreeStructureError, AddressError, TreeOtherError]
 
     def __init__(self, code: int, message: str, component_name: str, severity: str = 'NORMAL'):
         self.code: int = code

@@ -16,6 +16,7 @@ setup(
         'setuptools~=62.1.0',
         'pyzmq~=22.3.0',
         'msgpack~=1.0.3',
+        'confuse~=1.7.0',
     ],
     dependency_links=[
 

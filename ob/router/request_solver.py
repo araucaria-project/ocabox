@@ -22,7 +22,7 @@ class RequestSolver(BaseRequestSolver):
             # try to load data into ValueRequest object
             try:
                 v_request = ValueRequest.from_dict(r)
-            except (ValueError, AddressError):
+            except (ValueError, AddressError, TypeError):
                 # can not create ValueRequest object (data is damaged) - return empty response witch error
                 logger.error('Can not convert request dictionary to request object.')
                 re = ResponseError(4001, 'Can not build request from ordered data', repr(self))

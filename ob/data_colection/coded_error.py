@@ -60,7 +60,7 @@ class BaseCodedError(Exception, ABC):
         return ''
 
 
-class OBStructureError(BaseCodedError):
+class TreeStructureError(BaseCodedError):
     """
     This is a base exception with code for project structure errors.
 
@@ -82,7 +82,7 @@ class OBStructureError(BaseCodedError):
         super().__init__(message=message, code=code, **kwargs)
 
 
-class OBOtherError(BaseCodedError):
+class TreeOtherError(BaseCodedError):
     CODE_GROUP = 4000
     _KNOWN_LOCAL_CODES = [(1, 'Wrong request'),
                           (2, 'Application do not answer')]
