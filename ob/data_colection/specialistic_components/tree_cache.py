@@ -33,6 +33,7 @@ class TreeCache(TreeBaseProvider):
         task: Task or None
 
     async def get_value(self, request: ValueRequest, **kwargs) -> Value or None:
+        # docstring is imported from parent
         recall = kwargs.get('recall', 0)
         address = request.address
         known_value = self._find_in_known_values(address)
@@ -65,6 +66,7 @@ class TreeCache(TreeBaseProvider):
         raise TreeStructureError
 
     def _on_subcontractor_return(self, result: ValueResponse):
+        # docstring is imported from parent
         kv = self._find_in_known_values(result.address)
         self._update_known_value(result.address, result.value, kv)
         self._remove_the_value_lock(result.address, kv)
