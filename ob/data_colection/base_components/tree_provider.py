@@ -26,7 +26,7 @@ class TreeProvider(TreeBaseProvider, AddressDispatcher):
                  **kwargs):
         super().__init__(component_name=component_name, subcontractor=subcontractor, source_name=source_name, **kwargs)
 
-    async def get_value(self, request: ValueRequest) -> Value or None:
+    async def get_value(self, request: ValueRequest, **kwargs) -> Value or None:
         # docstring is imported from parent
         return await super().get_value(request=request)
 

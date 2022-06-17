@@ -13,6 +13,9 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ValueExchange:
+    """
+    This is base class to representing communication inside tree
+    """
     STANDARD_KEYS: ClassVar[list] = []  # master keys that store essential data
     _CONVERTING_TYPES: ClassVar[list] = [Address, Value, ResponseError]
 
@@ -22,6 +25,9 @@ class ValueExchange:
         Cteate this class from given dict of fields. The dictionary must have all the necessary fields.
         Redundant fields are ignored.
         :param dict_: Dictionary witch class fields
+        :raise TypeError: if the dictionary does not contain the required fields
+        :raise AddressError: if the address is incorrect
+        :raise ValueError: If the other value is invalid
         :return: instance of this class
         """
         class_fields = {f.name for f in fields(cls)}
@@ -47,6 +53,9 @@ class ValueExchange:
 
 @dataclass
 class ValueRequest(ValueExchange):
+    """
+    This is a base object with representing request
+    """
     # master keys that store essential data
     STANDARD_KEYS: ClassVar[list] = list(set(ValueExchange.STANDARD_KEYS + ['address', 'timestamp', 'delta']))
     address: str or Address or dict
@@ -79,6 +88,9 @@ class ValueRequest(ValueExchange):
 
 @dataclass
 class ValueResponse(ValueExchange):
+    """
+    This is a base object with representing response
+    """
     # master keys that store essential data
     STANDARD_KEYS: ClassVar[list] = list(set(ValueExchange.STANDARD_KEYS + ['address', 'value', 'status', 'error']))
     address: str or Address

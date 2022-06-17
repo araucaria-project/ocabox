@@ -28,7 +28,7 @@ class TreeBaseProvider(TreeComponent, ABC):
         super().__init__(component_name=component_name, **kwargs)
         self._subcontractor: ProvidesResponseProtocol = subcontractor
 
-    async def get_value(self, request: ValueRequest) -> Value or None:
+    async def get_value(self, request: ValueRequest, **kwargs) -> Value or None:
         """
         This is the main method of generating a return value from a response.
         A method can raise an TreeStructureError error if the address is not directed to that component but to components
@@ -43,6 +43,16 @@ class TreeBaseProvider(TreeComponent, ABC):
         :return: Value
         """
         raise TreeStructureError
+
+    def _on_subcontractor_return(self, result: ValueResponse):
+        """
+        This method is run after receiving a response from the subcontractor. It can be used to decorate a reply or
+        delete temporary data.
+
+        :param result: generated response returned to the client
+        :return: None
+        """
+        pass
 
     async def get_response(self, request: ValueRequest) -> ValueResponse:
         """
@@ -63,7 +73,9 @@ class TreeBaseProvider(TreeComponent, ABC):
         except TreeStructureError:
             if self._subcontractor:
                 try:
-                    return await self._subcontractor.get_response(request)
+                    result = await self._subcontractor.get_response(request)
+                    self._on_subcontractor_return(result)
+                    return result
                 except AttributeError:
                     re = ResponseError(3002, '', repr(self), 'CRITICAL')
                     logger.warning(f"Provider try call subcontractor but he doesn't has method get_response()")
