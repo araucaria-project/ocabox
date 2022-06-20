@@ -24,6 +24,9 @@ class Value:
     def __lt__(self, other):
         return self.v < other.v
 
+    def __copy__(self):
+        return Value(self.v, self.ts, self.type)
+
     def is_expired(self, dt: datetime, tolerance: timedelta = None):
         """
         This method check if date of this value is older then give date minus tolerance.

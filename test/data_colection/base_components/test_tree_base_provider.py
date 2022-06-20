@@ -13,7 +13,7 @@ from ob.data_colection.value_call import ValueRequest
 class TreeBaseProviderTest(unittest.TestCase):
     class SampleTestValueProvider(TreeBaseProvider):
 
-        async def get_value(self, request: ValueRequest) -> Value or None:
+        async def get_value(self, request: ValueRequest, **kwargs) -> Value or None:
             address = request.address
             value_name = address[address.get_last_index()]
             for n, v in self.test_values:

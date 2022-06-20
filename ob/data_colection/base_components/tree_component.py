@@ -38,6 +38,9 @@ class TreeComponent(ABC):
     def __repr__(self):
         return self._component_name
 
+    def get_name(self):
+        return self._component_name
+
 
 @runtime_checkable
 class ProvidesResponseProtocol(Protocol):

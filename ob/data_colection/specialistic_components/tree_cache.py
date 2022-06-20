@@ -20,7 +20,7 @@ class TreeCache(TreeBaseProvider):
     def __init__(self, component_name: str, subcontractor: ProvidesResponseProtocol = None, **kwargs):
         super().__init__(component_name=component_name, subcontractor=subcontractor, **kwargs)
         # self.known_values: List[Tuple[Address, Value, Task]] = []  # list (address :Address, value: Value, task: Task)
-        self.known_values: List[TreeCache._KnownValue] = []  # list (address :Address, value: Value, task: Task)
+        self._known_values: List[TreeCache._KnownValue] = []  # list (address :Address, value: Value, task: Task)
         self._max_recall = 1  # After how many times he waits for the previous task, he asks yourself.
         if self._max_recall < 1:
             logger.warning(f"The _max_recall value is lover than one. It is unacceptable so will be set to 1 !")
@@ -29,7 +29,7 @@ class TreeCache(TreeBaseProvider):
     @dataclass
     class _KnownValue:
         address: Address
-        value: Value
+        value: Value or None
         task: Task or None
 
     async def get_value(self, request: ValueRequest, **kwargs) -> Value or None:
@@ -37,9 +37,11 @@ class TreeCache(TreeBaseProvider):
         recall = kwargs.get('recall', 0)
         address = request.address
         known_value = self._find_in_known_values(address)
+        if not known_value:
+            known_value = self._KnownValue(address, None, None)
+            self._known_values.append(known_value)
         value = known_value.value if self._value_meets_requirements(known_value, request.timestamp,
                                                                     request.delta) else None
-
         # found in known values
         if value:
             return value
@@ -48,14 +50,12 @@ class TreeCache(TreeBaseProvider):
                 # The newly downloaded value does not meet the requirements
                 logger.info(f'Retry retrieving content from the cache but a value was not supplied by the previous '
                             f'task. Nr recall {recall} / {self._max_recall}')
-
         task = known_value.task
         # not found and no one asks about it
         if not task or task.done():
             known_value.task = None
             known_value.task = asyncio.current_task()
             raise TreeStructureError
-
         # not found but someone asks about it and waiting for answer
         if task and not task.done():
             if recall < self._max_recall:
@@ -68,6 +68,8 @@ class TreeCache(TreeBaseProvider):
     def _on_subcontractor_return(self, result: ValueResponse):
         # docstring is imported from parent
         kv = self._find_in_known_values(result.address)
+        if not kv:
+            logger.error(f'Can not find current value in list cached values and should be')
         self._update_known_value(result.address, result.value, kv)
         self._remove_the_value_lock(result.address, kv)
 
@@ -79,7 +81,7 @@ class TreeCache(TreeBaseProvider):
         :return: object representing stored value for given address or None if not exists
         """
         # check if the value is in cache
-        for kv in self.known_values:
+        for kv in self._known_values:
             if kv.address == address:
                 return kv
         #  return None if value is not in cache
@@ -97,6 +99,8 @@ class TreeCache(TreeBaseProvider):
         """
         #  check that the value meets the requirements
         t_delta = timedelta(seconds=delta)
+        if not kv.value:
+            return False
         return not kv.value.is_expired(ts, t_delta)
 
     def _update_known_value(self, address: Address, value: Value, known_value: _KnownValue = None):
@@ -115,10 +119,10 @@ class TreeCache(TreeBaseProvider):
             # if value isn't on list yet
             if not kv:
                 kv = self._KnownValue(address=address, value=value, task=None)
-                self.known_values.append(kv)
+                self._known_values.append(kv)
                 return
             # if new provided data is earlier than the date currently stored in list
-            if kv.value.ts < value.ts:
+            if not kv.value or kv.value.ts < value.ts:
                 kv.value = value
 
     def _remove_the_value_lock(self, address, known_value: _KnownValue = None):
@@ -127,6 +131,8 @@ class TreeCache(TreeBaseProvider):
             current_task = asyncio.current_task()
         except RuntimeError:
             logger.warning(f'Can not find current task for request')
+            return
+        if not kv:
             return
         if kv.task == current_task:
             kv.task = None
