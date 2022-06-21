@@ -1,4 +1,19 @@
-ValueRequest:
-  delta: 60
+router:
+  DefaultRouter:
+    port: 5559
+    url: '*'
+    protocol: tcp
+  SampleTestRouter:
+    port: 5560
+    url: '*'
+    protocol: tcp
 
+client:
+  DefaultClient:
+    port: 5559
+    url: localhost
+    protocol: tcp
 
+tree:
+  ValueRequest:
+    delta: 60

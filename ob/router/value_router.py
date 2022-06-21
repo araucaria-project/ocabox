@@ -2,9 +2,11 @@ import asyncio
 import logging
 from typing import List
 
+import confuse
 import zmq
 from zmq.asyncio import Context, Poller
 
+from ob.ob_config import SingletonConfig
 from ob.router.message_serializer import MessageSerializer
 from ob.router.base_request_solver import BaseRequestSolver
 
@@ -12,16 +14,17 @@ logger = logging.getLogger(__name__)
 
 
 class ValueRouter:
-    __name__ = 'ValueRouter'
+    DEFAULT_NAME = 'DefaultRouter'
 
-    def __init__(self, request_solver: BaseRequestSolver, name: str = None, port: int = 5559):
-        self.name = name if name else ValueRouter.__name__
+    def __init__(self, request_solver: BaseRequestSolver or None, name: str = None, port: int = SingletonConfig.
+                 get_config()['router'][DEFAULT_NAME]['port'].get()):
+        self.name = name if name else ValueRouter.DEFAULT_NAME
         # request solver
-        self.request_solver: BaseRequestSolver = request_solver
+        self.request_solver: BaseRequestSolver or None = request_solver
         # OMQ
-        self.context = Context()  # TODO Context.instance() ? jeden czy wiele kontekstów?
+        self.context = Context()  # TODO One for all router (Context.instance()) or one for everyone router (Context())?
         self.frontend = self.context.socket(zmq.ROUTER)
-        self.frontend.bind(f"tcp://*:{port}")
+        self.frontend.bind(f"{self._get_cfg('protocol', 'tcp')}://{self._get_cfg('url', '*')}:{port}")
         # Tasks
         self._main_task_name = f'{self.name}_main_task'
         self._main_task = None
@@ -33,6 +36,20 @@ class ValueRouter:
         self._stop_task = None
         # async loop
         self._current_loop = None  # remember async loop with router working
+
+    def _get_cfg(self, name_cfg: str, default=None):
+        """
+        The method looks for a value in the configuration file and returns it.
+
+        :param name_cfg: name of config value
+        :param default: default value if key not exist in config
+        :return: config value or None if method can't find it
+        """
+        try:
+            value = SingletonConfig.get_config()['router'][self.name][name_cfg].get()
+        except confuse.exceptions.NotFoundError:
+            value = default
+        return value
 
     async def _ping(self):
         while True:
@@ -92,6 +109,7 @@ class ValueRouter:
                 self._message_tasks.remove(task)
             except ValueError:
                 logger.error('Unexpected ValueError. Can not remove task from task list.')
+
         try:
             target, data_list = self._open_envelope(message)
         except ValueError:

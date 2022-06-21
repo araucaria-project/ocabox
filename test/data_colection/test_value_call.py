@@ -48,7 +48,7 @@ class ValueRequestTest(unittest.TestCase):
         self.assertDictEqual(out_dict, expected_dict)
 
     def test_default_config(self):
-        expected_delta = self._cfg.config['ValueRequest']['delta'].get()
+        expected_delta = self._cfg.config['tree']['ValueRequest']['delta'].get()
         vr = ValueRequest('aaa.bbb.ccc')
         # delta
         self.assertEqual(expected_delta, vr.delta)

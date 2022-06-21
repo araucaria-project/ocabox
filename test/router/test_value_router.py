@@ -1,6 +1,8 @@
 import asyncio
 import logging
 import unittest
+
+from ob.ob_config import SingletonConfig
 from ob.router.value_router import ValueRouter
 
 logger = logging.getLogger(__name__)
@@ -35,6 +37,7 @@ class ValueRouterTest(unittest.TestCase):
     def test_routers_name_conflict(self):
         """
         the test checks if it is not possible to loop two routers with the same name
+
         :return:
         """
         name1 = 'router1'
@@ -54,6 +57,7 @@ class ValueRouterTest(unittest.TestCase):
     def test_stop_router(self):
         """
         This test check, if method stop() correctly close all router task
+
         :return:
         """
         name1 = 'router1'
@@ -73,6 +77,7 @@ class ValueRouterTest(unittest.TestCase):
     def test_router_is_stopped(self):
         """
         This test check if .is_stopped() method work good
+
         :return:
         """
         name1 = 'router1'
@@ -99,6 +104,7 @@ class ValueRouterTest(unittest.TestCase):
     def test_router_stop_task(self):
         """
         This test check if stop task for router work correct
+
         :return:
         """
         name1 = 'router1'
@@ -117,16 +123,35 @@ class ValueRouterTest(unittest.TestCase):
         all_tasks = asyncio.all_tasks(self.loop)
         self.assertFalse(len(all_tasks) == 0)
 
-        async def foo2():
+        async def coro2():
             # it should be finished immediately if it waiting that mean is something wrong
             await asyncio.wait_for(stop_task, timeout=1.0)
-        self.loop.run_until_complete(foo2())
+        self.loop.run_until_complete(coro2())
         stop_task = vr.get_stop_task()
         self.assertIsNone(stop_task)  # here stop task finished so it can't exist in router
 
         #  now shouldn't be any task in loop
         all_tasks = asyncio.all_tasks(self.loop)
         self.assertTrue(len(all_tasks) == 0)
+
+    def test__get_cfg(self):
+        """
+        test method _get_cfg()
+
+        :return:
+        """
+        name = 'SampleTestRouter'
+        vr = ValueRouter(None, name=name)
+        # try to get some value from config
+        port = vr._get_cfg('port')
+        self.assertEqual(port, SingletonConfig.get_config()['router'][name]['port'].get())
+        # try to get no existing value from config
+        port = vr._get_cfg('port_not_existing')
+        self.assertIsNone(port)
+        # try to get no existing value from config witch default value
+        default = 'sample'
+        port = vr._get_cfg('port_not_existing', default)
+        self.assertEqual(port, default)
 
 
 if __name__ == '__main__':

@@ -9,7 +9,7 @@ from ob.data_colection.base_components.tree_provider import TreeProvider
 from ob.data_colection.coded_error import TreeStructureError
 from ob.data_colection.specialistic_components.tree_cache import TreeCache
 from ob.data_colection.value import Value
-from ob.data_colection.value_call import ValueRequest, ValueResponse
+from ob.data_colection.value_call import ValueRequest
 
 
 class TreeCacheTest(unittest.TestCase):
@@ -119,6 +119,7 @@ class TreeCacheTest(unittest.TestCase):
     def test_flow_get_from_cache(self):
         """
         Test of information flow through TreeCache block. Ask about any value when cache is empty.
+
         :return:
         """
 
