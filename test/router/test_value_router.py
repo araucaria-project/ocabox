@@ -1,8 +1,10 @@
 import asyncio
 import logging
 import unittest
+from typing import List
 
 from ob.ob_config import SingletonConfig
+from ob.router.base_request_solver import BaseRequestSolver
 from ob.router.value_router import ValueRouter
 
 logger = logging.getLogger(__name__)
@@ -80,7 +82,7 @@ class ValueRouterTest(unittest.TestCase):
 
         :return:
         """
-        name1 = 'router1'
+        name1 = 'SampleTestRouter'
         vr = ValueRouter(None, name=name1, port=5559)
 
         async def coro():
@@ -107,7 +109,7 @@ class ValueRouterTest(unittest.TestCase):
 
         :return:
         """
-        name1 = 'router1'
+        name1 = 'SampleTestRouter'
         vr = ValueRouter(None, name=name1, port=5559)
 
         async def coro():
@@ -117,18 +119,18 @@ class ValueRouterTest(unittest.TestCase):
         self.loop.run_until_complete(coro())
         vr.stop()
         stop_task = vr.get_stop_task()
-        self.assertIsNotNone(stop_task)  # here stop task was create but not run so it must exist and can't finished
+        self.assertIsNotNone(stop_task)  # here stop task was create but not run, so it must exist and can't finish
 
-        # here should be exist some task in loop because stop task don't finished yet
+        # here should be existing some task in loop because stop task don't finished yet
         all_tasks = asyncio.all_tasks(self.loop)
         self.assertFalse(len(all_tasks) == 0)
 
         async def coro2():
-            # it should be finished immediately if it waiting that mean is something wrong
+            # it should be finished immediately if it's waiting that mean is something wrong
             await asyncio.wait_for(stop_task, timeout=1.0)
         self.loop.run_until_complete(coro2())
         stop_task = vr.get_stop_task()
-        self.assertIsNone(stop_task)  # here stop task finished so it can't exist in router
+        self.assertIsNone(stop_task)  # here stop task finished, so it can't exist in router
 
         #  now shouldn't be any task in loop
         all_tasks = asyncio.all_tasks(self.loop)
@@ -152,6 +154,39 @@ class ValueRouterTest(unittest.TestCase):
         default = 'sample'
         port = vr._get_cfg('port_not_existing', default)
         self.assertEqual(port, default)
+
+    def test__send_back_canceled(self):
+        """
+        Test task that returns the answer has been canceled. Checks if it will be correctly removed from the active
+        tasks list.
+
+        :return:
+        """
+        class CrashResolver(BaseRequestSolver):
+
+            async def get_answer(self, request: List[dict]) -> List[dict]:
+                await asyncio.sleep(5)
+                return [{}]
+
+        name1 = 'SampleTestRouter'
+        vr = ValueRouter(CrashResolver(None), name=name1, port=5559)
+        sample_message = [b'\x00\x80\x00A\xa7', b'', b'\x83\xa7address\x81\xa3adr\xb8sample_telescope.any_val\xa9'
+                                                     b'timestamp\xcbA\xd8\xac\xbeM\xb52@\xa5delta\xcb@4\x00\x00\x00'
+                                                     b'\x00\x00\x00']
+
+        self.assertTrue(len(asyncio.all_tasks(self.loop)) == 0)
+        self.assertTrue(len(vr._message_tasks) == 0)
+
+        async def primitive_router_main_coro():
+            task = asyncio.create_task(vr._send_back(sample_message), name=vr._message_task_name)
+            vr._message_tasks.append(task)
+            await asyncio.sleep(0)
+            task.cancel()
+            await asyncio.sleep(0)
+
+        self.loop.run_until_complete(primitive_router_main_coro())
+        self.assertTrue(len(vr._message_tasks) == 0)
+        self.assertTrue(len(asyncio.all_tasks(self.loop)) == 0)
 
 
 if __name__ == '__main__':

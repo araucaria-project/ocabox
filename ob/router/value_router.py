@@ -122,6 +122,10 @@ class ValueRouter:
             # Don't answer for incorrect requests. Close task.
             remove_task_inner()
             return
+        except asyncio.CancelledError:
+            # remove canceled task from list
+            remove_task_inner()
+            raise
         except Exception as e:
             remove_task_inner()
             logger.error(f"Router encountered an unexpected error while generating response. Task was closed and "
