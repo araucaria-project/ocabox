@@ -5,8 +5,8 @@ import sys
 
 from ob.data_colection.base_components.tree_base_broker import TreeBaseBroker
 from ob.data_colection.base_components.tree_provider import TreeProvider
-from ob.router.request_solver import RequestSolver
-from ob.router.value_router import ValueRouter
+from ob.comunication.request_solver import RequestSolver
+from ob.comunication.router import ValueRouter
 
 
 async def stop_router_timeout(vrr):

@@ -4,8 +4,8 @@ import unittest
 from typing import List
 
 from ob.ob_config import SingletonConfig
-from ob.router.base_request_solver import BaseRequestSolver
-from ob.router.value_router import ValueRouter
+from ob.comunication.base_request_solver import BaseRequestSolver
+from ob.comunication.router import ValueRouter
 
 logger = logging.getLogger(__name__)
 

@@ -7,8 +7,8 @@ import zmq
 from zmq.asyncio import Context, Poller
 
 from ob.ob_config import SingletonConfig
-from ob.router.message_serializer import MessageSerializer
-from ob.router.base_request_solver import BaseRequestSolver
+from ob.comunication.message_serializer import MessageSerializer
+from ob.comunication.base_request_solver import BaseRequestSolver
 
 logger = logging.getLogger(__name__)
 

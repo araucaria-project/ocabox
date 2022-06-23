@@ -8,7 +8,7 @@ from ob.data_colection.base_components.tree_base_provider import TreeBaseProvide
 from ob.data_colection.base_components.tree_component import ProvidesResponseProtocol
 from ob.data_colection.value import Value
 from ob.data_colection.value_call import ValueRequest
-from ob.router.request_solver import RequestSolver
+from ob.comunication.request_solver import RequestSolver
 
 logger = logging.getLogger(__name__)
 

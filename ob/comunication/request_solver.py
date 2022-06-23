@@ -6,7 +6,7 @@ from ob.data_colection.address import AddressError
 from ob.data_colection.base_components.tree_component import ProvidesResponseProtocol
 from ob.data_colection.response_error import ResponseError
 from ob.data_colection.value_call import ValueRequest, ValueResponse
-from ob.router.base_request_solver import BaseRequestSolver
+from ob.comunication.base_request_solver import BaseRequestSolver
 
 logger = logging.getLogger(__name__)
 
