@@ -119,14 +119,18 @@ class ValueRouter:
         try:
             answer = await self._solve_request(data_list)
         except ValueError:
+            # Obsolete and shouldn't have happened
             # Don't answer for incorrect requests. Close task.
             remove_task_inner()
+            logger.error(f"Router encountered a ValueError when try to solve request. Solver handled the exception "
+                         f"incorrectly")
             return
         except asyncio.CancelledError:
             # remove canceled task from list
             remove_task_inner()
             raise
         except Exception as e:
+            # shouldn't have happened
             remove_task_inner()
             logger.error(f"Router encountered an unexpected error while generating response. Task was closed and "
                          f"don't send response. Error message: {str(e)}")

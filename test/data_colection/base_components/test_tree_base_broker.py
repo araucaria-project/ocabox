@@ -16,7 +16,7 @@ class TreeBaseBrokerTest(unittest.TestCase):
 
     class SampleTestValueProvider(TreeProvider):
 
-        async def get_value(self, request: ValueRequest) -> Value or None:
+        async def get_value(self, request: ValueRequest, **kwargs) -> Value or None:
             address = request.address
             value_name = address[address.get_last_index()]
             for n, v in self.test_values:

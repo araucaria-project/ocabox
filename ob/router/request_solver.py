@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import List
 
@@ -18,31 +19,49 @@ class RequestSolver(BaseRequestSolver):
     async def get_answer(self, request: List[dict]) -> List[dict]:
         # docstring is imported from parent
         response = []
+        coroutines = []
         for r in request:
-            # try to load data into ValueRequest object
-            try:
-                v_request = ValueRequest.from_dict(r)
-            except (ValueError, AddressError, TypeError):
-                # can not create ValueRequest object (data is damaged) - return empty response witch error
-                logger.error('Can not convert request dictionary to request object.')
-                re = ResponseError(4001, 'Can not build request from ordered data', repr(self))
+            coroutines.append(self.get_single_answer(r))
+        result = await asyncio.gather(*coroutines, return_exceptions=True)
+        for r in result:
+            if not isinstance(r, Exception):
+                response.append(r)
+            else:
+                # This is a precaution against unexpected program failures. To run properly, all errors should be
+                # caught in '_get_single_answer' method.
+                logger.error(f"CRITICAL One of the sub-tasks raise some unresolved exception.")
+                re = ResponseError(4001, 'There were unexpected problems trying to respond to the request', repr(self),
+                                   'CRITICAL')
                 v_response = ValueResponse('', None, False, re)
-                response.append(v_response.to_dict())
-                continue
-            # Can not find value provider application
-            if not self.data_provider or not isinstance(self.data_provider, ProvidesResponseProtocol):
-                logger.error('Can not find value provider application.')
-                re = ResponseError(4002, '', repr(self), 'CRITICAL')
-                v_response = ValueResponse('', None, False, re)
-                response.append(v_response.to_dict())
-                continue
-            # try to get response
-            # get_response method shouldn't raise any errors !!!
-            try:
-                v_response = await self.data_provider.get_response(v_request)
-            except Exception as e:
-                logger.error(f'{str(e)}')
-                re = ResponseError(4002, '', repr(self), 'CRITICAL')
-                v_response = ValueResponse('', None, False, re)
-            response.append(v_response.to_dict())
+                resp = v_response.to_dict()
+                response.append(resp)
+        return response
+
+    async def get_single_answer(self, request: dict) -> dict:
+        response: dict
+        try:
+            v_request = ValueRequest.from_dict(request)
+        except (ValueError, AddressError, TypeError):
+            # can not create ValueRequest object (data is damaged) - return empty response witch error
+            logger.info('Can not convert request dictionary to request object.')
+            re = ResponseError(4001, 'Can not build request from ordered data', repr(self), 'CRITICAL')
+            v_response = ValueResponse('', None, False, re)
+            response = v_response.to_dict()
+            return response
+        # Can not find value provider application
+        if not self.data_provider or not isinstance(self.data_provider, ProvidesResponseProtocol):
+            logger.error('Can not find value provider application.')
+            re = ResponseError(4002, '', repr(self), 'CRITICAL')
+            v_response = ValueResponse(v_request.address, None, False, re)
+            response = v_response.to_dict()
+            return response
+        # try to get response
+        # get_response method shouldn't raise any errors !!!
+        try:
+            v_response = await self.data_provider.get_response(v_request)
+        except Exception as e:
+            logger.error(f'{str(e)}')
+            re = ResponseError(4002, '', repr(self), 'CRITICAL')
+            v_response = ValueResponse(v_request.address, None, False, re)
+        response = v_response.to_dict()
         return response
