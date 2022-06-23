@@ -24,6 +24,7 @@ class ValueExchange:
         """
         Cteate this class from given dict of fields. The dictionary must have all the necessary fields.
         Redundant fields are ignored.
+
         :param dict_: Dictionary witch class fields
         :raise TypeError: if the dictionary does not contain the required fields
         :raise AddressError: if the address is incorrect
@@ -37,6 +38,7 @@ class ValueExchange:
         """
         This method convert object to dictionary. If among the property of this class there are other classes that
         have to_dict() methods implanted, they will also be converted, creating a nested dictionary.
+
         :return: dictionary
         """
         d = {}

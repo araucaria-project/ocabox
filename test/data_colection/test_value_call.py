@@ -24,6 +24,7 @@ class ValueRequestTest(unittest.TestCase):
     def test_from_dict(self):
         """
         Test create ValueRequest class from dictionary.
+
         :return:
         """
         d = {'address': 'aaa.bbb.ccc', 'timestamp': datetime.now(), 'delta': 23, 'trash': 54}
@@ -34,8 +35,6 @@ class ValueRequestTest(unittest.TestCase):
         self.assertFalse(hasattr(vr, 'trash'))
         self.assertIsInstance(vr.address, Address)
         self.assertIsInstance(vr.timestamp, datetime)
-        d = {'timestamp': datetime.now()}
-        vr = ValueRequest.from_dict(d)
 
     def test_to_dict(self):
         expected_dict = {'address': {'adr': 'aaa.bbb.ccc'},
@@ -61,6 +60,7 @@ class ValueResponseTest(unittest.TestCase):
     def test_from_dict(self):
         """
         Test create ValueResponse class from dictionary.
+
         :return:
         """
         d = {'address': 'aaa.bbb.ccc', 'value': Value(234, datetime.now()), 'trash': 54}
