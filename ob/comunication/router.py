@@ -2,10 +2,10 @@ import asyncio
 import logging
 from typing import List
 
-import confuse
 import zmq
 from zmq.asyncio import Context, Poller
 
+from ob.comunication.base_communication_object import BaseCommunicationObject
 from ob.ob_config import SingletonConfig
 from ob.comunication.message_serializer import MessageSerializer
 from ob.comunication.base_request_solver import BaseRequestSolver
@@ -13,12 +13,12 @@ from ob.comunication.base_request_solver import BaseRequestSolver
 logger = logging.getLogger(__name__)
 
 
-class ValueRouter:
+class Router(BaseCommunicationObject):
     DEFAULT_NAME = 'DefaultRouter'
 
     def __init__(self, request_solver: BaseRequestSolver or None, name: str = None, port: int = SingletonConfig.
-                 get_config()['router'][DEFAULT_NAME]['port'].get()):
-        self.name = name if name else ValueRouter.DEFAULT_NAME
+                 get_config()['router'][DEFAULT_NAME]['port'].get(), **kwargs):
+        super().__init__(name=name, **kwargs)
         # request solver
         self.request_solver: BaseRequestSolver or None = request_solver
         # OMQ
@@ -36,20 +36,6 @@ class ValueRouter:
         self._stop_task = None
         # async loop
         self._current_loop = None  # remember async loop with router working
-
-    def _get_cfg(self, name_cfg: str, default=None):
-        """
-        The method looks for a value in the configuration file and returns it.
-
-        :param name_cfg: name of config value
-        :param default: default value if key not exist in config
-        :return: config value or None if method can't find it
-        """
-        try:
-            value = SingletonConfig.get_config()['router'][self.name][name_cfg].get()
-        except confuse.exceptions.NotFoundError:
-            value = default
-        return value
 
     async def _ping(self):
         while True:
@@ -136,7 +122,7 @@ class ValueRouter:
                          f"don't send response. Error message: {str(e)}")
             return
         try:
-            answer_envelope = ValueRouter._pack_to_envelope(target, answer)
+            answer_envelope = Router._pack_to_envelope(target, answer)
         except ValueError:
             # Don't answer for incorrect requests. Close task.
             remove_task_inner()
@@ -145,6 +131,7 @@ class ValueRouter:
         remove_task_inner()
 
     async def _main(self):
+        # Poller() is only necessary for multiple sockets. Has been added here with thoughts about the future.
         poller = Poller()
         poller.register(self.frontend, zmq.POLLIN)
         i = 0

@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import time
 import unittest
 from typing import List, Tuple
 
@@ -14,10 +15,15 @@ from ob.data_colection.value_call import ValueRequest
 
 class TreeCacheTest(unittest.TestCase):
     class SampleTestValueProvider(TreeProvider):
+        RESPONSE_DELAY = 0
 
         async def get_value(self, request: ValueRequest, **kwargs) -> Value or None:
             address = request.address
             value_name = address[address.get_last_index()]
+            self.count_current_tasks += 1
+            self.count_tasks += 1
+            await asyncio.sleep(self.response_delay)
+            self.count_current_tasks -= 1
             for n, v in self.test_values:
                 if value_name == n:
                     return v
@@ -27,6 +33,9 @@ class TreeCacheTest(unittest.TestCase):
 
         def __init__(self, component_name: str, source_name: str, test_values: List[Tuple[str, Value]],
                      subcontractor: ProvidesResponseProtocol = None, **kwargs):
+            self.response_delay = self.RESPONSE_DELAY
+            self.count_current_tasks = 0
+            self.count_tasks = 0
             self.test_values: List[Tuple[str, Value]] = test_values
             super().__init__(component_name=component_name, source_name=source_name, subcontractor=subcontractor,
                              **kwargs)
@@ -138,6 +147,36 @@ class TreeCacheTest(unittest.TestCase):
         # get value again, value should be provided by cache witch old value
         response = asyncio.run(self.tree_provider1.get_response(request))
         self.assertEqual(response.value.v, self.v1[1].v)
+
+    def test_flow_no_repeat_answer(self):
+        """
+        A test that checks if the cache has no value and several tasks ask for it at the same time, then only one task
+        should ask the provider and the rest should wait and download from the cache.
+
+        :return:
+        """
+        self.tree_provider2.response_delay = 1
+        address = Address('.'.join([self.tree_provider1.get_source_name(), self.tree_provider2.get_source_name(),
+                                    self.v1[0]]))
+        request = ValueRequest(address, self.v1[1].ts)
+        nr_of_requests = 3
+
+        # sample_list_request = [request for _ in range(nr_of_requests)]  # list witch 10 requests
+
+        async def coro():
+            request_tasks = [asyncio.create_task(self.tree_provider1.get_response(request)) for _ in
+                             range(nr_of_requests)]
+            time_start = time.time()
+
+            await asyncio.sleep(0)
+            self.assertTrue(self.tree_provider2.count_current_tasks == 1)
+            for t in request_tasks:
+                await t
+            time_end = time.time()
+            self.assertTrue(self.tree_provider2.count_tasks == 1)
+            self.assertTrue(time_end - time_start < self.tree_provider2.response_delay * nr_of_requests)
+
+        asyncio.run(coro())
 
 
 if __name__ == '__main__':

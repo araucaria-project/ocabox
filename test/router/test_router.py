@@ -5,12 +5,12 @@ from typing import List
 
 from ob.ob_config import SingletonConfig
 from ob.comunication.base_request_solver import BaseRequestSolver
-from ob.comunication.router import ValueRouter
+from ob.comunication.router import Router
 
 logger = logging.getLogger(__name__)
 
 
-class ValueRouterTest(unittest.TestCase):
+class RouterTest(unittest.TestCase):
 
     def setUp(self):
         super().setUp()
@@ -44,8 +44,8 @@ class ValueRouterTest(unittest.TestCase):
         """
         name1 = 'router1'
         name2 = 'router1'
-        vr = ValueRouter(None, name=name1, port=5559)
-        vr2 = ValueRouter(None, name=name2, port=5558)
+        vr = Router(None, name=name1, port=5559)
+        vr2 = Router(None, name=name2, port=5558)
 
         async def coro():
             vr.start()
@@ -63,7 +63,7 @@ class ValueRouterTest(unittest.TestCase):
         :return:
         """
         name1 = 'router1'
-        vr = ValueRouter(None, name=name1)
+        vr = Router(None, name=name1)
 
         async def coro():
             vr.start()
@@ -83,7 +83,7 @@ class ValueRouterTest(unittest.TestCase):
         :return:
         """
         name1 = 'SampleTestRouter'
-        vr = ValueRouter(None, name=name1, port=5559)
+        vr = Router(None, name=name1, port=5559)
 
         async def coro():
             vr.start()
@@ -110,7 +110,7 @@ class ValueRouterTest(unittest.TestCase):
         :return:
         """
         name1 = 'SampleTestRouter'
-        vr = ValueRouter(None, name=name1, port=5559)
+        vr = Router(None, name=name1, port=5559)
 
         async def coro():
             vr.start()
@@ -143,7 +143,7 @@ class ValueRouterTest(unittest.TestCase):
         :return:
         """
         name = 'SampleTestRouter'
-        vr = ValueRouter(None, name=name)
+        vr = Router(None, name=name)
         # try to get some value from config
         port = vr._get_cfg('port')
         self.assertEqual(port, SingletonConfig.get_config()['router'][name]['port'].get())
@@ -169,7 +169,7 @@ class ValueRouterTest(unittest.TestCase):
                 return [{}]
 
         name1 = 'SampleTestRouter'
-        vr = ValueRouter(CrashResolver(None), name=name1, port=5559)
+        vr = Router(CrashResolver(None), name=name1, port=5559)
         sample_message = [b'\x00\x80\x00A\xa7', b'', b'\x83\xa7address\x81\xa3adr\xb8sample_telescope.any_val\xa9'
                                                      b'timestamp\xcbA\xd8\xac\xbeM\xb52@\xa5delta\xcb@4\x00\x00\x00'
                                                      b'\x00\x00\x00']

@@ -38,6 +38,7 @@ class RequestSolver(BaseRequestSolver):
         return response
 
     async def get_single_answer(self, request: dict) -> dict:
+        # docstring is imported from parent
         response: dict
         try:
             v_request = ValueRequest.from_dict(request)

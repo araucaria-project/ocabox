@@ -6,7 +6,7 @@ import sys
 from ob.data_colection.base_components.tree_base_broker import TreeBaseBroker
 from ob.data_colection.base_components.tree_provider import TreeProvider
 from ob.comunication.request_solver import RequestSolver
-from ob.comunication.router import ValueRouter
+from ob.comunication.router import Router
 
 
 async def stop_router_timeout(vrr):
@@ -27,7 +27,7 @@ def main(argv):
     vc = TreeProvider('sample_provider_1', 'sample_telescope')
     vb = TreeBaseBroker('sample_broker_1', [vc])
     rr = RequestSolver(vb)
-    vr = ValueRouter(rr)
+    vr = Router(rr)
     coro = vr.main_coroutine()
 
     try:

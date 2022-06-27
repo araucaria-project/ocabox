@@ -19,7 +19,6 @@ class TreeCache(TreeBaseProvider):
 
     def __init__(self, component_name: str, subcontractor: ProvidesResponseProtocol = None, **kwargs):
         super().__init__(component_name=component_name, subcontractor=subcontractor, **kwargs)
-        # self.known_values: List[Tuple[Address, Value, Task]] = []  # list (address :Address, value: Value, task: Task)
         self._known_values: List[TreeCache._KnownValue] = []  # list (address :Address, value: Value, task: Task)
         self._max_recall = 1  # After how many times he waits for the previous task, he asks yourself.
         if self._max_recall < 1:
