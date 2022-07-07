@@ -32,6 +32,7 @@ class RequestSolverTest(unittest.TestCase):
             self.loop = asyncio.get_running_loop()
         except RuntimeError:
             self.loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.loop)
 
     def tearDown(self) -> None:
         try:
@@ -92,7 +93,6 @@ class RequestSolverTest(unittest.TestCase):
         rs = RequestSolver(provider)
 
         answer = self.loop.run_until_complete(rs.get_single_answer(sample_request))
-        print(answer)
         self.assertEqual(answer.get('address'), sample_request.get('address'))
         self.assertIsNotNone(answer.get('value'))
         self.assertIsNone(answer.get('error'))

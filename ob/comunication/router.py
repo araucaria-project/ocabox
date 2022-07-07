@@ -232,7 +232,8 @@ class Router(BaseCommunicationObject):
         """
         This method is responsible for canceling all router tasks and then creating a special task that is to wait
         for all canceled previously to close and the server to shut down properly. shutdown job should never be
-        canceled as this may lead to incorrect niepoprawnego wyłączenia rutera..
+        canceled as this may lead to incorrect shutdown of the router.
+
         :return:
         """
         if self.is_stopped():

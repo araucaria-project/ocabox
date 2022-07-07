@@ -17,6 +17,8 @@ setup(
         'pyzmq~=22.3.0',
         'msgpack~=1.0.3',
         'confuse~=1.7.0',
+        'astropy~=5.0.4',
+        'aiohttp~=3.8.1',
     ],
     dependency_links=[
 

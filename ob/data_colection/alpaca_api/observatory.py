@@ -1,0 +1,2057 @@
+import logging
+from datetime import datetime
+from typing import Optional, Union, List, MutableMapping, Dict, Coroutine
+
+from ob.data_colection.alpaca_api.connector import Connector
+from ob.data_colection.alpaca_api.coo import check_equatorial_coordinates, \
+    check_horizontal_coordinates
+from ob.ob_config import SingletonConfig
+
+logger = logging.getLogger(__name__)
+
+
+class Component:
+    """
+    Base class for all elements of device tree
+    """
+
+    def __init__(self, sys_id: str, parent: Union['Component', None]) -> None:
+        self.kind = type(self).__name__.lower()
+        self.sys_id: str = sys_id
+        self.parent: Component = parent
+        self.component_options = {}
+        self._connector: Optional[Connector] = None
+        self.children: Dict[str, Component] = {}
+
+    def _setup(self, options: dict):
+        self.component_options: MutableMapping = options.copy()
+        try:
+            self._connector = Connector.create_connector(self.component_options['protocol'])
+        except KeyError:
+            logger.error(f"KeyError. Wrong configuration")
+            pass
+        try:
+            child_options = self.component_options.pop('components')
+        except KeyError:
+            child_options = {}
+        for cid, op in child_options.items():
+            child = self._create_component(kind=op['kind'], sys_id=self.sys_id + '.' + cid, parent=self)
+            self.children[cid] = child
+            setattr(self, cid, child)  # allow easy navigation: `parent.child`
+            child._setup(op)
+
+    @property
+    def connector(self) -> Connector:
+        if self._connector is not None:
+            return self._connector
+        else:
+            return self.parent.connector
+
+    def get_option_recursive(self, option):
+        try:
+            return self.component_options[option]
+        except KeyError:
+            if self.parent is None:
+                return None
+            else:
+                return self.parent.get_option_recursive(option)
+
+    def children_tree_iter(self):
+        """Generator yielding components tree, starting from self """
+        yield self
+        for c in self.children.values():
+            yield from c.children_tree_iter()
+
+    def children_count(self, recursively=True):
+        """gets number of children"""
+        n = len(self.children)
+        if recursively:
+            for c in self.children.values():
+                n += c.children_count(recursively=True)
+        return n
+
+    def child_by_relative_sys_id(self, sys_id_rel: str):
+        """Find child by relative sys_id path"""
+        cid, *cpath = sys_id_rel.split('.', 1)
+        c = self.children[cid]
+        if cpath:
+            return c.child_by_relative_sys_id(cpath[0])
+        else:
+            return c
+
+    def component_by_absolute_sys_id(self, sys_id_abs: str):
+        cid, *cpath = sys_id_abs.split('.', 1)
+        root = self.root
+        if root.sys_id != cid:
+            raise IndexError('Absolute sys_id should start from root: %s', root.sys_id)
+        if cpath:
+            return root.child_by_relative_sys_id(cpath[0])
+        else:
+            return self
+
+    @property
+    def root(self):
+        if self.parent is not None:
+            return self.parent.root
+        else:
+            return self
+
+    @classmethod
+    def _create_component(cls, kind: str, sys_id: str, parent: 'Component') -> 'Component':
+        return _component_classes[kind](sys_id=sys_id, parent=parent)
+
+
+class Observatory(Component):
+    """Observatory - root device in devices tree
+
+    Attributes:
+        configuration (Config): Optional configuration, by default configuration will be loaded from following files:
+              ~/ocabox.cfg.yaml
+              ./ocabox.cfg.yaml
+              <package_path>/ocaboxapi/default.cfg.yaml
+            Later overwrites former
+    """
+
+    def __init__(self):
+        configuration = SingletonConfig.get_config()
+        self.config = configuration
+        self.preset = 'default'
+        super().__init__('obs', None)
+
+    def connect(self, preset: Optional[str] = 'default') -> None:
+        """
+        Connect to servers if needed, builds Devices tree
+        Args:
+            preset: name of the preset from config
+        """
+        if preset is None:
+            preset = 'default'
+        self.preset = preset
+        # options = self.config.data[preset]['observatory']
+        options = self.config[preset]['observatory'].get()
+        self._setup(options)
+
+
+class Device(Component):
+    """Common methods across all devices.
+
+    Attributes:
+        sys_id (str): system ID of device
+        parent (Component): The parent component in devices tree
+    """
+    CURRENT = 0
+    PREVIOUS = 1
+    READ_TIME = 2
+    MODIFY_TIME = 3
+
+    def __init__(self, sys_id: str, parent: Union['Component', None]) -> None:
+        """Initialize Device object."""
+        super().__init__(sys_id=sys_id, parent=parent)
+
+    # TODO capytac czy zwykly def moze zwracac corutine czy mylace? MIKOŁAJ
+    def _get(self, attribute: str, **data) -> Coroutine:
+        """Send request and check response for errors.
+
+        Args:
+            attribute (str): Attribute to get from server.
+            **data: Data to send with request.
+
+        """
+        return self.connector.get(self, attribute, **data)
+
+    def _put(self, attribute: str, **data) -> Coroutine:
+        """
+        Send an HTTP PUT request to an Alpaca server and check response for errors.
+
+        Args:
+            attribute (str): Attribute to put to server.
+            **data: Data to send with request.
+
+        """
+        return self.connector.put(self, attribute, **data)
+
+    async def action(self, Action: str, *Parameters):
+        """Access functionality beyond the built-in capabilities of the ASCOM device interfaces.
+
+        Args:
+            Action (str): A well known name that represents the action to be carried out.
+            *Parameters: List of required parameters or empty if none are required.
+
+        """
+        return (await self._put("action", Action=Action, Parameters=Parameters))["Value"]
+
+    async def commandblind(self, Command: str, Raw: bool):
+        """Transmit an arbitrary string to the device and does not wait for a response.
+
+        Args:
+            Command (str): The literal command string to be transmitted.
+            Raw (bool): If true, command is transmitted 'as-is'.
+                If false, then protocol framing characters may be added prior to
+                transmission.
+
+        """
+        await self._put("commandblind", Command=Command, Raw=Raw)
+
+    async def commandbool(self, Command: str, Raw: bool):
+        """Transmit an arbitrary string to the device and wait for a boolean response.
+
+        Args:
+            Command (str): The literal command string to be transmitted.
+            Raw (bool): If true, command is transmitted 'as-is'.
+                If false, then protocol framing characters may be added prior to
+                transmission.
+
+        """
+        return (await self._put("commandbool", Command=Command, Raw=Raw))["Value"]
+
+    async def commandstring(self, Command: str, Raw: bool):
+        """Transmit an arbitrary string to the device and wait for a string response.
+
+        Args:
+            Command (str): The literal command string to be transmitted.
+            Raw (bool): If true, command is transmitted 'as-is'.
+                If false, then protocol framing characters may be added prior to
+                transmission.
+
+        """
+        return (await self._put("commandstring", Command=Command, Raw=Raw))["Value"]
+
+    async def connected(self, Connected: Optional[bool] = None):
+        """Retrieve or set the connected state of the device.
+
+        Args:
+            Connected (bool): Set True to connect to device hardware.
+                Set False to disconnect from device hardware.
+                Set None to get connected state (default).
+
+        """
+        if Connected is None:
+            return await self._get("connected")
+        await self._put("connected", Connected=Connected)
+
+    async def description(self) -> str:
+        """Get description of the device."""
+        return await self._get("name")
+
+    async def driverinfo(self) -> List[str]:
+        """Get information of the device."""
+        return [i.strip() for i in (await self._get("driverinfo")).split(",")]
+
+    async def driverversion(self) -> str:
+        """Get string containing only the major and minor version of the driver."""
+        return await self._get("driverversion")
+
+    async def interfaceversion(self) -> int:
+        """ASCOM Device interface version number that this device supports."""
+        return await self._get("interfaceversion")
+
+    async def name(self) -> str:
+        """Get name of the device."""
+        return await self._get("name")
+
+    async def supportedactions(self) -> List[str]:
+        """Get list of action names supported by this driver."""
+        return await self._get("supportedactions")
+
+
+class Switch(Device):
+    """Switch specific methods."""
+
+    async def maxswitch(self) -> int:
+        """Count of switch devices managed by this driver.
+
+        Returns:
+            Number of switch devices managed by this driver. Devices are numbered from 0
+            to MaxSwitch - 1.
+
+        """
+        return await self._get("maxswitch")
+
+    async def canwrite(self, Id: Optional[int] = 0) -> bool:
+        """Indicate whether the specified switch device can be written to.
+
+        Notes:
+            Devices are numbered from 0 to MaxSwitch - 1.
+
+        Args:
+            Id (int): The device number.
+
+        Returns:
+            Whether the specified switch device can be written to, default true. This is
+            false if the device cannot be written to, for example a limit switch or a
+            sensor.
+
+        """
+        return await self._get("canwrite", Id=Id)
+
+    async def getswitch(self, Id: Optional[int] = 0) -> bool:
+        """Return the state of switch device id as a boolean.
+
+        Notes:
+            Devices are numbered from 0 to MaxSwitch - 1.
+
+        Args:
+            Id (int): The device number.
+
+        Returns:
+            State of switch device id as a boolean.
+
+        """
+        return await self._get("getswitch", Id=Id)
+
+    async def getswitchdescription(self, Id: Optional[int] = 0) -> str:
+        """Get the description of the specified switch device.
+
+        Notes:
+            Devices are numbered from 0 to MaxSwitch - 1.
+
+        Args:
+            Id (int): The device number.
+
+        Returns:
+            Description of the specified switch device.
+
+        """
+        return await self._get("getswitchdescription", Id=Id)
+
+    async def getswitchname(self, Id: Optional[int] = 0) -> str:
+        """Get the name of the specified switch device.
+
+        Notes:
+            Devices are numbered from 0 to MaxSwitch - 1.
+
+        Args:
+            Id (int): The device number.
+
+        Returns:
+            Name of the specified switch device.
+
+        """
+        return await self._get("getswitchname", Id=Id)
+
+    async def getswitchvalue(self, Id: Optional[int] = 0) -> str:
+        """Get the value of the specified switch device as a double.
+
+        Notes:
+            Devices are numbered from 0 to MaxSwitch - 1.
+
+        Args:
+            Id (int): The device number.
+
+        Returns:
+            Value of the specified switch device.
+
+        """
+        return await self._get("getswitchvalue", Id=Id)
+
+    async def minswitchvalue(self, Id: Optional[int] = 0) -> str:
+        """Get the minimum value of the specified switch device as a double.
+
+        Notes:
+            Devices are numbered from 0 to MaxSwitch - 1.
+
+        Args:
+            Id (int): The device number.
+
+        Returns:
+            Minimum value of the specified switch device as a double.
+
+        """
+        return await self._get("minswitchvalue", Id=Id)
+
+    async def setswitch(self, Id: int, State: bool):
+        """Set a switch controller device to the specified state, True or False.
+
+        Notes:
+            Devices are numbered from 0 to MaxSwitch - 1.
+
+        Args:
+            Id (int): The device number.
+            State (bool): The required control state (True or False).
+
+        """
+        await self._put("setswitch", Id=Id, State=State)
+
+    async def setswitchname(self, Id: int, Name: str):
+        """Set a switch device name to the specified value.
+
+        Notes:
+            Devices are numbered from 0 to MaxSwitch - 1.
+
+        Args:
+            Id (int): The device number.
+            Name (str): The name of the device.
+
+        """
+        await self._put("setswitchname", Id=Id, Name=Name)
+
+    async def setswitchvalue(self, Id: int, Value: float):
+        """Set a switch device value to the specified value.
+
+        Notes:
+            Devices are numbered from 0 to MaxSwitch - 1.
+
+        Args:
+            Id (int): The device number.
+            Value (float): Value to be set, between MinSwitchValue and MaxSwitchValue.
+
+        """
+        await self._put("setswitchvalue", Id=Id, Value=Value)
+
+    async def switchstep(self, Id: Optional[int] = 0) -> str:
+        """Return the step size that this device supports.
+
+        Return the step size that this device supports (the difference between
+        successive values of the device).
+
+        Notes:
+            Devices are numbered from 0 to MaxSwitch - 1.
+
+        Args:
+            Id (int): The device number.
+
+        Returns:
+            Maximum value of the specified switch device as a double.
+
+        """
+        return await self._get("switchstep", Id=Id)
+
+
+class SafetyMonitor(Device):
+    """Safety monitor specific methods."""
+
+    async def issafe(self) -> bool:
+        """Indicate whether the monitored state is safe for use.
+
+        Returns:
+            True if the state is safe, False if it is unsafe.
+
+        """
+        return await self._get("issafe")
+
+
+class Dome(Device):
+    """Dome specific methods."""
+
+    async def altitude(self) -> float:
+        """Dome altitude.
+
+        Returns:
+            Dome altitude (degrees, horizon zero and increasing positive to 90 zenith).
+
+        """
+        return await self._get("altitude")
+
+    async def athome(self) -> bool:
+        """Indicate whether the dome is in the home position.
+
+        Notes:
+            This is normally used following a findhome() operation. The value is reset
+            with any azimuth slew operation that moves the dome away from the home
+            position. athome() may also become true durng normal slew operations, if the
+            dome passes through the home position and the dome controller hardware is
+            capable of detecting that; or at the end of a slew operation if the dome
+            comes to rest at the home position.
+
+        Returns:
+            True if dome is in the home position.
+
+        """
+        return await self._get("athome")
+
+    async def atpark(self) -> bool:
+        """Indicate whether the telescope is at the park position.
+
+        Notes:
+            Set only following a park() operation and reset with any slew operation.
+
+        Returns:
+            True if the dome is in the programmed park position.
+
+        """
+        return await self._get("atpark")
+
+    async def azimuth(self) -> float:
+        """Dome azimuth.
+
+        Returns:
+            Dome azimuth (degrees, North zero and increasing clockwise, i.e., 90 East,
+            180 South, 270 West).
+
+        """
+        return await self._get("azimuth")
+
+    async def canfindhome(self) -> bool:
+        """Indicate whether the dome can find the home position.
+
+        Returns:
+            True if the dome can move to the home position.
+
+        """
+        return await self._get("canfindhome")
+
+    async def canpark(self) -> bool:
+        """Indicate whether the dome can be parked.
+
+        Returns:
+            True if the dome is capable of programmed parking (park() method).
+
+        """
+        return await self._get("canpark")
+
+    async def cansetaltitude(self) -> bool:
+        """Indicate whether the dome altitude can be set.
+
+        Returns:
+            True if driver is capable of setting the dome altitude.
+
+        """
+        return await self._get("cansetaltitude")
+
+    async def cansetazimuth(self) -> bool:
+        """Indicate whether the dome azimuth can be set.
+
+        Returns:
+            True if driver is capable of setting the dome azimuth.
+
+        """
+        return await self._get("cansetazimuth")
+
+    async def cansetpark(self) -> bool:
+        """Indicate whether the dome park position can be set.
+
+        Returns:
+            True if driver is capable of setting the dome park position.
+
+        """
+        return await self._get("cansetpark")
+
+    async def cansetshutter(self) -> bool:
+        """Indicate whether the dome shutter can be opened.
+
+        Returns:
+            True if driver is capable of automatically operating shutter.
+
+        """
+        return await self._get("cansetshutter")
+
+    async def canslave(self) -> bool:
+        """Indicate whether the dome supports slaving to a telescope.
+
+        Returns:
+            True if driver is capable of slaving to a telescope.
+
+        """
+        return await self._get("canslave")
+
+    async def cansyncazimuth(self) -> bool:
+        """Indicate whether the dome azimuth position can be synched.
+
+        Notes:
+            True if driver is capable of synchronizing the dome azimuth position using
+            the synctoazimuth(float) method.
+
+        Returns:
+            True or False value.
+
+        """
+        return await self._get("cansyncazimuth")
+
+    async def shutterstatus(self) -> int:
+        """Status of the dome shutter or roll-off roof.
+
+        Notes:
+            0 = Open, 1 = Closed, 2 = Opening, 3 = Closing, 4 = Shutter status error.
+
+        Returns:
+            Status of the dome shutter or roll-off roof.
+
+        """
+        return await self._get("shutterstatus")
+
+    async def slaved(self, Slaved: Optional[bool] = None) -> bool:
+        """Set or indicate whether the dome is slaved to the telescope.
+
+        Returns:
+            True or False value in not set.
+
+        """
+        if Slaved is None:
+            return await self._get("slaved")
+        await self._put("slaved", Slaved=Slaved)
+
+    async def slewing(self) -> bool:
+        """Indicate whether the any part of the dome is moving.
+
+        Notes:
+            True if any part of the dome is currently moving, False if all dome
+            components are steady.
+
+        Return:
+            True or False value.
+
+        """
+        return await self._get("slewing")
+
+    async def abortslew(self):
+        """Immediately cancel current dome operation.
+
+        Notes:
+            Calling this method will immediately disable hardware slewing (Slaved will
+            become False).
+
+        """
+        await self._put("abortslew")
+
+    async def closeshutter(self):
+        """Close the shutter or otherwise shield telescope from the sky."""
+        await self._put("closeshutter")
+
+    async def findhome(self):
+        """Start operation to search for the dome home position.
+
+        Notes:
+            After home position is established initializes azimuth to the default value
+            and sets the athome flag.
+
+        """
+        await self._put("findhome")
+
+    async def openshutter(self):
+        """Open shutter or otherwise expose telescope to the sky."""
+        await self._put("openshutter")
+
+    async def park(self):
+        """Rotate dome in azimuth to park position.
+
+        Notes:
+            After assuming programmed park position, sets atpark flag.
+
+        """
+        await self._put("park")
+
+    async def setpark(self):
+        """Set current azimuth, altitude position of dome to be the park position."""
+        await self._put("setpark")
+
+    async def slewtoaltitude(self, Altitude: float):
+        """Slew the dome to the given altitude position."""
+        await self._put("slewtoaltitude", Altitude=Altitude)
+
+    async def slewtoazimuth(self, Azimuth: float):
+        """Slew the dome to the given azimuth position.
+
+        Args:
+            Azimuth (float): Target dome azimuth (degrees, North zero and increasing
+                clockwise. i.e., 90 East, 180 South, 270 West).
+
+        """
+        await self._put("slewtoazimuth", Azimuth=Azimuth)
+
+    async def synctoazimuth(self, Azimuth: float):
+        """Synchronize the current position of the dome to the given azimuth.
+
+        Args:
+            Azimuth (float): Target dome azimuth (degrees, North zero and increasing
+                clockwise. i.e., 90 East, 180 South, 270 West).
+
+        """
+        await self._put("synctoazimuth", Azimuth=Azimuth)
+
+
+class Camera(Device):
+    """Camera specific methods."""
+
+    async def bayeroffsetx(self) -> int:
+        """Return the X offset of the Bayer matrix, as defined in SensorType."""
+        return await self._get("bayeroffsetx")
+
+    async def bayeroffsety(self) -> int:
+        """Return the Y offset of the Bayer matrix, as defined in SensorType."""
+        return await self._get("bayeroffsety")
+
+    async def binx(self, BinX: Optional[int] = None) -> int:
+        """Set or return the binning factor for the X axis.
+
+        Args:
+            BinX (int): The X binning value.
+
+        Returns:
+            Binning factor for the X axis.
+
+        """
+        if BinX is None:
+            return await self._get("binx")
+        await self._put("binx", BinX=BinX)
+
+    async def biny(self, BinY: Optional[int] = None) -> int:
+        """Set or return the binning factor for the Y axis.
+
+        Args:
+            BinY (int): The Y binning value.
+
+        Returns:
+            Binning factor for the Y axis.
+
+        """
+        if BinY is None:
+            return await self._get("biny")
+        await self._put("biny", BinY=BinY)
+
+    async def camerastate(self) -> int:
+        """Return the camera operational state.
+
+        Notes:
+            0 = CameraIdle, 1 = CameraWaiting, 2 = CameraExposing,
+            3 = CameraReading, 4 = CameraDownload, 5 = CameraError.
+
+        Returns:
+            Current camera operational state as an integer.
+
+        """
+        return await self._get("camerastate")
+
+    async def cameraxsize(self) -> int:
+        """Return the width of the CCD camera chip."""
+        return await self._get("cameraxsize")
+
+    async def cameraysize(self) -> int:
+        """Return the height of the CCD camera chip."""
+        return await self._get("cameraysize")
+
+    async def canabortexposure(self) -> bool:
+        """Indicate whether the camera can abort exposures."""
+        return await self._get("canabortexposure")
+
+    async def canasymmetricbin(self) -> bool:
+        """Indicate whether the camera supports asymmetric binning."""
+        return await self._get("canasymmetricbin")
+
+    async def canfastreadout(self) -> bool:
+        """Indicate whether the camera has a fast readout mode."""
+        return await self._get("canfastreadout")
+
+    async def cangetcoolerpower(self) -> bool:
+        """Indicate whether the camera's cooler power setting can be read."""
+        return await self._get("cangetcoolerpower")
+
+    async def canpulseguide(self) -> bool:
+        """Indicate whether this camera supports pulse guiding."""
+        return await self._get("canpulseguide")
+
+    async def cansetccdtemperature(self) -> bool:
+        """Indicate whether this camera supports setting the CCD temperature."""
+        return await self._get("cansetccdtemperature")
+
+    async def canstopexposure(self) -> bool:
+        """Indicate whether this camera can stop an exposure that is in progress."""
+        return await self._get("canstopexposure")
+
+    async def ccdtemperature(self) -> float:
+        """Return the current CCD temperature in degrees Celsius."""
+        return await self._get("ccdtemperature")
+
+    async def cooleron(self, CoolerOn: Optional[bool] = None) -> bool:
+        """Turn the camera cooler on and off or return the current cooler on/off state.
+
+        Notes:
+            True = cooler on, False = cooler off.
+
+        Args:
+            CoolerOn (bool): Cooler state.
+
+        Returns:
+            Current cooler on/off state.
+
+        """
+        if CoolerOn is None:
+            return await self._get("cooleron")
+        await self._put("cooleron", CoolerOn=CoolerOn)
+
+    async def coolerpower(self) -> float:
+        """Return the present cooler power level, in percent."""
+        return await self._get("coolerpower")
+
+    async def electronsperadu(self) -> float:
+        """Return the gain of the camera in photoelectrons per A/D unit."""
+        return await self._get("electronsperadu")
+
+    async def exposuremax(self) -> float:
+        """Return the maximum exposure time supported by StartExposure."""
+        return await self._get("exposuremax")
+
+    async def exposuremin(self) -> float:
+        """Return the minimum exposure time supported by StartExposure."""
+        return await self._get("exposuremin")
+
+    async def exposureresolution(self) -> float:
+        """Return the smallest increment in exposure time supported by StartExposure."""
+        return await self._get("exposureresolution")
+
+    async def fastreadout(self, FastReadout: Optional[bool] = None) -> bool:
+        """Set or return whether Fast Readout Mode is enabled.
+
+        Args:
+            FastReadout (bool): True to enable fast readout mode.
+
+        Returns:
+            Whether Fast Readout Mode is enabled.
+
+        """
+        if FastReadout is None:
+            return await self._get("fastreadout")
+        await self._put("fastreadout", FastReadout=FastReadout)
+
+    async def fullwellcapacity(self) -> float:
+        """Report the full well capacity of the camera.
+
+        Report the full well capacity of the camera in electrons, at the current
+        camera settings (binning, SetupDialog settings, etc.).
+
+        Returns:
+            Full well capacity of the camera.
+
+        """
+        return await self._get("fullwellcapacity")
+
+    async def gain(self, Gain: Optional[int] = None) -> int:
+        """Set or return an index into the Gains array.
+
+        Args:
+            Gain (int): Index of the current camera gain in the Gains string array.
+
+        Returns:
+            Index into the Gains array for the selected camera gain.
+
+        """
+        if Gain is None:
+            return await self._get("gain")
+        await self._put("gain", Gain=Gain)
+
+    async def gainmax(self) -> int:
+        """Maximum value of Gain."""
+        return await self._get("gainmax")
+
+    async def gainmin(self) -> int:
+        """Minimum value of Gain."""
+        return await self._get("gainmin")
+
+    async def gains(self) -> List[int]:
+        """Gains supported by the camera."""
+        return await self._get("gains")
+
+    async def hasshutter(self) -> bool:
+        """Indicate whether the camera has a mechanical shutter."""
+        return await self._get("hasshutter")
+
+    async def heatsinktemperature(self) -> float:
+        """Return the current heat sink temperature.
+
+        Returns:
+            Current heat sink temperature (called "ambient temperature" by some
+            manufacturers) in degrees Celsius.
+
+        """
+        return await self._get("heatsinktemperature")
+
+    async def imagearray(self) -> List[int]:
+        r"""Return an array of integers containing the exposure pixel values.
+
+        Return an array of 32bit integers containing the pixel values from the last
+        exposure. This call can return either a 2 dimension (monochrome images) or 3
+        dimension (colour or multi-plane images) array of size NumX * NumY or NumX *
+        NumY * NumPlanes. Where applicable, the size of NumPlanes has to be determined
+        by inspection of the returned Array. Since 32bit integers are always returned
+        by this call, the returned JSON Type value (0 = Unknown, 1 = short(16bit),
+        2 = int(32bit), 3 = Double) is always 2. The number of planes is given in the
+        returned Rank value. When de-serialising to an object it helps enormously to
+        know the array Rank beforehand so that the correct data class can be used. This
+        can be achieved through a regular expression or by direct parsing of the
+        returned JSON string to extract the Type and Rank values before de-serialising.
+        This regular expression accomplishes the extraction into two named groups Type
+        and Rank ^*"Type":(?<Type>\d*),"Rank":(?<Rank>\d*) which can then be used to
+        select the correct de-serialisation data class.
+
+        Returns:
+            Array of integers containing the exposure pixel values.
+
+        """
+        return await self._get("imagearray")
+
+    async def imagearrayvariant(self) -> List[int]:
+        r"""Return an array of integers containing the exposure pixel values.
+
+        Return an array of 32bit integers containing the pixel values from the last
+        exposure. This call can return either a 2 dimension (monochrome images) or 3
+        dimension (colour or multi-plane images) array of size NumX * NumY or NumX *
+        NumY * NumPlanes. Where applicable, the size of NumPlanes has to be determined
+        by inspection of the returned Array. Since 32bit integers are always returned
+        by this call, the returned JSON Type value (0 = Unknown, 1 = short(16bit),
+        2 = int(32bit), 3 = Double) is always 2. The number of planes is given in the
+        returned Rank value. When de-serialising to an object it helps enormously to
+        know the array Rank beforehand so that the correct data class can be used. This
+        can be achieved through a regular expression or by direct parsing of the
+        returned JSON string to extract the Type and Rank values before de-serialising.
+        This regular expression accomplishes the extraction into two named groups Type
+        and Rank ^*"Type":(?<Type>\d*),"Rank":(?<Rank>\d*) which can then be used to
+        select the correct de-serialisation data class.
+
+        Returns:
+            Array of integers containing the exposure pixel values.
+
+        """
+        return await self._get("imagearrayvariant")
+
+    async def imageready(self) -> bool:
+        """Indicate that an image is ready to be downloaded."""
+        return await self._get("imageready")
+
+    async def ispulseguiding(self) -> bool:
+        """Indicatee that the camera is pulse guideing."""
+        return await self._get("ispulseguiding")
+
+    async def lastexposureduration(self) -> float:
+        """Report the actual exposure duration in seconds (i.e. shutter open time)."""
+        return await self._get("lastexposureduration")
+
+    async def lastexposurestarttime(self) -> str:
+        """Start time of the last exposure in FITS standard format.
+
+        Reports the actual exposure start in the FITS-standard
+        CCYY-MM-DDThh:mm:ss[.sss...] format.
+
+        Returns:
+            Start time of the last exposure in FITS standard format.
+
+        """
+        return await self._get("lastexposurestarttime")
+
+    async def maxadu(self) -> int:
+        """Camera's maximum ADU value."""
+        return await self._get("maxadu")
+
+    async def maxbinx(self) -> int:
+        """Maximum binning for the camera X axis."""
+        return await self._get("maxbinx")
+
+    async def maxbiny(self) -> int:
+        """Maximum binning for the camera Y axis."""
+        return await self._get("maxbiny")
+
+    async def numx(self, NumX: Optional[int] = None) -> int:
+        """Set or return the current subframe width.
+
+        Args:
+            NumX (int): Subframe width, if binning is active, value is in binned
+                pixels.
+
+        Returns:
+            Current subframe width.
+
+        """
+        if NumX is None:
+            return await self._get("numx")
+        await self._put("numx", NumX=NumX)
+
+    async def numy(self, NumY: Optional[int] = None) -> int:
+        """Set or return the current subframe height.
+
+        Args:
+            NumY (int): Subframe height, if binning is active, value is in binned
+                pixels.
+
+        Returns:
+            Current subframe height.
+
+        """
+        if NumY is None:
+            return await self._get("numy")
+        await self._put("numy", NumY=NumY)
+
+    async def percentcompleted(self) -> int:
+        """Indicate percentage completeness of the current operation.
+
+        Returns:
+            If valid, returns an integer between 0 and 100, where 0 indicates 0%
+            progress (function just started) and 100 indicates 100% progress (i.e.
+            completion).
+
+        """
+        return await self._get("percentcompleted")
+
+    async def pixelsizex(self):
+        """Width of CCD chip pixels (microns)."""
+        return await self._get("pixelsizex")
+
+    async def pixelsizey(self):
+        """Height of CCD chip pixels (microns)."""
+        return await self._get("pixelsizey")
+
+    async def readoutmode(self, ReadoutMode: Optional[int] = None) -> int:
+        """Indicate the canera's readout mode as an index into the array ReadoutModes."""
+        if ReadoutMode is None:
+            return await self._get("readoutmode")
+        await self._put("readoutmode", ReadoutMode=ReadoutMode)
+
+    async def readoutmodes(self) -> List[int]:
+        """List of available readout modes."""
+        return await self._get("readoutmodes")
+
+    async def sensorname(self) -> str:
+        """Name of the sensor used within the camera."""
+        return await self._get("sensorname")
+
+    async def sensortype(self) -> int:
+        """Type of information returned by the the camera sensor (monochrome or colour).
+
+        Notes:
+            0 = Monochrome, 1 = Colour not requiring Bayer decoding, 2 = RGGB Bayer
+            encoding, 3 = CMYG Bayer encoding, 4 = CMYG2 Bayer encoding, 5 = LRGB
+            TRUESENSE Bayer encoding.
+
+        Returns:
+            Value indicating whether the sensor is monochrome, or what Bayer matrix it
+            encodes.
+
+        """
+        return await self._get("sensortype")
+
+    async def setccdtemperature(self, SetCCDTemperature: Optional[float] = None) -> float:
+        """Set or return the camera's cooler setpoint (degrees Celsius).
+
+        Args:
+            SetCCDTemperature (float): 	Temperature set point (degrees Celsius).
+
+        Returns:
+            Camera's cooler setpoint (degrees Celsius).
+
+        """
+        if SetCCDTemperature is None:
+            return await self._get("setccdtemperature")
+        await self._put("setccdtemperature", SetCCDTemperature=SetCCDTemperature)
+
+    async def startx(self, StartX: Optional[int] = None) -> int:
+        """Set or return the current subframe X axis start position.
+
+        Args:
+            StartX (int): The subframe X axis start position in binned pixels.
+
+        Returns:
+            Sets the subframe start position for the X axis (0 based) and returns the
+            current value. If binning is active, value is in binned pixels.
+
+        """
+        if StartX is None:
+            return await self._get("startx")
+        await self._put("startx", StartX=StartX)
+
+    async def starty(self, StartY: Optional[int] = None) -> int:
+        """Set or return the current subframe Y axis start position.
+
+        Args:
+            StartY (int): The subframe Y axis start position in binned pixels.
+
+        Returns:
+            Sets the subframe start position for the Y axis (0 based) and returns the
+            current value. If binning is active, value is in binned pixels.
+
+        """
+        if StartY is None:
+            return await self._get("starty")
+        await self._put("starty", StartY=StartY)
+
+    async def abortexposure(self):
+        """Abort the current exposure, if any, and returns the camera to Idle state."""
+        await self._put("abortexposure")
+
+    async def pulseguide(self, Direction: int, Duration: int):
+        """Pulse guide in the specified direction for the specified time.
+
+        Args:
+            Direction (int): Direction of movement (0 = North, 1 = South, 2 = East,
+                3 = West).
+            Duration (int): Duration of movement in milli-seconds.
+
+        """
+        await self._put("pulseguide", Direction=Direction, Duration=Duration)
+
+    async def startexposure(self, Duration: float, Light: bool):
+        """Start an exposure.
+
+        Notes:
+            Use ImageReady to check when the exposure is complete.
+
+        Args:
+            Duration (float): Duration of exposure in seconds.
+            Light (bool): True if light frame, false if dark frame.
+
+        """
+        await self._put("startexposure", Duration=Duration, Light=Light)
+
+    async def stopexposure(self):
+        """Stop the current exposure, if any.
+
+        Notes:
+            If an exposure is in progress, the readout process is initiated. Ignored if
+            readout is already in process.
+
+        """
+        await self._put("stopexposure")
+
+
+class FilterWheel(Device):
+    """Filter wheel specific methods."""
+
+    async def focusoffsets(self) -> List[int]:
+        """Filter focus offsets.
+
+        Returns:
+            An integer array of filter focus offsets.
+
+        """
+        return await self._get("focusoffsets")
+
+    async def names(self) -> List[str]:
+        """Filter wheel filter names.
+
+        Returns:
+            Names of the filters.
+
+        """
+        return await self._get("names")
+
+    async def position(self, Position: Optional[int] = None):
+        """Set or return the filter wheel position.
+
+        Args:
+            Position (int): Number of the filter wheel position to select.
+
+        Returns:
+            Returns the current filter wheel position.
+
+        """
+        if Position is None:
+            return await self._get("position")
+        await self._put("position", Position=Position)
+
+
+class Telescope(Device):
+    """Telescope specific methods."""
+
+    async def alignmentmode(self):
+        """Return the current mount alignment mode.
+
+        Returns:
+            Alignment mode of the mount (Alt/Az, Polar, German Polar).
+
+        """
+        return await self._get("alignmentmode")
+
+    async def altitude(self):
+        """Return the mount's Altitude above the horizon.
+
+        Returns:
+            Altitude of the telescope's current position (degrees, positive up).
+
+        """
+        return await self._get("altitude")
+
+    async def aperturearea(self):
+        """Return the telescope's aperture.
+
+        Returns:
+            Area of the telescope's aperture (square meters).
+
+        """
+        return await self._get("aperturearea")
+
+    async def aperturediameter(self):
+        """Return the telescope's effective aperture.
+
+        Returns:
+            Telescope's effective aperture diameter (meters).
+
+        """
+        return await self._get("aperturediameter")
+
+    async def athome(self):
+        """Indicate whether the mount is at the home position.
+
+        Returns:
+            True if the mount is stopped in the Home position. Must be False if the
+            telescope does not support homing.
+
+        """
+        return await self._get("athome")
+
+    async def atpark(self):
+        """Indicate whether the telescope is at the park position.
+
+        Returns:
+            True if the telescope has been put into the parked state by the seee park()
+            method. Set False by calling the unpark() method.
+
+        """
+        return await self._get("atpark")
+
+    async def azimuth(self):
+        """Return the telescope's aperture.
+
+        Return:
+            Azimuth of the telescope's current position (degrees, North-referenced,
+            positive East/clockwise).
+
+        """
+        return await self._get("azimuth")
+
+    async def canfindhome(self):
+        """Indicate whether the mount can find the home position.
+
+        Returns:
+            True if this telescope is capable of programmed finding its home position.
+
+        """
+        return await self._get("canfindhome")
+
+    async def canpark(self):
+        """Indicate whether the telescope can be parked.
+
+        Returns:
+            True if this telescope is capable of programmed parking.
+
+        """
+        return await self._get("canpark")
+
+    async def canpulseguide(self):
+        """Indicate whether the telescope can be pulse guided.
+
+        Returns:
+            True if this telescope is capable of software-pulsed guiding (via the
+            pulseguide(int, int) method).
+
+        """
+        return await self._get("canpulseguide")
+
+    async def cansetdeclinationrate(self):
+        """Indicate whether the DeclinationRate property can be changed.
+
+        Returns:
+            True if the DeclinationRate property can be changed to provide offset
+            tracking in the declination axis.
+
+        """
+        return await self._get("cansetdeclinationrate")
+
+    async def cansetguiderates(self):
+        """Indicate whether the DeclinationRate property can be changed.
+
+        Returns:
+            True if the guide rate properties used for pulseguide(int, int) can ba
+            adjusted.
+
+        """
+        return await self._get("cansetguiderates")
+
+    async def cansetpark(self):
+        """Indicate whether the telescope park position can be set.
+
+        Returns:
+            True if this telescope is capable of programmed setting of its park position
+            (setpark() method).
+
+        """
+        return await self._get("cansetpark")
+
+    async def cansetpierside(self):
+        """Indicate whether the telescope SideOfPier can be set.
+
+        Returns:
+            True if the SideOfPier property can be set, meaning that the mount can be
+            forced to flip.
+
+        """
+        return await self._get("cansetpierside")
+
+    async def cansetrightascensionrate(self):
+        """Indicate whether the RightAscensionRate property can be changed.
+
+        Returns:
+            True if the RightAscensionRate property can be changed to provide offset
+            tracking in the right ascension axis.
+
+        """
+        return await self._get("cansetrightascensionrate")
+
+    async def cansettracking(self):
+        """Indicate whether the Tracking property can be changed.
+
+        Returns:
+            True if the Tracking property can be changed, turning telescope sidereal
+            tracking on and off.
+
+        """
+        return await self._get("cansettracking")
+
+    async def canslew(self):
+        """Indicate whether the telescope can slew synchronously.
+
+        Returns:
+            True if this telescope is capable of programmed slewing (synchronous or
+            asynchronous) to equatorial coordinates.
+
+        """
+        return await self._get("canslew")
+
+    async def canslewaltaz(self):
+        """Indicate whether the telescope can slew synchronously to AltAz coordinates.
+
+        Returns:
+            True if this telescope is capable of programmed slewing (synchronous or
+            asynchronous) to local horizontal coordinates.
+
+        """
+        return await self._get("canslewaltaz")
+
+    async def canslewaltazasync(self):
+        """Indicate whether the telescope can slew asynchronusly to AltAz coordinates.
+
+        Returns:
+            True if this telescope is capable of programmed asynchronus slewing
+            (synchronous or asynchronous) to local horizontal coordinates.
+
+        """
+        return await self._get("canslewaltazasync")
+
+    async def cansync(self):
+        """Indicate whether the telescope can sync to equatorial coordinates.
+
+        Returns:
+            True if this telescope is capable of programmed synching to equatorial
+            coordinates.
+
+        """
+        return await self._get("cansync")
+
+    async def cansyncaltaz(self):
+        """Indicate whether the telescope can sync to local horizontal coordinates.
+
+        Returns:
+            True if this telescope is capable of programmed synching to local horizontal
+            coordinates.
+
+        """
+        return await self._get("cansyncaltaz")
+
+    async def declination(self):
+        """Return the telescope's declination.
+
+        Notes:
+            Reading the property will raise an error if the value is unavailable.
+
+        Returns:
+            The declination (degrees) of the telescope's current equatorial coordinates,
+            in the coordinate system given by the EquatorialSystem property.
+
+        """
+        return await self._get("declination")
+
+    async def declinationrate(self, DeclinationRate: Optional[float] = None):
+        """Set or return the telescope's declination tracking rate.
+
+        Args:
+            DeclinationRate (float): Declination tracking rate (arcseconds per second).
+
+        Returns:
+            The declination tracking rate (arcseconds per second) if DeclinatioRate is
+            not set.
+
+        """
+        if DeclinationRate is None:
+            return await self._get("declinationrate")
+        await self._put("declinationrate", DeclinationRate=DeclinationRate)
+
+    async def doesrefraction(self, DoesRefraction: Optional[bool] = None):
+        """Indicate or determine if atmospheric refraction is applied to coordinates.
+
+        Args:
+            DoesRefraction (bool): Set True to make the telescope or driver apply
+                atmospheric refraction to coordinates.
+
+        Returns:
+            True if the telescope or driver applies atmospheric refraction to
+            coordinates.
+
+        """
+        if DoesRefraction is None:
+            return await self._get("doesrefraction")
+        await self._put("doesrefraction", DoesRefraction=DoesRefraction)
+
+    async def equatorialsystem(self):
+        """Return the current equatorial coordinate system used by this telescope.
+
+        Returns:
+            Current equatorial coordinate system used by this telescope
+            (e.g. Topocentric or J2000).
+
+        """
+        return await self._get("equatorialsystem")
+
+    async def focallength(self):
+        """Return the telescope's focal length in meters.
+
+        Returns:
+            The telescope's focal length in meters.
+
+        """
+        return await self._get("focallength")
+
+    async def guideratedeclination(self, GuideRateDeclination: Optional[float] = None):
+        """Set or return the current Declination rate offset for telescope guiding.
+
+        Args:
+            GuideRateDeclination (float): Declination movement rate offset
+                (degrees/sec).
+
+        Returns:
+            Current declination rate offset for telescope guiding if not set.
+
+        """
+        if GuideRateDeclination is None:
+            return await self._get("guideratedeclination")
+        await self._put("guideratedeclination", GuideRateDeclination=GuideRateDeclination)
+
+    async def guideraterightascension(self, GuideRateRightAscension: Optional[float] = None):
+        """Set or return the current RightAscension rate offset for telescope guiding.
+
+        Args:
+            GuideRateRightAscension (float): RightAscension movement rate offset
+                (degrees/sec).
+
+        Returns:
+            Current right ascension rate offset for telescope guiding if not set.
+
+        """
+        if GuideRateRightAscension is None:
+            return await self._get("guideraterightascension")
+        await self._put("guideraterightascension", GuideRateRightAscension=GuideRateRightAscension)
+
+    async def ispulseguiding(self):
+        """Indicate whether the telescope is currently executing a PulseGuide command.
+
+        Returns:
+            True if a pulseguide(int, int) command is in progress, False otherwise.
+
+        """
+        return await self._get("ispulseguiding")
+
+    async def rightascension(self):
+        """Return the telescope's right ascension coordinate.
+
+        Returns:
+            The right ascension (degrees) of the telescope's current equatorial
+            coordinates, in the coordinate system given by the EquatorialSystem
+            property.
+
+        """
+        return await self._get("rightascension") / 24 * 360  # hourangle -> deg
+
+    async def rightascensionrate(self, RightAscensionRate: Optional[float] = None):
+        """Set or return the telescope's right ascension tracking rate.
+
+        Args:
+            RightAscensionRate (float): Right ascension tracking rate (arcseconds per
+                second).
+
+        Returns:
+            Telescope's right ascension tracking rate if not set.
+
+        """
+        if RightAscensionRate is None:
+            return await self._get("rightascensionrate")
+        await self._put("rightascensionrate", RightAscensionRate=RightAscensionRate)
+
+    async def sideofpier(self, SideOfPier: Optional[int] = None):
+        """Set or return the mount's pointing state.
+
+        Args:
+            SideOfPier (int): New pointing state. 0 = pierEast, 1 = pierWest
+
+        Returns:
+            Side of pier if not set.
+
+        """
+        if SideOfPier is None:
+            return await self._get("sideofpier")
+        await self._put("sideofpier", SideOfPier=SideOfPier)
+
+    async def siderealtime(self):
+        """Return the local apparent sidereal time.
+
+        Returns:
+            The local apparent sidereal time from the telescope's internal clock (hours,
+            sidereal).
+
+        """
+        return await self._get("siderealtime")
+
+    async def siteelevation(self, SiteElevation: Optional[float] = None):
+        """Set or return the observing site's elevation above mean sea level.
+
+        Args:
+            SiteElevation (float): Elevation above mean sea level (metres).
+
+        Returns:
+            Elevation above mean sea level (metres) of the site at which the telescope
+            is located if not set.
+
+        """
+        if SiteElevation is None:
+            return await self._get("siteelevation")
+        await self._put("siteelevation", SiteElevation=SiteElevation)
+
+    async def sitelatitude(self, SiteLatitude: Optional[float] = None):
+        """Set or return the observing site's latitude.
+
+        Args:
+            SiteLatitude (float): Site latitude (degrees).
+
+        Returns:
+            Geodetic(map) latitude (degrees, positive North, WGS84) of the site at which
+            the telescope is located if not set.
+
+        """
+        if SiteLatitude is None:
+            return await self._get("sitelatitude")
+        await self._put("sitelatitude", SiteLatitude=SiteLatitude)
+
+    async def sitelongitude(self, SiteLongitude: Optional[float] = None):
+        """Set or return the observing site's longitude.
+
+        Args:
+            SiteLongitude (float): Site longitude (degrees, positive East, WGS84)
+
+        Returns:
+            Longitude (degrees, positive East, WGS84) of the site at which the telescope
+            is located.
+
+        """
+        if SiteLongitude is None:
+            return await self._get("sitelongitude")
+        await self._put("sitelongitude", SiteLongitude=SiteLongitude)
+
+    async def slewing(self):
+        """Indicate whether the telescope is currently slewing.
+
+        Returns:
+            True if telescope is currently moving in response to one of the Slew methods
+            or the moveaxis(int, float) method, False at all other times.
+
+        """
+        return await self._get("slewing")
+
+    async def slewsettletime(self, SlewSettleTime: Optional[int] = None):
+        """Set or return the post-slew settling time.
+
+        Args:
+            SlewSettleTime (int): Settling time (integer sec.).
+
+        Returns:
+            Returns the post-slew settling time (sec.) if not set.
+
+        """
+        if SlewSettleTime is None:
+            return await self._get("slewsettletime")
+        await self._put("slewsettletime", SlewSettleTime=SlewSettleTime)
+
+    async def targetdeclination(self, TargetDeclination: Optional[Union[float, str]] = None):
+        """Set or return the target declination of a slew or sync.
+
+        Args:
+            TargetDeclination (float): Target declination(degrees)
+
+        Returns:
+            Declination (degrees, positive North) for the target of an equatorial slew
+            or sync operation.
+
+        """
+        if TargetDeclination is None:
+            return await self._get("targetdeclination")
+        _, TargetDeclination = check_equatorial_coordinates(0.0, TargetDeclination)
+        await self._put("targetdeclination", TargetDeclination=TargetDeclination)
+
+    async def targetrightascension(self, TargetRightAscension: Optional[Union[float, str]] = None):
+        """Set or return the current target right ascension.
+
+        Args:
+            TargetRightAscension (float or str): Right Ascension coordinate (degrees if float, hours if str).
+
+        Returns:
+            Right ascension (float) for the target of an equatorial slew or sync
+            operation (degrees).
+
+        """
+
+        if TargetRightAscension is None:
+            return await self._get("targetrightascension") / 24 * 360  # hourangle -> deg
+        TargetRightAscension, _ = check_equatorial_coordinates(TargetRightAscension, 0.0)
+        TargetRightAscension = TargetRightAscension / 360 * 24  # deg -> hour angle
+        await self._put("targetrightascension", TargetRightAscension=TargetRightAscension)
+
+    async def tracking(self, Tracking: Optional[bool] = None):
+        """Enable, disable, or indicate whether the telescope is tracking.
+
+        Args:
+            Tracking (bool): Tracking enabled / disabled.
+
+        Returns:
+            State of the telescope's sidereal tracking drive.
+
+        """
+        if Tracking is None:
+            return await self._get("tracking")
+        await self._put("tracking", Tracking=Tracking)
+
+    async def trackingrate(self, TrackingRate: Optional[int] = None):
+        """Set or return the current tracking rate.
+
+        Args:
+            TrackingRate (int): New tracking rate. 0 = driveSidereal, 1 = driveLunar,
+                2 = driveSolar, 3 = driveKing.
+
+        Returns:
+            Current tracking rate of the telescope's sidereal drive if not set.
+
+        """
+        if TrackingRate is None:
+            return await self._get("trackingrate")
+        await self._put("trackingrate", TrackingRate=TrackingRate)
+
+    async def trackingrates(self):
+        """Return a collection of supported DriveRates values.
+
+        Returns:
+            List of supported DriveRates values that describe the permissible values of
+            the TrackingRate property for this telescope type.
+
+        """
+        return await self._get("trackingrates")
+
+    async def utcdate(self, UTCDate: Optional[Union[str, datetime]] = None):
+        """
+        Set or return the UTC date/time of the telescope's internal clock.
+
+        :param UTCDate: UTC date/time as an str or datetime.
+        :raise TypeError:
+        :return: datetime of the UTC date/time if not set.
+        """
+        if UTCDate is None:
+            return await self._get("utcdate")
+
+        if type(UTCDate) is str:
+            data = UTCDate
+        elif type(UTCDate) is datetime:
+            data = UTCDate.isoformat()
+        else:
+            raise TypeError()
+
+        await self._put("utcdate", UTCDate=data)
+
+    async def abortslew(self):
+        """Immediatley stops a slew in progress."""
+        await self._put("abortslew")
+
+    async def axisrates(self, Axis: int):
+        """Return rates at which the telescope may be moved about the specified axis.
+
+        Returns:
+            The rates at which the telescope may be moved about the specified axis by
+            the moveaxis(int, float) method.
+
+        """
+        return await self._get("axisrates", Axis=Axis)
+
+    async def canmoveaxis(self, Axis: int):
+        """Indicate whether the telescope can move the requested axis.
+
+        Returns:
+            True if this telescope can move the requested axis.
+
+        """
+        return await self._get("canmoveaxis", Axis=Axis)
+
+    async def destinationsideofpier(self, RightAscension: Union[float, str], Declination: Union[float, str]):
+        """Predict the pointing state after a German equatorial mount slews to given coordinates.
+
+        Args:
+            RightAscension (float or str): Right Ascension coordinate (degrees if float, hours if str).
+            Declination (float or str): Declination coordinate (degrees).
+
+        Returns:
+            Pointing state that a German equatorial mount will be in if it slews to the
+            given coordinates. The return value will be one of - 0 = pierEast,
+            1 = pierWest, -1 = pierUnknown.
+
+        """
+
+        RightAscension, Declination = check_equatorial_coordinates(RightAscension, Declination)
+        RightAscension = RightAscension / 360 * 24  # deg -> hour angle
+
+        return await self._get("destinationsideofpier", RightAscension=RightAscension, Declination=Declination)
+
+    async def findhome(self):
+        """Move the mount to the "home" position."""
+        await self._put("findhome")
+
+    async def moveaxis(self, Axis: int, Rate: float):
+        """Move a telescope axis at the given rate.
+
+        Args:
+            Axis (int): The axis about which rate information is desired.
+                0 = axisPrimary, 1 = axisSecondary, 2 = axisTertiary.
+            Rate (float): The rate of motion (deg/sec) about the specified axis
+
+        """
+        await self._put("moveaxis", Axis=Axis, Rate=Rate)
+
+    async def park(self):
+        """Park the mount."""
+        await self._put("park")
+
+    async def pulseguide(self, Direction: int, Duration: int):
+        """Move the scope in the given direction for the given time.
+
+        Notes:
+            0 = guideNorth, 1 = guideSouth, 2 = guideEast, 3 = guideWest.
+
+        Args:
+            Direction (int): Direction in which the guide-rate motion is to be made.
+            Duration (int): Duration of the guide-rate motion (milliseconds).
+
+        """
+        await self._put("pulseguide", Direction=Direction, Duration=Duration)
+
+    async def setpark(self):
+        """Set the telescope's park position."""
+        await self._put("setpark")
+
+    async def slewtoaltaz(self, Azimuth: Union[float, str], Altitude: Union[float, str]):
+        """Slew synchronously to the given local horizontal coordinates.
+
+        Args:
+            Azimuth (float or str): Azimuth coordinate (degrees, North-referenced, positive
+                East/clockwise).
+            Altitude (float or str): Altitude coordinate (degrees, positive up).
+
+        """
+        Azimuth, Altitude = check_horizontal_coordinates(Azimuth, Altitude)
+        await self._put("slewtoaltaz", Azimuth=Azimuth, Altitude=Altitude)
+
+    async def slewtoaltazasync(self, Azimuth: Union[float, str], Altitude: Union[float, str]):
+        """Slew asynchronously to the given local horizontal coordinates.
+
+        Args:
+            Azimuth (float or str): Azimuth coordinate (degrees, North-referenced, positive
+                East/clockwise).
+            Altitude (float or str): Altitude coordinate (degrees, positive up).
+
+        """
+        Azimuth, Altitude = check_horizontal_coordinates(Azimuth, Altitude)
+        await self._put("slewtoaltazasync", Azimuth=Azimuth, Altitude=Altitude)
+
+    async def slewtocoordinates(self, RightAscension: Union[float, str], Declination: Union[float, str]):
+        """Slew synchronously to the given equatorial coordinates.
+
+        Args:
+            RightAscension (float or str): Right Ascension coordinate (degrees if float, hours if str).
+            Declination (float or str): Declination coordinate (degrees).
+
+        """
+        RightAscension, Declination = check_equatorial_coordinates(RightAscension, Declination)
+        RightAscension = RightAscension / 360 * 24  # deg -> hour angle
+        await self._put("slewtocoordinates", RightAscension=RightAscension, Declination=Declination)
+
+    async def slewtocoordinatesasync(self, RightAscension: Union[float, str], Declination: Union[float, str]):
+        """Slew asynchronously to the given equatorial coordinates.
+
+        Args:
+            RightAscension (float or str): Right Ascension coordinate (degrees if float, hours if str).
+            Declination (float or str): Declination coordinate (degrees).
+
+        """
+        RightAscension, Declination = check_equatorial_coordinates(RightAscension, Declination)
+        RightAscension = RightAscension / 360 * 24  # deg -> hour angle
+        await self._put("slewtocoordinatesasync", RightAscension=RightAscension, Declination=Declination,)
+
+    async def slewtotarget(self):
+        """Slew synchronously to the TargetRightAscension and TargetDeclination coordinates."""
+        await self._put("slewtotarget")
+
+    async def slewtotargetasync(self):
+        """Asynchronously slew to the TargetRightAscension and TargetDeclination coordinates."""
+        await self._put("slewtotargetasync")
+
+    async def synctoaltaz(self, Azimuth: Union[float, str], Altitude: Union[float, str]):
+        """Sync to the given local horizontal coordinates.
+
+        Args:
+            Azimuth (float or str): Azimuth coordinate (degrees, North-referenced, positive
+                East/clockwise).
+            Altitude (float or str): Altitude coordinate (degrees, positive up).
+
+        """
+        Azimuth, Altitude = check_horizontal_coordinates(Azimuth, Altitude)
+        await self._put("synctoaltaz", Azimuth=Azimuth, Altitude=Altitude)
+
+    async def synctocoordinates(self, RightAscension: Union[float, str], Declination: Union[float, str]):
+        """Sync to the given equatorial coordinates.
+
+        Args:
+            RightAscension (float or str): Right Ascension coordinate (degrees if float, hours if str).
+            Declination (float or str): Declination coordinate (degrees).
+
+        """
+        RightAscension, Declination = check_equatorial_coordinates(RightAscension, Declination)
+        RightAscension = RightAscension / 360 * 24  # deg -> hour angle
+        await self._put("synctocoordinates", RightAscension=RightAscension, Declination=Declination)
+
+    async def synctotarget(self):
+        """Sync to the TargetRightAscension and TargetDeclination coordinates."""
+        await self._put("synctotarget")
+
+    async def unpark(self):
+        """Unpark the mount."""
+        await self._put("unpark")
+
+
+class Focuser(Device):
+    """Focuser specific methods."""
+
+    async def absolute(self) -> bool:
+        """Indicates whether the focuser is capable of absolute position
+
+        Returns:
+            True if the focuser is capable of absolute position; that is, being commanded to a specific step location.
+        """
+        return await self._get("absolute")
+
+    async def ismoving(self) -> bool:
+        """Indicates whether the focuser is currently moving
+
+        Returns:
+            True if the focuser is currently moving to a new position. False if the focuser is stationary.
+        """
+        return await self._get("ismoving")
+
+    async def maxincrement(self) -> int:
+        """Returns the focuser's maximum increment size.
+
+        Returns:
+            Maximum increment size allowed by the focuser;
+            i.e. the maximum number of steps allowed in one move operation.
+        """
+        return await self._get("maxincrement")
+
+    async def maxstep(self) -> int:
+        """Returns the focuser's maximum step size.
+
+        Returns:
+            Maximum step position permitted.
+        """
+        return await self._get("maxstep")
+
+    async def position(self) -> int:
+        """Returns the focuser's current position.
+
+        Returns:
+            Current focuser position, in steps.
+        """
+        return await self._get("position")
+
+    async def stepsize(self) -> float:
+        """Returns the focuser's step size
+
+        Returns:
+            Step size (microns) for the focuser.
+        """
+        return await self._get("stepsize")
+
+    async def tempcomp(self, TempComp: Optional[bool] = None) -> Optional[bool]:
+        """Set or return the state of temperature compensation mode
+
+        Args:
+            TempComp (bool): Set true to enable the focuser's temperature compensation mode,
+            otherwise false for normal operation.
+
+        Returns:
+            Gets the state of temperature compensation mode (if available), else always False.
+
+        """
+        if TempComp is None:
+            return await self._get("tempcomp")
+        await self._put("tempcomp", TempComp=TempComp)
+
+    async def tempcompavailable(self) -> bool:
+        """Indicates whether the focuser has temperature compensation
+
+        Returns:
+            True if focuser has temperature compensation available.
+        """
+        return await self._get("tempcompavailable")
+
+    async def temperature(self) -> float:
+        """Returns the focuser's current temperature
+
+        Returns:
+            Current ambient temperature as measured by the focuser.
+        """
+        return await self._get("temperature")
+
+    async def halt(self):
+        """Immediatley stops focuser motion
+
+        Notes:
+            Immediately stop any focuser motion due to a previous move() method call.
+        """
+        await self._put("halt")
+
+    async def move(self, Position: int):
+        """Moves the focuser to a new position
+
+        Notes:
+            Moves the focuser by the specified amount or to the specified position
+            depending on the value of the Absolute property.
+
+        Args:
+            Position (int): Step distance or absolute position, depending on the value of the Absolute property
+        """
+        await self._put("move", Position=Position)
+
+
+class Rotator(Device):
+    """Rotator specific methods."""
+
+    async def canreverse(self) -> bool:
+        """Indicates whether the Rotator supports the Reverse method
+
+        Returns:
+            True if the Rotator supports the Reverse method.
+        """
+        return await self._get("canreverse")
+
+    async def ismoving(self) -> bool:
+        """Indicates whether the rotator is currently moving
+
+        Returns:
+            True if the rotator is capable of ismoving position; that is, being commanded to a specific step location.
+        """
+        return await self._get("ismoving")
+
+    async def mechanicalposition(self) -> float:
+        """Returns the rotator's mechanical current position
+
+        Returns:
+            Current instantaneous Rotator position, in degrees.
+        """
+        return await self._get("mechanicalposition")
+
+    async def position(self) -> float:
+        """Returns the rotator's current position
+
+        Returns:
+            Returns the raw mechanical position of the rotator in degrees.
+        """
+        return await self._get("position")
+
+    async def reverse(self, Reverse: Optional[bool] = None) -> Optional[bool]:
+        """Set or return the rotator’s Reverse state
+
+        Args:
+            Reverse (bool): True if the rotation and angular direction must
+            be reversed to match the optical characteristcs
+
+        Returns:
+            Returns the rotator’s Reverse state.
+        """
+        if Reverse is None:
+            return await self._get("reverse")
+        await self._put("reverse", Reverse=Reverse)
+
+    async def stepsize(self) -> float:
+        """Returns the minimum StepSize
+
+        Returns:
+            The minimum StepSize, in degrees.
+        """
+        return await self._get("stepsize")
+
+    async def targetposition(self) -> float:
+        """Returns the destination position angle
+
+        Returns:
+            The destination position angle for Move() and MoveAbsolute().
+        """
+        return await self._get("targetposition")
+
+    async def halt(self):
+        """Immediatley stops rotator motion
+
+        Notes:
+            Immediately stop any Rotator motion due to a previous move() or moveabsolute() method call.
+        """
+        await self._put("halt")
+
+    async def move(self, Position: float):
+        """Moves the rotator to a new relative position
+
+        Notes:
+            Causes the rotator to move Position degrees relative to the current Position value.
+
+        Args:
+            Position (float): Relative position to move in degrees from current Position.
+        """
+        await self._put("move", Position=Position)
+
+    async def moveabsolute(self, Position: float):
+        """Moves the rotator to a new absolute position
+
+        Notes:
+            Causes the rotator to move the absolute position of Position degrees.
+
+        Args:
+            Position (float): Absolute position in degrees.
+        """
+        await self._put("moveabsolute", Position=Position)
+
+    async def movemechanical(self, Position: float):
+        """Moves the rotator to a new raw mechanical position
+
+        Notes:
+            Causes the rotator to move the mechanical position of Position degrees.
+
+        Args:
+            Position (float): Absolute position in degrees.
+        """
+        await self._put("movemechanical", Position=Position)
+
+    async def sync(self, Position: float):
+        """Syncs the rotator to the specified position angle without moving it
+
+        Notes:
+            Causes the rotator to sync to the position of Position degrees.
+
+        Args:
+            Position (float): Absolute position in degrees.
+        """
+        await self._put("sync", Position=Position)
+
+
+_component_classes = {
+    'telescope': Telescope,
+    'dome': Dome,
+    'camera': Camera,
+    'filterwheel': FilterWheel,
+    'focuser': Focuser,
+    'rotator': Rotator,
+    'switch': Switch,
+    'safetymonitor': SafetyMonitor,
+}
