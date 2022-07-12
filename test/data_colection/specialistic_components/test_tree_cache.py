@@ -8,7 +8,7 @@ from ob.data_colection.address import Address
 from ob.data_colection.base_components.tree_component import ProvidesResponseProtocol
 from ob.data_colection.base_components.tree_provider import TreeProvider
 from ob.data_colection.coded_error import TreeStructureError
-from ob.data_colection.specialistic_components.tree_cache import TreeCache
+from ob.data_colection.specialistic_components.tree_cache_observatory import TreeCache
 from ob.data_colection.value import Value
 from ob.data_colection.value_call import ValueRequest
 

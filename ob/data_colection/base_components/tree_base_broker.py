@@ -112,3 +112,13 @@ class TreeBaseBroker(TreeComponent):
         except ValueError:
             logger.warning(f'Can not find given provider in the list.')
             return False
+
+    async def run(self):
+        # run self
+        for p in self._list_providers:
+            await p.run()
+
+    async def stop(self):
+        # stop self
+        for p in self._list_providers:
+            await p.stop()

@@ -341,8 +341,8 @@ class Router(BaseCommunicationObject):
             for t in tasks:
                 if t and t in asyncio.all_tasks(self._current_loop):
                     return False
-        else:
-            logger.info(f'Can not find async loop for this router. Probably this router was newer started.')
+        # else:
+            # logger.info(f'Can not find async loop for this router. Probably this router was newer started.')
         return True
 
     def get_stop_task(self):

@@ -91,3 +91,13 @@ class TreeBaseProvider(TreeComponent, ABC):
         except AddressError as e:
             re = ResponseError(e.code, e.message, repr(self))
             return ValueResponse(request.address, None, False, re)
+
+    async def run(self):
+        # run self
+        if self._subcontractor:
+            await self._subcontractor.run()
+
+    async def stop(self):
+        # stop self
+        if self._subcontractor:
+            await self._subcontractor.stop()

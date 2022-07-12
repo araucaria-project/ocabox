@@ -7,6 +7,7 @@ from ob.data_colection.base_components.tree_base_broker import TreeBaseBroker
 from ob.data_colection.base_components.tree_provider import TreeProvider
 from ob.comunication.request_solver import RequestSolver
 from ob.comunication.router import Router
+from ob.data_colection.specialistic_components.tree_alpaca import TreeAlpacaObservatory
 
 
 async def stop_router_timeout(vrr):
@@ -15,16 +16,11 @@ async def stop_router_timeout(vrr):
     vrr.stop()
 
 
-async def gather_coro(c, c2):
-    task2 = asyncio.create_task(c2)
-    await c
-    await task2
-
-
 def main(argv):
     logging.basicConfig(level=logging.INFO)
 
-    vc = TreeProvider('sample_provider_1', 'sample_telescope')
+    alpaca_module = TreeAlpacaObservatory('dibi_sample', observatory_name='dibi-camk')
+    vc = TreeProvider('sample_provider_1', 'sample_telescope', alpaca_module)
     vb = TreeBaseBroker('sample_broker_1', [vc])
     rr = RequestSolver(vb)
     vr = Router(rr)
@@ -37,6 +33,7 @@ def main(argv):
 
     try:
         asyncio.set_event_loop(loop)
+        loop.run_until_complete(rr.run_tree())
         loop.run_until_complete(coro)
     except KeyboardInterrupt:
         pass
@@ -44,7 +41,7 @@ def main(argv):
         try:
             # cancel router tasks
             vr.stop()
-            vr_stop = asyncio.gather(vr.get_stop_task(), return_exceptions=True)
+            vr_stop = asyncio.gather(vr.get_stop_task(), rr.stop_tree(), return_exceptions=True)
             loop.run_until_complete(vr_stop)
 
             # make sure if all task is finished (router task and every other in this loop)

@@ -1,14 +1,10 @@
 import asyncio
 import random
-from typing import Iterable, Callable, Tuple
-
 import aiohttp as aiohttp
-
+import logging
+from typing import Iterable, Callable, Tuple
 from ob.data_colection.alpaca_api.exceptions import AlpacaError, AlpacaHttpError, RequestConnectionError, \
     AlpacaHttp400Error, AlpacaHttp500Error, AlpacaContentTypeError
-# from ocaboxapi.observatory import Component
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +27,9 @@ class Connector:
 
     async def subscribe(self, variables: Iterable[Tuple[str, str]], callback: Callable):
         raise NotImplementedError
+
+    def __del__(self):
+        pass
 
 
 class AlpacaConnector(Connector):
@@ -127,6 +126,7 @@ class AlpacaConnector(Connector):
 
     def __del__(self):
         self._close_http_session()
+        super().__del__()
 
     async def scan_connection(self, address: str = 'http://localhost:80/api/v1'):
         """
@@ -190,6 +190,7 @@ class AlpacaConnector(Connector):
         :raise RequestConnectionError: when can not connect to alpaca
         :return: requested value or none
         """
+
         async def get_response(s):
             async with s.get(url, params=data, allow_redirects=False) as response:
                 await self.__check_error(response)
@@ -255,6 +256,7 @@ class AlpacaConnector(Connector):
         :raise RequestConnectionError: when can not connect to alpaca
         :return: requested value or none
         """
+
         async def get_response(s: aiohttp.ClientSession):
             async with s.put(url, data=data) as response:
                 await self.__check_error(response)

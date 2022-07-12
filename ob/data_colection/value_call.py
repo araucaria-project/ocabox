@@ -84,7 +84,7 @@ class ValueRequest(ValueExchange):
             raise ValueError
         # check delta
         if self.delta is None:
-            self.delta = SingletonConfig.get_config()['tree'][type(self).__name__]['delta'].get()
+            self.delta = SingletonConfig.get_config()['data_collection'][type(self).__name__]['delta'].get()
         self.delta = float(self.delta)  # this raise ValueError if is wrong type
 
 

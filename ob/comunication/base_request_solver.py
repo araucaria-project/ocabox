@@ -30,3 +30,19 @@ class BaseRequestSolver(ABC):
         :return: dictionary representing ValueResponse
         """
         pass
+
+    async def run_tree(self):
+        """
+        This method starts cascading asynchronous tree initialization.
+
+        :return:
+        """
+        await self.data_provider.run()
+
+    async def stop_tree(self):
+        """
+        This method stops cascading asynchronous tree elements.
+
+        :return:
+        """
+        await self.data_provider.stop()

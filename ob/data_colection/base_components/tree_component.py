@@ -41,6 +41,24 @@ class TreeComponent(ABC):
     def get_name(self):
         return self._component_name
 
+    @abstractmethod
+    async def run(self):
+        """
+        This method runs all the necessary tasks in the async loop of this component and the children components.
+
+        :return:
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def stop(self):
+        """
+        This method closes all the tasks of this component and the children components running in the asynchronous loop.
+
+        :return:
+        """
+        raise NotImplementedError
+
 
 @runtime_checkable
 class ProvidesResponseProtocol(Protocol):
@@ -55,6 +73,21 @@ class ProvidesResponseProtocol(Protocol):
         """
         pass
 
+    async def run(self):
+        """
+        This method runs all the necessary tasks in the async loop of this component and the children components.
+
+        :return:
+        """
+        pass
+
+    async def stop(self):
+        """
+        This method closes all the tasks of this component and the children components running in the asynchronous loop.
+
+        :return:
+        """
+        pass
 
 @runtime_checkable
 class AddressedResponderProtocol (ProvidesResponseProtocol, AddressedProtocol, Protocol):

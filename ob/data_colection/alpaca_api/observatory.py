@@ -25,11 +25,12 @@ class Component:
 
     def _setup(self, options: dict):
         self.component_options: MutableMapping = options.copy()
-        try:
-            self._connector = Connector.create_connector(self.component_options['protocol'])
-        except KeyError:
-            logger.error(f"KeyError. Wrong configuration")
-            pass
+        if not self._connector:
+            try:
+                # todo czemu jakis protokuł przecierz zawsze bedzie alpaca do tych klas ? MIKOŁAJ
+                self._connector = Connector.create_connector(self.component_options['protocol'])
+            except KeyError:
+                pass
         try:
             child_options = self.component_options.pop('components')
         except KeyError:
@@ -38,6 +39,7 @@ class Component:
             child = self._create_component(kind=op['kind'], sys_id=self.sys_id + '.' + cid, parent=self)
             self.children[cid] = child
             setattr(self, cid, child)  # allow easy navigation: `parent.child`
+            # todo po co to drzewo jest? MIKOŁAJ
             child._setup(op)
 
     @property
@@ -118,12 +120,15 @@ class Observatory(Component):
         self.preset = 'default'
         super().__init__('obs', None)
 
-    def connect(self, preset: Optional[str] = 'default') -> None:
+    def connect(self, preset: Optional[str] = 'default', connector: Connector = None) -> None:
         """
         Connect to servers if needed, builds Devices tree
         Args:
             preset: name of the preset from config
+            connector:
         """
+        if connector:
+            self._connector = connector
         if preset is None:
             preset = 'default'
         self.preset = preset

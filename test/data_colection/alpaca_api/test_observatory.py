@@ -1,10 +1,9 @@
 import asyncio
 import unittest
-
-import requests
-
-from ob.data_colection.alpaca_api.observatory import Observatory
 import logging
+from ob.data_colection.alpaca_api.observatory import Observatory, Telescope
+from ob.ob_config import SingletonConfig
+
 logger = logging.getLogger(__name__)
 
 
@@ -41,20 +40,20 @@ class ObservatoryTest(unittest.TestCase):
         self._tearDownLoop()
         super().tearDown()
 
-    def test_something(self):
-
-        observatory = Observatory()
-
-        observatory.connect('dibi-camk')
-
-        tel = observatory.dibi  # sys_id "my_telescope" is a key in config file
-
-        async def coro():
-            a = await tel.targetdeclination(1.0)
-            print(a)
-
-        self.loop.run_until_complete(coro())
-        self.assertEqual(True, True)  # add assertion here
+    # def test_something(self):
+    #
+    #     observatory = Observatory()
+    #
+    #     observatory.connect('dibi-camk')
+    #
+    #     tel = observatory.dibi
+    #
+    #     async def coro():
+    #         a = await tel.azimuth()
+    #         print(a)
+    #
+    #     self.loop.run_until_complete(coro())
+    #     self.assertEqual(True, True)  # add assertion here
 
 
 if __name__ == '__main__':
