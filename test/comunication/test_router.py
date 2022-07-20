@@ -3,6 +3,8 @@ import logging
 import unittest
 from typing import List
 
+from ob.comunication.message_serializer import MessageSerializer
+from ob.comunication.multipart_structure import MultipartStructure
 from ob.ob_config import SingletonConfig
 from ob.comunication.base_request_solver import BaseRequestSolver
 from ob.comunication.router import Router
@@ -63,7 +65,7 @@ class RouterTest(unittest.TestCase):
 
         :return:
         """
-        name1 = 'router1'
+        name1 = 'SampleTestRouter'
         vr = Router(None, name=name1)
 
         async def coro():
@@ -129,6 +131,7 @@ class RouterTest(unittest.TestCase):
         async def coro2():
             # it should be finished immediately if it's waiting that mean is something wrong
             await asyncio.wait_for(stop_task, timeout=1.0)
+
         self.loop.run_until_complete(coro2())
         stop_task = vr.get_stop_task()
         self.assertIsNone(stop_task)  # here stop task finished, so it can't exist in router
@@ -163,6 +166,7 @@ class RouterTest(unittest.TestCase):
 
         :return:
         """
+
         class CrashResolver(BaseRequestSolver):
 
             async def get_answer(self, request: List[dict]) -> List[dict]:
@@ -171,9 +175,15 @@ class RouterTest(unittest.TestCase):
 
         name1 = 'SampleTestRouter'
         vr = Router(CrashResolver(None), name=name1, port=5559)
-        sample_message = [b'\x00\x80\x00A\xa7', b'', b'\x83\xa7address\x81\xa3adr\xb8sample_telescope.any_val\xa9'
-                                                     b'timestamp\xcbA\xd8\xac\xbeM\xb52@\xa5delta\xcb@4\x00\x00\x00'
-                                                     b'\x00\x00\x00']
+        sample_message = [b'\x00\x80\x00A\xa7',
+                          b'',
+                          b'123456789',
+                          b'',
+                          b'0',
+                          b'',
+                          b'\x83\xa7address\x81\xa3adr\xb8sample_telescope.any_val\xa9'
+                          b'timestamp\xcbA\xd8\xac\xbeM\xb52@\xa5delta\xcb@4\x00\x00\x00'
+                          b'\x00\x00\x00']
 
         self.assertTrue(len(asyncio.all_tasks(self.loop)) == 0)
         self.assertTrue(len(vr._message_tasks) == 0)
@@ -188,6 +198,44 @@ class RouterTest(unittest.TestCase):
         self.loop.run_until_complete(primitive_router_main_coro())
         self.assertTrue(len(vr._message_tasks) == 0)
         self.assertTrue(len(asyncio.all_tasks(self.loop)) == 0)
+
+    def test__open_envelope(self):
+        """
+        Test metchod _open_envelope()
+
+        :return:
+        """
+
+        class CrashResolver(BaseRequestSolver):
+
+            async def get_answer(self, request: List[dict]) -> List[dict]:
+                await asyncio.sleep(5)
+                return [{}]
+
+        name1 = 'SampleTestRouter'
+        vr = Router(CrashResolver(None), name=name1, port=5559)
+
+        sample_envelope = [b'\x00\x80\x00A\xa7',
+                           b'',
+                           b'123456789',
+                           b'',
+                           b'0',
+                           b'',
+                           b'\x83\xa7address\x81\xa3adr\xb8sample_telescope.any_val\xa9'
+                           b'timestamp\xcbA\xd8\xac\xbeM\xb52@\xa5delta\xcb@4\x00\x00\x00'
+                           b'\x00\x00\x00']
+        target, create_time, id_, messages = vr._open_envelope(sample_envelope)
+        prefix_size = 1
+        self.assertEqual(target, [sample_envelope[prefix_size - 1]])
+        self.assertEqual(create_time, sample_envelope[MultipartStructure.CREATE_TIME + prefix_size])
+        self.assertEqual(id_, sample_envelope[MultipartStructure.ID_ + prefix_size])
+        self.assertEqual(messages, [MessageSerializer.unpack_b(sample_envelope[MultipartStructure.DATA + prefix_size])])
+
+        # no create data in envelope
+        sample_wrong_envelope = sample_envelope
+        sample_wrong_envelope[MultipartStructure.CREATE_TIME + prefix_size] = b''
+        with self.assertRaises(ValueError):
+            target, create_time, id_, messages = vr._open_envelope(sample_envelope)
 
 
 if __name__ == '__main__':

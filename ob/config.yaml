@@ -13,6 +13,10 @@ client:
     port: 5559
     url: localhost
     protocol: tcp
+  SampleTestClient:
+    port: 5560
+    url: localhost
+    protocol: tcp
 
 data_collection:
   ValueRequest:

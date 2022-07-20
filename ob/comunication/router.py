@@ -3,28 +3,27 @@ import logging
 from typing import List
 
 import zmq
-from zmq.asyncio import Context, Poller
+from zmq.asyncio import Poller
 
 from ob.comunication.base_communication_object import BaseCommunicationObject
-from ob.ob_config import SingletonConfig
 from ob.comunication.message_serializer import MessageSerializer
 from ob.comunication.base_request_solver import BaseRequestSolver
+from ob.comunication.multipart_structure import MultipartStructure
 
 logger = logging.getLogger(__name__)
 
 
 class Router(BaseCommunicationObject):
     DEFAULT_NAME = 'DefaultRouter'
+    _TYPE = 'router'
 
-    def __init__(self, request_solver: BaseRequestSolver or None, name: str = None, port: int = SingletonConfig.
-                 get_config()['router'][DEFAULT_NAME]['port'].get(), **kwargs):
-        super().__init__(name=name, **kwargs)
+    def __init__(self, request_solver: BaseRequestSolver or None, name: str = None, port: int = None, **kwargs):
+        super().__init__(name=name, port=port, **kwargs)
         # request solver
         self.request_solver: BaseRequestSolver or None = request_solver
         # OMQ
-        self.context = Context()  # TODO One for all router (Context.instance()) or one for everyone router (Context())?
         self.frontend = self.context.socket(zmq.ROUTER)
-        self.frontend.bind(f"{self._get_cfg('protocol', 'tcp')}://{self._get_cfg('url', '*')}:{port}")
+        self.frontend.bind(f"{self._get_cfg('protocol', 'tcp')}://{self._get_cfg('url', '*')}:{self._port}")
         # Tasks
         self._main_task_name = f'{self.name}_main_task'
         self._main_task = None
@@ -52,41 +51,37 @@ class Router(BaseCommunicationObject):
 
     @staticmethod
     def _open_envelope(multipart):
-        if len(multipart) < 3:
-            logger.error(f'Wrong multipart because is shorter than 3')
-            raise ValueError
-        target = multipart[0]
-        empty = multipart[1]
-        data = multipart[2:]
+        ms = MultipartStructure(multipart, 1)
+        try:
+            ms.validate()
+        except ValueError as e:
+            logger.error(e)
+            raise
+        target = ms.prefix_data
         if not target:
             logger.error(f'Wrong port address in multipart.')
             raise ValueError
-        if empty:
-            logger.error(f'Empty byte in multipart is not empty')
-            raise ValueError
-        if not data:
-            logger.error(f'No data in multipart')
-            raise ValueError
+
         messages = []
+        data = ms.data
         for d in data:
             messages.append(MessageSerializer.unpack_b(d))
-        return target, messages
+        return target, ms.create_time, ms.id_, messages
 
     @staticmethod
-    def _pack_to_envelope(target: bytes, data: list):
+    def _pack_to_envelope(target: bytes, create_time: bytes, msg_id: bytes, data: list):
         if not target:
             logger.error(f'Wrong port address for multipart.')
             raise ValueError
         if not data:
             data = [{}]
-            logger.error(f'No data to send. Task send empty bit to client. ')
-
-        envelope = [target, b'']
+            logger.warning(f'No data to send. Task send empty bit to client. ')
+        data_b = []
         for d in data:
             if not isinstance(d, dict) or not MessageSerializer.is_correct(d):
                 raise ValueError
-            envelope.append(MessageSerializer.pack_b(d))
-        return envelope
+            data_b.append(MessageSerializer.pack_b(d))
+        return MultipartStructure.create_multipart(create_time, msg_id, data_b, [target])
 
     async def _send_back(self, message):
         def remove_task_inner():
@@ -97,7 +92,7 @@ class Router(BaseCommunicationObject):
                 logger.error('Unexpected ValueError. Can not remove task from task list.')
 
         try:
-            target, data_list = self._open_envelope(message)
+            target, create_time, msg_id, data_list = self._open_envelope(message)
         except ValueError:
             # Don't answer for incorrect requests. Close task.
             remove_task_inner()
@@ -122,7 +117,7 @@ class Router(BaseCommunicationObject):
                          f"don't send response. Error message: {str(e)}")
             return
         try:
-            answer_envelope = Router._pack_to_envelope(target, answer)
+            answer_envelope = Router._pack_to_envelope(target, create_time, msg_id, answer)
         except ValueError:
             # Don't answer for incorrect requests. Close task.
             remove_task_inner()
@@ -342,7 +337,7 @@ class Router(BaseCommunicationObject):
                 if t and t in asyncio.all_tasks(self._current_loop):
                     return False
         # else:
-            # logger.info(f'Can not find async loop for this router. Probably this router was newer started.')
+        # logger.info(f'Can not find async loop for this router. Probably this router was newer started.')
         return True
 
     def get_stop_task(self):
@@ -358,4 +353,4 @@ class Router(BaseCommunicationObject):
     def __del__(self):
         if not self.is_stopped():
             self.stop()
-        self.context.destroy()  # without this zmq not close socket when router is destroy
+        super().__del__()

@@ -27,7 +27,6 @@ class Component:
         self.component_options: MutableMapping = options.copy()
         if not self._connector:
             try:
-                # todo czemu jakis protokuł przecierz zawsze bedzie alpaca do tych klas ? MIKOŁAJ
                 self._connector = Connector.create_connector(self.component_options['protocol'])
             except KeyError:
                 pass
@@ -39,7 +38,6 @@ class Component:
             child = self._create_component(kind=op['kind'], sys_id=self.sys_id + '.' + cid, parent=self)
             self.children[cid] = child
             setattr(self, cid, child)  # allow easy navigation: `parent.child`
-            # todo po co to drzewo jest? MIKOŁAJ
             child._setup(op)
 
     @property
@@ -153,7 +151,6 @@ class Device(Component):
         """Initialize Device object."""
         super().__init__(sys_id=sys_id, parent=parent)
 
-    # TODO capytac czy zwykly def moze zwracac corutine czy mylace? MIKOŁAJ
     def _get(self, attribute: str, **data) -> Coroutine:
         """Send request and check response for errors.
 

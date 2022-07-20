@@ -30,8 +30,6 @@ class TreeAlpacaObservatory(TreeBaseProvider):
         self._connect_to_observatory()
 
     def _connect_to_observatory(self):
-        # todo pozbyć sie tych protokolów 'alpaca' z configa! zapytać po co to jest MIKOŁAJ
-        #  self._connector = Connector.create_connector(self._get_cfg('protocol', self.DEFAULT_PROTOCOL))
         self._connector = AlpacaConnector()
         self._observatory.connect(self.observatory_name, connector=self._connector)
 

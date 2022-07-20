@@ -152,7 +152,6 @@ class AlpacaConnector(Connector):
         for device in alpaca_devices:
             i = 0
             try:
-                # todo czy to na pewno ma tak działać że jeden elemet teleskopu wywala cala reszet ? MIKOŁAJ
                 while True:
                     info = {'device': device, 'devicenumber': i}
 
@@ -168,7 +167,6 @@ class AlpacaConnector(Connector):
 
                     out = await asyncio.gather(*list_coro, return_exceptions=False)  # return_exceptions=False - one
                     # error stop all gather if true gather don't raise errors
-                    # todo co z wyswietlaniem bledłw bo tutaj jest pruba pobrania rzeczy ktorych nie ma? MIKOŁAJ
                     for j in range(len(properties)):
                         info[properties[j]] = out[j]
                     i += 1

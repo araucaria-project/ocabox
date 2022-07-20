@@ -31,17 +31,17 @@ class MessageSerializer:
     @staticmethod
     def unpack_b(data_b: bytes):
         """
-        This method convert bytes to dict using external serializer.
+        This method convert bytes to python base type using external serializer.
         :param data_b: data in bytes
-        :return: data in dict
+        :return: data
         """
         return msgpack.unpackb(data_b)
 
     @staticmethod
-    def pack_b(data: dict):
+    def pack_b(data):
         """
-        This method convert dict to bytes using external serializer
-        :param data: data in dict
+        This method convert python base types to bytes using external serializer
+        :param data: data in python base types
         :return: data in bytes
         """
         return msgpack.packb(data)

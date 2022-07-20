@@ -3,6 +3,7 @@ from dataclasses import dataclass, fields, field
 from datetime import datetime
 from typing import ClassVar
 
+from ob.comunication.message_serializer import MessageSerializer
 from ob.data_colection.address import Address
 from ob.data_colection.response_error import ResponseError
 from ob.data_colection.value import Value
@@ -22,7 +23,7 @@ class ValueExchange:
     @classmethod
     def from_dict(cls, dict_):
         """
-        Cteate this class from given dict of fields. The dictionary must have all the necessary fields.
+        Create this class from given dict of fields. The dictionary must have all the necessary fields.
         Redundant fields are ignored.
 
         :param dict_: Dictionary witch class fields
@@ -33,6 +34,21 @@ class ValueExchange:
         """
         class_fields = {f.name for f in fields(cls)}
         return cls(**{k: v for k, v in dict_.items() if k in class_fields})  # why warning? everything is good
+
+    @classmethod
+    def from_byte(cls, bytes_: bytes):
+        """
+        Create this class from given bytes representing dict of fields. The dictionary must have all the necessary
+        fields. Redundant fields are ignored.
+
+        :param bytes_: Bytes representing dictionary witch class fields
+        :raise TypeError: if the dictionary does not contain the required fields
+        :raise AddressError: if the address is incorrect
+        :raise ValueError: If the other value is invalid
+        :return: instance of this class
+        """
+        dict_ = MessageSerializer.unpack_b(bytes_)
+        return cls.from_dict(dict_)
 
     def to_dict(self) -> dict:
         """
@@ -51,6 +67,17 @@ class ValueExchange:
                 else:
                     d[k] = v
         return d
+
+    def to_byte(self) -> bytes:
+        """
+        This method convert object to bytes. If among the property of this class there are other classes that
+        have to_dict() methods implanted, they will also be converted, creating a nested dictionary.
+
+        :return: bytes
+        """
+        request_dict = self.to_dict()
+        byt = MessageSerializer.pack_b(request_dict)
+        return byt
 
 
 @dataclass
