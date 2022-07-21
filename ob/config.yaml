@@ -3,20 +3,24 @@ router:
     port: 5559
     url: '*'
     protocol: tcp
+    timeout: 30
   SampleTestRouter:
     port: 5560
     url: '*'
     protocol: tcp
+    timeout: 1
 
 client:
   DefaultClient:
     port: 5559
     url: localhost
     protocol: tcp
+    timeout: 30
   SampleTestClient:
     port: 5560
     url: localhost
     protocol: tcp
+    timeout: 1
 
 data_collection:
   ValueRequest:

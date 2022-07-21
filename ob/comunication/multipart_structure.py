@@ -20,7 +20,7 @@ class MultipartStructure:
         self.prefix_size: int = prefix_size
 
     @property
-    def prefix_data(self):
+    def prefix_data(self) -> List[bytes]:
         return self.get_prefix_data(self.multipart, self.prefix_size)
 
     @property
@@ -36,8 +36,8 @@ class MultipartStructure:
         return self.get_data(self.multipart, self.prefix_size)
 
     @staticmethod
-    def get_prefix_data(multipart, prefix_size: int = 0):
-        return multipart[:(prefix_size)]
+    def get_prefix_data(multipart, prefix_size: int = 0) -> List[bytes]:
+        return multipart[:prefix_size]
 
     @staticmethod
     def get_create_time(multipart, prefix_size: int = 0):

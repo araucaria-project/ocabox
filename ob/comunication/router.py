@@ -69,7 +69,7 @@ class Router(BaseCommunicationObject):
         return target, ms.create_time, ms.id_, messages
 
     @staticmethod
-    def _pack_to_envelope(target: bytes, create_time: bytes, msg_id: bytes, data: list):
+    def _pack_to_envelope(target: List[bytes], create_time: bytes, msg_id: bytes, data: list):
         if not target:
             logger.error(f'Wrong port address for multipart.')
             raise ValueError
@@ -81,7 +81,7 @@ class Router(BaseCommunicationObject):
             if not isinstance(d, dict) or not MessageSerializer.is_correct(d):
                 raise ValueError
             data_b.append(MessageSerializer.pack_b(d))
-        return MultipartStructure.create_multipart(create_time, msg_id, data_b, [target])
+        return MultipartStructure.create_multipart(create_time, msg_id, data_b, target)
 
     async def _send_back(self, message):
         def remove_task_inner():

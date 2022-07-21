@@ -62,6 +62,19 @@ class ClientTest(unittest.TestCase):
             self.loop.close()
         super().tearDown()
 
+    def test_has_cfg(self):
+        """
+        This checks for critical configuration in default file. Always should return something.
+
+        :return:
+        """
+        client = Client(name='SampleTestClient')
+        self.assertIsNone(client._get_cfg('this_is_not_in_config_file'))
+        self.assertIsNotNone(client._get_cfg('port'))
+        self.assertIsNotNone(client._get_cfg('url'))
+        self.assertIsNotNone(client._get_cfg('protocol'))
+        self.assertIsNotNone(client._get_cfg('timeout'))
+
     def test_get_async_ordered_response(self):
         """
         Test getting many requests by one client and retry ordered responses
@@ -87,11 +100,16 @@ class ClientTest(unittest.TestCase):
         client2 = Client(name='SampleTestClient')
 
         async def coro():
-            task1 = asyncio.create_task(client.get_async('sample_telescope.dibi.azimuth.1', datetime.datetime.now(), 20))
-            task2 = asyncio.create_task(client.get_async('sample_telescope.dibi.azimuth.2', datetime.datetime.now(), 20))
-            task3 = asyncio.create_task(client.get_async('sample_telescope.dibi.azimuth.3', datetime.datetime.now(), 20))
-            task4 = asyncio.create_task(client2.get_async('sample_telescope.dibi.azimuth.4', datetime.datetime.now(), 20))
-            task5 = asyncio.create_task(client2.get_async('sample_telescope.dibi.azimuth.3', datetime.datetime.now(), 20))
+            task1 = asyncio.create_task(client.get_async('sample_telescope.dibi.azimuth.1', datetime.datetime.now(),
+                                                         20))
+            task2 = asyncio.create_task(client.get_async('sample_telescope.dibi.azimuth.2', datetime.datetime.now(),
+                                                         20))
+            task3 = asyncio.create_task(client.get_async('sample_telescope.dibi.azimuth.3', datetime.datetime.now(),
+                                                         20))
+            task4 = asyncio.create_task(client2.get_async('sample_telescope.dibi.azimuth.4', datetime.datetime.now(),
+                                                          20))
+            task5 = asyncio.create_task(client2.get_async('sample_telescope.dibi.azimuth.3', datetime.datetime.now(),
+                                                          20))
             result = await task1
             self.assertEqual(result.value.v, 1)
             logger.info(f"OK: {result.value.v}={1}")
@@ -108,6 +126,73 @@ class ClientTest(unittest.TestCase):
             self.assertEqual(result.value.v, 3)
             logger.info(f"OK: {result.value.v}={3}")
 
+            await asyncio.sleep(0)
+
+        self.loop.run_until_complete(coro())
+
+    def test_crash_waiting_task(self):
+        """
+        This is testing of situation when task witch waiting for response was canceled before retrieve all messages.
+
+        :return:
+        """
+        self.vr.request_solver.response_delay = 1  # give a time
+        client = Client(name='SampleTestClient')
+
+        async def coro():
+            task1 = asyncio.create_task(client.get_async('sample_telescope.dibi.azimuth.1', datetime.datetime.now(),
+                                                         20))
+            task2 = asyncio.create_task(client.get_async('sample_telescope.dibi.azimuth.2', datetime.datetime.now(),
+                                                         20))
+            task3 = asyncio.create_task(client.get_async('sample_telescope.dibi.azimuth.3', datetime.datetime.now(),
+                                                         20))
+            await asyncio.sleep(0)
+            self.assertEqual(client._waiting_amount, 3)
+            self.assertIsNotNone(client._receive_task)
+            self.assertIsNotNone(client._loop)
+
+            client._receive_task.cancel()
+            await asyncio.sleep(0)
+            self.assertIsNotNone(client._receive_task)
+            self.assertIsNotNone(client._loop)
+
+            result = await task1
+            self.assertIsNone(result.value)
+            result = await task2
+            self.assertIsNone(result.value)
+            result = await task3
+            self.assertIsNone(result.value)
+            await asyncio.sleep(0)
+
+        self.loop.run_until_complete(coro())
+
+    def test_timeout(self):
+        """
+        Test when router not responding before timeout
+
+        :return:
+        """
+        self.vr.request_solver.response_delay = 10  # give a time
+        client = Client(name='SampleTestClient')
+        client.timeout = 1
+
+        async def coro():
+            task1 = asyncio.create_task(client.get_async('sample_telescope.dibi.azimuth.1', datetime.datetime.now(),
+                                                         20))
+            task2 = asyncio.create_task(client.get_async('sample_telescope.dibi.azimuth.2', datetime.datetime.now(),
+                                                         20))
+            task3 = asyncio.create_task(client.get_async('sample_telescope.dibi.azimuth.3', datetime.datetime.now(),
+                                                         20))
+
+            await asyncio.sleep(0)
+
+            result = await asyncio.wait_for(task1, timeout=client.timeout*2)
+            self.assertIsNone(result.value)
+
+            result = await asyncio.wait_for(task2, timeout=client.timeout*2)
+            self.assertIsNone(result.value)
+            result = await asyncio.wait_for(task3, timeout=client.timeout*2)
+            self.assertIsNone(result.value)
             await asyncio.sleep(0)
 
         self.loop.run_until_complete(coro())
