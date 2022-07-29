@@ -3,13 +3,14 @@ import datetime
 import logging
 import unittest
 from typing import List
-
 from ob.comunication.client import Client
-from ob.data_colection.base_components.tree_component import ProvidesResponseProtocol
-from ob.comunication.base_request_solver import BaseRequestSolver
+from ob.comunication.comunication_error import ClientRuntimeError, ClientTimeoutError
+from ob.comunication.multipart_structure import MultipartStructure
+from ob.data_colection.address import AddressError
 from ob.comunication.router import Router
 from ob.data_colection.value import Value
 from ob.data_colection.value_call import ValueRequest, ValueResponse
+from test.comunication.sample_test_resolver import SampleTestResolver
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.StreamHandler())
@@ -17,18 +18,6 @@ logger.setLevel(logging.INFO)
 
 
 class ClientTest(unittest.TestCase):
-    class SampleTestResolver(BaseRequestSolver):
-        RESPONSE_DELAY = 0
-
-        async def get_answer(self, request: List[dict]) -> List[dict]:
-            v_request = ValueRequest.from_dict(request[0])
-            await asyncio.sleep(self.response_delay)
-            response = ValueResponse(v_request.address, Value('sample_answer', datetime.datetime.now()))
-            return [response.to_dict()]
-
-        def __init__(self, data_provider: ProvidesResponseProtocol, **kwargs):
-            self.response_delay = self.RESPONSE_DELAY
-            super().__init__(data_provider, **kwargs)
 
     def setUp(self):
         super().setUp()
@@ -38,7 +27,7 @@ class ClientTest(unittest.TestCase):
             self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)
         name = 'SampleTestRouter'
-        self.vr = Router(self.SampleTestResolver(None), name=name)
+        self.vr = Router(SampleTestResolver(None), name=name)
         self.vr.start(self.loop)
 
     def tearDown(self) -> None:
@@ -62,6 +51,18 @@ class ClientTest(unittest.TestCase):
             self.loop.close()
         super().tearDown()
 
+    @staticmethod
+    def multipart_to_V_response(resp):
+        try:
+            vr = ValueResponse.from_byte(resp)
+        except TypeError:
+            vr = ValueResponse('', None, False, None)
+        except AddressError:
+            vr = ValueResponse('', None, False, None)
+        except ValueError:
+            vr = ValueResponse('', None, False, None)
+        return vr
+
     def test_has_cfg(self):
         """
         This checks for critical configuration in default file. Always should return something.
@@ -75,14 +76,29 @@ class ClientTest(unittest.TestCase):
         self.assertIsNotNone(client._get_cfg('protocol'))
         self.assertIsNotNone(client._get_cfg('timeout'))
 
+    def test__check_message_comes(self):
+        """
+        Test method _check_message_comes()
+        """
+        client = Client(name='SampleTestClient')
+        msg_time = client._get_msg_create_time()
+        msg_id = b'0'
+        msg_wrong_id = b'1'
+        sample_message = [b'', msg_time, b'', msg_id, b'sample_data']
+        ms = MultipartStructure(sample_message)
+        client._new_msgs.append(ms)
+
+        self.assertIsNone(client._check_message_comes(msg_time, msg_wrong_id))
+        self.assertIsNotNone(client._check_message_comes(msg_time, msg_id))
+        self.assertTrue(isinstance(client._check_message_comes(msg_time, msg_id), MultipartStructure))
+
     def test_get_async_ordered_response(self):
         """
         Test getting many requests by one client and retry ordered responses
-
-        :return:
         """
-
-        class SampleTestResolverMix(self.SampleTestResolver):
+        # TODO tu skonczylem ...
+        # TODO tutaj coś nie gra z testem ale pozatym to testy jak się wysypią to trzeba zabić proces bo coś się blokuje
+        class SampleTestResolverMix(SampleTestResolver):
 
             async def get_answer(self, request: List[dict]) -> List[dict]:
                 v_request = ValueRequest.from_dict(request[0])
@@ -91,7 +107,7 @@ class ClientTest(unittest.TestCase):
                     nr = int(nr)
                 except Exception as e:
                     nr = 0
-                await asyncio.sleep(5/10 - nr/10)
+                await asyncio.sleep(5 / 10 - nr / 10)
                 response = ValueResponse(v_request.address, Value(nr, datetime.datetime.now()))
                 return [response.to_dict()]
 
@@ -100,29 +116,30 @@ class ClientTest(unittest.TestCase):
         client2 = Client(name='SampleTestClient')
 
         async def coro():
-            task1 = asyncio.create_task(client.get_async('sample_telescope.dibi.azimuth.1', datetime.datetime.now(),
-                                                         20))
-            task2 = asyncio.create_task(client.get_async('sample_telescope.dibi.azimuth.2', datetime.datetime.now(),
-                                                         20))
-            task3 = asyncio.create_task(client.get_async('sample_telescope.dibi.azimuth.3', datetime.datetime.now(),
-                                                         20))
-            task4 = asyncio.create_task(client2.get_async('sample_telescope.dibi.azimuth.4', datetime.datetime.now(),
-                                                          20))
-            task5 = asyncio.create_task(client2.get_async('sample_telescope.dibi.azimuth.3', datetime.datetime.now(),
-                                                          20))
-            result = await task1
+            task1 = asyncio.create_task(client.send_singlepart(ValueRequest('sample_telescope.dibi.azimuth.1',
+                                                                            datetime.datetime.now(), 20).to_byte()))
+            task2 = asyncio.create_task(client.send_singlepart(ValueRequest('sample_telescope.dibi.azimuth.2',
+                                                                            datetime.datetime.now(), 20).to_byte()))
+            task3 = asyncio.create_task(client.send_singlepart(ValueRequest('sample_telescope.dibi.azimuth.3',
+                                                                            datetime.datetime.now(), 20).to_byte()))
+            task4 = asyncio.create_task(client2.send_singlepart(ValueRequest('sample_telescope.dibi.azimuth.4',
+                                                                             datetime.datetime.now(), 20).to_byte()))
+            task5 = asyncio.create_task(client2.send_singlepart(ValueRequest('sample_telescope.dibi.azimuth.3',
+                                                                             datetime.datetime.now(), 20).to_byte()))
+
+            result = self.multipart_to_V_response(await task1)
             self.assertEqual(result.value.v, 1)
             logger.info(f"OK: {result.value.v}={1}")
-            result = await task2
+            result = self.multipart_to_V_response(await task2)
             self.assertEqual(result.value.v, 2)
             logger.info(f"OK: {result.value.v}={2}")
-            result = await task3
+            result = self.multipart_to_V_response(await task3)
             self.assertEqual(result.value.v, 3)
             logger.info(f"OK: {result.value.v}={3}")
-            result = await task4
+            result = self.multipart_to_V_response(await task4)
             self.assertEqual(result.value.v, 4)
             logger.info(f"OK: {result.value.v}={4}")
-            result = await task5
+            result = self.multipart_to_V_response(await task5)
             self.assertEqual(result.value.v, 3)
             logger.info(f"OK: {result.value.v}={3}")
 
@@ -133,19 +150,17 @@ class ClientTest(unittest.TestCase):
     def test_crash_waiting_task(self):
         """
         This is testing of situation when task witch waiting for response was canceled before retrieve all messages.
-
-        :return:
         """
         self.vr.request_solver.response_delay = 1  # give a time
         client = Client(name='SampleTestClient')
 
         async def coro():
-            task1 = asyncio.create_task(client.get_async('sample_telescope.dibi.azimuth.1', datetime.datetime.now(),
-                                                         20))
-            task2 = asyncio.create_task(client.get_async('sample_telescope.dibi.azimuth.2', datetime.datetime.now(),
-                                                         20))
-            task3 = asyncio.create_task(client.get_async('sample_telescope.dibi.azimuth.3', datetime.datetime.now(),
-                                                         20))
+            task1 = asyncio.create_task(client.send_singlepart(ValueRequest('sample_telescope.dibi.azimuth.1',
+                                                                            datetime.datetime.now(), 20).to_byte()))
+            task2 = asyncio.create_task(client.send_singlepart(ValueRequest('sample_telescope.dibi.azimuth.2',
+                                                                            datetime.datetime.now(), 20).to_byte()))
+            task3 = asyncio.create_task(client.send_singlepart(ValueRequest('sample_telescope.dibi.azimuth.3',
+                                                                            datetime.datetime.now(), 20).to_byte()))
             await asyncio.sleep(0)
             self.assertEqual(client._waiting_amount, 3)
             self.assertIsNotNone(client._receive_task)
@@ -156,12 +171,12 @@ class ClientTest(unittest.TestCase):
             self.assertIsNotNone(client._receive_task)
             self.assertIsNotNone(client._loop)
 
-            result = await task1
-            self.assertIsNone(result.value)
-            result = await task2
-            self.assertIsNone(result.value)
-            result = await task3
-            self.assertIsNone(result.value)
+            with self.assertRaises(ClientRuntimeError):
+                result = self.multipart_to_V_response(await task1)
+            with self.assertRaises(ClientRuntimeError):
+                result = self.multipart_to_V_response(await task2)
+            with self.assertRaises(ClientRuntimeError):
+                result = self.multipart_to_V_response(await task3)
             await asyncio.sleep(0)
 
         self.loop.run_until_complete(coro())
@@ -169,30 +184,27 @@ class ClientTest(unittest.TestCase):
     def test_timeout(self):
         """
         Test when router not responding before timeout
-
-        :return:
         """
         self.vr.request_solver.response_delay = 10  # give a time
         client = Client(name='SampleTestClient')
-        client.timeout = 1
+        client.timeout = 0.2
 
         async def coro():
-            task1 = asyncio.create_task(client.get_async('sample_telescope.dibi.azimuth.1', datetime.datetime.now(),
-                                                         20))
-            task2 = asyncio.create_task(client.get_async('sample_telescope.dibi.azimuth.2', datetime.datetime.now(),
-                                                         20))
-            task3 = asyncio.create_task(client.get_async('sample_telescope.dibi.azimuth.3', datetime.datetime.now(),
-                                                         20))
+            task1 = asyncio.create_task(client.send_singlepart(ValueRequest('sample_telescope.dibi.azimuth.1',
+                                                                            datetime.datetime.now(), 20).to_byte()))
+            task2 = asyncio.create_task(client.send_singlepart(ValueRequest('sample_telescope.dibi.azimuth.2',
+                                                                            datetime.datetime.now(), 20).to_byte()))
+            task3 = asyncio.create_task(client.send_singlepart(ValueRequest('sample_telescope.dibi.azimuth.3',
+                                                                            datetime.datetime.now(), 20).to_byte()))
 
             await asyncio.sleep(0)
 
-            result = await asyncio.wait_for(task1, timeout=client.timeout*2)
-            self.assertIsNone(result.value)
-
-            result = await asyncio.wait_for(task2, timeout=client.timeout*2)
-            self.assertIsNone(result.value)
-            result = await asyncio.wait_for(task3, timeout=client.timeout*2)
-            self.assertIsNone(result.value)
+            with self.assertRaises(ClientTimeoutError):
+                result = self.multipart_to_V_response(await asyncio.wait_for(task1, timeout=client.timeout * 2))
+            with self.assertRaises(ClientTimeoutError):
+                result = self.multipart_to_V_response(await asyncio.wait_for(task2, timeout=client.timeout * 2))
+            with self.assertRaises(ClientTimeoutError):
+                result = self.multipart_to_V_response(await asyncio.wait_for(task3, timeout=client.timeout * 2))
             await asyncio.sleep(0)
 
         self.loop.run_until_complete(coro())

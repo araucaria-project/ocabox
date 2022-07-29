@@ -78,27 +78,27 @@ class TreeAlpacaObservatory(TreeBaseProvider):
             result = await method()
         except AlpacaHttp400Error as e:
             # if server alpaca return 400 error
-            logger.info(f"Alpaca throw error 400 for request {address}")
+            logger.warning(f"Alpaca throw error 400 for request {address}")
             raise TreeValueError(None, 2002, message=e.message)
         except AlpacaHttp500Error as e:
             # if server alpaca return 500 error
-            logger.info(f"Alpaca throw error 500 for request {address}")
+            logger.warning(f"Alpaca throw error 500 for request {address}")
             raise TreeValueError(None, 2002, message=e.message)
         except AlpacaContentTypeError as e:
             # if server alpaca return data in wrong format
-            logger.info(f"Alpaca throw error AlpacaContentTypeError for request {address}")
+            logger.warning(f"Alpaca throw error AlpacaContentTypeError for request {address}")
             raise TreeValueError(None, 2002, message=e.message)
         except AlpacaError as e:
             # when server alpaca throws an error with a numeric value
-            logger.info(f"Alpaca throw numeric error for request {address}")
+            logger.warning(f"Alpaca throw numeric error for request {address}")
             raise TreeValueError(None, 2002, message=e.message)
         except AlpacaHttpError as e:
             # if server alpaca return unresolved error
-            logger.info(f"Alpaca throw AlpacaHttpError for request {address}")
+            logger.warning(f"Alpaca throw AlpacaHttpError for request {address}")
             raise TreeValueError(None, 2002, message=e.message)
         except RequestConnectionError as e:
             # when can not connect to alpaca
-            logger.info(f"Server alpaca is not responding")
+            logger.warning(f"Server alpaca is not responding")
             raise TreeValueError(None, 2002, message=f"Server alpaca is not responding")
 
         return Value(result, datetime.datetime.now())

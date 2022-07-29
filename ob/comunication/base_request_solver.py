@@ -10,24 +10,24 @@ class BaseRequestSolver(ABC):
         self.data_provider: ProvidesResponseProtocol = data_provider
 
     @abstractmethod
-    async def get_answer(self, request: List[dict]) -> List[dict]:
+    async def get_answer(self, request: List[bytes]) -> List[bytes]:
         """
         This method is designed to provide a response to given request by calling to data_provider. The received query
         is a list of minor queries for single values. This method runs a separate task for each query in order to
         reduce the waiting time. Created tasks are associated with this method and if the task that called this method
         is canceled, all tasks created by it will also be canceled.
 
-        :param request: List of dictionaries representing ValueRequest
-        :return: List of dictionaries representing ValueResponse
+        :param request: List of bytes representing ValueRequest
+        :return: List of bytes representing ValueResponse
         """
         pass
 
-    async def get_single_answer(self, request: dict) -> dict:
+    async def get_single_answer(self, request: bytes) -> bytes:
         """
         The method reads the query details and calls the provider for an answer for a single query.
 
-        :param request: dictionary representing ValueRequest
-        :return: dictionary representing ValueResponse
+        :param request: bytes representing ValueRequest
+        :return: bytes representing ValueResponse
         """
         pass
 

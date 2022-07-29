@@ -5,13 +5,13 @@ class MultipartStructure:
     """
     This is a class that representing structure of messages sending between client and router
     """
-    EMPTY_BIT_1 = 0
+    EMPTY_BYTE_1 = 0
     CREATE_TIME = 1
-    EMPTY_BIT_2 = 2
+    EMPTY_BYTE_2 = 2
     ID_ = 3
-    EMPTY_BIT_3 = 4
+    EMPTY_BYTE_3 = 4
     DATA = 5
-
+    t = [b'xxx', b'', b'123456789.585', b'', b'3', b'hdesrderhd']
     _MIN_SIZE = 6
 
     def __init__(self, multipart: List[bytes], prefix_size: int = 0, **kwargs):
@@ -56,8 +56,12 @@ class MultipartStructure:
         prefix_data = [] if prefix_data is None else prefix_data
         return [*prefix_data, b'', create_time, b'', id_, b'', *data]
 
+    @classmethod
+    def from_parts(cls, create_time: bytes, id_: bytes, data: List[bytes], prefix_data: List[bytes] = None):
+        return cls(cls.create_multipart(create_time, id_, data, prefix_data), prefix_size=len(prefix_data))
+
     @staticmethod
-    def validate_multipart(multipart, ps: int = 0):
+    def validate_multipart(multipart: List[bytes], ps: int = 0):
         """
         This method validate multipart.
 
@@ -67,15 +71,15 @@ class MultipartStructure:
         :return: True if ok
         """
         MS = MultipartStructure
-        if len(multipart) < MultipartStructure._MIN_SIZE+ps:
-            raise ValueError(f'Wrong multipart because is shorter than {MS._MIN_SIZE+ps}')
-        if multipart[MS.EMPTY_BIT_1+ps] or multipart[MS.EMPTY_BIT_2+ps] or multipart[MS.EMPTY_BIT_3+ps]:
+        if len(multipart) < MultipartStructure._MIN_SIZE + ps:
+            raise ValueError(f'Wrong multipart because is shorter than {MS._MIN_SIZE + ps}')
+        if multipart[MS.EMPTY_BYTE_1 + ps] or multipart[MS.EMPTY_BYTE_2 + ps] or multipart[MS.EMPTY_BYTE_3 + ps]:
             raise ValueError(f'Empty byte in multipart is not empty')
-        if not multipart[MS.CREATE_TIME+ps]:
+        if not multipart[MS.CREATE_TIME + ps]:
             raise ValueError(f'Request has not message create date')
-        if not multipart[MS.ID_+ps]:
+        if not multipart[MS.ID_ + ps]:
             raise ValueError(f'Request has not message id')
-        if not multipart[MS.DATA+ps]:
+        if not multipart[MS.DATA + ps]:
             raise ValueError(f'No data in multipart')
         return True
 

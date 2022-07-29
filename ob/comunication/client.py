@@ -1,16 +1,12 @@
 import asyncio
-import datetime
 import logging
 import time
-
 import zmq
 from typing import List
-from zmq.asyncio import Poller
 from ob.comunication.base_communication_object import BaseCommunicationObject
-from ob.comunication.message_id_deque import MessageIdDeque
+from ob.comunication.comunication_error import ClientRuntimeError, ClientTimeoutError
 from ob.comunication.message_serializer import MessageSerializer
 from ob.comunication.multipart_structure import MultipartStructure
-from ob.data_colection.value_call import ValueRequest, ValueResponse
 
 logger = logging.getLogger(__name__)
 
@@ -22,25 +18,21 @@ class Client(BaseCommunicationObject):
     def __init__(self, name: str = None, port: int = None, **kwargs):
         super().__init__(name=name, port=port, **kwargs)
         # OMQ
-        self._frontend = self.context.socket(zmq.DEALER)
-        self._frontend.connect(f"{self._get_cfg('protocol')}://{self._get_cfg('url')}:{self._port}")
+        self._front_socket = self.context.socket(zmq.DEALER)
+        self._front_socket.connect(f"{self._get_cfg('protocol')}://{self._get_cfg('url')}:{self._port}")
         # message service
         self._msg_event: asyncio.Event = asyncio.Event()
-        self._new_msgs: List[bytes] = []
+        self._new_msgs: List[MultipartStructure] = []
         self._create_time = 0
         self._next_id: int = 0
         self._receive_task: asyncio.Task or None = None
         self._loop = None
         self._waiting_amount = 0
-        self.timeout = self._get_cfg('timeout')
-
-    async def get_async(self, address, timestamp: datetime or float or None = None, delta: float or None = None):
-        request = ValueRequest(address=address, timestamp=timestamp, delta=delta)
-        return await self.send_singlepart(request)
 
     def _get_msg_create_time(self) -> bytes:
         """
-        Create and return message timestamp.
+        Create and return message timestamp
+
         :return: message timestamp
         """
         msg_create_time = int(time.time())
@@ -60,44 +52,56 @@ class Client(BaseCommunicationObject):
         self._next_id += 1
         return MessageSerializer.pack_b(msg_id)
 
-    async def _send_to_server(self, list_parts: List[bytes], no_wait: bool = False) -> List[bytes] or None:
-        # create message timestamp
-        msg_create_time_b = self._get_msg_create_time()
-        # create message id
-        msg_id_b = self._get_msg_id()
+    async def _send_to_server(self, ms: MultipartStructure, no_wait: bool = False) -> MultipartStructure:
+        """
 
+        :param ms:
+        :param no_wait:
+        :raise ClientRuntimeError:
+        :raise ClientTimeoutError:
+        :return: MultipartStructure or None
+        """
         logger.info(f"The {self._TYPE} named {self.name} is sending request...")
-        sending_result = await self._frontend.send_multipart(
-            MultipartStructure.create_multipart(msg_create_time_b, msg_id_b, list_parts))
+        sending_result = await self._front_socket.send_multipart(ms.multipart)
+        logger.info(f"The {self._TYPE} named {self.name} sent the request")
         if not no_wait:
             try:
-                await self._stand_in_line()
+                await self._stand_in_line()  # ca raise RuntimeError
                 try:
-                    return await asyncio.wait_for(self._wait_for_response(msg_create_time_b, msg_id_b), timeout=self.timeout)
+                    return await asyncio.wait_for(self._wait_for_response(ms.create_time, ms.id_), timeout=self.timeout)
                 except asyncio.TimeoutError:
-                    logger.info(f"the response did not come before timeout {self.timeout}s")
+                    # logger.info(f"the response did not come before timeout {self.timeout}s")
+                    raise ClientTimeoutError(message=f"The response did not come before timeout {self.timeout}s")
+                except ClientRuntimeError:
+                    raise
+            except ClientRuntimeError:
+                raise
             finally:
                 await self._skip_the_line()
-        return None
+        raise ClientRuntimeError
 
-    async def _wait_for_response(self, msg_create_time_b: bytes, msg_id_b: bytes):
+    async def _wait_for_response(self, msg_create_time_b: bytes, msg_id_b: bytes) -> MultipartStructure:
         logger.info(f"The {self._TYPE} named {self.name} is waiting for response...")
         while True:
             if not self._receive_task or self._receive_task.done():  # sanity check
                 logger.error(f"The receive task was stopped before retrieve some waiting messages")
-                return None
+                raise ClientRuntimeError(message=f"The receive task was stopped before retrieve some waiting messages")
             await asyncio.sleep(0)  # this will allow other tasks to change event
             await self._msg_event.wait()
             message = self._check_message_comes(msg_create_time_b, msg_id_b)
             if message:
                 break
         self._new_msgs.remove(message)
-        return MultipartStructure.get_data(message)
+        return message
 
     async def _receive_msgs(self):
         while True:
-            multipart = await self._frontend.recv_multipart()
-            self._new_msgs.append(multipart)
+            multipart = await self._front_socket.recv_multipart()
+            try:
+                ms = self._open_envelope(multipart)
+                self._new_msgs.append(ms)
+            except ValueError:
+                logger.error(f"The received message is corrupted, it will be discarded.")
             # this try is for situation when task will be canceled when sleep always should set event to false (clear)
             try:
                 self._msg_event.set()
@@ -106,6 +110,11 @@ class Client(BaseCommunicationObject):
                 self._msg_event.clear()
 
     async def _stand_in_line(self):
+        """
+
+        :raise ClientRuntimeError:
+        :return:
+        """
         self._waiting_amount += 1
         if not self._receive_task:
             await self._run_receiver()
@@ -119,6 +128,7 @@ class Client(BaseCommunicationObject):
         """
         This method start receiver task
 
+        :raise ClientRuntimeError:
         :return: None
         """
         try:
@@ -126,7 +136,7 @@ class Client(BaseCommunicationObject):
         except RuntimeError:
             # this shouldn't happen
             logger.error(f"Can not get current async loop, something goes wrong")
-            raise
+            raise ClientRuntimeError(message='Can not get current async loop')
         self._loop = loop
         self._receive_task = loop.create_task(self._receive_msgs())
 
@@ -145,40 +155,73 @@ class Client(BaseCommunicationObject):
             if task.done():
                 logger.info(f"The retrieve task was stopped")
 
-    def _check_message_comes(self, create_time_b: bytes, id_b: bytes):
+    def _check_message_comes(self, create_time_b: bytes, id_b: bytes) -> MultipartStructure or None:
         for m in self._new_msgs:
-            if MultipartStructure.get_create_time(m) == create_time_b and MultipartStructure.get_id(m) == id_b:
+            if m.create_time == create_time_b and m.id_ == id_b:
                 return m
         return None
 
-    async def send_multipart(self, list_part: List[ValueRequest]) -> List[ValueResponse]:
+    async def send_multipart(self, list_part: List[bytes], no_wait: bool = False) -> List[bytes]:
         """
         This method send request to server witch many sub-requests and return answer.
 
+        :param no_wait: If 'true' than request will be sent and client will not wait for response
         :param list_part: list single requests
+        :raise ClientRuntimeError:
+        :raise ClientTimeoutError:
         :return: list of responses
         """
-        list_byte_part = []
-        for lp in list_part:
-            list_byte_part.append(lp.to_byte())
-        resp = await self._send_to_server(list_byte_part)
-        response = []
-        for r in resp:
-            response.append(ValueResponse.from_byte(r))
-        return response
+        # create message timestamp
+        msg_create_time_b = self._get_msg_create_time()
+        # create message id
+        msg_id_b = self._get_msg_id()
+        ms = self._pack_to_envelope([], msg_create_time_b, msg_id_b, list_part)
+        try:
+            resp = await self._send_to_server(ms, no_wait=no_wait)
+        except ClientRuntimeError:
+            raise
+        except ClientTimeoutError:
+            raise
+        return resp.data
 
-    async def send_singlepart(self, part: ValueRequest) -> ValueResponse:
+    async def send_singlepart(self, part: bytes, no_wait: bool = False) -> bytes:
         """
         This method send request to server witch one sub-request and return answer.
 
+        :param no_wait: If 'true' than request will be sent and client will not wait for response
         :param part: single requests
+        :raise ClientRuntimeError:
+        :raise ClientTimeoutError:
         :return: response
         """
-        resp = await self._send_to_server([part.to_byte()])
-        if resp:
-            return ValueResponse.from_byte(resp[0])
-        else:
-            return ValueResponse(part.address)
+        messages = await self.send_multipart([part], no_wait=no_wait)
+        return messages[0]
+
+    @staticmethod
+    def _open_envelope(multipart: List[bytes]) -> MultipartStructure:
+        ms = MultipartStructure(multipart, 0)
+        try:
+            ms.validate()
+        except ValueError as e:
+            # envelope is damaged
+            raise
+        return ms
+
+    @staticmethod
+    def _pack_to_envelope(target: List[bytes], create_time: bytes, msg_id: bytes, data_b: list) -> MultipartStructure:
+        """
+
+        :param target: Not used. Always be empty []
+        :param create_time: request create time
+        :param msg_id: request id
+        :param data_b: list sub-requests
+        :return: multipart
+        """
+        target = []
+        if not data_b:
+            data_b = [b'']
+            logger.warning(f'No data to send. Task send empty bit to router. ')
+        return MultipartStructure.from_parts(create_time, msg_id, data_b, target)
 
 # TODO dodać jakiś timeout do zapytań
 

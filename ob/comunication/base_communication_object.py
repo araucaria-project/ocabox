@@ -1,6 +1,9 @@
 import logging
-from abc import ABC
 import confuse
+from abc import ABC
+from typing import List
+
+from ob.comunication.multipart_structure import MultipartStructure
 from ob.ob_config import SingletonConfig
 from zmq.asyncio import Context
 
@@ -19,6 +22,9 @@ class BaseCommunicationObject(ABC):
             raise RuntimeError
         # OMQ
         self.context = Context()  # TODO One for all router (Context.instance()) or one for everyone router (Context())?
+        self._front_socket = None
+        # message service
+        self.timeout = self._get_cfg('timeout')
 
     def _get_cfg(self, name_cfg: str, default=None, use_default_settings=True):
         """
@@ -40,6 +46,22 @@ class BaseCommunicationObject(ABC):
             else:
                 value = default
         return value
+
+    @staticmethod
+    def _open_envelope(multipart: List[bytes]) -> MultipartStructure:
+        raise NotImplemented
+
+    @staticmethod
+    def _pack_to_envelope(target: List[bytes], create_time: bytes, msg_id: bytes, data_b: list) -> MultipartStructure:
+        """
+
+        :param target: address of clients should be one address or many witch empty byte separate.
+        :param create_time: request create time
+        :param msg_id: request id
+        :param data_b: list sub-requests
+        :return: multipart
+        """
+        raise NotImplemented
 
     def __del__(self):
         self.context.destroy()  # without this zmq not close socket when BaseCommunicationObject is destroy

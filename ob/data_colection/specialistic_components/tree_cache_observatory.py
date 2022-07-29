@@ -39,8 +39,8 @@ class TreeCache(TreeBaseProvider):
         if not known_value:
             known_value = self._KnownValue(address, None, None)
             self._known_values.append(known_value)
-        value = known_value.value if self._value_meets_requirements(known_value, request.timestamp,
-                                                                    request.delta) else None
+        value = known_value.value if self._value_meets_requirements(known_value, request.time_of_data,
+                                                                    request.time_of_data_tolerance) else None
         # found in known values
         if value:
             return value

@@ -1,12 +1,9 @@
 import asyncio
 import logging
-from typing import List
-
 import zmq
+from typing import List
 from zmq.asyncio import Poller
-
 from ob.comunication.base_communication_object import BaseCommunicationObject
-from ob.comunication.message_serializer import MessageSerializer
 from ob.comunication.base_request_solver import BaseRequestSolver
 from ob.comunication.multipart_structure import MultipartStructure
 
@@ -22,8 +19,8 @@ class Router(BaseCommunicationObject):
         # request solver
         self.request_solver: BaseRequestSolver or None = request_solver
         # OMQ
-        self.frontend = self.context.socket(zmq.ROUTER)
-        self.frontend.bind(f"{self._get_cfg('protocol', 'tcp')}://{self._get_cfg('url', '*')}:{self._port}")
+        self._front_socket = self.context.socket(zmq.ROUTER)
+        self._front_socket.bind(f"{self._get_cfg('protocol', 'tcp')}://{self._get_cfg('url', '*')}:{self._port}")
         # Tasks
         self._main_task_name = f'{self.name}_main_task'
         self._main_task = None
@@ -41,7 +38,7 @@ class Router(BaseCommunicationObject):
             await asyncio.sleep(1)
             logger.info(f'{self.name}: Listening...')
 
-    async def _solve_request(self, data: List[dict]) -> List[dict] or None:
+    async def _solve_request(self, data: List[bytes]) -> List[bytes] or None:
         answer = None
         if self.request_solver:
             answer = await self.request_solver.get_answer(data)
@@ -50,7 +47,7 @@ class Router(BaseCommunicationObject):
         return answer
 
     @staticmethod
-    def _open_envelope(multipart):
+    def _open_envelope(multipart: List[bytes]) -> MultipartStructure:
         ms = MultipartStructure(multipart, 1)
         try:
             ms.validate()
@@ -61,26 +58,16 @@ class Router(BaseCommunicationObject):
         if not target:
             logger.error(f'Wrong port address in multipart.')
             raise ValueError
-
-        messages = []
-        data = ms.data
-        for d in data:
-            messages.append(MessageSerializer.unpack_b(d))
-        return target, ms.create_time, ms.id_, messages
+        return ms
 
     @staticmethod
-    def _pack_to_envelope(target: List[bytes], create_time: bytes, msg_id: bytes, data: list):
+    def _pack_to_envelope(target: List[bytes], create_time: bytes, msg_id: bytes, data_b: list) -> MultipartStructure:
         if not target:
-            logger.error(f'Wrong port address for multipart.')
+            logger.error(f'Wrong client address for multipart.')
             raise ValueError
-        if not data:
-            data = [{}]
+        if not data_b:
+            data_b = [b'']
             logger.warning(f'No data to send. Task send empty bit to client. ')
-        data_b = []
-        for d in data:
-            if not isinstance(d, dict) or not MessageSerializer.is_correct(d):
-                raise ValueError
-            data_b.append(MessageSerializer.pack_b(d))
         return MultipartStructure.create_multipart(create_time, msg_id, data_b, target)
 
     async def _send_back(self, message):
@@ -90,15 +77,14 @@ class Router(BaseCommunicationObject):
                 self._message_tasks.remove(task)
             except ValueError:
                 logger.error('Unexpected ValueError. Can not remove task from task list.')
-
         try:
-            target, create_time, msg_id, data_list = self._open_envelope(message)
+            ms = self._open_envelope(message)
         except ValueError:
             # Don't answer for incorrect requests. Close task.
             remove_task_inner()
             return
         try:
-            answer = await self._solve_request(data_list)
+            answer = await asyncio.wait_for(self._solve_request(ms.data), timeout=self.timeout)
         except ValueError:
             # Obsolete and shouldn't have happened
             # Don't answer for incorrect requests. Close task.
@@ -110,6 +96,11 @@ class Router(BaseCommunicationObject):
             # remove canceled task from list
             remove_task_inner()
             raise
+        except asyncio.TimeoutError:
+            # remove to slow task from list
+            remove_task_inner()
+            logger.error(f"Handling the request has timed out. Stop handling this task.")
+            return
         except Exception as e:
             # shouldn't have happened
             remove_task_inner()
@@ -117,25 +108,26 @@ class Router(BaseCommunicationObject):
                          f"don't send response. Error message: {str(e)}")
             return
         try:
-            answer_envelope = Router._pack_to_envelope(target, create_time, msg_id, answer)
+            answer_envelope = Router._pack_to_envelope(ms.prefix_data, ms.create_time, ms.id_, answer)
         except ValueError:
             # Don't answer for incorrect requests. Close task.
             remove_task_inner()
             return
-        self.frontend.send_multipart(answer_envelope)
+        self._front_socket.send_multipart(answer_envelope)
+        logger.info("Send response to client")
         remove_task_inner()
 
     async def _main(self):
         # Poller() is only necessary for multiple sockets. Has been added here with thoughts about the future.
         poller = Poller()
-        poller.register(self.frontend, zmq.POLLIN)
+        poller.register(self._front_socket, zmq.POLLIN)
         i = 0
         while True:
             i += 1
             events = await poller.poll()
-            if self.frontend in dict(events):
-                message = await self.frontend.recv_multipart()
-                task = asyncio.create_task(self._send_back(message), name=self._message_task_name)
+            if self._front_socket in dict(events):
+                message = await self._front_socket.recv_multipart()
+                task = self._current_loop.create_task(self._send_back(message), name=self._message_task_name)
                 self._message_tasks.append(task)
 
     def _start_main_task(self):

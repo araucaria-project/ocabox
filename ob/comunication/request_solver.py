@@ -16,7 +16,7 @@ class RequestSolver(BaseRequestSolver):
     def __init__(self, data_provider: ProvidesResponseProtocol, **kwargs):
         super(RequestSolver, self).__init__(data_provider, **kwargs)
 
-    async def get_answer(self, request: List[dict]) -> List[dict]:
+    async def get_answer(self, request: List[bytes]) -> List[bytes]:
         # docstring is imported from parent
         response = []
         coroutines = []
@@ -33,28 +33,28 @@ class RequestSolver(BaseRequestSolver):
                 re = ResponseError(4001, 'There were unexpected problems trying to respond to the request', repr(self),
                                    'CRITICAL')
                 v_response = ValueResponse('', None, False, re)
-                resp = v_response.to_dict()
+                resp = v_response.to_byte()
                 response.append(resp)
         return response
 
-    async def get_single_answer(self, request: dict) -> dict:
+    async def get_single_answer(self, request: bytes) -> bytes:
         # docstring is imported from parent
-        response: dict
+        response: bytes
         try:
-            v_request = ValueRequest.from_dict(request)
+            v_request = ValueRequest.from_byte(request)
         except (ValueError, AddressError, TypeError):
             # can not create ValueRequest object (data is damaged) - return empty response witch error
             logger.info('Can not convert request dictionary to request object.')
             re = ResponseError(4001, 'Can not build request from ordered data', repr(self), 'CRITICAL')
             v_response = ValueResponse('', None, False, re)
-            response = v_response.to_dict()
+            response = v_response.to_byte()
             return response
         # Can not find value provider application
         if not self.data_provider or not isinstance(self.data_provider, ProvidesResponseProtocol):
             logger.error('Can not find value provider application.')
             re = ResponseError(4002, '', repr(self), 'CRITICAL')
             v_response = ValueResponse(v_request.address, None, False, re)
-            response = v_response.to_dict()
+            response = v_response.to_byte()
             return response
         # try to get response
         # get_response method shouldn't raise any errors !!!
@@ -64,5 +64,5 @@ class RequestSolver(BaseRequestSolver):
             logger.error(f'{str(e)}')
             re = ResponseError(4002, '', repr(self), 'CRITICAL')
             v_response = ValueResponse(v_request.address, None, False, re)
-        response = v_response.to_dict()
+        response = v_response.to_byte()
         return response

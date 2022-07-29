@@ -4,6 +4,7 @@ import logging
 import time
 import unittest
 
+from ob.comunication.message_serializer import MessageSerializer
 from ob.data_colection.base_components.tree_base_provider import TreeBaseProvider
 from ob.data_colection.base_components.tree_component import ProvidesResponseProtocol
 from ob.data_colection.value import Value
@@ -54,13 +55,12 @@ class RequestSolverTest(unittest.TestCase):
     def test_get_single_answer_no_provider(self):
         """
         test of get answer when is no provider set
-
-        :return:
         """
-        sample_request = {'address': {'adr': 'sample_telescope.any_val'}, 'timestamp': 1655975599.883751, 'delta': 20.0}
+        sample_request = {'address': {'adr': 'sample_telescope.any_val'}, 'time_of_data': 1655975599.883751,
+                          'time_of_data_tolerance': 20.0}
         rs = RequestSolver(None)
-        answer = self.loop.run_until_complete(rs.get_single_answer(sample_request))
-
+        answer = self.loop.run_until_complete(rs.get_single_answer(MessageSerializer.pack_b(sample_request)))
+        answer = MessageSerializer.unpack_b(answer)
         self.assertEqual(answer.get('address'), sample_request.get('address'))
         self.assertIsNone(answer.get('value'))
         self.assertEqual(answer.get('error').get('code'), 4002)
@@ -68,15 +68,14 @@ class RequestSolverTest(unittest.TestCase):
     def test_get_single_answer_corrupted_request(self):
         """
         test of get answer when request is damaged
-
-        :return:
         """
         # no address in request
-        sample_request = {'wrong_address': {'adr': 'sample_telescope.any_val'}, 'timestamp': 1655975599.883751,
-                          'delta': 20.0}
+        sample_request = {'wrong_address': {'adr': 'sample_telescope.any_val'}, 'time_of_data': 1655975599.883751,
+                          'time_of_data_tolerance': 20.0}
         rs = RequestSolver(None)
 
-        answer = self.loop.run_until_complete(rs.get_single_answer(sample_request))
+        answer = self.loop.run_until_complete(rs.get_single_answer(MessageSerializer.pack_b(sample_request)))
+        answer = MessageSerializer.unpack_b(answer)
         self.assertEqual(answer.get('address').get('adr'), '')
         self.assertIsNone(answer.get('value'))
         self.assertEqual(answer.get('error').get('code'), 4001)
@@ -84,15 +83,14 @@ class RequestSolverTest(unittest.TestCase):
     def test_get_single_answer(self):
         """
         test of get answer correct request
-
-        :return:
         """
-        sample_request = {'address': {'adr': 'sample_telescope.any_val'}, 'timestamp': 1655975599.883751,
-                          'delta': 20.0}
+        sample_request = {'address': {'adr': 'sample_telescope.any_val'}, 'time_of_data': 1655975599.883751,
+                          'time_of_data_tolerance': 20.0}
         provider = self.SampleTestValueProvider('sample_provider')
         rs = RequestSolver(provider)
 
-        answer = self.loop.run_until_complete(rs.get_single_answer(sample_request))
+        answer = self.loop.run_until_complete(rs.get_single_answer(MessageSerializer.pack_b(sample_request)))
+        answer = MessageSerializer.unpack_b(answer)
         self.assertEqual(answer.get('address'), sample_request.get('address'))
         self.assertIsNotNone(answer.get('value'))
         self.assertIsNone(answer.get('error'))
@@ -101,21 +99,21 @@ class RequestSolverTest(unittest.TestCase):
         """
         test of parallel operation. If the request concerns several values at once, the method should divide them into
         tasks and run them in parallel.
-
-        :return:
         """
-        sample_request = {'address': {'adr': 'sample_telescope.any_val'}, 'timestamp': 1655975599.883751,
-                          'delta': 20.0}
+        sample_request = {'address': {'adr': 'sample_telescope.any_val'}, 'time_of_data': 1655975599.883751,
+                          'time_of_data_tolerance': 20.0}
         provider = self.SampleTestValueProvider('sample_provider')
         rs = RequestSolver(provider)
         nr_of_requests = 10
-        sample_list_request = [sample_request for _ in range(nr_of_requests)]  # list witch 10 requests
+        # list witch 10 requests
+        sample_list_request = [MessageSerializer.pack_b(sample_request) for _ in range(nr_of_requests)]
 
         time_start = time.time()
         answer = self.loop.run_until_complete(rs.get_answer(sample_list_request))
         time_end = time.time()
         self.assertTrue(time_end - time_start < nr_of_requests * self.SampleTestValueProvider.RESPONSE_DELAY)
         for a in answer:
+            a = MessageSerializer.unpack_b(a)
             self.assertEqual(a.get('address'), sample_request.get('address'))
             self.assertIsNotNone(a.get('value'))
             self.assertIsNone(a.get('error'))
@@ -124,11 +122,9 @@ class RequestSolverTest(unittest.TestCase):
         """
         this test will check that when the main task which runs the get answer method is canceled then all subtasks
         will also be canceled.
-
-        :return:
         """
-        sample_request = {'address': {'adr': 'sample_telescope.any_val'}, 'timestamp': 1655975599.883751,
-                          'delta': 20.0}
+        sample_request = {'address': {'adr': 'sample_telescope.any_val'}, 'time_of_data': 1655975599.883751,
+                          'time_of_data_tolerance': 20.0}
         provider = self.SampleTestValueProvider('sample_provider')
         rs = RequestSolver(provider)
         nr_of_requests = 10

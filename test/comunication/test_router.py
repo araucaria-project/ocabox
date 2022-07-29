@@ -2,8 +2,6 @@ import asyncio
 import logging
 import unittest
 from typing import List
-
-from ob.comunication.message_serializer import MessageSerializer
 from ob.comunication.multipart_structure import MultipartStructure
 from ob.ob_config import SingletonConfig
 from ob.comunication.base_request_solver import BaseRequestSolver
@@ -13,6 +11,21 @@ logger = logging.getLogger(__name__)
 
 
 class RouterTest(unittest.TestCase):
+    class CrashResolver(BaseRequestSolver):
+
+        async def get_answer(self, request: List[bytes]) -> List[bytes]:
+            await asyncio.sleep(5)
+            return [b'']
+
+    SAMPLE_MESSAGE = [b'\x00\x80\x00A\xa7',
+                      b'',
+                      b'123456789',
+                      b'',
+                      b'0',
+                      b'',
+                      b'\x84\xa7address\x81\xa3adr\xb8sample_telescope.any_val\xactime_of_data\xcbA\xd8\xb8\xab7w\xc1a'
+                      b'\xb6time_of_data_tolerance\xcb@N\x00\x00\x00\x00\x00\x00\xafrequest_timeout\xcbA\xd8\xb8\xab'
+                      b'>\xf6]\xee']
 
     def setUp(self):
         super().setUp()
@@ -163,79 +176,64 @@ class RouterTest(unittest.TestCase):
         """
         Test task that returns the answer has been canceled. Checks if it will be correctly removed from the active
         tasks list.
-
-        :return:
         """
 
-        class CrashResolver(BaseRequestSolver):
-
-            async def get_answer(self, request: List[dict]) -> List[dict]:
-                await asyncio.sleep(5)
-                return [{}]
-
         name1 = 'SampleTestRouter'
-        vr = Router(CrashResolver(None), name=name1, port=5559)
-        sample_message = [b'\x00\x80\x00A\xa7',
-                          b'',
-                          b'123456789',
-                          b'',
-                          b'0',
-                          b'',
-                          b'\x83\xa7address\x81\xa3adr\xb8sample_telescope.any_val\xa9'
-                          b'timestamp\xcbA\xd8\xac\xbeM\xb52@\xa5delta\xcb@4\x00\x00\x00'
-                          b'\x00\x00\x00']
+        vr = Router(self.CrashResolver(None), name=name1, port=5559)
 
         self.assertTrue(len(asyncio.all_tasks(self.loop)) == 0)
         self.assertTrue(len(vr._message_tasks) == 0)
 
         async def primitive_router_main_coro():
-            task = asyncio.create_task(vr._send_back(sample_message), name=vr._message_task_name)
+            task = asyncio.create_task(vr._send_back(self.SAMPLE_MESSAGE), name=vr._message_task_name)
             vr._message_tasks.append(task)
             await asyncio.sleep(0)
             task.cancel()
-            await asyncio.sleep(0)
+            await asyncio.sleep(0)  # !!! need 3 times to change focus for cancel all sub-task
+            await asyncio.sleep(0)  # !!! need 3 times to change focus for cancel all sub-task
+            await asyncio.sleep(0)  # !!! need 3 times to change focus for cancel all sub-task
 
         self.loop.run_until_complete(primitive_router_main_coro())
         self.assertTrue(len(vr._message_tasks) == 0)
         self.assertTrue(len(asyncio.all_tasks(self.loop)) == 0)
 
+    def test_timeout_task(self):
+        """
+        Test task that returns the answer has timeout.
+        """
+        name1 = 'SampleTestRouter'
+        vr = Router(self.CrashResolver(None), name=name1)
+        vr.timeout = 1
+
+        async def primitive_router_main_coro():
+            task = asyncio.create_task(vr._send_back(self.SAMPLE_MESSAGE), name=vr._message_task_name)
+            vr._message_tasks.append(task)
+            await asyncio.sleep(0)
+            result = await task
+            self.assertIsNone(result)
+
+        self.loop.run_until_complete(primitive_router_main_coro())
+
     def test__open_envelope(self):
         """
         Test metchod _open_envelope()
-
-        :return:
         """
-
-        class CrashResolver(BaseRequestSolver):
-
-            async def get_answer(self, request: List[dict]) -> List[dict]:
-                await asyncio.sleep(5)
-                return [{}]
-
+        sample_envelope = self.SAMPLE_MESSAGE
         name1 = 'SampleTestRouter'
-        vr = Router(CrashResolver(None), name=name1, port=5559)
+        vr = Router(self.CrashResolver(None), name=name1, port=5559)
 
-        sample_envelope = [b'\x00\x80\x00A\xa7',
-                           b'',
-                           b'123456789',
-                           b'',
-                           b'0',
-                           b'',
-                           b'\x83\xa7address\x81\xa3adr\xb8sample_telescope.any_val\xa9'
-                           b'timestamp\xcbA\xd8\xac\xbeM\xb52@\xa5delta\xcb@4\x00\x00\x00'
-                           b'\x00\x00\x00']
-        target, create_time, id_, messages = vr._open_envelope(sample_envelope)
+        ms = vr._open_envelope(sample_envelope)
         prefix_size = 1
-        self.assertEqual(target, [sample_envelope[prefix_size - 1]])
-        self.assertEqual(create_time, sample_envelope[MultipartStructure.CREATE_TIME + prefix_size])
-        self.assertEqual(id_, sample_envelope[MultipartStructure.ID_ + prefix_size])
-        self.assertEqual(messages, [MessageSerializer.unpack_b(sample_envelope[MultipartStructure.DATA + prefix_size])])
+        self.assertEqual(ms.prefix_data, [sample_envelope[prefix_size - 1]])
+        self.assertEqual(ms.create_time, sample_envelope[MultipartStructure.CREATE_TIME + prefix_size])
+        self.assertEqual(ms.id_, sample_envelope[MultipartStructure.ID_ + prefix_size])
+        self.assertEqual(ms.data, [sample_envelope[MultipartStructure.DATA + prefix_size]])
 
         # no create data in envelope
         sample_wrong_envelope = sample_envelope
         sample_wrong_envelope[MultipartStructure.CREATE_TIME + prefix_size] = b''
         with self.assertRaises(ValueError):
-            target, create_time, id_, messages = vr._open_envelope(sample_envelope)
+            ms = vr._open_envelope(sample_envelope)
 
 
 if __name__ == '__main__':

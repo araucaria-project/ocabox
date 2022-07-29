@@ -24,7 +24,8 @@ client:
 
 data_collection:
   ValueRequest:
-    delta: 60
+    default_request_timeout: 30
+    time_of_data_tolerance: 60
   TreeAlpacaObservatory:
     address: localhost:80
     api_version: 1

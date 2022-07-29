@@ -1,4 +1,5 @@
 import logging
+import time
 from dataclasses import dataclass, fields, field
 from datetime import datetime
 from typing import ClassVar
@@ -86,14 +87,20 @@ class ValueRequest(ValueExchange):
     This is a base object with representing request
     """
     # master keys that store essential data
-    STANDARD_KEYS: ClassVar[list] = list(set(ValueExchange.STANDARD_KEYS + ['address', 'timestamp', 'delta']))
+    STANDARD_KEYS: ClassVar[list] = list(
+        set(ValueExchange.STANDARD_KEYS + ['address', 'time_of_data', 'time_of_data_tolerance', 'request_timeout']))
     address: str or Address or dict
-    timestamp: datetime or float or None = None  # default - now
-    delta: float or None = None  # default - get from config
+    # todo zrobicm jedna biblioteke time zamiast datatime i floaty do przechowywania jesli nie ma przeciwwskazan
+    time_of_data: datetime or float or None = None  # default - now
+    time_of_data_tolerance: float or None = None  # default - get from config  :  moznaq zwrocic dane z zakresu (time_of_data - time_of_data_tolerance, now)
     index: int = field(init=False, default=0)
+    request_timeout: float or None = None  # bezwgledny timeout rquesta, TODO: propagate to 0MQ frame and router and everywhere
 
     def __post_init__(self):
-        # check address
+        if self.request_timeout is None:
+            self.request_timeout = time.time() + SingletonConfig.get_config()['data_collection'][type(self).__name__][
+                'default_request_timeout'].get()
+            # check address
         if isinstance(self.address, dict):
             self.address = Address(**self.address)
         elif isinstance(self.address, Address):
@@ -101,18 +108,19 @@ class ValueRequest(ValueExchange):
         else:
             self.address = Address(self.address)  # I know, wrong typing but it must be so, raise AddressError here
         # check date
-        if self.timestamp is None:
-            self.timestamp = datetime.now()
-        elif isinstance(self.timestamp, float):
-            self.timestamp = datetime.fromtimestamp(self.timestamp)
-        elif isinstance(self.timestamp, datetime):
+        if self.time_of_data is None:
+            self.time_of_data = datetime.now()
+        elif isinstance(self.time_of_data, float):
+            self.time_of_data = datetime.fromtimestamp(self.time_of_data)
+        elif isinstance(self.time_of_data, datetime):
             pass
         else:
             raise ValueError
-        # check delta
-        if self.delta is None:
-            self.delta = SingletonConfig.get_config()['data_collection'][type(self).__name__]['delta'].get()
-        self.delta = float(self.delta)  # this raise ValueError if is wrong type
+        # check time_of_data_tolerance
+        if self.time_of_data_tolerance is None:
+            self.time_of_data_tolerance = SingletonConfig.get_config()['data_collection'][type(self).__name__][
+                'time_of_data_tolerance'].get()
+        self.time_of_data_tolerance = float(self.time_of_data_tolerance)  # this raise ValueError if is wrong type
 
 
 @dataclass

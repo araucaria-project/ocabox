@@ -27,33 +27,35 @@ class ValueRequestTest(unittest.TestCase):
 
         :return:
         """
-        d = {'address': 'aaa.bbb.ccc', 'timestamp': datetime.now(), 'delta': 23, 'trash': 54}
+        d = {'address': 'aaa.bbb.ccc', 'time_of_data': datetime.now(), 'time_of_data_tolerance': 23, 'trash': 54}
         vr = ValueRequest.from_dict(d)
         self.assertTrue(hasattr(vr, 'address'))
-        self.assertTrue(hasattr(vr, 'timestamp'))
-        self.assertTrue(hasattr(vr, 'delta'))
+        self.assertTrue(hasattr(vr, 'time_of_data'))
+        self.assertTrue(hasattr(vr, 'time_of_data_tolerance'))
+        self.assertTrue(hasattr(vr, 'request_timeout'))
         self.assertFalse(hasattr(vr, 'trash'))
         self.assertIsInstance(vr.address, Address)
-        self.assertIsInstance(vr.timestamp, datetime)
+        self.assertIsInstance(vr.time_of_data, datetime)
 
     def test_to_dict(self):
         expected_dict = {'address': {'adr': 'aaa.bbb.ccc'},
-                         'timestamp': datetime(2022, 3, 15, 12, 40, 53).timestamp(), 'delta': 23}
-        vr = ValueRequest(expected_dict['address'], datetime.fromtimestamp(expected_dict['timestamp']),
-                          expected_dict['delta'])
+                         'time_of_data': datetime(2022, 3, 15, 12, 40, 53).timestamp(), 'time_of_data_tolerance': 23,
+                         'request_timeout': datetime(2022, 7, 29, 15, 40, 53).timestamp()}
+        vr = ValueRequest(address=expected_dict['address'], time_of_data=datetime.fromtimestamp(expected_dict['time_of_data']),
+                          time_of_data_tolerance=expected_dict['time_of_data_tolerance'], request_timeout=expected_dict['request_timeout'])
         out_dict = vr.to_dict()
         self.assertNotIsInstance(out_dict['address'], Address, msg='Object Address has not implemented '
                                                                    'method to_dict()')
         self.assertDictEqual(out_dict, expected_dict)
 
     def test_default_config(self):
-        expected_delta = self._cfg.config['data_collection']['ValueRequest']['delta'].get()
+        expected_time_of_data_tolerance = self._cfg.config['data_collection']['ValueRequest']['time_of_data_tolerance'].get()
         vr = ValueRequest('aaa.bbb.ccc')
-        # delta
-        self.assertEqual(expected_delta, vr.delta)
-        self.assertTrue(type(vr.delta) == int or float)
-        # timestamp
-        self.assertTrue(isinstance(vr.timestamp, datetime))
+        # request_timeout
+        self.assertEqual(expected_time_of_data_tolerance, vr.time_of_data_tolerance)
+        self.assertTrue(type(vr.time_of_data_tolerance) == int or float)
+        # time_of_data_tolerance
+        self.assertTrue(isinstance(vr.time_of_data, datetime))
 
 
 class ValueResponseTest(unittest.TestCase):
