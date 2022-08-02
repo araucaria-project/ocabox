@@ -345,4 +345,5 @@ class Router(BaseCommunicationObject):
     def __del__(self):
         if not self.is_stopped():
             self.stop()
+        self._front_socket.close()
         super().__del__()

@@ -15,10 +15,10 @@ class SampleTestResolver(BaseRequestSolver):
         self.response_delay = self.RESPONSE_DELAY
         super().__init__(data_provider, **kwargs)
 
-    async def get_answer(self, request: List[dict]) -> List[dict]:
+    async def get_answer(self, request: List[bytes]) -> List[bytes]:
         response = []
         for req in request:
-            v_request = ValueRequest.from_dict(req)
-            response.append(ValueResponse(v_request.address, Value('sample_answer', datetime.datetime.now())).to_dict())
+            v_request = ValueRequest.from_byte(req)
+            response.append(ValueResponse(v_request.address, Value('sample_answer', datetime.datetime.now())).to_byte())
         await asyncio.sleep(self.response_delay)
         return response

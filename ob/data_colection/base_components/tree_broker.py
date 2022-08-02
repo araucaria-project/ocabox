@@ -28,7 +28,8 @@ class TreeBroker(TreeBaseBroker, AddressDispatcher):
 
     async def get_response(self, request: ValueRequest) -> ValueResponse:
         # docstring is imported from parent
-        # TODO Czy sprawdzać czy adres jest tego komponentu jest poprawny? Poprzedni elemęt decyduje gdzie wysłać
-        #  zapytanie ale może oszukać czy sprawdzać to? DODAC TYLKO WARNINGA I NIC NIE ROBIC
+        if request.address[request.index] != self.get_source_name():
+            logger.warning(f"The request was passed to a block ({self.get_source_name()}) not contained in the address "
+                           f"({request.address.__str__()}).")
         request.index += 1
         return await super().get_response(request)

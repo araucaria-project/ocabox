@@ -64,4 +64,5 @@ class BaseCommunicationObject(ABC):
         raise NotImplemented
 
     def __del__(self):
+        # TODO tu jest problem
         self.context.destroy()  # without this zmq not close socket when BaseCommunicationObject is destroy

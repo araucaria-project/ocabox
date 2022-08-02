@@ -42,6 +42,7 @@ class ClientAPITest(unittest.TestCase):
         finally:
             asyncio.set_event_loop(None)
             self.loop.close()
+        self.vr.__del__()
         super().tearDown()
 
     def test_initial_client_api(self):
@@ -51,8 +52,6 @@ class ClientAPITest(unittest.TestCase):
     def test_get_multi(self):
         """
         Test method get_multi()
-
-        :return:
         """
         c_api = ClientAPI(name='SampleTestClient')
 

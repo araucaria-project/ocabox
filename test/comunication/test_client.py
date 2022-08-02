@@ -34,7 +34,6 @@ class ClientTest(unittest.TestCase):
         self.vr.stop()
         vr_stop = asyncio.gather(self.vr.get_stop_task(), return_exceptions=True)
         self.loop.run_until_complete(vr_stop)
-
         try:
             all_tasks = asyncio.all_tasks(self.loop)
             for t in all_tasks:
@@ -49,6 +48,8 @@ class ClientTest(unittest.TestCase):
         finally:
             asyncio.set_event_loop(None)
             self.loop.close()
+        self.vr.__del__()
+        # TODO MIKOŁAJ dlaczeg omuszę jawnie niszczyć obiekt bo sam robi to za późno i nie zdąży przed kolejnym testem?
         super().tearDown()
 
     @staticmethod
@@ -96,12 +97,10 @@ class ClientTest(unittest.TestCase):
         """
         Test getting many requests by one client and retry ordered responses
         """
-        # TODO tu skonczylem ...
-        # TODO tutaj coś nie gra z testem ale pozatym to testy jak się wysypią to trzeba zabić proces bo coś się blokuje
         class SampleTestResolverMix(SampleTestResolver):
 
-            async def get_answer(self, request: List[dict]) -> List[dict]:
-                v_request = ValueRequest.from_dict(request[0])
+            async def get_answer(self, request: List[bytes]) -> List[bytes]:
+                v_request = ValueRequest.from_byte(request[0])
                 nr = v_request.address[v_request.address.get_last_index()]
                 try:
                     nr = int(nr)
@@ -109,7 +108,7 @@ class ClientTest(unittest.TestCase):
                     nr = 0
                 await asyncio.sleep(5 / 10 - nr / 10)
                 response = ValueResponse(v_request.address, Value(nr, datetime.datetime.now()))
-                return [response.to_dict()]
+                return [response.to_byte()]
 
         self.vr.request_solver = SampleTestResolverMix(None)
         client = Client(name='SampleTestClient')

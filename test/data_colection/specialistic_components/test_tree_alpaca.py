@@ -48,6 +48,9 @@ class TreeAlpacaTest(unittest.TestCase):
         super().tearDown()
 
     def test_alpaca_call(self):
+        """
+        Test connection to the alpaca server. This test requires the alpaca server to be running in the background.
+        """
         sample_alpaca_call = 'name'
 
         sample_components = SingletonConfig.get_config()[self.OBSERVATORY_NAME]['observatory']['components'].get()

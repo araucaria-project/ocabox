@@ -223,8 +223,10 @@ class Client(BaseCommunicationObject):
             logger.warning(f'No data to send. Task send empty bit to router. ')
         return MultipartStructure.from_parts(create_time, msg_id, data_b, target)
 
-# TODO dodać jakiś timeout do zapytań
+    def __del__(self):
+        self._front_socket.close()
+        super().__del__()
 
-# TODO zrobic kolejke w kliecie zeby byl asynchroniczny
+# TODO dodać jakiś timeout do zapytań
 
 # TODO get i put rozrozniac
