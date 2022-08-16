@@ -1,11 +1,15 @@
 import asyncio
 import logging
+import time
 import unittest
 from typing import List
+
+from ob.comunication.message_serializer import MessageSerializer
 from ob.comunication.multipart_structure import MultipartStructure
 from ob.ob_config import SingletonConfig
 from ob.comunication.base_request_solver import BaseRequestSolver
 from ob.comunication.router import Router
+from test.comunication.sample_test_resolver import SampleTestResolver
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +24,8 @@ class RouterTest(unittest.TestCase):
     SAMPLE_MESSAGE = [b'\x00\x80\x00A\xa7',
                       b'',
                       b'123456789',
-                      b'',
                       b'0',
+                      b'123456789',
                       b'',
                       b'\x84\xa7address\x81\xa3adr\xb8sample_telescope.any_val\xactime_of_data\xcbA\xd8\xb8\xab7w\xc1a'
                       b'\xb6time_of_data_tolerance\xcb@N\x00\x00\x00\x00\x00\x00\xafrequest_timeout\xcbA\xd8\xb8\xab'
@@ -95,8 +99,6 @@ class RouterTest(unittest.TestCase):
     def test_router_is_stopped(self):
         """
         This test check if .is_stopped() method work good
-
-        :return:
         """
         name1 = 'SampleTestRouter'
         vr = Router(None, name=name1, port=5559)
@@ -156,8 +158,6 @@ class RouterTest(unittest.TestCase):
     def test__get_cfg(self):
         """
         test method _get_cfg()
-
-        :return:
         """
         name = 'SampleTestRouter'
         vr = Router(None, name=name)
@@ -197,22 +197,22 @@ class RouterTest(unittest.TestCase):
         self.assertTrue(len(vr._message_tasks) == 0)
         self.assertTrue(len(asyncio.all_tasks(self.loop)) == 0)
 
-    def test_timeout_task(self):
-        """
-        Test task that returns the answer has timeout.
-        """
-        name1 = 'SampleTestRouter'
-        vr = Router(self.CrashResolver(None), name=name1)
-        vr.timeout = 1
-
-        async def primitive_router_main_coro():
-            task = asyncio.create_task(vr._send_back(self.SAMPLE_MESSAGE), name=vr._message_task_name)
-            vr._message_tasks.append(task)
-            await asyncio.sleep(0)
-            result = await task
-            self.assertIsNone(result)
-
-        self.loop.run_until_complete(primitive_router_main_coro())
+    # def test_timeout_task(self):
+    #     """
+    #     Test task that returns the answer has timeout.
+    #     """
+    #     name1 = 'SampleTestRouter'
+    #     vr = Router(self.CrashResolver(None), name=name1)
+    #     vr.default_timeout = 1
+    #
+    #     async def primitive_router_main_coro():
+    #         task = asyncio.create_task(vr._send_back(self.SAMPLE_MESSAGE), name=vr._message_task_name)
+    #         vr._message_tasks.append(task)
+    #         await asyncio.sleep(0)
+    #         result = await task
+    #         self.assertIsNone(result)
+    #
+    #     self.loop.run_until_complete(primitive_router_main_coro())
 
     def test__open_envelope(self):
         """
@@ -230,10 +230,59 @@ class RouterTest(unittest.TestCase):
         self.assertEqual(ms.data, [sample_envelope[MultipartStructure.DATA + prefix_size]])
 
         # no create data in envelope
-        sample_wrong_envelope = sample_envelope
+        sample_wrong_envelope = sample_envelope.copy()
         sample_wrong_envelope[MultipartStructure.CREATE_TIME + prefix_size] = b''
         with self.assertRaises(ValueError):
-            ms = vr._open_envelope(sample_envelope)
+            ms = vr._open_envelope(sample_wrong_envelope)
+
+        # no id in envelope
+        sample_wrong_envelope = sample_envelope.copy()
+        sample_wrong_envelope[MultipartStructure.ID_ + prefix_size] = b''
+        with self.assertRaises(ValueError):
+            ms = vr._open_envelope(sample_wrong_envelope)
+
+        # no id in envelope
+        sample_wrong_envelope = sample_envelope.copy()
+        sample_wrong_envelope[MultipartStructure.REQUEST_TIMEOUT + prefix_size] = b''
+        with self.assertRaises(ValueError):
+            ms = vr._open_envelope(sample_wrong_envelope)
+
+    def test_task_timeout_from_ordered_message(self):
+        """
+        Test task get timeout from ordered message.
+        """
+        import zmq
+        from zmq.asyncio import Context
+        response_delay = 0.3
+        resolver = SampleTestResolver(None)
+        resolver.response_delay = response_delay
+
+        name1 = 'SampleTestRouter'
+        vr = Router(resolver, name=name1)
+        vr.default_timeout = 1
+
+        async def receive(time_to_expire):
+            with Context() as context:
+                with context.socket(zmq.DEALER) as socket:
+                    socket.connect(f"tcp://localhost:{vr._port}")
+                    prefix_size = 0
+                    sample_envelope = self.SAMPLE_MESSAGE.copy()[1:]
+                    sample_envelope[MultipartStructure.REQUEST_TIMEOUT + prefix_size] = MessageSerializer.pack_b(time.time() + time_to_expire)
+                    await socket.send_multipart(sample_envelope)
+                    message = await socket.recv_multipart()
+                    return message
+
+        async def primitive_coro():
+            vr.start(self.loop)
+            try:
+                with self.assertRaises(asyncio.exceptions.TimeoutError):
+                    result = await asyncio.wait_for(receive(time_to_expire=response_delay/2), timeout=1)
+                result = await asyncio.wait_for(receive(time_to_expire=response_delay*2), timeout=1)
+                self.assertIsNotNone(result)
+            finally:
+                vr.stop()
+
+        self.loop.run_until_complete(primitive_coro())
 
 
 if __name__ == '__main__':

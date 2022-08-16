@@ -4,7 +4,7 @@ import time
 import zmq
 from typing import List
 from ob.comunication.base_communication_object import BaseCommunicationObject
-from ob.comunication.comunication_error import ClientRuntimeError, ClientTimeoutError
+from ob.comunication.comunication_error import CommunicationRuntimeError, CommunicationTimeoutError
 from ob.comunication.message_serializer import MessageSerializer
 from ob.comunication.multipart_structure import MultipartStructure
 
@@ -31,7 +31,8 @@ class Client(BaseCommunicationObject):
 
     def _get_msg_create_time(self) -> bytes:
         """
-        Create and return message timestamp
+        Create and return message timestamp. This is needed to distinguish between incoming messages.
+        It is used like id.
 
         :return: message timestamp
         """
@@ -52,7 +53,8 @@ class Client(BaseCommunicationObject):
         self._next_id += 1
         return MessageSerializer.pack_b(msg_id)
 
-    async def _send_to_server(self, ms: MultipartStructure, no_wait: bool = False) -> MultipartStructure:
+    async def _send_to_server(self, ms: MultipartStructure, time_to_expire: float,
+                              no_wait: bool = False) -> MultipartStructure:
         """
 
         :param ms:
@@ -68,24 +70,26 @@ class Client(BaseCommunicationObject):
             try:
                 await self._stand_in_line()  # ca raise RuntimeError
                 try:
-                    return await asyncio.wait_for(self._wait_for_response(ms.create_time, ms.id_), timeout=self.timeout)
+                    return await asyncio.wait_for(self._wait_for_response(ms.create_time, ms.id_),
+                                                  timeout=time_to_expire)
                 except asyncio.TimeoutError:
                     # logger.info(f"the response did not come before timeout {self.timeout}s")
-                    raise ClientTimeoutError(message=f"The response did not come before timeout {self.timeout}s")
-                except ClientRuntimeError:
+                    raise CommunicationTimeoutError(
+                        message=f"The response did not come before timeout {self.default_timeout}s")
+                except CommunicationRuntimeError:
                     raise
-            except ClientRuntimeError:
+            except CommunicationRuntimeError:
                 raise
             finally:
                 await self._skip_the_line()
-        raise ClientRuntimeError
+        raise CommunicationRuntimeError
 
     async def _wait_for_response(self, msg_create_time_b: bytes, msg_id_b: bytes) -> MultipartStructure:
         logger.info(f"The {self._TYPE} named {self.name} is waiting for response...")
         while True:
             if not self._receive_task or self._receive_task.done():  # sanity check
                 logger.error(f"The receive task was stopped before retrieve some waiting messages")
-                raise ClientRuntimeError(message=f"The receive task was stopped before retrieve some waiting messages")
+                raise CommunicationRuntimeError(message=f"The receive task was stopped before retrieve some waiting messages")
             await asyncio.sleep(0)  # this will allow other tasks to change event
             await self._msg_event.wait()
             message = self._check_message_comes(msg_create_time_b, msg_id_b)
@@ -100,6 +104,7 @@ class Client(BaseCommunicationObject):
             try:
                 ms = self._open_envelope(multipart)
                 self._new_msgs.append(ms)
+                # TODO dodać jakiś mechamizm usuwania starych wiadomości na które nikt nie czeka
             except ValueError:
                 logger.error(f"The received message is corrupted, it will be discarded.")
             # this try is for situation when task will be canceled when sleep always should set event to false (clear)
@@ -136,7 +141,7 @@ class Client(BaseCommunicationObject):
         except RuntimeError:
             # this shouldn't happen
             logger.error(f"Can not get current async loop, something goes wrong")
-            raise ClientRuntimeError(message='Can not get current async loop')
+            raise CommunicationRuntimeError(message='Can not get current async loop')
         self._loop = loop
         self._receive_task = loop.create_task(self._receive_msgs())
 
@@ -161,11 +166,13 @@ class Client(BaseCommunicationObject):
                 return m
         return None
 
-    async def send_multipart(self, list_part: List[bytes], no_wait: bool = False) -> List[bytes]:
+    async def send_multipart(self, list_part: List[bytes], request_timeout: float = None,
+                             no_wait: bool = False) -> List[bytes]:
         """
         This method send request to server witch many sub-requests and return answer.
 
         :param no_wait: If 'true' than request will be sent and client will not wait for response
+        :param request_timeout: waiting for answer timeout
         :param list_part: list single requests
         :raise ClientRuntimeError:
         :raise ClientTimeoutError:
@@ -175,26 +182,35 @@ class Client(BaseCommunicationObject):
         msg_create_time_b = self._get_msg_create_time()
         # create message id
         msg_id_b = self._get_msg_id()
-        ms = self._pack_to_envelope([], msg_create_time_b, msg_id_b, list_part)
+        # create message timeout
+        if request_timeout is None:
+            request_timeout = time.time() + self.default_timeout
+            logger.info(f"Timeout will be set to the default value (The request will expire in {self.default_timeout} "
+                        f"second)")
+        request_timeout_b = MessageSerializer.pack_b(request_timeout)
+        # TODO czy robi durzą różnicę to że pakje do bytes a potem pobieram i rozpakowuje? MIKOŁAJ
+        ms = self._pack_to_envelope([], msg_create_time_b, msg_id_b, request_timeout_b, list_part)
         try:
-            resp = await self._send_to_server(ms, no_wait=no_wait)
-        except ClientRuntimeError:
+            # TODO MIKOŁĄJ czy w wiadomości może nie być timeout? jak kak to muszę dawać tej funkcji osobno argumęt a jak nie to moze ona potem pobrać to z śerodka 'ms'
+            resp = await self._send_to_server(ms, time_to_expire=self._get_time_to_expire(ms), no_wait=no_wait)
+        except CommunicationRuntimeError:
             raise
-        except ClientTimeoutError:
+        except CommunicationTimeoutError:
             raise
         return resp.data
 
-    async def send_singlepart(self, part: bytes, no_wait: bool = False) -> bytes:
+    async def send_singlepart(self, part: bytes, request_timeout: float = None, no_wait: bool = False) -> bytes:
         """
         This method send request to server witch one sub-request and return answer.
 
         :param no_wait: If 'true' than request will be sent and client will not wait for response
+        :param request_timeout: waiting for answer timeout
         :param part: single requests
         :raise ClientRuntimeError:
         :raise ClientTimeoutError:
         :return: response
         """
-        messages = await self.send_multipart([part], no_wait=no_wait)
+        messages = await self.send_multipart([part], request_timeout=request_timeout, no_wait=no_wait)
         return messages[0]
 
     @staticmethod
@@ -208,7 +224,8 @@ class Client(BaseCommunicationObject):
         return ms
 
     @staticmethod
-    def _pack_to_envelope(target: List[bytes], create_time: bytes, msg_id: bytes, data_b: list) -> MultipartStructure:
+    def _pack_to_envelope(target: List[bytes], create_time: bytes, msg_id: bytes, request_timeout: bytes,
+                          data_b: list) -> MultipartStructure:
         """
 
         :param target: Not used. Always be empty []
@@ -221,7 +238,8 @@ class Client(BaseCommunicationObject):
         if not data_b:
             data_b = [b'']
             logger.warning(f'No data to send. Task send empty bit to router. ')
-        return MultipartStructure.from_parts(create_time, msg_id, data_b, target)
+        return MultipartStructure.from_parts(create_time=create_time, id_=msg_id, data=data_b,
+                                             request_timeout=request_timeout, prefix_data=target)
 
     def __del__(self):
         self._front_socket.close()

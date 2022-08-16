@@ -1,4 +1,4 @@
-class BaseClientError(Exception):
+class BaseCommunicationError(Exception):
 
     def __init__(self, message='', **kwargs):
         self.message = message
@@ -10,13 +10,13 @@ class BaseClientError(Exception):
         return super().__str__()
 
 
-class ClientTimeoutError(BaseClientError):
+class CommunicationTimeoutError(BaseCommunicationError):
 
     def __init__(self, message='The response did not come before timeout', **kwargs):
         super().__init__(message=message, **kwargs)
 
 
-class ClientRuntimeError(BaseClientError):
+class CommunicationRuntimeError(BaseCommunicationError):
 
     def __init__(self, message='', **kwargs):
         super().__init__(message=message, **kwargs)

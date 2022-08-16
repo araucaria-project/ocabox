@@ -5,6 +5,7 @@ from typing import List
 from zmq.asyncio import Poller
 from ob.comunication.base_communication_object import BaseCommunicationObject
 from ob.comunication.base_request_solver import BaseRequestSolver
+from ob.comunication.comunication_error import CommunicationTimeoutError
 from ob.comunication.multipart_structure import MultipartStructure
 
 logger = logging.getLogger(__name__)
@@ -61,14 +62,18 @@ class Router(BaseCommunicationObject):
         return ms
 
     @staticmethod
-    def _pack_to_envelope(target: List[bytes], create_time: bytes, msg_id: bytes, data_b: list) -> MultipartStructure:
+    def _pack_to_envelope(target: List[bytes], create_time: bytes, msg_id: bytes, request_timeout: bytes,
+                          data_b: list) -> MultipartStructure:
         if not target:
             logger.error(f'Wrong client address for multipart.')
             raise ValueError
         if not data_b:
             data_b = [b'']
             logger.warning(f'No data to send. Task send empty bit to client. ')
-        return MultipartStructure.create_multipart(create_time, msg_id, data_b, target)
+        multipart = MultipartStructure.from_parts(create_time=create_time, id_=msg_id, data=data_b,
+                                                  request_timeout=request_timeout, prefix_data=target)
+        multipart.validate()
+        return multipart
 
     async def _send_back(self, message):
         def remove_task_inner():
@@ -77,6 +82,7 @@ class Router(BaseCommunicationObject):
                 self._message_tasks.remove(task)
             except ValueError:
                 logger.error('Unexpected ValueError. Can not remove task from task list.')
+
         try:
             ms = self._open_envelope(message)
         except ValueError:
@@ -84,7 +90,13 @@ class Router(BaseCommunicationObject):
             remove_task_inner()
             return
         try:
-            answer = await asyncio.wait_for(self._solve_request(ms.data), timeout=self.timeout)
+            time_to_expire = self._get_time_to_expire(ms=ms, use_default=True)
+        except CommunicationTimeoutError as e:
+            remove_task_inner()
+            logger.error(e.message)
+            return
+        try:
+            answer = await asyncio.wait_for(self._solve_request(ms.data), timeout=time_to_expire)
         except ValueError:
             # Obsolete and shouldn't have happened
             # Don't answer for incorrect requests. Close task.
@@ -108,12 +120,13 @@ class Router(BaseCommunicationObject):
                          f"don't send response. Error message: {str(e)}")
             return
         try:
-            answer_envelope = Router._pack_to_envelope(ms.prefix_data, ms.create_time, ms.id_, answer)
+            answer_multipart = Router._pack_to_envelope(ms.prefix_data, ms.create_time, ms.id_, ms.request_timeout,
+                                                        answer)
         except ValueError:
             # Don't answer for incorrect requests. Close task.
             remove_task_inner()
             return
-        self._front_socket.send_multipart(answer_envelope)
+        self._front_socket.send_multipart(answer_multipart.multipart)
         logger.info("Send response to client")
         remove_task_inner()
 

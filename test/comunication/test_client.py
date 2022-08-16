@@ -1,10 +1,12 @@
 import asyncio
 import datetime
 import logging
+import time
 import unittest
 from typing import List
 from ob.comunication.client import Client
-from ob.comunication.comunication_error import ClientRuntimeError, ClientTimeoutError
+from ob.comunication.comunication_error import CommunicationRuntimeError, CommunicationTimeoutError
+from ob.comunication.message_serializer import MessageSerializer
 from ob.comunication.multipart_structure import MultipartStructure
 from ob.data_colection.address import AddressError
 from ob.comunication.router import Router
@@ -85,7 +87,8 @@ class ClientTest(unittest.TestCase):
         msg_time = client._get_msg_create_time()
         msg_id = b'0'
         msg_wrong_id = b'1'
-        sample_message = [b'', msg_time, b'', msg_id, b'sample_data']
+        msg_timeout = MessageSerializer.pack_b(time.time() + 100)
+        sample_message = [b'', msg_time, msg_id, msg_timeout, b'', b'sample_data']
         ms = MultipartStructure(sample_message)
         client._new_msgs.append(ms)
 
@@ -102,10 +105,7 @@ class ClientTest(unittest.TestCase):
             async def get_answer(self, request: List[bytes]) -> List[bytes]:
                 v_request = ValueRequest.from_byte(request[0])
                 nr = v_request.address[v_request.address.get_last_index()]
-                try:
-                    nr = int(nr)
-                except Exception as e:
-                    nr = 0
+                nr = int(nr)
                 await asyncio.sleep(5 / 10 - nr / 10)
                 response = ValueResponse(v_request.address, Value(nr, datetime.datetime.now()))
                 return [response.to_byte()]
@@ -170,11 +170,11 @@ class ClientTest(unittest.TestCase):
             self.assertIsNotNone(client._receive_task)
             self.assertIsNotNone(client._loop)
 
-            with self.assertRaises(ClientRuntimeError):
+            with self.assertRaises(CommunicationRuntimeError):
                 result = self.multipart_to_V_response(await task1)
-            with self.assertRaises(ClientRuntimeError):
+            with self.assertRaises(CommunicationRuntimeError):
                 result = self.multipart_to_V_response(await task2)
-            with self.assertRaises(ClientRuntimeError):
+            with self.assertRaises(CommunicationRuntimeError):
                 result = self.multipart_to_V_response(await task3)
             await asyncio.sleep(0)
 
@@ -186,7 +186,7 @@ class ClientTest(unittest.TestCase):
         """
         self.vr.request_solver.response_delay = 10  # give a time
         client = Client(name='SampleTestClient')
-        client.timeout = 0.2
+        client.default_timeout = 0.2
 
         async def coro():
             task1 = asyncio.create_task(client.send_singlepart(ValueRequest('sample_telescope.dibi.azimuth.1',
@@ -198,12 +198,16 @@ class ClientTest(unittest.TestCase):
 
             await asyncio.sleep(0)
 
-            with self.assertRaises(ClientTimeoutError):
-                result = self.multipart_to_V_response(await asyncio.wait_for(task1, timeout=client.timeout * 2))
-            with self.assertRaises(ClientTimeoutError):
-                result = self.multipart_to_V_response(await asyncio.wait_for(task2, timeout=client.timeout * 2))
-            with self.assertRaises(ClientTimeoutError):
-                result = self.multipart_to_V_response(await asyncio.wait_for(task3, timeout=client.timeout * 2))
+            with self.assertRaises(CommunicationTimeoutError):
+                result = self.multipart_to_V_response(await asyncio.wait_for(task1, timeout=client.default_timeout * 2))
+            with self.assertRaises(CommunicationTimeoutError):
+                result = self.multipart_to_V_response(await asyncio.wait_for(task2, timeout=client.default_timeout * 2))
+            with self.assertRaises(CommunicationTimeoutError):
+                result = self.multipart_to_V_response(await asyncio.wait_for(task3, timeout=client.default_timeout * 2))
             await asyncio.sleep(0)
 
         self.loop.run_until_complete(coro())
+
+
+if __name__ == '__main__':
+    unittest.main()

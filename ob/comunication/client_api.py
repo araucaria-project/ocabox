@@ -2,7 +2,7 @@ import datetime
 import logging
 from typing import List
 from ob.comunication.client import Client
-from ob.comunication.comunication_error import ClientTimeoutError, ClientRuntimeError
+from ob.comunication.comunication_error import CommunicationTimeoutError, CommunicationRuntimeError
 from ob.data_colection.address import AddressError
 from ob.data_colection.response_error import ResponseError
 from ob.data_colection.value_call import ValueRequest, ValueResponse
@@ -36,11 +36,20 @@ class ClientAPI:
         :raise ClientTimeoutError:
         :return:
         """
+
+        shortest_timeout = None
+        request_b = []
+        for r in requests:
+            if r.request_timeout and (shortest_timeout is None or r.request_timeout < shortest_timeout):
+                shortest_timeout = r.request_timeout
+            request_b.append(r.to_byte())
+        if shortest_timeout is None:
+            logger.error(f"Unable to get timeout value from request. Request is uncompleted.")
         try:
-            resp = await self.client.send_multipart([r.to_byte() for r in requests], no_wait=no_wait)
-        except ClientRuntimeError:
+            resp = await self.client.send_multipart(request_b, request_timeout=shortest_timeout, no_wait=no_wait)
+        except CommunicationRuntimeError:
             raise
-        except ClientTimeoutError:
+        except CommunicationTimeoutError:
             raise
         vr = []
         for r in resp:
