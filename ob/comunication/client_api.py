@@ -21,13 +21,25 @@ class ClientAPI:
         request = ValueRequest(address=address, time_of_data=time_of_data,
                                time_of_data_tolerance=time_of_data_tolerance,
                                request_timeout=request_timeout)
-        return self.get_single(request)
+        return await self.send_single(request)
 
-    async def get_single(self, request: ValueRequest, no_wait: bool = False) -> ValueResponse:
-        vr = await self.get_multi([request], no_wait=no_wait)
-        return vr[0]
+    async def put_async(self, address, time_of_data: datetime or float or None = None,
+                        time_of_data_tolerance: float or None = None,
+                        request_timeout: float or None = None, parameters_dict: dict = None):
+        if parameters_dict is None:
+            parameters_dict = {}
+        request = ValueRequest(address=address, time_of_data=time_of_data,
+                               time_of_data_tolerance=time_of_data_tolerance,
+                               request_timeout=request_timeout, request_type='PUT', request_data=parameters_dict)
+        await self.send_single(request, no_wait=True)
 
-    async def get_multi(self, requests: List[ValueRequest], no_wait: bool = False) -> List[ValueResponse]:
+    async def send_single(self, request: ValueRequest, no_wait: bool = False) -> ValueResponse or None:
+        vr = await self.send_multi([request], no_wait=no_wait)
+        if not no_wait:
+            return vr[0]
+        return None
+
+    async def send_multi(self, requests: List[ValueRequest], no_wait: bool = False) -> List[ValueResponse] or None:
         """
 
         :param no_wait: If 'true' than request will be sent and client will not wait for response
@@ -51,6 +63,8 @@ class ClientAPI:
             raise
         except CommunicationTimeoutError:
             raise
+        if resp is None:
+            return None
         vr = []
         for r in resp:
             try:
@@ -61,3 +75,5 @@ class ClientAPI:
                 re = ResponseError(4001, 'Can not build request from ordered data', repr(self.client), 'CRITICAL')
                 vr.append(ValueResponse('', None, False, re))
         return vr
+
+

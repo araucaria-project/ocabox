@@ -79,8 +79,25 @@ class TreeAlpacaTest(unittest.TestCase):
             self.assertIsNone(response.value)
             self.assertFalse(response.status)
             self.assertIsNotNone(response.error)
-            self.assertTrue(response.error.code == 1002)
+            self.assertTrue(response.error.code == 2002)
         self.loop.run_until_complete(coro())
+    # TODO ten test nie działa ale jest chyba dobrze - problem z tym że zapytanie get z parametrami wykonuje się poprawnie
+    # def test_alpaca_wrong_args_for_method(self):
+    #     sample_alpaca_call = 'name'
+    #
+    #     sample_components = SingletonConfig.get_config()[self.OBSERVATORY_NAME]['observatory']['components'].get()
+    #     component = list(sample_components.keys())[0]
+    #
+    #     address = Address(f"{component}.{sample_alpaca_call}")
+    #     request = ValueRequest(address, datetime.datetime.now(), request_data={'sample_wrong_argument': 2})
+    #
+    #     async def coro():
+    #         response = await self.tao.get_response(request)
+    #         self.assertIsNone(response.value)
+    #         self.assertFalse(response.status)
+    #         self.assertIsNotNone(response.error)
+    #         self.assertTrue(response.error.code == 1003)
+    #     self.loop.run_until_complete(coro())
 
 
 if __name__ == '__main__':

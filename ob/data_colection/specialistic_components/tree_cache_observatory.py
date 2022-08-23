@@ -35,6 +35,9 @@ class TreeCache(TreeBaseProvider):
         # docstring is imported from parent
         recall = kwargs.get('recall', 0)
         address = request.address
+        # skip cache if request is not type GET
+        if request.request_type != 'GET':
+            raise TreeStructureError
         known_value = self._find_in_known_values(address)
         if not known_value:
             known_value = self._KnownValue(address, None, None)
@@ -61,7 +64,7 @@ class TreeCache(TreeBaseProvider):
                 await task
                 return await self.get_value(request, recall=recall + 1)
 
-        logger.info(f"stop waiting for other task and try ask yourself")
+        logger.info(f"stop waiting for other task and try ask by yourself")
         raise TreeStructureError
 
     def _on_subcontractor_return(self, result: ValueResponse):

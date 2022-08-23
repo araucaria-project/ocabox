@@ -88,13 +88,16 @@ class ValueRequest(ValueExchange):
     """
     # master keys that store essential data
     STANDARD_KEYS: ClassVar[list] = list(
-        set(ValueExchange.STANDARD_KEYS + ['address', 'time_of_data', 'time_of_data_tolerance', 'request_timeout']))
+        set(ValueExchange.STANDARD_KEYS + ['address', 'time_of_data', 'time_of_data_tolerance', 'request_timeout',
+                                           'request_type', 'request_data']))
+    KNOWN_REQUEST_TYPES: ClassVar[list] = ['GET', 'PUT', 'EXECUTE']
     address: str or Address or dict
-    # todo zrobicm jedna biblioteke time zamiast datatime i floaty do przechowywania jesli nie ma przeciwwskazan
     time_of_data: datetime or float or None = None  # default - now
     time_of_data_tolerance: float or None = None  # default - get from config  :  moznaq zwrocic dane z zakresu (time_of_data - time_of_data_tolerance, now)
     index: int = field(init=False, default=0)
-    request_timeout: float or None = None  # bezwgledny timeout rquesta, TODO: propagate to 0MQ frame and router and everywhere
+    request_timeout: float or None = None  # absolute request timeout
+    request_type: str = field(default='GET')
+    request_data: dict or None = None
 
     def __post_init__(self):
         if self.request_timeout is None:
@@ -121,6 +124,16 @@ class ValueRequest(ValueExchange):
             self.time_of_data_tolerance = SingletonConfig.get_config()['data_collection'][type(self).__name__][
                 'time_of_data_tolerance'].get()
         self.time_of_data_tolerance = float(self.time_of_data_tolerance)  # this raise ValueError if is wrong type
+        # check request type
+        if self.request_type not in self.KNOWN_REQUEST_TYPES:
+            raise ValueError
+        # check request data
+        if self.request_data is None:
+            self.request_data = {}
+        elif isinstance(self.request_data, dict):
+            pass
+        else:
+            raise ValueError
 
 
 @dataclass

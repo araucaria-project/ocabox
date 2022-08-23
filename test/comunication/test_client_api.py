@@ -58,7 +58,7 @@ class ClientAPITest(unittest.TestCase):
         async def coro():
             request = [ValueRequest('sample_telescope.dibi.azimuth.1', datetime.datetime.now(), 20),
                        ValueRequest('sample_telescope.dibi.azimuth.2', datetime.datetime.now(), 20)]
-            task1 = asyncio.create_task(c_api.get_multi(request))
+            task1 = asyncio.create_task(c_api.send_multi(request))
             result = await task1
             # self.assertEqual(len(result), len(request))
             self.assertTrue(isinstance(result[0], ValueResponse))

@@ -21,7 +21,7 @@ class Client(BaseCommunicationObject):
         self._front_socket = self.context.socket(zmq.DEALER)
         self._front_socket.connect(f"{self._get_cfg('protocol')}://{self._get_cfg('url')}:{self._port}")
         # message service
-        self._msg_event: asyncio.Event = asyncio.Event()
+        self._msg_event: asyncio.Event or None = None
         self._new_msgs: List[MultipartStructure] = []
         self._create_time = 0
         self._next_id: int = 0
@@ -54,7 +54,7 @@ class Client(BaseCommunicationObject):
         return MessageSerializer.pack_b(msg_id)
 
     async def _send_to_server(self, ms: MultipartStructure, time_to_expire: float,
-                              no_wait: bool = False) -> MultipartStructure:
+                              no_wait: bool = False) -> MultipartStructure or None:
         """
 
         :param ms:
@@ -82,7 +82,8 @@ class Client(BaseCommunicationObject):
                 raise
             finally:
                 await self._skip_the_line()
-        raise CommunicationRuntimeError
+        else:
+            return None
 
     async def _wait_for_response(self, msg_create_time_b: bytes, msg_id_b: bytes) -> MultipartStructure:
         logger.info(f"The {self._TYPE} named {self.name} is waiting for response...")
@@ -104,7 +105,7 @@ class Client(BaseCommunicationObject):
             try:
                 ms = self._open_envelope(multipart)
                 self._new_msgs.append(ms)
-                # TODO dodać jakiś mechamizm usuwania starych wiadomości na które nikt nie czeka
+                # TODO dodać jakiś mechamizm usuwania starych wiadomości na które nikt nie czeka. Zapytać MIKOŁAJ o jego wizję
             except ValueError:
                 logger.error(f"The received message is corrupted, it will be discarded.")
             # this try is for situation when task will be canceled when sleep always should set event to false (clear)
@@ -143,6 +144,8 @@ class Client(BaseCommunicationObject):
             logger.error(f"Can not get current async loop, something goes wrong")
             raise CommunicationRuntimeError(message='Can not get current async loop')
         self._loop = loop
+        # create event
+        self._msg_event = asyncio.Event()
         self._receive_task = loop.create_task(self._receive_msgs())
 
     async def _stop_receiver(self):
@@ -156,6 +159,7 @@ class Client(BaseCommunicationObject):
             task.cancel()
             self._receive_task = None
             self._loop = None
+            self._msg_event = None
             await asyncio.sleep(0)
             if task.done():
                 logger.info(f"The retrieve task was stopped")
@@ -167,7 +171,7 @@ class Client(BaseCommunicationObject):
         return None
 
     async def send_multipart(self, list_part: List[bytes], request_timeout: float = None,
-                             no_wait: bool = False) -> List[bytes]:
+                             no_wait: bool = False) -> List[bytes] or None:
         """
         This method send request to server witch many sub-requests and return answer.
 
@@ -197,7 +201,10 @@ class Client(BaseCommunicationObject):
             raise
         except CommunicationTimeoutError:
             raise
-        return resp.data
+        if not no_wait:
+            return resp.data
+        else:
+            return None
 
     async def send_singlepart(self, part: bytes, request_timeout: float = None, no_wait: bool = False) -> bytes:
         """
@@ -244,7 +251,3 @@ class Client(BaseCommunicationObject):
     def __del__(self):
         self._front_socket.close()
         super().__del__()
-
-# TODO dodać jakiś timeout do zapytań
-
-# TODO get i put rozrozniac
