@@ -1,5 +1,4 @@
 import asyncio
-import datetime
 import time
 import unittest
 from typing import List, Tuple
@@ -42,8 +41,8 @@ class TreeCacheTest(unittest.TestCase):
 
     def setUp(self):
         super().setUp()
-        self.v1 = ('val1', Value(1, datetime.datetime(2022, 5, 20, 1, 1, 1)))
-        self.v2 = ('val2', Value(2, datetime.datetime(2022, 5, 20, 2, 2, 2)))
+        self.v1 = ('val1', Value(1, 1661349399.030824))
+        self.v2 = ('val2', Value(2, 1661349399.030824-152))
 
         self.tree_provider2 = self.SampleTestValueProvider('sample_name2', 'provider2', [self.v1, self.v2])
         self.tree_cache = TreeCache('sample_name_cache', self.tree_provider2)
@@ -60,7 +59,7 @@ class TreeCacheTest(unittest.TestCase):
         address = Address('.'.join(['sample_address', self.v1[0]]))
         kv = TreeCache._KnownValue(address, self.v1[1], None)
 
-        expected_date = self.v1[1].ts + datetime.timedelta(seconds=10)
+        expected_date = self.v1[1].ts + 10
         result = TreeCache._value_meets_requirements(kv, expected_date, 20)
         self.assertTrue(result)
         result = TreeCache._value_meets_requirements(kv, expected_date, 10)
@@ -91,7 +90,7 @@ class TreeCacheTest(unittest.TestCase):
         # test change value to newer
         address2 = Address('.'.join(['sample_address', self.v2[0]]))
         v2 = self.v2[1].__copy__()
-        v2.ts = v2.ts + datetime.timedelta(10)
+        v2.ts = v2.ts + 10
         v2.v = v2.v + 10
         tc._update_known_value(address2, v2)
 
@@ -102,7 +101,7 @@ class TreeCacheTest(unittest.TestCase):
         # test do not change value to older
         address2 = Address('.'.join(['sample_address', self.v2[0]]))
         v3 = self.v2[1].__copy__()
-        v3.ts = v3.ts - datetime.timedelta(10)
+        v3.ts = v3.ts - 10
         v3.v = v3.v + 20
         tc._update_known_value(address2, v3)
 

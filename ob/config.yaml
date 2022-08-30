@@ -30,6 +30,8 @@ data_collection:
     address: localhost:80
     api_version: 1
     url_protocol: http
+  TreeRequestAlpacaBlocker:
+    reservation_length: 60
 
 tree:
   my_observatory:

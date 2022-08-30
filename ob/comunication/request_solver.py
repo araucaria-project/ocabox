@@ -16,12 +16,12 @@ class RequestSolver(BaseRequestSolver):
     def __init__(self, data_provider: ProvidesResponseProtocol, **kwargs):
         super(RequestSolver, self).__init__(data_provider, **kwargs)
 
-    async def get_answer(self, request: List[bytes]) -> List[bytes]:
+    async def get_answer(self, request: List[bytes], user_id: bytes) -> List[bytes]:
         # docstring is imported from parent
         response = []
         coroutines = []
         for r in request:
-            coroutines.append(self.get_single_answer(r))
+            coroutines.append(self.get_single_answer(r, user_id))
         result = await asyncio.gather(*coroutines, return_exceptions=True)
         for r in result:
             if not isinstance(r, Exception):
@@ -37,7 +37,7 @@ class RequestSolver(BaseRequestSolver):
                 response.append(resp)
         return response
 
-    async def get_single_answer(self, request: bytes) -> bytes:
+    async def get_single_answer(self, request: bytes, user_id: bytes) -> bytes:
         # docstring is imported from parent
         response: bytes
         try:
@@ -49,6 +49,8 @@ class RequestSolver(BaseRequestSolver):
             v_response = ValueResponse('', None, False, re)
             response = v_response.to_byte()
             return response
+        # set user ID
+        v_request.user.socket_id = user_id
         # Can not find value provider application
         if not self.data_provider or not isinstance(self.data_provider, ProvidesResponseProtocol):
             logger.error('Can not find value provider application.')

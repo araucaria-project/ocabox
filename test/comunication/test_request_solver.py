@@ -1,5 +1,4 @@
 import asyncio
-import datetime
 import logging
 import time
 import unittest
@@ -21,7 +20,7 @@ class RequestSolverTest(unittest.TestCase):
 
         async def get_value(self, request: ValueRequest, **kwargs) -> Value or None:
             await asyncio.sleep(self.RESPONSE_DELAY)
-            return Value(34, datetime.datetime.now(), None)
+            return Value(34, time.time(), None)
 
         def __init__(self, component_name: str, subcontractor: ProvidesResponseProtocol = None,
                      **kwargs):
@@ -59,7 +58,8 @@ class RequestSolverTest(unittest.TestCase):
         sample_request = {'address': {'adr': 'sample_telescope.any_val'}, 'time_of_data': 1655975599.883751,
                           'time_of_data_tolerance': 20.0}
         rs = RequestSolver(None)
-        answer = self.loop.run_until_complete(rs.get_single_answer(MessageSerializer.pack_b(sample_request)))
+        answer = self.loop.run_until_complete(
+            rs.get_single_answer(MessageSerializer.pack_b(sample_request), user_id=b'12345'))
         answer = MessageSerializer.unpack_b(answer)
         self.assertEqual(answer.get('address'), sample_request.get('address'))
         self.assertIsNone(answer.get('value'))
@@ -74,7 +74,8 @@ class RequestSolverTest(unittest.TestCase):
                           'time_of_data_tolerance': 20.0}
         rs = RequestSolver(None)
 
-        answer = self.loop.run_until_complete(rs.get_single_answer(MessageSerializer.pack_b(sample_request)))
+        answer = self.loop.run_until_complete(
+            rs.get_single_answer(MessageSerializer.pack_b(sample_request), user_id=b'12345'))
         answer = MessageSerializer.unpack_b(answer)
         self.assertEqual(answer.get('address').get('adr'), '')
         self.assertIsNone(answer.get('value'))
@@ -89,7 +90,8 @@ class RequestSolverTest(unittest.TestCase):
         provider = self.SampleTestValueProvider('sample_provider')
         rs = RequestSolver(provider)
 
-        answer = self.loop.run_until_complete(rs.get_single_answer(MessageSerializer.pack_b(sample_request)))
+        answer = self.loop.run_until_complete(
+            rs.get_single_answer(MessageSerializer.pack_b(sample_request), user_id=b'12345'))
         answer = MessageSerializer.unpack_b(answer)
         self.assertEqual(answer.get('address'), sample_request.get('address'))
         self.assertIsNotNone(answer.get('value'))
@@ -109,7 +111,7 @@ class RequestSolverTest(unittest.TestCase):
         sample_list_request = [MessageSerializer.pack_b(sample_request) for _ in range(nr_of_requests)]
 
         time_start = time.time()
-        answer = self.loop.run_until_complete(rs.get_answer(sample_list_request))
+        answer = self.loop.run_until_complete(rs.get_answer(sample_list_request, user_id=b'12345'))
         time_end = time.time()
         self.assertTrue(time_end - time_start < nr_of_requests * self.SampleTestValueProvider.RESPONSE_DELAY)
         for a in answer:
@@ -128,7 +130,8 @@ class RequestSolverTest(unittest.TestCase):
         provider = self.SampleTestValueProvider('sample_provider')
         rs = RequestSolver(provider)
         nr_of_requests = 10
-        sample_list_request = [sample_request for _ in range(nr_of_requests)]  # list witch 10 requests
+        sample_list_request = [MessageSerializer.pack_b(sample_request) for _ in
+                               range(nr_of_requests)]  # list witch 10 requests
 
         def count_tasks():
             count = 0
@@ -140,13 +143,14 @@ class RequestSolverTest(unittest.TestCase):
         async def coro_test():
             await asyncio.sleep(0)
             task_on_start = count_tasks()
-            c = asyncio.create_task(rs.get_answer(sample_list_request))
+            c = asyncio.create_task(rs.get_answer(sample_list_request, user_id=b'12345'))
             await asyncio.sleep(0)
-            self.assertEqual(count_tasks(), task_on_start+nr_of_requests+1)
+            self.assertEqual(count_tasks(), task_on_start + nr_of_requests + 1)
             c.cancel()
-            await asyncio.sleep(0.1)    # here we need to wait some time because gather() closing subtasks and just
+            await asyncio.sleep(0.1)  # here we need to wait some time because gather() closing subtasks and just
             # changing the focus is not enough
             self.assertEqual(count_tasks(), task_on_start)
+
         self.loop.run_until_complete(coro_test())
 
 

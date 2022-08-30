@@ -39,10 +39,11 @@ class Router(BaseCommunicationObject):
             await asyncio.sleep(1)
             logger.info(f'{self.name}: Listening...')
 
-    async def _solve_request(self, data: List[bytes]) -> List[bytes] or None:
+    async def _solve_request(self, ms: MultipartStructure) -> List[bytes] or None:
         answer = None
         if self.request_solver:
-            answer = await self.request_solver.get_answer(data)
+            zmq_id_ = ms.prefix_data[0] if ms.prefix_size > 0 else b''
+            answer = await self.request_solver.get_answer(ms.data, zmq_id_)
         else:
             logger.error(f"Can not find request solver. The router can't send response to client.")
         return answer
@@ -96,7 +97,7 @@ class Router(BaseCommunicationObject):
             logger.error(e.message)
             return
         try:
-            answer = await asyncio.wait_for(self._solve_request(ms.data), timeout=time_to_expire)
+            answer = await asyncio.wait_for(self._solve_request(ms), timeout=time_to_expire)
         except ValueError:
             # Obsolete and shouldn't have happened
             # Don't answer for incorrect requests. Close task.
@@ -159,6 +160,7 @@ class Router(BaseCommunicationObject):
         This method starts the router's event loop on the asynchronous task and runs it in the current async loop.
         It is possible to pass a previously created loop as an argument of the method. Otherwise, the currently
         running loop is downloaded.
+
         :param loop: async loop
         :return:
         """
@@ -187,9 +189,9 @@ class Router(BaseCommunicationObject):
         :return:
         """
         if not self.is_stopped():
-            logger.error('Can not start router because is already workng.')
+            logger.error('Can not start router because is already working.')
             return
-        self._current_loop = asyncio.get_running_loop()  # this is called from loop so it is not possible to loop was
+        self._current_loop = asyncio.get_running_loop()  # this is called from loop, so it is not possible to loop was
         # closed and throw exception
         self._start_main_task()
         mt = self._main_task  # keep the instance when await because self param can be set to None during waiting
@@ -312,6 +314,7 @@ class Router(BaseCommunicationObject):
         This method is a corutin that waits for the server to shutdown properly after calling the 'stop()' method.
         Additionally, it checks the server shutdown process. Instead, you can use the 'get_stop_task()' method which
         returns a job instance to shutdown the router and wait for it to complete but it is not recommended.
+
         :return:
         """
         if self.is_stopped():
@@ -334,6 +337,7 @@ class Router(BaseCommunicationObject):
     def is_stopped(self):
         """
         This method returns true if the router is stopped.
+
         :return: true if router is stopped or false if don't.
         """
         if self._current_loop:
@@ -351,6 +355,7 @@ class Router(BaseCommunicationObject):
         'stop()' method has been run beforehand. If the stop () method has not been run before or the router has
         already been shut down properly, None will be returned. It is recommended to use the 'wait_for_stop()' instead
         this method.
+
         :return: asyncio task
         """
         return self._stop_task

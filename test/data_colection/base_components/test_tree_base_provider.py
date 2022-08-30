@@ -1,5 +1,4 @@
 import asyncio
-import datetime
 import unittest
 from typing import List, Tuple
 
@@ -40,8 +39,8 @@ class TreeBaseProviderTest(unittest.TestCase):
 
     def setUp(self):
         super().setUp()
-        self.v1 = ('val1', Value(1, datetime.datetime(2022, 5, 20, 1, 1, 1)))
-        self.v2 = ('val2', Value(2, datetime.datetime(2022, 5, 20, 2, 2, 2)))
+        self.v1 = ('val1', Value(1, 1661349399.030824))
+        self.v2 = ('val2', Value(2, 1661349399.030824))
         self.vp1 = self.SampleTestValueProvider('provider1_name', [self.v1, self.v2])
 
         self.sample_address_prefix = 'aaa.bbb'
@@ -57,7 +56,7 @@ class TreeBaseProviderTest(unittest.TestCase):
         """
         tbp = TreeBaseProvider('component_sample_name', self.vp1)
 
-        request = ValueRequest('.'.join([self.sample_address_prefix, self.v1[0]]), self.v1[1].ts.timestamp(), 20)
+        request = ValueRequest('.'.join([self.sample_address_prefix, self.v1[0]]), self.v1[1].ts, 20)
         request.index = self.start_index  # set manually index
         response = asyncio.run(tbp.get_response(request))
         self.assertEqual(response.value, self.v1[1])
@@ -70,7 +69,7 @@ class TreeBaseProviderTest(unittest.TestCase):
         :return:
         """
         tbp = TreeBaseProvider('component_sample_name', None)
-        request = ValueRequest('.'.join([self.sample_address_prefix, self.v1[0]]), self.v1[1].ts.timestamp(), 20)
+        request = ValueRequest('.'.join([self.sample_address_prefix, self.v1[0]]), self.v1[1].ts, 20)
         request.index = self.start_index  # set manually index
         response = asyncio.run(tbp.get_response(request))
         self.assertEqual(response.value, None)
@@ -84,7 +83,7 @@ class TreeBaseProviderTest(unittest.TestCase):
         """
         tbp = self.vp1
         # without specific code
-        request = ValueRequest('.'.join([self.sample_address_prefix, 'address_error']), self.v1[1].ts.timestamp(), 20)
+        request = ValueRequest('.'.join([self.sample_address_prefix, 'address_error']), self.v1[1].ts, 20)
         request.index = self.start_index  # set manually index
         response = asyncio.run(tbp.get_response(request))
         self.assertEqual(response.value, None)
@@ -93,7 +92,7 @@ class TreeBaseProviderTest(unittest.TestCase):
 
         # with specific code
         request = ValueRequest('.'.join([self.sample_address_prefix, 'address_error_coded']),
-                               self.v1[1].ts.timestamp(), 20)
+                               self.v1[1].ts, 20)
         request.index = self.start_index  # set manually index
         response = asyncio.run(tbp.get_response(request))
         self.assertEqual(response.value, None)
@@ -107,7 +106,7 @@ class TreeBaseProviderTest(unittest.TestCase):
         """
         tbp = self.vp1
         # without specific code
-        request = ValueRequest('.'.join([self.sample_address_prefix, 'value_error']), self.v1[1].ts.timestamp(), 20)
+        request = ValueRequest('.'.join([self.sample_address_prefix, 'value_error']), self.v1[1].ts, 20)
         request.index = self.start_index  # set manually index
         response = asyncio.run(tbp.get_response(request))
         self.assertEqual(response.value, None)
@@ -116,7 +115,7 @@ class TreeBaseProviderTest(unittest.TestCase):
 
         # with specific code
         request = ValueRequest('.'.join([self.sample_address_prefix, 'value_error_coded']),
-                               self.v1[1].ts.timestamp(), 20)
+                               self.v1[1].ts, 20)
         request.index = self.start_index  # set manually index
         response = asyncio.run(tbp.get_response(request))
         self.assertEqual(response.value, None)
@@ -129,7 +128,7 @@ class TreeBaseProviderTest(unittest.TestCase):
         :return:
         """
         tbp = self.vp1
-        request = ValueRequest('.'.join([self.sample_address_prefix, 'wrong_type']), self.v1[1].ts.timestamp(), 20)
+        request = ValueRequest('.'.join([self.sample_address_prefix, 'wrong_type']), self.v1[1].ts, 20)
         request.index = self.start_index  # set manually index
         response = asyncio.run(tbp.get_response(request))
         self.assertEqual(response.value, None)
@@ -142,7 +141,7 @@ class TreeBaseProviderTest(unittest.TestCase):
         :return:
         """
         tbp = self.vp1
-        request = ValueRequest('.'.join([self.sample_address_prefix, 'crash']), self.v1[1].ts.timestamp(), 20)
+        request = ValueRequest('.'.join([self.sample_address_prefix, 'crash']), self.v1[1].ts, 20)
         request.index = self.start_index  # set manually index
         self.assertRaises(ValueError, asyncio.run, tbp.get_response(request))
 

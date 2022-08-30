@@ -1,5 +1,4 @@
 import asyncio
-import datetime
 import logging
 import time
 import unittest
@@ -102,12 +101,12 @@ class ClientTest(unittest.TestCase):
         """
         class SampleTestResolverMix(SampleTestResolver):
 
-            async def get_answer(self, request: List[bytes]) -> List[bytes]:
+            async def get_answer(self, request: List[bytes], user_id: bytes) -> List[bytes]:
                 v_request = ValueRequest.from_byte(request[0])
                 nr = v_request.address[v_request.address.get_last_index()]
                 nr = int(nr)
                 await asyncio.sleep(5 / 10 - nr / 10)
-                response = ValueResponse(v_request.address, Value(nr, datetime.datetime.now()))
+                response = ValueResponse(v_request.address, Value(nr, time.time()))
                 return [response.to_byte()]
 
         self.vr.request_solver = SampleTestResolverMix(None)
@@ -116,15 +115,15 @@ class ClientTest(unittest.TestCase):
 
         async def coro():
             task1 = asyncio.create_task(client.send_singlepart(ValueRequest('sample_telescope.dibi.azimuth.1',
-                                                                            datetime.datetime.now(), 20).to_byte()))
+                                                                            time.time(), 20).to_byte()))
             task2 = asyncio.create_task(client.send_singlepart(ValueRequest('sample_telescope.dibi.azimuth.2',
-                                                                            datetime.datetime.now(), 20).to_byte()))
+                                                                            time.time(), 20).to_byte()))
             task3 = asyncio.create_task(client.send_singlepart(ValueRequest('sample_telescope.dibi.azimuth.3',
-                                                                            datetime.datetime.now(), 20).to_byte()))
+                                                                            time.time(), 20).to_byte()))
             task4 = asyncio.create_task(client2.send_singlepart(ValueRequest('sample_telescope.dibi.azimuth.4',
-                                                                             datetime.datetime.now(), 20).to_byte()))
+                                                                             time.time(), 20).to_byte()))
             task5 = asyncio.create_task(client2.send_singlepart(ValueRequest('sample_telescope.dibi.azimuth.3',
-                                                                             datetime.datetime.now(), 20).to_byte()))
+                                                                             time.time(), 20).to_byte()))
 
             result = self.multipart_to_V_response(await task1)
             self.assertEqual(result.value.v, 1)
@@ -155,11 +154,11 @@ class ClientTest(unittest.TestCase):
 
         async def coro():
             task1 = asyncio.create_task(client.send_singlepart(ValueRequest('sample_telescope.dibi.azimuth.1',
-                                                                            datetime.datetime.now(), 20).to_byte()))
+                                                                            time.time(), 20).to_byte()))
             task2 = asyncio.create_task(client.send_singlepart(ValueRequest('sample_telescope.dibi.azimuth.2',
-                                                                            datetime.datetime.now(), 20).to_byte()))
+                                                                            time.time(), 20).to_byte()))
             task3 = asyncio.create_task(client.send_singlepart(ValueRequest('sample_telescope.dibi.azimuth.3',
-                                                                            datetime.datetime.now(), 20).to_byte()))
+                                                                            time.time(), 20).to_byte()))
             await asyncio.sleep(0)
             self.assertEqual(client._waiting_amount, 3)
             self.assertIsNotNone(client._receive_task)
@@ -190,11 +189,11 @@ class ClientTest(unittest.TestCase):
 
         async def coro():
             task1 = asyncio.create_task(client.send_singlepart(ValueRequest('sample_telescope.dibi.azimuth.1',
-                                                                            datetime.datetime.now(), 20).to_byte()))
+                                                                            time.time(), 20).to_byte()))
             task2 = asyncio.create_task(client.send_singlepart(ValueRequest('sample_telescope.dibi.azimuth.2',
-                                                                            datetime.datetime.now(), 20).to_byte()))
+                                                                            time.time(), 20).to_byte()))
             task3 = asyncio.create_task(client.send_singlepart(ValueRequest('sample_telescope.dibi.azimuth.3',
-                                                                            datetime.datetime.now(), 20).to_byte()))
+                                                                            time.time(), 20).to_byte()))
 
             await asyncio.sleep(0)
 

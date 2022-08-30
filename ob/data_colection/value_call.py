@@ -1,12 +1,12 @@
 import logging
 import time
 from dataclasses import dataclass, fields, field
-from datetime import datetime
 from typing import ClassVar
 
 from ob.comunication.message_serializer import MessageSerializer
 from ob.data_colection.address import Address
 from ob.data_colection.response_error import ResponseError
+from ob.data_colection.tree_user import TreeUser, BaseTreeUser
 from ob.data_colection.value import Value
 from ob.ob_config import SingletonConfig
 
@@ -19,7 +19,7 @@ class ValueExchange:
     This is base class to representing communication inside tree
     """
     STANDARD_KEYS: ClassVar[list] = []  # master keys that store essential data
-    _CONVERTING_TYPES: ClassVar[list] = [Address, Value, ResponseError]
+    _CONVERTING_TYPES: ClassVar[list] = [Address, Value, ResponseError, TreeUser]
 
     @classmethod
     def from_dict(cls, dict_):
@@ -61,8 +61,6 @@ class ValueExchange:
         d = {}
         for k, v in self.__dict__.items():
             if k in self.STANDARD_KEYS:
-                if isinstance(v, datetime):
-                    v = datetime.timestamp(v)
                 if type(v) in self._CONVERTING_TYPES and hasattr(v, 'to_dict'):
                     d[k] = v.to_dict()
                 else:
@@ -89,15 +87,16 @@ class ValueRequest(ValueExchange):
     # master keys that store essential data
     STANDARD_KEYS: ClassVar[list] = list(
         set(ValueExchange.STANDARD_KEYS + ['address', 'time_of_data', 'time_of_data_tolerance', 'request_timeout',
-                                           'request_type', 'request_data']))
+                                           'request_type', 'request_data', 'user']))
     KNOWN_REQUEST_TYPES: ClassVar[list] = ['GET', 'PUT', 'EXECUTE']
     address: str or Address or dict
-    time_of_data: datetime or float or None = None  # default - now
+    time_of_data: float or None = None  # default - now
     time_of_data_tolerance: float or None = None  # default - get from config  :  moznaq zwrocic dane z zakresu (time_of_data - time_of_data_tolerance, now)
     index: int = field(init=False, default=0)
     request_timeout: float or None = None  # absolute request timeout
     request_type: str = field(default='GET')
     request_data: dict or None = None
+    user: BaseTreeUser = None
 
     def __post_init__(self):
         if self.request_timeout is None:
@@ -112,10 +111,8 @@ class ValueRequest(ValueExchange):
             self.address = Address(self.address)  # I know, wrong typing but it must be so, raise AddressError here
         # check date
         if self.time_of_data is None:
-            self.time_of_data = datetime.now()
+            self.time_of_data = time.time()
         elif isinstance(self.time_of_data, float):
-            self.time_of_data = datetime.fromtimestamp(self.time_of_data)
-        elif isinstance(self.time_of_data, datetime):
             pass
         else:
             raise ValueError
@@ -132,6 +129,15 @@ class ValueRequest(ValueExchange):
             self.request_data = {}
         elif isinstance(self.request_data, dict):
             pass
+        else:
+            raise ValueError
+        # check request user
+        if self.user is None:
+            self.user = TreeUser()
+        elif isinstance(self.user, BaseTreeUser):
+            pass
+        elif isinstance(self.user, dict):
+            self.user = TreeUser(**self.user)
         else:
             raise ValueError
 

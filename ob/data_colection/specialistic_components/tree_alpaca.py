@@ -1,7 +1,5 @@
 import logging
-import datetime
-import confuse
-
+import time
 from ob.data_colection.address import AddressError
 from ob.data_colection.alpaca_api.connector import Connector, AlpacaConnector
 from ob.data_colection.alpaca_api.exceptions import AlpacaHttp400Error, AlpacaHttp500Error, AlpacaContentTypeError, \
@@ -11,13 +9,13 @@ from ob.data_colection.base_components.tree_base_provider import TreeBaseProvide
 from ob.data_colection.base_components.tree_component import ProvidesResponseProtocol
 from ob.data_colection.value import Value, TreeValueError
 from ob.data_colection.value_call import ValueRequest
-from ob.ob_config import SingletonConfig
 
 logger = logging.getLogger(__name__)
 
 
 class TreeAlpacaObservatory(TreeBaseProvider):
     DEFAULT_PROTOCOL = 'alpaca'
+    COMPONENT_DEFAULT_NAME: str = 'TreeAlpacaObservatory'
 
     def __init__(self, component_name: str, subcontractor: ProvidesResponseProtocol = None, observatory_name=None,
                  **kwargs):
@@ -106,24 +104,7 @@ class TreeAlpacaObservatory(TreeBaseProvider):
             # when given arguments is wrong
             logger.warning(f"Alpaca driver get wrong arguments to run function")
             raise AddressError(address=address, code=1003, message=f"Wrong arguments for method")
-        return Value(result, datetime.datetime.now())
-
-    def _get_cfg(self, name_cfg: str, default=None):
-        """
-        The method looks for a value in the configuration file and returns it.
-
-        :param name_cfg: name of config value
-        :param default: default value if key not exist in config
-        :return: config value or None if method can't find it
-        """
-        try:
-            value = SingletonConfig.get_config()['tree'][self._component_name][name_cfg].get()  # local
-        except confuse.exceptions.NotFoundError:
-            try:
-                value = SingletonConfig.get_config()['data_collection'][self._component_name][name_cfg].get()  # global
-            except confuse.exceptions.NotFoundError:
-                value = default  # default
-        return value
+        return Value(result, time.time())
 
     def __del__(self):
         self._connector.__del__()

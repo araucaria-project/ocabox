@@ -1,6 +1,6 @@
 import asyncio
-import datetime
 import logging
+import time
 import unittest
 from ob.comunication.client_api import ClientAPI
 from ob.comunication.router import Router
@@ -56,8 +56,8 @@ class ClientAPITest(unittest.TestCase):
         c_api = ClientAPI(name='SampleTestClient')
 
         async def coro():
-            request = [ValueRequest('sample_telescope.dibi.azimuth.1', datetime.datetime.now(), 20),
-                       ValueRequest('sample_telescope.dibi.azimuth.2', datetime.datetime.now(), 20)]
+            request = [ValueRequest('sample_telescope.dibi.azimuth.1', time.time(), 20),
+                       ValueRequest('sample_telescope.dibi.azimuth.2', time.time(), 20)]
             task1 = asyncio.create_task(c_api.send_multi(request))
             result = await task1
             # self.assertEqual(len(result), len(request))

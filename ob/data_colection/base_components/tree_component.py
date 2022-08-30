@@ -1,10 +1,10 @@
 import logging
+import confuse
 from abc import ABC, abstractmethod
 from typing import Protocol, runtime_checkable
-
 from ob.data_colection.base_components.address_dispatcher import AddressedProtocol
 from ob.data_colection.value_call import ValueRequest, ValueResponse
-
+from ob.ob_config import SingletonConfig
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +20,8 @@ class TreeComponent(ABC):
     Conforms to:
         ProvidesResponseProtocol
     """
+    COMPONENT_DEFAULT_NAME: str = 'TreeComponent'
+
     def __init__(self, component_name: str, **kwargs):
         super().__init__(**kwargs)
         self._component_name: str = component_name  # this is name of tree component, used for debug and errors
@@ -59,6 +61,28 @@ class TreeComponent(ABC):
         """
         raise NotImplementedError
 
+    def _get_cfg(self, name_cfg: str, default=None, use_default_settings=True):
+        """
+        The method looks for a value in the configuration file and returns it.
+
+        :param name_cfg: name of config value
+        :param default: default value if key not exist in config
+        :param use_default_settings: use default settings if default value is None and can not get settings
+        :return: config value or None if method can't find it
+        """
+        try:
+            value = SingletonConfig.get_config()['tree'][self._component_name][name_cfg].get()  # local
+        except confuse.exceptions.NotFoundError:
+            if default is None and use_default_settings:
+                try:
+                    value = SingletonConfig.get_config()['data_collection'][self.COMPONENT_DEFAULT_NAME][
+                        name_cfg].get()  # global
+                except confuse.exceptions.NotFoundError:
+                    value = default  # default
+            else:
+                value = default
+        return value
+
 
 @runtime_checkable
 class ProvidesResponseProtocol(Protocol):
@@ -89,6 +113,7 @@ class ProvidesResponseProtocol(Protocol):
         """
         pass
 
+
 @runtime_checkable
-class AddressedResponderProtocol (ProvidesResponseProtocol, AddressedProtocol, Protocol):
+class AddressedResponderProtocol(ProvidesResponseProtocol, AddressedProtocol, Protocol):
     pass

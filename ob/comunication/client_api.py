@@ -1,10 +1,10 @@
-import datetime
 import logging
 from typing import List
 from ob.comunication.client import Client
 from ob.comunication.comunication_error import CommunicationTimeoutError, CommunicationRuntimeError
 from ob.data_colection.address import AddressError
 from ob.data_colection.response_error import ResponseError
+from ob.data_colection.tree_user import TreeUser
 from ob.data_colection.value_call import ValueRequest, ValueResponse
 
 logger = logging.getLogger(__name__)
@@ -12,25 +12,39 @@ logger = logging.getLogger(__name__)
 
 class ClientAPI:
 
-    def __init__(self, name: str = None, client: Client = None):
+    # TODO MIKOŁAJ jak sespolić klięta z urzytkonikiem? powinno być w jwdnej klasie wszystko chyba ale wtedy przestajemy się trzymać zasady że zmq jest oddzielone od drzewa (chyba że w client są takie same pola - kopie 'name' 'description')
+    def __init__(self, name: str = None, client: Client = None, user_name: str = '', user_description: str = '',
+                 user_email: str = ''):
         self.client = client if client else Client(name=name)
+        self.user = TreeUser(email=user_email,
+                             name=user_name if user_name else self.client.name,
+                             description=user_description)
 
-    async def get_async(self, address, time_of_data: datetime or float or None = None,
-                        time_of_data_tolerance: float or None = None,
-                        request_timeout: float or None = None):
-        request = ValueRequest(address=address, time_of_data=time_of_data,
-                               time_of_data_tolerance=time_of_data_tolerance,
-                               request_timeout=request_timeout)
-        return await self.send_single(request)
-
-    async def put_async(self, address, time_of_data: datetime or float or None = None,
+    async def get_async(self, address, time_of_data: float or None = None,
                         time_of_data_tolerance: float or None = None,
                         request_timeout: float or None = None, parameters_dict: dict = None):
         if parameters_dict is None:
             parameters_dict = {}
-        request = ValueRequest(address=address, time_of_data=time_of_data,
+        request = ValueRequest(address=address,
+                               time_of_data=time_of_data,
                                time_of_data_tolerance=time_of_data_tolerance,
-                               request_timeout=request_timeout, request_type='PUT', request_data=parameters_dict)
+                               request_timeout=request_timeout,
+                               request_data=parameters_dict,
+                               user=self.user)
+        return await self.send_single(request)
+
+    async def put_async(self, address, time_of_data: float or None = None,
+                        time_of_data_tolerance: float or None = None,
+                        request_timeout: float or None = None, parameters_dict: dict = None):
+        if parameters_dict is None:
+            parameters_dict = {}
+        request = ValueRequest(address=address,
+                               time_of_data=time_of_data,
+                               time_of_data_tolerance=time_of_data_tolerance,
+                               request_timeout=request_timeout,
+                               request_type='PUT',
+                               request_data=parameters_dict,
+                               user=self.user)
         await self.send_single(request, no_wait=True)
 
     async def send_single(self, request: ValueRequest, no_wait: bool = False) -> ValueResponse or None:
@@ -54,6 +68,8 @@ class ClientAPI:
         for r in requests:
             if r.request_timeout and (shortest_timeout is None or r.request_timeout < shortest_timeout):
                 shortest_timeout = r.request_timeout
+            if not r.user:
+                r.user = self.user
             request_b.append(r.to_byte())
         if shortest_timeout is None:
             logger.error(f"Unable to get timeout value from request. Request is uncompleted.")
@@ -75,5 +91,3 @@ class ClientAPI:
                 re = ResponseError(4001, 'Can not build request from ordered data', repr(self.client), 'CRITICAL')
                 vr.append(ValueResponse('', None, False, re))
         return vr
-
-

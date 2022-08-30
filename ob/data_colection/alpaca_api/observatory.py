@@ -155,8 +155,6 @@ class Device(Component):
         self._process_response_get = {}
         self._process_response_put = {}
 
-        # self._add_alpaca_get_parameters_process('slew', lambda at, **data: self._sample_radec_processor(at, **data))
-
     def _get(self, attribute: str, **data) -> Coroutine:
         """Send request and check response for errors.
 

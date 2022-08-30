@@ -1,5 +1,4 @@
 import asyncio
-import datetime
 import unittest
 from typing import List, Tuple
 
@@ -32,10 +31,10 @@ class TreeBaseBrokerTest(unittest.TestCase):
 
     def setUp(self):
         super().setUp()
-        self.v1 = ('val1', Value(1, datetime.datetime(2022, 5, 20, 1, 1, 1)))
-        self.v2 = ('val2', Value(2, datetime.datetime(2022, 5, 20, 2, 2, 2)))
-        self.v3 = ('val3', Value(3, datetime.datetime(2022, 5, 20, 3, 3, 3)))
-        self.v4 = ('val4', Value(4, datetime.datetime(2022, 5, 20, 4, 4, 4)))
+        self.v1 = ('val1', Value(1, 1661349399.030824))
+        self.v2 = ('val2', Value(2, 1661349399.030824))
+        self.v3 = ('val3', Value(3, 1661349399.030824))
+        self.v4 = ('val4', Value(4, 1661349399.030824))
 
         self.vp1 = self.SampleTestValueProvider('provider1_name', 'provider1', [self.v1, self.v2])
         self.vp2 = self.SampleTestValueProvider('provider2_name', 'provider2', [self.v3, self.v4])
@@ -57,16 +56,16 @@ class TreeBaseBrokerTest(unittest.TestCase):
         """
         vb = TreeBaseBroker('DefaultBroker', [self.vp1, self.vp2])
         # good provider
-        request = ValueRequest('.'.join([self.vp1.get_source_name(), self.v1[0]]), self.v1[1].ts.timestamp(), 20)
+        request = ValueRequest('.'.join([self.vp1.get_source_name(), self.v1[0]]), self.v1[1].ts, 20)
         provider = vb._get_provider(request)
         self.assertEqual(provider.get_source_name(), self.vp1.get_source_name())
         self.assertIs(provider, self.vp1)
         # nonexistent provider
-        request = ValueRequest('.'.join(['nonexistent_provider', self.v1[0]]), self.v1[1].ts.timestamp(), 20)
+        request = ValueRequest('.'.join(['nonexistent_provider', self.v1[0]]), self.v1[1].ts, 20)
         provider = vb._get_provider(request)
         self.assertIsNone(provider)
         # wrong address
-        request = ValueRequest('.'.join(['']), self.v1[1].ts.timestamp(), 20)
+        request = ValueRequest('.'.join(['']), self.v1[1].ts, 20)
         self.assertRaises(AddressError, vb._get_provider, request)
 
     def test_add_provider(self):
@@ -93,12 +92,12 @@ class TreeBaseBrokerTest(unittest.TestCase):
         """
         vb = TreeBaseBroker('DefaultBroker', [self.vp1, self.vp2])
         # good request
-        request = ValueRequest('.'.join([self.vp1.get_source_name(), self.v1[0]]), self.v1[1].ts.timestamp(), 20)
+        request = ValueRequest('.'.join([self.vp1.get_source_name(), self.v1[0]]), self.v1[1].ts, 20)
         response = asyncio.run(vb.get_response(request))
         self.assertTrue(response.status)
         self.assertEqual(response.value, self.v1[1])
         # wrong request - provider not exist
-        request = ValueRequest('.'.join(['nonexistent_provider', self.v1[0]]), self.v1[1].ts.timestamp(), 20)
+        request = ValueRequest('.'.join(['nonexistent_provider', self.v1[0]]), self.v1[1].ts, 20)
         response = asyncio.run(vb.get_response(request))
         self.assertEqual(response.address, request.address)
         self.assertIsNone(response.value)

@@ -1,6 +1,4 @@
 import logging
-from datetime import datetime, timedelta
-
 from ob.data_colection.coded_error import BaseCodedError
 
 logger = logging.getLogger(__name__)
@@ -8,11 +6,9 @@ logger = logging.getLogger(__name__)
 
 class Value:
 
-    def __init__(self, v, ts: datetime or float, value_type=None, **kwargs):
+    def __init__(self, v, ts: float, value_type=None, **kwargs):
         self.v = v
-        if isinstance(ts, float):
-            ts = datetime.fromtimestamp(ts)
-        self.ts: datetime = ts
+        self.ts: float = ts
         self.type = value_type
 
     def __eq__(self, other):
@@ -27,7 +23,7 @@ class Value:
     def __copy__(self):
         return Value(self.v, self.ts, self.type)
 
-    def is_expired(self, dt: datetime, tolerance: timedelta = None):
+    def is_expired(self, dt: float, tolerance: float = None):
         """
         This method check if date of this value is older then give date minus tolerance.
         :param dt: date what is needed
@@ -41,8 +37,6 @@ class Value:
     def to_dict(self) -> dict:
         d = {}
         for k, v in self.__dict__.items():
-            if k == 'ts':
-                v = datetime.timestamp(v)
             d[k] = v
         return d
 

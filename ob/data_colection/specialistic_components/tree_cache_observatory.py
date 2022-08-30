@@ -2,7 +2,6 @@ import asyncio
 from dataclasses import dataclass
 import logging
 from asyncio import Task
-from datetime import datetime, timedelta
 from typing import List
 
 from ob.data_colection.address import Address
@@ -90,7 +89,7 @@ class TreeCache(TreeBaseProvider):
         return None
 
     @staticmethod
-    def _value_meets_requirements(kv: _KnownValue, ts: datetime, delta: float):
+    def _value_meets_requirements(kv: _KnownValue, ts: float, delta: float):
         """
         Method check if known value meets requirements and can be used to send client.
 
@@ -100,7 +99,7 @@ class TreeCache(TreeBaseProvider):
         :return: Returns True if the conditions are met and False if not
         """
         #  check that the value meets the requirements
-        t_delta = timedelta(seconds=delta)
+        t_delta = delta
         if not kv.value:
             return False
         return not kv.value.is_expired(ts, t_delta)

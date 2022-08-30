@@ -78,7 +78,8 @@ class AddressError(BaseCodedError):
     CODE_GROUP: int = 1000
     _KNOWN_LOCAL_CODES = [(1, 'Wrong address format'),
                           (2, 'Non-existent address'),
-                          (3, 'Wrong parameters for address')]
+                          (3, 'Wrong parameters for address'),
+                          (4, 'Access denied')]
 
     def __init__(self, address: Address or str = '', code: int = CODE_GROUP, message="", **kwargs):
         self.address = address

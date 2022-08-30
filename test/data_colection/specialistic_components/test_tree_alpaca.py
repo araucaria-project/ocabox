@@ -1,6 +1,6 @@
 import asyncio
-import datetime
 import logging
+import time
 import unittest
 
 from ob.data_colection.address import Address
@@ -57,7 +57,7 @@ class TreeAlpacaTest(unittest.TestCase):
         component = list(sample_components.keys())[0]
 
         address = Address(f"{component}.{sample_alpaca_call}")
-        request = ValueRequest(address, datetime.datetime.now())
+        request = ValueRequest(address, time.time())
 
         async def coro():
             response = await self.tao.get_response(request)
@@ -72,7 +72,7 @@ class TreeAlpacaTest(unittest.TestCase):
         component = list(sample_components.keys())[0]
 
         address = Address(f"{component}.{sample_alpaca_call}")
-        request = ValueRequest(address, datetime.datetime.now())
+        request = ValueRequest(address, time.time())
 
         async def coro():
             response = await self.tao.get_response(request)

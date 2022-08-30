@@ -3,7 +3,7 @@ from abc import ABC
 
 from ob.data_colection.address import AddressError
 from ob.data_colection.base_components.tree_component import TreeComponent, ProvidesResponseProtocol
-from ob.data_colection.coded_error import TreeStructureError
+from ob.data_colection.coded_error import TreeStructureError, TreeOtherError
 from ob.data_colection.response_error import ResponseError
 from ob.data_colection.value import Value, TreeValueError
 from ob.data_colection.value_call import ValueRequest, ValueResponse
@@ -40,6 +40,7 @@ class TreeBaseProvider(TreeComponent, ABC):
         :raise TreeStructureError: when method can't provide value and algorythm should looking a value in sub provider
         :raise TreeValueError: when the value cannot be generated and an error response should be returned to the client
         :raise AddressError: when address is wrong or damaged
+        :raise TreeOtherError: when is some other errors
         :return: Value
         """
         raise TreeStructureError
@@ -89,6 +90,9 @@ class TreeBaseProvider(TreeComponent, ABC):
             re = ResponseError(e.code, e.message, repr(self))
             return ValueResponse(request.address, None, False, re)
         except AddressError as e:
+            re = ResponseError(e.code, e.message, repr(self))
+            return ValueResponse(request.address, None, False, re)
+        except TreeOtherError as e:
             re = ResponseError(e.code, e.message, repr(self))
             return ValueResponse(request.address, None, False, re)
 
