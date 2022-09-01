@@ -7,6 +7,7 @@ from ob.data_colection.specialistic_components.tree_request_alpaca_blocker impor
 from ob.data_colection.tree_user import TreeServiceUser
 from ob.data_colection.value import TreeValueError, Value
 from ob.data_colection.value_call import ValueRequest
+from ob.ob_config import SingletonConfig
 from test.data_colection.base_async_test import BaseAsyncTest
 
 logger = logging.getLogger(__name__)
@@ -15,7 +16,8 @@ logger = logging.getLogger(__name__)
 class TreeRequestAlpacaBlockerTest(unittest.TestCase, BaseAsyncTest):
     class SampleTestValueProvider(TreeProvider):
         async def get_value(self, request: ValueRequest, **kwargs) -> Value or None:
-            if request.index < len(request.address) and request.address[request.index] == 'some_val':
+            if request.index < len(request.address) and request.address[request.index] in {'some_val',
+                                                                                           'some_other_val'}:
                 return Value(5, time.time())
             else:
                 raise TreeValueError
@@ -26,7 +28,7 @@ class TreeRequestAlpacaBlockerTest(unittest.TestCase, BaseAsyncTest):
         self.sample_provider_source_name = 'source_sample_name'
         self.sample_provider = self.SampleTestValueProvider(self.sample_provider_name, self.sample_provider_source_name,
                                                             None)
-        self.blocker_name = 'sample_blocker'
+        self.blocker_name = 'test_sample_blocker'  # this name is used in config file
         self.blocker = TreeRequestAlpacaBlocker(self.blocker_name, self.sample_provider)
         self.provider_name = 'provider_sample_name'
         self.provider_source_name = 'provider_source_sample_name'
@@ -102,6 +104,80 @@ class TreeRequestAlpacaBlockerTest(unittest.TestCase, BaseAsyncTest):
             self.blocker.make_reservation(user=user2, timeout_reservation=time.time() + 60)
         self.assertEqual(user, self.blocker.get_current_user())
         self.assertNotEqual(user2, self.blocker.get_current_user())
+
+    def test_white_list(self):
+        """Test request from white list"""
+
+        async def coro():
+            req_address = '.'.join([self.provider_source_name, self.sample_provider_source_name, 'some_other_val'])
+            req = ValueRequest(req_address, request_type='PUT')
+            result = await self.provider.get_response(request=req)
+            # first check if white list is empty
+            self.assertIsNone(result.value)
+            self.assertTrue(result.error.code == 1004)
+
+            # add address to white list
+            self.blocker.add_to_white_list('.'.join([self.sample_provider_source_name, 'some_other_val']), 'PUT')
+            req = ValueRequest(req_address, request_type='PUT')
+            result = await self.provider.get_response(request=req)
+            self.assertIsNotNone(result.value)
+            self.assertIsNone(result.error)
+
+        self.loop.run_until_complete(coro())
+
+    def test_black_list(self):
+        """Test request from black list"""
+
+        async def coro():
+            req_address = '.'.join([self.provider_source_name, self.sample_provider_source_name, 'some_other_val'])
+            req = ValueRequest(req_address, request_type='GET')
+            result = await self.provider.get_response(request=req)
+            # first check if black list is empty
+            self.assertIsNotNone(result.value)
+            self.assertIsNone(result.error)
+
+            # add address to black list
+            self.blocker.add_to_black_list('.'.join([self.sample_provider_source_name, 'some_other_val']), 'GET')
+            req = ValueRequest(req_address, request_type='GET')
+            result = await self.provider.get_response(request=req)
+            self.assertIsNone(result.value)
+            self.assertTrue(result.error.code == 1004)
+
+        self.loop.run_until_complete(coro())
+
+    def test_black_list_type_request(self):
+        """Test black list can recognise type request"""
+        user = TreeServiceUser(name='some_user')
+        self.blocker.make_reservation(user=user, timeout_reservation=time.time() + 60)
+        self.blocker.add_to_black_list('.'.join([self.sample_provider_source_name, 'some_other_val']), 'GET')
+
+        async def coro():
+            req_address = '.'.join([self.provider_source_name, self.sample_provider_source_name, 'some_other_val'])
+            req = ValueRequest(req_address, request_type='PUT', user=user)
+            result = await self.provider.get_response(request=req)
+            # first check if black list is empty
+            self.assertIsNotNone(result.value)
+            self.assertIsNone(result.error)
+
+            req = ValueRequest(req_address, request_type='GET', user=user)
+            result = await self.provider.get_response(request=req)
+            self.assertIsNone(result.value)
+            self.assertTrue(result.error.code == 1004)
+
+        self.loop.run_until_complete(coro())
+
+    def test__init_lists_of_special_requests(self):
+        """Test initial black/white list"""
+        black_lists = self.blocker._black_lists
+        expected_black_list = SingletonConfig.get_config()['tree'][self.blocker_name]['black_list'].get()
+        for key, val in expected_black_list.items():
+            self.assertTrue(all(item in black_lists.get(key) for item in val))
+        white_lists = self.blocker._white_lists
+        expected_white_list = SingletonConfig.get_config()['tree'][self.blocker_name]['white_list'].get()
+        self.assertFalse(white_lists.get('GET'))
+        self.assertTrue(white_lists.get('PUT'))
+        for key, val in expected_white_list.items():
+            self.assertTrue(all(item in white_lists.get(key) for item in val))
 
 
 if __name__ == '__main__':

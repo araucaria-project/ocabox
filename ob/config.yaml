@@ -32,12 +32,24 @@ data_collection:
     url_protocol: http
   TreeRequestAlpacaBlocker:
     reservation_length: 60
+    white_list:
+      GET: []
+      PUT: []
+    black_list:
+      GET: []
+      PUT: []
 
 tree:
-  my_observatory:
-    address: localhost:80
-    api_version: 1
-    url_protocol: http
+  test_sample_blocker:
+    white_list:
+      GET: []
+      PUT:
+        - telescope.some_val
+        - telescope.some_val2
+    black_list:
+      GET:
+        - telescope.some_val3
+        - telescope.some_val4
 
 test_observatory:
   observatory:

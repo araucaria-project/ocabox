@@ -1,5 +1,6 @@
 import logging
 import time
+from typing import Dict
 
 from ob.data_colection.address import AddressError
 from ob.data_colection.base_components.tree_component import AddressedResponderProtocol
@@ -18,12 +19,24 @@ class TreeRequestAlpacaBlocker(TreeProviderFrontend):
         super().__init__(component_name=component_name, subcontractor=subcontractor, **kwargs)
         self._current_user: BaseTreeUser or None = None
         self._timeout_reservation: float = 0
+        self._black_lists: Dict[str, list] = {'GET': [],
+                                              'PUT': []}
+        self._white_lists: Dict[str, list] = {'GET': [],
+                                              'PUT': []}
+        self._init_lists_of_special_requests()
 
     async def get_value(self, request: ValueRequest, **kwargs) -> Value or None:
         # docstring is importing from parent
+        # stop all request from black list
+        if self._check_black_list(request=request):
+            raise AddressError(code=1004)
 
         # GET always can go ahead
         if request.request_type == 'GET':
+            raise TreeStructureError
+
+        # white list always can go ahead
+        if self._check_white_list(request=request):
             raise TreeStructureError
 
         if request.request_type != 'PUT':
@@ -76,6 +89,66 @@ class TreeRequestAlpacaBlocker(TreeProviderFrontend):
         :return: None or current user
         """
         return self._get_current_reservation()
+
+    def add_to_white_list(self, adr: str, type_req: str):
+        list_ = self._get_list_of_special_requests(color_list='WHITE', type_req=type_req)
+        if list_ is None:
+            logger.error(f'Can not find list for this request type: {type_req}')
+            raise ValueError
+        if adr not in list_:
+            list_.append(adr)
+        else:
+            logger.info(f'This address: {adr} is already on white list')
+
+    def add_to_black_list(self, adr: str, type_req: str):
+        list_ = self._get_list_of_special_requests(color_list='BLACK', type_req=type_req)
+        if list_ is None:
+            logger.error(f'Can not find list for this request type: {type_req}')
+            raise ValueError
+        if adr not in list_:
+            list_.append(adr)
+        else:
+            logger.info(f'This address: {adr} is already on black list')
+
+    def _is_on_whitelist(self, adr: str, type_req: str):
+        list_ = self._get_list_of_special_requests(color_list='WHITE', type_req=type_req)
+        if list_ is None:
+            return False
+        if adr in list_:
+            return True
+        return False
+
+    def _is_on_black_list(self, adr: str, type_req: str):
+        list_ = self._get_list_of_special_requests(color_list='BLACK', type_req=type_req)
+        if list_ is None:
+            return False
+        if adr in list_:
+            return True
+        return False
+
+    def _check_white_list(self, request: ValueRequest):
+        adr = '.'.join(request.address[request.index:])
+        return self._is_on_whitelist(adr, request.request_type)
+
+    def _check_black_list(self, request: ValueRequest):
+        adr = '.'.join(request.address[request.index:])
+        return self._is_on_black_list(adr, request.request_type)
+
+    def _get_list_of_special_requests(self, color_list: str, type_req: str):
+        if color_list == 'BLACK':
+            return self._black_lists.get(type_req, None)
+        elif color_list == 'WHITE':
+            return self._white_lists.get(type_req, None)
+        return None
+
+    def _init_lists_of_special_requests(self):
+        """This method gets the data from the configuration file and initializes the black/white/other list with it."""
+        initial_data = self._get_cfg('white_list', {})
+        for key, val in self._white_lists.items():
+            val.extend(initial_data.get(key, []))
+        initial_data = self._get_cfg('black_list', {})
+        for key, val in self._black_lists.items():
+            val.extend(initial_data.get(key, []))
 
 
 class ReservationError(Exception):
