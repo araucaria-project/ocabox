@@ -8,6 +8,7 @@ from ob.data_colection.base_components.tree_provider import TreeProvider
 from ob.comunication.request_solver import RequestSolver
 from ob.comunication.router import Router
 from ob.data_colection.specialistic_components.tree_alpaca import TreeAlpacaObservatory
+from ob.data_colection.specialistic_components.tree_request_alpaca_blocker import TreeRequestAlpacaBlocker
 
 
 async def stop_router_timeout(vrr):
@@ -18,9 +19,9 @@ async def stop_router_timeout(vrr):
 
 def main(argv):
     logging.basicConfig(level=logging.INFO)
-
     alpaca_module = TreeAlpacaObservatory('dibi_sample', observatory_name='dibi-camk')
-    vc = TreeProvider('sample_provider_1', 'sample_telescope', alpaca_module)
+    alpaca_blocker = TreeRequestAlpacaBlocker('dibi_blocker', alpaca_module)
+    vc = TreeProvider('sample_provider_1', 'sample_telescope', alpaca_blocker)
     vb = TreeBaseBroker('sample_broker_1', [vc])
     rr = RequestSolver(vb)
     vr = Router(rr)

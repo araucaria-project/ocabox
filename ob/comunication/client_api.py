@@ -35,7 +35,7 @@ class ClientAPI:
 
     async def put_async(self, address, time_of_data: float or None = None,
                         time_of_data_tolerance: float or None = None,
-                        request_timeout: float or None = None, parameters_dict: dict = None):
+                        request_timeout: float or None = None, parameters_dict: dict = None, no_wait=True):
         if parameters_dict is None:
             parameters_dict = {}
         request = ValueRequest(address=address,
@@ -45,7 +45,7 @@ class ClientAPI:
                                request_type='PUT',
                                request_data=parameters_dict,
                                user=self.user)
-        await self.send_single(request, no_wait=True)
+        return await self.send_single(request, no_wait=no_wait)
 
     async def send_single(self, request: ValueRequest, no_wait: bool = False) -> ValueResponse or None:
         vr = await self.send_multi([request], no_wait=no_wait)
