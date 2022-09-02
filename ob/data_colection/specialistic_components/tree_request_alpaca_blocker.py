@@ -3,9 +3,9 @@ import time
 from typing import Dict
 
 from ob.data_colection.address import AddressError
-from ob.data_colection.base_components.tree_component import AddressedResponderProtocol
+from ob.data_colection.base_components.tree_base_provider import TreeBaseProvider
+from ob.data_colection.base_components.tree_component import ProvidesResponseProtocol
 from ob.data_colection.coded_error import TreeStructureError, TreeOtherError
-from ob.data_colection.specialistic_components.tree_provider_frontend import TreeProviderFrontend
 from ob.data_colection.tree_user import BaseTreeUser
 from ob.data_colection.value import Value
 from ob.data_colection.value_call import ValueRequest
@@ -13,9 +13,9 @@ from ob.data_colection.value_call import ValueRequest
 logger = logging.getLogger(__name__)
 
 
-class TreeRequestAlpacaBlocker(TreeProviderFrontend):
+class TreeRequestAlpacaBlocker(TreeBaseProvider):
 
-    def __init__(self, component_name: str, subcontractor: AddressedResponderProtocol = None, **kwargs):
+    def __init__(self, component_name: str, subcontractor: ProvidesResponseProtocol = None, **kwargs):
         super().__init__(component_name=component_name, subcontractor=subcontractor, **kwargs)
         self._current_user: BaseTreeUser or None = None
         self._timeout_reservation: float = 0

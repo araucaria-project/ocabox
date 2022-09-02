@@ -33,7 +33,7 @@ class TreeAlpacaTest(unittest.TestCase, BaseAsyncTest):
         sample_components = SingletonConfig.get_config()[self.OBSERVATORY_NAME]['observatory']['components'].get()
         component = list(sample_components.keys())[0]
 
-        address = Address('.'.join([self.OBSERVATORY_NAME, component, sample_alpaca_call]))
+        address = Address('.'.join([component, sample_alpaca_call]))
         request = ValueRequest(address, time.time())
 
         async def coro():
@@ -49,7 +49,7 @@ class TreeAlpacaTest(unittest.TestCase, BaseAsyncTest):
         sample_components = SingletonConfig.get_config()[self.OBSERVATORY_NAME]['observatory']['components'].get()
         component = list(sample_components.keys())[0]
 
-        address = Address('.'.join([self.OBSERVATORY_NAME, component, sample_alpaca_call]))
+        address = Address('.'.join([component, sample_alpaca_call]))
         request = ValueRequest(address, time.time())
 
         async def coro():
@@ -68,7 +68,7 @@ class TreeAlpacaTest(unittest.TestCase, BaseAsyncTest):
         sample_components = SingletonConfig.get_config()[self.OBSERVATORY_NAME]['observatory']['components'].get()
         component = list(sample_components.keys())[0]
 
-        address = Address('.'.join([self.OBSERVATORY_NAME, component, sample_alpaca_call]))
+        address = Address('.'.join([component, sample_alpaca_call]))
         request = ValueRequest(address, time.time())
 
         async def coro():

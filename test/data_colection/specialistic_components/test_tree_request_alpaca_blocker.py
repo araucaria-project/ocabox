@@ -29,7 +29,7 @@ class TreeRequestAlpacaBlockerTest(unittest.TestCase, BaseAsyncTest):
         self.sample_provider = self.SampleTestValueProvider(self.sample_provider_name, self.sample_provider_source_name,
                                                             None)
         self.blocker_name = 'test_sample_blocker'  # this name is used in config file
-        self.blocker = TreeRequestAlpacaBlocker(self.blocker_name, self.sample_provider)
+        self.blocker = TreeRequestAlpacaBlocker(component_name=self.blocker_name, subcontractor=self.sample_provider)
         self.provider_name = 'provider_sample_name'
         self.provider_source_name = 'provider_source_sample_name'
         self.provider = TreeProvider(self.provider_name, self.provider_source_name, self.blocker)

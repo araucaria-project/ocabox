@@ -5,33 +5,27 @@ from ob.data_colection.alpaca_api.connector import Connector, AlpacaConnector
 from ob.data_colection.alpaca_api.exceptions import AlpacaHttp400Error, AlpacaHttp500Error, AlpacaContentTypeError, \
     AlpacaError, AlpacaHttpError, RequestConnectionError
 from ob.data_colection.alpaca_api.observatory import Observatory
-from ob.data_colection.base_components.tree_provider import TreeProvider
+from ob.data_colection.base_components.tree_base_provider import TreeBaseProvider
 from ob.data_colection.value import Value, TreeValueError
 from ob.data_colection.value_call import ValueRequest
 
 logger = logging.getLogger(__name__)
 
 
-class TreeAlpacaObservatory(TreeProvider):
+class TreeAlpacaObservatory(TreeBaseProvider):
     """
     This object represents an alpaca module in a tree structure. Responsible for redirecting queries to the alpaca
-    server with the api device. The object has an address in the tree structure and by default it is the same as the
-    name of the observatory. If necessary, it is possible to enter an address other than the name of the observatory,
-    then the address will be automatically translated.
+    server with the api device. The object hasn't an address in the tree structure.
 
     :param component_name: this is name of tree component, used for debug
-    :param observatory_name: This is observatory name, it is used to get configuration from config file, and it is used
-        to addressed when source_name is not given
-    :param source_name: This is a component name with will be used to decode address, default it is the same
-        as observatory_name
+    :param observatory_name: This is observatory name, it is used to get configuration from config file.
     """
     DEFAULT_PROTOCOL = 'alpaca'
     COMPONENT_DEFAULT_NAME: str = 'TreeAlpacaObservatory'
 
-    def __init__(self, component_name: str, observatory_name=None, source_name: str = None, **kwargs):
+    def __init__(self, component_name: str, observatory_name=None, **kwargs):
+        super().__init__(component_name=component_name, subcontractor=None, **kwargs)
         self.observatory_name = observatory_name if observatory_name else component_name
-        source_name = source_name if source_name else self.observatory_name
-        super().__init__(component_name=component_name, source_name=source_name, subcontractor=None, **kwargs)
         self._observatory = Observatory()
         self._connector: Connector
         self._connect_to_observatory()
