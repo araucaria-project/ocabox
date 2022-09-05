@@ -24,6 +24,8 @@ class TreeBaseProvider(TreeComponent, ABC):
         ProvidesResponseProtocol
     """
 
+    COMPONENT_DEFAULT_NAME: str = 'TreeBaseProvider'
+
     def __init__(self, component_name: str, subcontractor: ProvidesResponseProtocol = None, **kwargs):
         super().__init__(component_name=component_name, **kwargs)
         self._subcontractor: ProvidesResponseProtocol = subcontractor

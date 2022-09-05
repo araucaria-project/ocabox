@@ -31,7 +31,8 @@ data_collection:
     api_version: 1
     url_protocol: http
   TreeRequestAlpacaBlocker:
-    reservation_length: 60
+    default_control_time: 60
+    max_control_time: 86400 # 24h
     white_list:
       GET: []
       PUT: []

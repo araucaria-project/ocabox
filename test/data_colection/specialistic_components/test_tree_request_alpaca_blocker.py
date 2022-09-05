@@ -41,15 +41,18 @@ class TreeRequestAlpacaBlockerTest(unittest.TestCase, BaseAsyncTest):
 
     def test_access_granted_get_request(self):
         """Test access granted for GET request"""
+
         async def coro():
             # GET request always go through
             req = ValueRequest('.'.join([self.provider_source_name, self.sample_provider_source_name, 'some_val']))
             result = await self.provider.get_response(request=req)
             self.assertIsNotNone(result.value.v)
+
         self.loop.run_until_complete(coro())
 
     def test_access_denied_put_request(self):
         """Test when access denied"""
+
         async def coro():
             # PUT request stop
             req = ValueRequest('.'.join([self.provider_source_name, self.sample_provider_source_name, 'some_val']),
@@ -57,10 +60,12 @@ class TreeRequestAlpacaBlockerTest(unittest.TestCase, BaseAsyncTest):
             result = await self.provider.get_response(request=req)
             self.assertIsNone(result.value)
             self.assertTrue(result.error.code == 1004)
+
         self.loop.run_until_complete(coro())
 
     def test_access_granted_put_request(self):
         """Test when access granted for user"""
+
         async def coro():
             # PUT request when access granted
             user = TreeServiceUser(name='some_user')
@@ -70,6 +75,7 @@ class TreeRequestAlpacaBlockerTest(unittest.TestCase, BaseAsyncTest):
             result = await self.provider.get_response(request=req)
             self.assertIsNotNone(result.value)
             self.assertIsNone(result.error)
+
         self.loop.run_until_complete(coro())
 
     def test_wrong_type_request(self):
@@ -80,10 +86,12 @@ class TreeRequestAlpacaBlockerTest(unittest.TestCase, BaseAsyncTest):
             result = await self.provider.get_response(request=req)
             self.assertIsNone(result.value)
             self.assertTrue(result.error.code == 4001)
+
         self.loop.run_until_complete(coro())
 
     def test_access_timeout_put_request(self):
         """Test when user lost access by timeout"""
+
         async def coro():
             # PUT request when access denied by timeout
             user = TreeServiceUser(name='some_user')
@@ -93,6 +101,7 @@ class TreeRequestAlpacaBlockerTest(unittest.TestCase, BaseAsyncTest):
             result = await self.provider.get_response(request=req)
             self.assertIsNone(result.value)
             self.assertTrue(result.error.code == 1004)
+
         self.loop.run_until_complete(coro())
 
     def test_double_reservation(self):

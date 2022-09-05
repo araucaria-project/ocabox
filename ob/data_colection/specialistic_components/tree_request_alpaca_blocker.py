@@ -14,6 +14,12 @@ logger = logging.getLogger(__name__)
 
 
 class TreeRequestAlpacaBlocker(TreeBaseProvider):
+    """
+    This is a module for filtering and blocking some type incoming requests. In order to unlock access, access must
+    be reserved by the user for a certain period of time. Reservation is done using a different module.
+    """
+
+    COMPONENT_DEFAULT_NAME: str = 'TreeRequestAlpacaBlocker'
 
     def __init__(self, component_name: str, subcontractor: ProvidesResponseProtocol = None, **kwargs):
         super().__init__(component_name=component_name, subcontractor=subcontractor, **kwargs)
@@ -54,17 +60,19 @@ class TreeRequestAlpacaBlocker(TreeBaseProvider):
 
         :param user: user object witch one want to reserve time on this block
         :param timeout_reservation: reservation timeout
-        :raise ReservationError: if can not now reserve time this block
+        :raise ReservationError: if can not now reserve time this block or reservation is too long
         :return:
         """
+        # TODO MIKOŁAJ czy czas dostępu ma być podany bezwzględnie (do kiedy) czy poprostu na ile chce przejąć kontrolę
         current_user = self._get_current_reservation()
         if current_user is not None and current_user != user:
             raise ReservationError
-        else:
-            self._current_user = user
-            timeout_reservation = time.time() + self._get_cfg('reservation_length',
-                                                              0) if timeout_reservation is None else timeout_reservation
-            self._timeout_reservation = timeout_reservation
+        timeout_reservation = time.time() + self._get_cfg('default_control_time',
+                                                          0) if timeout_reservation is None else timeout_reservation
+        if timeout_reservation-time.time() > self._get_cfg('max_control_time', 60):
+            raise ReservationError
+        self._current_user = user
+        self._timeout_reservation = timeout_reservation
 
     def _get_current_reservation(self) -> None or BaseTreeUser:
         """
@@ -73,9 +81,15 @@ class TreeRequestAlpacaBlocker(TreeBaseProvider):
         :return: Current user or None
         """
         if self._current_user:
-            if self._timeout_reservation != 0 and self._timeout_reservation <= time.time():
+            if self._timeout_reservation <= time.time():
                 self.cancel_reservation()
         return self._current_user
+
+    def get_timeout_current_reservation(self) -> float or None:
+        """Method return timeout reservation for current user as float value or None if no one make reservation"""
+        if self._get_current_reservation():
+            return self._timeout_reservation
+        return None
 
     def cancel_reservation(self):
         """Remove current reservation"""

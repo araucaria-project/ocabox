@@ -8,6 +8,7 @@ from ob.data_colection.base_components.tree_provider import TreeProvider
 from ob.comunication.request_solver import RequestSolver
 from ob.comunication.router import Router
 from ob.data_colection.specialistic_components.tree_alpaca import TreeAlpacaObservatory
+from ob.data_colection.specialistic_components.tree_blocker_access_grantor import TreeBlockerAccessGrantor
 from ob.data_colection.specialistic_components.tree_request_alpaca_blocker import TreeRequestAlpacaBlocker
 
 
@@ -22,9 +23,10 @@ def main(argv):
     alpaca_module = TreeAlpacaObservatory('dibi_sample', observatory_name='dibi-camk')
     alpaca_blocker = TreeRequestAlpacaBlocker('dibi_blocker', alpaca_module)
     vc = TreeProvider('sample_provider_1', 'sample_telescope', alpaca_blocker)
-    vb = TreeBaseBroker('sample_broker_1', [vc])
-    rr = RequestSolver(vb)
-    vr = Router(rr)
+    blocker_grantor = TreeBlockerAccessGrantor('sample_grantor', 'alpaca_grantor',alpaca_blocker)
+    vb = TreeBaseBroker('sample_broker_1', [vc, blocker_grantor])
+    rs = RequestSolver(vb)
+    vr = Router(rs)
     coro = vr.main_coroutine()
 
     try:
@@ -34,7 +36,7 @@ def main(argv):
 
     try:
         asyncio.set_event_loop(loop)
-        loop.run_until_complete(rr.run_tree())
+        loop.run_until_complete(rs.run_tree())
         loop.run_until_complete(coro)
     except KeyboardInterrupt:
         pass
@@ -42,7 +44,7 @@ def main(argv):
         try:
             # cancel router tasks
             vr.stop()
-            vr_stop = asyncio.gather(vr.get_stop_task(), rr.stop_tree(), return_exceptions=True)
+            vr_stop = asyncio.gather(vr.get_stop_task(), rs.stop_tree(), return_exceptions=True)
             loop.run_until_complete(vr_stop)
 
             # make sure if all task is finished (router task and every other in this loop)

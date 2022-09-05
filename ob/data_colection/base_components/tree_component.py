@@ -73,7 +73,7 @@ class TreeComponent(ABC):
         try:
             value = SingletonConfig.get_config()['tree'][self._component_name][name_cfg].get()  # local
         except confuse.exceptions.NotFoundError:
-            if default is None and use_default_settings:
+            if use_default_settings:
                 try:
                     value = SingletonConfig.get_config()['data_collection'][self.COMPONENT_DEFAULT_NAME][
                         name_cfg].get()  # global
