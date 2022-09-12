@@ -21,12 +21,7 @@ class TreeProviderFrontend(TreeProvider):
                            f'closely related to its subcontractor and will not work properly without it.')
             source_name = 'no_named'
         super().__init__(component_name=component_name, subcontractor=subcontractor, source_name=source_name, **kwargs)
-        # TODO zapytać o to jak zmienić typ na wyższy w klasie dziecka bez robienia @property MIKOŁAJ
         self._subcontractor: AddressedResponderProtocol = subcontractor
-
-    # @property
-    # def _subcontractor(self):
-    #     return None
 
     def get_source_name(self) -> str:
         """

@@ -50,7 +50,6 @@ class ClientTest(unittest.TestCase):
             asyncio.set_event_loop(None)
             self.loop.close()
         self.vr.__del__()
-        # TODO MIKOŁAJ dlaczeg omuszę jawnie niszczyć obiekt bo sam robi to za późno i nie zdąży przed kolejnym testem?
         super().tearDown()
 
     @staticmethod
@@ -99,6 +98,7 @@ class ClientTest(unittest.TestCase):
         """
         Test getting many requests by one client and retry ordered responses
         """
+
         class SampleTestResolverMix(SampleTestResolver):
 
             async def get_answer(self, request: List[bytes], user_id: bytes) -> List[bytes]:
@@ -203,6 +203,40 @@ class ClientTest(unittest.TestCase):
                 result = self.multipart_to_V_response(await asyncio.wait_for(task2, timeout=client.default_timeout * 2))
             with self.assertRaises(CommunicationTimeoutError):
                 result = self.multipart_to_V_response(await asyncio.wait_for(task3, timeout=client.default_timeout * 2))
+            await asyncio.sleep(0)
+
+        self.loop.run_until_complete(coro())
+
+    def test_clearing_list_new_msgs(self):
+        """Test when client retrieve message and no one read it before timeout."""
+        client = Client(name='SampleTestClient')
+        client.default_timeout = 0.2
+        client._cleaning_length = 5
+
+        async def coro():
+            old_ms = MultipartStructure([b'',
+                                         b'2222222',
+                                         b'0',
+                                         MessageSerializer.pack_b(time.time()-1),
+                                         b'', ValueResponse('some.some').to_byte()])
+            client._new_msgs.append(old_ms)
+            self.assertTrue(len(client._new_msgs) == 1)
+            task1 = asyncio.create_task(client.send_singlepart(ValueRequest('sample_telescope.dibi.azimuth.1',
+                                                                            time.time(), 20).to_byte()))
+            await asyncio.sleep(0)
+            self.assertTrue(len(client._new_msgs) > 0)  # old message is on the list
+            result = self.multipart_to_V_response(await asyncio.wait_for(task1, timeout=client.default_timeout * 2))
+            self.assertTrue(len(client._new_msgs) > 0)  # old message steal is on the list because _cleaning_length
+            # param is higher than 0
+
+            # now set the _cleaning_length to 0 and send request again
+            client._cleaning_length = 0
+            task2 = asyncio.create_task(client.send_singlepart(ValueRequest('sample_telescope.dibi.azimuth.2',
+                                                                            time.time(), 20).to_byte()))
+            await asyncio.sleep(0)
+            result = self.multipart_to_V_response(await asyncio.wait_for(task2, timeout=client.default_timeout * 2))
+            self.assertTrue(len(client._new_msgs) == 0)  # list is empty because task get his message and clear list
+            # from old messages
             await asyncio.sleep(0)
 
         self.loop.run_until_complete(coro())

@@ -1,10 +1,7 @@
 import logging
-import time
-
 import confuse
 from abc import ABC
 from typing import List
-
 from ob.comunication.comunication_error import CommunicationTimeoutError
 from ob.comunication.multipart_structure import MultipartStructure
 from ob.ob_config import SingletonConfig

@@ -56,6 +56,22 @@ class TreeProviderTest(unittest.TestCase, BaseAsyncTest):
             self.assertTrue(result.error.code == 2002)
         self.loop.run_until_complete(coro())
 
+    def test_get_response_wrong_address_in_line(self):
+        """This test checks for correct operation of stopping request forwarding in case of a bad address between
+        two providers."""
+        tp3 = TreeProvider('component_sample_name3', 'ccc', None)
+        tp2 = TreeProvider('component_sample_name2', 'bbb', tp3)
+        tp1 = TreeProvider('component_sample_name1', 'aaa', tp2)
+
+        async def coro():
+            req = ValueRequest('aaa.ddd.ccc')
+            result = await tp1.get_response(req)
+            self.assertIsNotNone(result)
+            self.assertIsNotNone(result.error)
+            self.assertTrue(result.error.code == 1002)
+            self.assertIsNone(result.value)
+        self.loop.run_until_complete(coro())
+
 
 if __name__ == '__main__':
     unittest.main()

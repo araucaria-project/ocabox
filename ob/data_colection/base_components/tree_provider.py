@@ -38,11 +38,11 @@ class TreeProvider(TreeBaseProvider, AddressDispatcher):
                                      f'address: {self.get_source_name()}.', repr(self))
             logger.info(f'Wrong format request address {request.address} - make error response')
             return ValueResponse(request.address, None, False, re)  # address is damaged
-        # TODO zapytać MIKOŁAJ o to czy jak są providery w rzędzie to zapytanie po addresie pierwszego dalem joże iść
-        #  bez adressu czy powinno się zatrzymać np jest a.b.c a jak ktoś zapyta a.b to ma iść do 'c' czy zatrzymać się
-        #  na 'b' i powiedziećż e nie da siepobrać wartośći?
         if request.address[request.index] != self.get_source_name():
             logger.warning(f"The request was passed to a block ({self.get_source_name()}) not contained in the address "
                            f"({request.address.__str__()}).")
+            re = ResponseError(1002, f"The request was passed to a block ({self.get_source_name()}) not contained in "
+                                     f"the address ({request.address.__str__()}).", repr(self))
+            return ValueResponse(request.address, None, False, re)  # address is wrong
         request.index += 1
         return await super().get_response(request)

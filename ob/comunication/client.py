@@ -19,10 +19,13 @@ class Client(BaseCommunicationObject):
         super().__init__(name=name, port=port, **kwargs)
         # OMQ
         self._front_socket = self.context.socket(zmq.DEALER)
+        # IMPORTANT Pending messages shall be discarded immediately when the socket is closed
+        self._front_socket.setsockopt(zmq.LINGER, 0)
         self._front_socket.connect(f"{self._get_cfg('protocol')}://{self._get_cfg('url')}:{self._port}")
         # message service
         self._msg_event: asyncio.Event or None = None
         self._new_msgs: List[MultipartStructure] = []
+        self._cleaning_length = 10
         self._create_time = 0
         self._next_id: int = 0
         self._receive_task: asyncio.Task or None = None
@@ -59,8 +62,8 @@ class Client(BaseCommunicationObject):
 
         :param ms:
         :param no_wait:
-        :raise ClientRuntimeError:
-        :raise ClientTimeoutError:
+        :raise CommunicationRuntimeError:
+        :raise CommunicationTimeoutError:
         :return: MultipartStructure or None
         """
         logger.info(f"The {self._TYPE} named {self.name} is sending request...")
@@ -75,7 +78,7 @@ class Client(BaseCommunicationObject):
                 except asyncio.TimeoutError:
                     # logger.info(f"the response did not come before timeout {self.timeout}s")
                     raise CommunicationTimeoutError(
-                        message=f"The response did not come before timeout {self.default_timeout}s")
+                        message=f"The response did not come before timeout {time_to_expire}s")
                 except CommunicationRuntimeError:
                     raise
             except CommunicationRuntimeError:
@@ -90,7 +93,8 @@ class Client(BaseCommunicationObject):
         while True:
             if not self._receive_task or self._receive_task.done():  # sanity check
                 logger.error(f"The receive task was stopped before retrieve some waiting messages")
-                raise CommunicationRuntimeError(message=f"The receive task was stopped before retrieve some waiting messages")
+                raise CommunicationRuntimeError(message=f"The receive task was stopped before retrieve some waiting "
+                                                        f"messages")
             await asyncio.sleep(0)  # this will allow other tasks to change event
             await self._msg_event.wait()
             message = self._check_message_comes(msg_create_time_b, msg_id_b)
@@ -103,9 +107,10 @@ class Client(BaseCommunicationObject):
         while True:
             multipart = await self._front_socket.recv_multipart()
             try:
+                if len(self._new_msgs) >= self._cleaning_length:
+                    self._clear_old_msg()
                 ms = self._open_envelope(multipart)
                 self._new_msgs.append(ms)
-                # TODO dodać jakiś mechamizm usuwania starych wiadomości na które nikt nie czeka. Zapytać MIKOŁAJ o jego wizję
             except ValueError:
                 logger.error(f"The received message is corrupted, it will be discarded.")
             # this try is for situation when task will be canceled when sleep always should set event to false (clear)
@@ -118,7 +123,7 @@ class Client(BaseCommunicationObject):
     async def _stand_in_line(self):
         """
 
-        :raise ClientRuntimeError:
+        :raise CommunicationRuntimeError:
         :return:
         """
         self._waiting_amount += 1
@@ -134,7 +139,7 @@ class Client(BaseCommunicationObject):
         """
         This method start receiver task
 
-        :raise ClientRuntimeError:
+        :raise CommunicationRuntimeError:
         :return: None
         """
         try:
@@ -164,6 +169,12 @@ class Client(BaseCommunicationObject):
             if task.done():
                 logger.info(f"The retrieve task was stopped")
 
+    def _clear_old_msg(self):
+        """This method cleaning the _new_msgs list from old messages witch no one wanting for."""
+        for msg in self._new_msgs:
+            if msg.is_expire():
+                self._new_msgs.remove(msg)
+
     def _check_message_comes(self, create_time_b: bytes, id_b: bytes) -> MultipartStructure or None:
         for m in self._new_msgs:
             if m.create_time == create_time_b and m.id_ == id_b:
@@ -178,8 +189,8 @@ class Client(BaseCommunicationObject):
         :param no_wait: If 'true' than request will be sent and client will not wait for response
         :param request_timeout: waiting for answer timeout
         :param list_part: list single requests
-        :raise ClientRuntimeError:
-        :raise ClientTimeoutError:
+        :raise CommunicationRuntimeError:
+        :raise CommunicationTimeoutError:
         :return: list of responses
         """
         # create message timestamp
@@ -192,10 +203,9 @@ class Client(BaseCommunicationObject):
             logger.info(f"Timeout will be set to the default value (The request will expire in {self.default_timeout} "
                         f"second)")
         request_timeout_b = MessageSerializer.pack_b(request_timeout)
-        # TODO czy robi durzą różnicę to że pakje do bytes a potem pobieram i rozpakowuje? MIKOŁAJ
+        # TODO If some performance problems occurs, here it is place to change potentially unneeded deserialization
         ms = self._pack_to_envelope([], msg_create_time_b, msg_id_b, request_timeout_b, list_part)
         try:
-            # TODO MIKOŁĄJ czy w wiadomości może nie być timeout? jak kak to muszę dawać tej funkcji osobno argumęt a jak nie to moze ona potem pobrać to z śerodka 'ms'
             resp = await self._send_to_server(ms, time_to_expire=self._get_time_to_expire(ms), no_wait=no_wait)
         except CommunicationRuntimeError:
             raise
@@ -213,8 +223,8 @@ class Client(BaseCommunicationObject):
         :param no_wait: If 'true' than request will be sent and client will not wait for response
         :param request_timeout: waiting for answer timeout
         :param part: single requests
-        :raise ClientRuntimeError:
-        :raise ClientTimeoutError:
+        :raise CommunicationRuntimeError:
+        :raise CommunicationTimeoutError:
         :return: response
         """
         messages = await self.send_multipart([part], request_timeout=request_timeout, no_wait=no_wait)

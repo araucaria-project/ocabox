@@ -14,7 +14,6 @@ class BaseCodedError(Exception, ABC):
     :cvar CODE_GROUP: Number of error group, must be the number of whole thousands
     :cvar _KNOWN_LOCAL_CODES: List of known errors with local codes (codes without number of group can be number
         between 1 and 999)
-    :cvar ERROR_CODE: This is list of pair (code, description)
 
     :param code: Error code
     :param message: Error message
@@ -28,12 +27,16 @@ class BaseCodedError(Exception, ABC):
         if message:
             message = message
         elif code != self.CODE_GROUP:
-            message = f'Error code {str(code)} - {self.get_code_description(code)}'
+            message = f'({str(code)}) {self.get_code_description(code)}'
         else:
             message = "Default error."
         self.message = message
         self.code = code
         super().__init__(self.message)
+
+    @classmethod
+    def get_global_error_codes(cls):
+        return [(c + cls.CODE_GROUP, d) for c, d in cls._KNOWN_LOCAL_CODES]
 
     @classmethod
     def is_code_known(cls, code: int) -> bool:
@@ -42,7 +45,7 @@ class BaseCodedError(Exception, ABC):
         :param code: code to check
         :return: true if code is known and false if not
         """
-        for c, m in cls.ERROR_CODE:
+        for c, m in cls.get_global_error_codes():
             if code == c:
                 return True
         return False
@@ -54,7 +57,7 @@ class BaseCodedError(Exception, ABC):
         :param code: code
         :return: description for given code or empty string
         """
-        for c, m in cls.ERROR_CODE:
+        for c, m in cls.get_global_error_codes():
             if code == c:
                 return m
         return ''
@@ -69,7 +72,6 @@ class TreeStructureError(BaseCodedError):
     :cvar CODE_GROUP: Number of error group, must be the number of whole thousands
     :cvar _KNOWN_LOCAL_CODES: List of known errors with local codes (codes without number of group can be number
         between 1 and 999)
-    :cvar ERROR_CODE: This is list of pair (code, description)
 
     :param code: Error code
     :param message: Error message

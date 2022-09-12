@@ -307,8 +307,6 @@ class Telescope(Device):
                                                lambda at, **data: self._check_equatorial_coordinates_processor(at,
                                                                                                                **data))
 
-    # TODO porozmawaić o tym jeszcze raz z MIKOŁAJ bo dalej trochę nie widze w tym sęsu, co jeśli będzie trzeba rozbudować procesowanie jednej metody a będzie procesowanie będzie wykorzystywane juź gdzie indziej? - to wyjdzie na to że każda i tak będzie miała osobną metodę do procesu i jakieś wspólne sóbmetody
-
     @staticmethod
     def _hourangle_to_deg_processor(attribute, res):
         return res / 24 * 360

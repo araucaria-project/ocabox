@@ -21,6 +21,8 @@ class Router(BaseCommunicationObject):
         self.request_solver: BaseRequestSolver or None = request_solver
         # OMQ
         self._front_socket = self.context.socket(zmq.ROUTER)
+        # IMPORTANT Pending messages shall be discarded immediately when the socket is closed
+        self._front_socket.setsockopt(zmq.LINGER, 0)
         self._front_socket.bind(f"{self._get_cfg('protocol', 'tcp')}://{self._get_cfg('url', '*')}:{self._port}")
         # Tasks
         self._main_task_name = f'{self.name}_main_task'

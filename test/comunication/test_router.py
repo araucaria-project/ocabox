@@ -264,6 +264,8 @@ class RouterTest(unittest.TestCase):
         async def receive(time_to_expire):
             with Context() as context:
                 with context.socket(zmq.DEALER) as socket:
+                    # IMPORTANT Pending messages shall be discarded immediately when the socket is closed
+                    socket.setsockopt(zmq.LINGER, 0)
                     socket.connect(f"tcp://localhost:{vr._port}")
                     prefix_size = 0
                     sample_envelope = self.SAMPLE_MESSAGE.copy()[1:]

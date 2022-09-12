@@ -9,21 +9,25 @@ from ob.comunication.request_solver import RequestSolver
 from ob.comunication.router import Router
 from ob.data_colection.specialistic_components.tree_alpaca import TreeAlpacaObservatory
 from ob.data_colection.specialistic_components.tree_blocker_access_grantor import TreeBlockerAccessGrantor
+from ob.data_colection.specialistic_components.tree_cache_observatory import TreeCache
 from ob.data_colection.specialistic_components.tree_request_alpaca_blocker import TreeRequestAlpacaBlocker
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 async def stop_router_timeout(vrr):
     await asyncio.sleep(10)
-    logging.warning('close router from stop_router_timeout()')
+    logger.warning('close router from stop_router_timeout()')
     vrr.stop()
 
 
 def main(argv):
-    logging.basicConfig(level=logging.INFO)
     alpaca_module = TreeAlpacaObservatory('dibi_sample', observatory_name='dibi-camk')
     alpaca_blocker = TreeRequestAlpacaBlocker('dibi_blocker', alpaca_module)
     vc = TreeProvider('sample_provider_1', 'sample_telescope', alpaca_blocker)
-    blocker_grantor = TreeBlockerAccessGrantor('sample_grantor', 'alpaca_grantor',alpaca_blocker)
+    blocker_grantor = TreeBlockerAccessGrantor('sample_grantor', 'alpaca_grantor', alpaca_blocker)
+    VC = TreeCache()
     vb = TreeBaseBroker('sample_broker_1', [vc, blocker_grantor])
     rs = RequestSolver(vb)
     vr = Router(rs)
@@ -50,9 +54,9 @@ def main(argv):
             # make sure if all task is finished (router task and every other in this loop)
             all_tasks = asyncio.all_tasks(loop)
             if not all_tasks:
-                logging.info('All task in loop is finished')
+                logger.info('All task in loop is finished')
             else:
-                logging.error('Some of the tasks in current loop is still running')
+                logger.error('Some of the tasks in current loop is still running')
                 raise RuntimeError
 
             loop.run_until_complete(loop.shutdown_asyncgens())
@@ -62,7 +66,7 @@ def main(argv):
     # try:
     #     asyncio.run(coro)
     # except KeyboardInterrupt as e:
-    #     logging.info('Caught keyboard interrupt. Canceling tasks...')
+    #     logger.info('Caught keyboard interrupt. Canceling tasks...')
 
     return 0
 
@@ -70,7 +74,3 @@ def main(argv):
 if __name__ == '__main__':
     retcode = main(sys.argv)
     sys.exit(retcode)
-
-    # @DATACLAS zrobic klase do danych,
-    # jak najszybciej przesywac przez 0mq dane nie JSON nie sownik
-    # router ma si dorzucac do istniejacej petli

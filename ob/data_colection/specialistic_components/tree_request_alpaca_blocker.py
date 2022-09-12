@@ -63,7 +63,6 @@ class TreeRequestAlpacaBlocker(TreeBaseProvider):
         :raise ReservationError: if can not now reserve time this block or reservation is too long
         :return:
         """
-        # TODO MIKOŁAJ czy czas dostępu ma być podany bezwzględnie (do kiedy) czy poprostu na ile chce przejąć kontrolę
         current_user = self._get_current_reservation()
         if current_user is not None and current_user != user:
             raise ReservationError

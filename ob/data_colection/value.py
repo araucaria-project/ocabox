@@ -51,7 +51,6 @@ class TreeValueError(BaseCodedError):
     :cvar CODE_GROUP: Number of error group, must be the number of whole thousands
     :cvar _KNOWN_LOCAL_CODES: List of known errors with local codes (codes without number of group can be number
         between 1 and 999)
-    :cvar ERROR_CODE: This is list of pair (code, description)
 
     :param value: value
     :param code: Error code

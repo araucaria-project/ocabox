@@ -12,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 class ClientAPI:
 
-    # TODO MIKOŁAJ jak sespolić klięta z urzytkonikiem? powinno być w jwdnej klasie wszystko chyba ale wtedy przestajemy się trzymać zasady że zmq jest oddzielone od drzewa (chyba że w client są takie same pola - kopie 'name' 'description')
     def __init__(self, name: str = None, client: Client = None, user_name: str = '', user_description: str = '',
                  user_email: str = ''):
         self.client = client if client else Client(name=name)
@@ -57,9 +56,9 @@ class ClientAPI:
         """
 
         :param no_wait: If 'true' than request will be sent and client will not wait for response
-        :param requests:
-        :raise ClientRuntimeError:
-        :raise ClientTimeoutError:
+        :param requests: request
+        :raise CommunicationRuntimeError:
+        :raise CommunicationTimeoutError:
         :return:
         """
 
