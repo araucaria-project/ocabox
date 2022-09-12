@@ -25,10 +25,10 @@ async def stop_router_timeout(vrr):
 def main(argv):
     alpaca_module = TreeAlpacaObservatory('dibi_sample', observatory_name='dibi-camk')
     alpaca_blocker = TreeRequestAlpacaBlocker('dibi_blocker', alpaca_module)
-    vc = TreeProvider('sample_provider_1', 'sample_telescope', alpaca_blocker)
+    vc = TreeCache('sample_cache', alpaca_blocker)
+    tp = TreeProvider('sample_provider_1', 'sample_telescope', vc)
     blocker_grantor = TreeBlockerAccessGrantor('sample_grantor', 'alpaca_grantor', alpaca_blocker)
-    VC = TreeCache()
-    vb = TreeBaseBroker('sample_broker_1', [vc, blocker_grantor])
+    vb = TreeBaseBroker('sample_broker_1', [tp, blocker_grantor])
     rs = RequestSolver(vb)
     vr = Router(rs)
     coro = vr.main_coroutine()
