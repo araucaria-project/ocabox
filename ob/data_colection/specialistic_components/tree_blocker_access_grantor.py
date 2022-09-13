@@ -50,7 +50,7 @@ class TreeBlockerAccessGrantor(TreeProvider):
 
         if command == 'return_control':
             current_user = self._target_blocker.get_current_user()
-            if current_user == user or current_user is None:
+            if current_user is None or current_user == user:
                 self._target_blocker.cancel_reservation()
                 return Value(v=True, ts=time.time())
             return Value(v=False, ts=time.time())
@@ -72,3 +72,4 @@ class TreeBlockerAccessGrantor(TreeProvider):
             # this must be first before get user otherwise may hit the moment when the user expires
             timeout_control = self._target_blocker.get_timeout_current_reservation()
             return Value(v=timeout_control, ts=time.time())
+        raise AddressError(code=1002, message=f'Unrecognised method for module {self.get_name()}')
