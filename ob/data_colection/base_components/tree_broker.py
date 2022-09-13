@@ -4,6 +4,7 @@ from typing import List
 from ob.data_colection.base_components.address_dispatcher import AddressDispatcher
 from ob.data_colection.base_components.tree_base_broker import TreeBaseBroker
 from ob.data_colection.base_components.tree_component import AddressedResponderProtocol
+from ob.data_colection.response_error import ResponseError
 from ob.data_colection.value_call import ValueRequest, ValueResponse
 
 logger = logging.getLogger(__name__)
@@ -31,5 +32,8 @@ class TreeBroker(TreeBaseBroker, AddressDispatcher):
         if request.address[request.index] != self.get_source_name():
             logger.warning(f"The request was passed to a block ({self.get_source_name()}) not contained in the address "
                            f"({request.address.__str__()}).")
+            re = ResponseError(1002, f"The request was passed to a block ({self.get_source_name()}) not contained in "
+                                     f"the address ({request.address.__str__()}).", repr(self))
+            return ValueResponse(request.address, None, False, re)  # address is wrong
         request.index += 1
         return await super().get_response(request)
