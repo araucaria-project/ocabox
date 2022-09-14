@@ -19,7 +19,7 @@ class TreeProviderTest(unittest.TestCase, BaseAsyncTest):
         self.vp1 = self.SampleTestValueProvider('provider1_name', [self.v1, self.v2])
 
         self.sample_address_prefix = 'aaa.bbb'
-        self.start_index = len(self.sample_address_prefix.split('.')) - 1
+        self.start_index = len(self.sample_address_prefix.split('.'))
 
     def tearDown(self) -> None:
         self._tearDownLoop()
@@ -30,11 +30,11 @@ class TreeProviderTest(unittest.TestCase, BaseAsyncTest):
         test when get_value() method compels to call nex provider
         :return:
         """
-        tp = TreeProvider('component_sample_name', 'bbb', self.vp1)
+        name = 'name'
+        tp = TreeProvider('component_sample_name', name, self.vp1)
 
-        # test when is no next provider and get_value() method compels to call nex provider
-        request = ValueRequest('.'.join([self.sample_address_prefix, self.v1[0]]), self.v1[1].ts, 20)
-        request.index = self.start_index-1  # set manually index
+        request = ValueRequest('.'.join([self.sample_address_prefix, name, self.v1[0]]), self.v1[1].ts, 20)
+        request.index = self.start_index  # set manually index
         response = self.loop.run_until_complete(tp.get_response(request))
         self.assertEqual(response.value, self.v1[1])
         self.assertTrue(response.status)

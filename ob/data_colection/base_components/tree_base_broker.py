@@ -64,7 +64,7 @@ class TreeBaseBroker(TreeComponent):
             raise AddressError(address, 1001)
         provider = None
         for p in self._list_providers:
-            if p.get_source_name() == provider_name:
+            if p.is_named(provider_name):
                 provider = p
                 break
         return provider
@@ -79,7 +79,7 @@ class TreeBaseBroker(TreeComponent):
         :return: True if success remove and false if not
         """
         for p in self._list_providers:
-            if p.get_source_name() == provider.get_source_name():
+            if p.compare_source_names(provider.get_source_names()):
                 if force:
                     logger.warning(f'One with the same address has already been found in the list of provider. '
                                    f'It will be removed from the list.')

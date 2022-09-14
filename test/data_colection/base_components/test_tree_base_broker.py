@@ -2,7 +2,6 @@ import asyncio
 import unittest
 from typing import List, Tuple
 
-
 from ob.data_colection.base_components.tree_base_broker import TreeBaseBroker
 from ob.data_colection.base_components.tree_component import ProvidesResponseProtocol
 from ob.data_colection.base_components.tree_provider import TreeProvider
@@ -12,7 +11,6 @@ from ob.data_colection.value_call import ValueRequest
 
 
 class TreeBaseBrokerTest(unittest.TestCase):
-
     class SampleTestValueProvider(TreeProvider):
 
         async def get_value(self, request: ValueRequest, **kwargs) -> Value or None:
@@ -67,6 +65,31 @@ class TreeBaseBrokerTest(unittest.TestCase):
         # wrong address
         request = ValueRequest('.'.join(['']), self.v1[1].ts, 20)
         self.assertRaises(AddressError, vb._get_provider, request)
+
+    def test_get_provider_multi_named(self):
+        """Test get provider when provider has many names"""
+        name = 'multi_named_provider'
+        special_provider = TreeProvider('does_not_matter', name)
+        other_name1 = 'other_name1'
+        other_name2 = 'other_name2'
+        special_provider._source_names.append(other_name1)
+        special_provider._source_names.append(other_name2)
+        vb = TreeBaseBroker('DefaultBroker', [self.vp1, self.vp2, special_provider])
+        # main name
+        request = ValueRequest('.'.join([special_provider.get_source_name(), 'xxx']), self.v1[1].ts, 20)
+        provider = vb._get_provider(request)
+        self.assertEqual(provider.get_source_name(), special_provider.get_source_name())
+        self.assertIs(provider, special_provider)
+        # auxiliary source names
+        request = ValueRequest('.'.join([other_name1, 'xxx']), self.v1[1].ts, 20)
+        provider = vb._get_provider(request)
+        self.assertEqual(provider.get_source_names(), special_provider.get_source_names())
+        self.assertIs(provider, special_provider)
+
+        request = ValueRequest('.'.join([other_name2, 'xxx']), self.v1[1].ts, 20)
+        provider = vb._get_provider(request)
+        self.assertEqual(provider.get_source_names(), special_provider.get_source_names())
+        self.assertIs(provider, special_provider)
 
     def test_add_provider(self):
         """

@@ -29,11 +29,11 @@ class TreeBroker(TreeBaseBroker, AddressDispatcher):
 
     async def get_response(self, request: ValueRequest) -> ValueResponse:
         # docstring is imported from parent
-        if request.address[request.index] != self.get_source_name():
-            logger.warning(f"The request was passed to a block ({self.get_source_name()}) not contained in the address "
-                           f"({request.address.__str__()}).")
-            re = ResponseError(1002, f"The request was passed to a block ({self.get_source_name()}) not contained in "
-                                     f"the address ({request.address.__str__()}).", repr(self))
+        if not self.is_named(request.address[request.index]):
+            logger.warning(f"The request was passed to a block ({'.'.join(self.get_source_names())}) not contained in "
+                           f"the address ({request.address.__str__()}).")
+            re = ResponseError(1002, f"The request was passed to a block named ({'.'.join(self.get_source_names())}) "
+                                     f"not contained in the address ({request.address.__str__()}).", repr(self))
             return ValueResponse(request.address, None, False, re)  # address is wrong
         request.index += 1
         return await super().get_response(request)

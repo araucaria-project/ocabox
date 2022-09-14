@@ -44,7 +44,7 @@ class TreeBaseProviderTest(unittest.TestCase):
         self.vp1 = self.SampleTestValueProvider('provider1_name', [self.v1, self.v2])
 
         self.sample_address_prefix = 'aaa.bbb'
-        self.start_index = len(self.sample_address_prefix.split('.')) - 1
+        self.start_index = len(self.sample_address_prefix.split('.'))
 
     def tearDown(self) -> None:
         super().tearDown()
