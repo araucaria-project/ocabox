@@ -47,7 +47,7 @@ class TreeBaseBroker(TreeComponent):
         response = await provider.get_response(request)
         return response
 
-    def _get_provider(self, v_req: ValueRequest):
+    def _get_provider(self, v_req: ValueRequest) -> AddressedResponderProtocol:
         """
         This method return provider for give address if is known.
         If request has incorrect address this method raise AddressError

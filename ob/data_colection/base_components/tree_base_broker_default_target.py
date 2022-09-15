@@ -1,0 +1,67 @@
+from typing import List
+from ob.data_colection.base_components.tree_base_broker import TreeBaseBroker
+from ob.data_colection.base_components.tree_component import AddressedResponderProtocol, ProvidesResponseProtocol
+from ob.data_colection.value_call import ValueRequest
+
+
+class TreeBaseBrokerDefaultTarget(TreeBaseBroker):
+    """
+    This is a base broker witch default provider. This component behaves the same as base broker except that when a
+    request contains an address to a nonexistent provider, the request is routed to the default provider instead of
+    returning an invalid address message.
+
+    :ivar _list_providers: list all next providers in tree
+    :ivar _default_provider: default provider
+
+    :param component_name: this is name of tree component, used for debug
+    :param list_providers: list all next providers in tree
+    :param default_provider: provider witch is chosen when broker can not find right provider
+
+    Conforms to:
+        AddressedResponderProtocol
+    """
+
+    def __init__(self, component_name: str, list_providers: List[AddressedResponderProtocol] = None,
+                 default_provider: ProvidesResponseProtocol = None, **kwargs):
+        super().__init__(component_name=component_name, **kwargs)
+        self._list_providers: List[AddressedResponderProtocol] = list_providers \
+            if list_providers and isinstance(list_providers, list) else []
+        self._default_provider: ProvidesResponseProtocol = default_provider
+
+    def set_default_provider(self, provider: ProvidesResponseProtocol):
+        """Method sets default provider for this component"""
+        self._default_provider = provider
+
+    def remove_default_provider(self):
+        """Method remove default provider"""
+        self._default_provider = None
+
+    def get_default_provider(self) -> ProvidesResponseProtocol:
+        """Method return current default provider"""
+        return self._default_provider
+
+    def _get_provider(self, v_req: ValueRequest) -> AddressedResponderProtocol:
+        """
+        This method return provider for give address if is known else return default provider.
+        If request has incorrect address this method raise AddressError
+
+        :param v_req: ValueRequest
+        :raise AddressError: if is wrong format address
+        :return: return provider if exist or None if not
+        """
+        provider = super(TreeBaseBrokerDefaultTarget, self)._get_provider(v_req=v_req)
+        if not provider:
+            provider = self._default_provider
+        return provider
+
+    async def run(self):
+        # run self
+        await super().run()
+        if self._default_provider:
+            await self._default_provider.run()
+
+    async def stop(self):
+        # stop self
+        await super().stop()
+        if self._default_provider:
+            await self._default_provider.stop()
