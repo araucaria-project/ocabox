@@ -8,7 +8,7 @@ class TreeBaseBrokerDefaultTarget(TreeBaseBroker):
     """
     This is a base broker witch default provider. This component behaves the same as base broker except that when a
     request contains an address to a nonexistent provider, the request is routed to the default provider instead of
-    returning an invalid address message.
+    returning an invalid address message. The default provider does not have to be on the list of all providers.
 
     :ivar _list_providers: list all next providers in tree
     :ivar _default_provider: default provider

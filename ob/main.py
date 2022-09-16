@@ -4,6 +4,7 @@ import logging
 import sys
 
 from ob.data_colection.base_components.tree_base_broker import TreeBaseBroker
+from ob.data_colection.base_components.tree_base_broker_default_target import TreeBaseBrokerDefaultTarget
 from ob.data_colection.base_components.tree_provider import TreeProvider
 from ob.comunication.request_solver import RequestSolver
 from ob.comunication.router import Router
@@ -11,6 +12,7 @@ from ob.data_colection.specialistic_components.tree_alpaca import TreeAlpacaObse
 from ob.data_colection.specialistic_components.tree_blocker_access_grantor import TreeBlockerAccessGrantor
 from ob.data_colection.specialistic_components.tree_cache_observatory import TreeCache
 from ob.data_colection.specialistic_components.tree_request_alpaca_blocker import TreeRequestAlpacaBlocker
+from ob.ob_config import SingletonConfig
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -23,12 +25,16 @@ async def stop_router_timeout(vrr):
 
 
 def main(argv):
-    alpaca_module = TreeAlpacaObservatory('dibi_sample', observatory_name='dibi-camk')
-    alpaca_blocker = TreeRequestAlpacaBlocker('dibi_blocker', alpaca_module)
-    vc = TreeCache('sample_cache', alpaca_blocker)
-    tp = TreeProvider('sample_provider_1', 'sample_telescope', vc)
-    blocker_grantor = TreeBlockerAccessGrantor('sample_grantor', 'alpaca_grantor', alpaca_blocker)
-    vb = TreeBaseBroker('sample_broker_1', [tp, blocker_grantor])
+    SingletonConfig.add_config_file_from_config_dir('sample_config.yaml')
+    alpaca_module = TreeAlpacaObservatory('zibi_sample', observatory_name='zibi-ocabox-800')
+    alpaca_blocker = TreeRequestAlpacaBlocker('zibi_blocker', alpaca_module)
+    cache_800 = TreeCache('sample_cache', alpaca_blocker)
+
+    blocker_grantor = TreeBlockerAccessGrantor('grantor_800', 'access_grantor', alpaca_blocker)
+    broker_800 = TreeBaseBrokerDefaultTarget('broker_800', [blocker_grantor], default_provider=cache_800)
+    tp_800 = TreeProvider('module_800', '800', broker_800)
+
+    vb = TreeBaseBroker('front_broker', [tp_800])
     rs = RequestSolver(vb)
     vr = Router(rs)
     coro = vr.main_coroutine()

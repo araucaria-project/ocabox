@@ -1,0 +1,24 @@
+zibi-ocabox-800:
+  observatory:
+    comment: Simulated on ASA computer in CAMK
+    lon: 24.627222    # Paranal
+    lat: -70.404167
+    elev: 2635.0
+    protocol: alpaca
+    address: http://localhost:80/api/v1
+    components:
+      mount:
+        kind: telescope
+        device_number: 0
+      derotator:
+        kind: rotator
+        device_number: 0  #  address will be taken from parent if not provided
+      guderrotator:
+        kind: rotator
+        device_number: 1  #  address will be taken from parent if not provided
+      focuser:
+        kind: focuser
+        device_number: 0
+      dome:
+        kind: dome
+        device_number: 0

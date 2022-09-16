@@ -106,9 +106,8 @@ class Observatory(Component):
 
     Attributes:
         configuration (Config): Optional configuration, by default configuration will be loaded from following files:
-              ~/ocabox.cfg.yaml
-              ./ocabox.cfg.yaml
-              <package_path>/ocaboxapi/default.cfg.yaml
+              ./ocabox.config.yaml
+              ./ocabox.configuration.config.yaml
             Later overwrites former
     """
 

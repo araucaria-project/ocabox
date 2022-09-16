@@ -6,3 +6,4 @@ ob/router/__pycache__/
 
 ob/configuration/*
 !ob/configuration/.gitkeep
+!ob/configuration/sample_config.yaml

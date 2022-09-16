@@ -47,6 +47,10 @@ class SingletonConfig(metaclass=SingletonMeta):
         with multiprocessing.Lock():
             cls.additional_files += [f]
 
+    @classmethod
+    def add_config_file_from_config_dir(cls, f: str):
+        cls.add_config_file(os.path.join(cls.get_path_to_config_dir(), f))
+
     @staticmethod
     def _get_inst_dir():
         thisfile = __file__
@@ -59,6 +63,10 @@ class SingletonConfig(metaclass=SingletonMeta):
         Returns absolute path to file in package directory.
         """
         return os.path.join(cls._get_inst_dir(), f)
+
+    @classmethod
+    def get_path_to_config_dir(cls):
+        return os.path.join(cls._get_inst_dir(), 'configuration')
 
     @classmethod
     def get_config_files(cls):
