@@ -71,7 +71,7 @@ class Client(BaseCommunicationObject):
         logger.info(f"The {self._TYPE} named {self.name} sent the request")
         if not no_wait:
             try:
-                await self._stand_in_line()  # ca raise RuntimeError
+                await self._stand_in_line()  # can raise CommunicationRuntimeError
                 try:
                     return await asyncio.wait_for(self._wait_for_response(ms.create_time, ms.id_),
                                                   timeout=time_to_expire)
@@ -104,21 +104,27 @@ class Client(BaseCommunicationObject):
         return message
 
     async def _receive_msgs(self):
-        while True:
-            multipart = await self._front_socket.recv_multipart()
-            try:
-                if len(self._new_msgs) >= self._cleaning_length:
-                    self._clear_old_msg()
-                ms = self._open_envelope(multipart)
-                self._new_msgs.append(ms)
-            except ValueError:
-                logger.error(f"The received message is corrupted, it will be discarded.")
-            # this try is for situation when task will be canceled when sleep always should set event to false (clear)
-            try:
-                self._msg_event.set()
-                await asyncio.sleep(0)  # this will allow other tasks to react to the event
-            finally:
-                self._msg_event.clear()
+        try:
+            while True:
+                multipart = await self._front_socket.recv_multipart()
+                try:
+                    if len(self._new_msgs) >= self._cleaning_length:
+                        self._clear_old_msg()
+                    ms = self._open_envelope(multipart)
+                    self._new_msgs.append(ms)
+                except ValueError:
+                    logger.error(f"The received message is corrupted, it will be discarded.")
+                # this try is for situation when task will be canceled when sleep always should set event to false
+                try:
+                    self._msg_event.set()
+                    await asyncio.sleep(0)  # this will allow other tasks to react to the event
+                finally:
+                    self._msg_event.clear()
+        # catch Cancelled of a task and set the flag to true to wake up all pending tasks and let them finish
+        except asyncio.CancelledError:
+            self._msg_event.set()
+            await asyncio.sleep(0)
+            raise
 
     async def _stand_in_line(self):
         """

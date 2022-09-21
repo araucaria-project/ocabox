@@ -159,15 +159,16 @@ class ClientTest(unittest.TestCase):
                                                                             time.time(), 20).to_byte()))
             task3 = asyncio.create_task(client.send_singlepart(ValueRequest('sample_telescope.dibi.azimuth.3',
                                                                             time.time(), 20).to_byte()))
-            await asyncio.sleep(0)
+            await asyncio.sleep(0.1)  # have to be more than 0 !
             self.assertEqual(client._waiting_amount, 3)
             self.assertIsNotNone(client._receive_task)
             self.assertIsNotNone(client._loop)
 
             client._receive_task.cancel()
-            await asyncio.sleep(0)
-            self.assertIsNotNone(client._receive_task)
-            self.assertIsNotNone(client._loop)
+            await asyncio.sleep(0.1)  # have to be more than 0 !
+            # none because before ending all waiting task was stop and last one remove _loop and _receive_task
+            self.assertIsNone(client._receive_task)
+            self.assertIsNone(client._loop)
 
             with self.assertRaises(CommunicationRuntimeError):
                 result = self.multipart_to_V_response(await task1)
