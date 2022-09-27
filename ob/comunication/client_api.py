@@ -107,7 +107,9 @@ class ClientAPI:
         :param log_missed_msg: If is False missed messages will be skipped. Default False
         :return: object CycleQuery
         """
-        if not time_of_data_tolerance:
+        # TODO zrobić coś z tym żeby time_of_data_tolerance było ustawiane też na delay domyślnie bo teraz może
+        #  być delay=1 a time_of_data_tolerance=30
+        if not time_of_data_tolerance and delay:
             time_of_data_tolerance = delay * 0.9  # 90% delay time
         if parameters_dict is None:
             parameters_dict = {}

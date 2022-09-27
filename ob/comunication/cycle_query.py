@@ -7,6 +7,7 @@ from ob.comunication.comunication_error import CommunicationRuntimeError, Commun
 from ob.data_colection.address import AddressError
 from ob.data_colection.response_error import ResponseError
 from ob.data_colection.value_call import ValueRequest, ValueResponse
+from ob.ob_config import SingletonConfig
 
 logger = logging.getLogger(__name__)
 
@@ -19,18 +20,18 @@ class CycleQuery:
 
     :param client: client object
     :param list_request: list of requests to cycle send
-    :param delay: request delay
+    :param delay: request delay, default is getting from config file
     :param loop: async loop
     :param log_missed_msg: If is False missed messages will be skipped. Default False
     :raise CommunicationRuntimeError: if not provide async loop and czn not get existing loop
     """
-    def __init__(self, client, list_request: List[ValueRequest], delay: float, loop=None, log_missed_msg: bool = False, **kwargs):
+    def __init__(self, client, list_request: List[ValueRequest], delay: float or None = None, loop=None,
+                 log_missed_msg: bool = False, **kwargs):
         self._client = client
         self._event: asyncio.Event = asyncio.Event()
         self._last_msg: List[bytes] or None = None
-        if delay <= 0:
-            # TODO maby set to default
-            raise ValueError
+        if delay is None or delay <= 0:
+            delay = SingletonConfig.get_config()['comunication'][type(self).__name__]['default_delay'].get()
         self._delay: float = delay
         self._max_missed_msg: int = 2
         self._task: asyncio.Task or None = None
