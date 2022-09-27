@@ -101,7 +101,7 @@ class ClientTest(unittest.TestCase):
 
         class SampleTestResolverMix(SampleTestResolver):
 
-            async def get_answer(self, request: List[bytes], user_id: bytes) -> List[bytes]:
+            async def get_answer(self, request: List[bytes], user_id: bytes, timeout=None) -> List[bytes]:
                 v_request = ValueRequest.from_byte(request[0])
                 nr = v_request.address[v_request.address.get_last_index()]
                 nr = int(nr)

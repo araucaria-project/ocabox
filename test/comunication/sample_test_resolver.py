@@ -15,7 +15,7 @@ class SampleTestResolver(BaseRequestSolver):
         self.response_delay = self.RESPONSE_DELAY
         super().__init__(data_provider, **kwargs)
 
-    async def get_answer(self, request: List[bytes], user_id: bytes) -> List[bytes]:
+    async def get_answer(self, request: List[bytes], user_id: bytes, timeout=None) -> List[bytes]:
         response = []
         for req in request:
             v_request = ValueRequest.from_byte(req)

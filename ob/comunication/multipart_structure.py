@@ -39,6 +39,10 @@ class MultipartStructure:
         return self.get_request_timeout(self.multipart, self.prefix_size)
 
     @property
+    def request_timeout_float(self):
+        return self.get_request_timeout_float(self.multipart, self.prefix_size)
+
+    @property
     def data(self):
         return self.get_data(self.multipart, self.prefix_size)
 
@@ -57,6 +61,15 @@ class MultipartStructure:
     @staticmethod
     def get_request_timeout(multipart, prefix_size: int = 0):
         return multipart[(MultipartStructure.REQUEST_TIMEOUT + prefix_size)]
+
+    @staticmethod
+    def get_request_timeout_float(multipart, prefix_size: int = 0):
+        try:
+            timeout = MessageSerializer.unpack_b(MultipartStructure.get_request_timeout(multipart=multipart,
+                                                                                        prefix_size=prefix_size))
+        except ValueError:
+            timeout = None
+        return timeout
 
     @staticmethod
     def get_data(multipart, prefix_size: int = 0):

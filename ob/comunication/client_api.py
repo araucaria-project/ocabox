@@ -2,6 +2,7 @@ import logging
 from typing import List
 from ob.comunication.client import Client
 from ob.comunication.comunication_error import CommunicationTimeoutError, CommunicationRuntimeError
+from ob.comunication.cycle_query import CycleQuery
 from ob.data_colection.address import AddressError
 from ob.data_colection.response_error import ResponseError
 from ob.data_colection.tree_user import TreeUser
@@ -21,7 +22,8 @@ class ClientAPI:
 
     async def get_async(self, address, time_of_data: float or None = None,
                         time_of_data_tolerance: float or None = None,
-                        request_timeout: float or None = None, parameters_dict: dict = None):
+                        request_timeout: float or None = None,
+                        parameters_dict: dict = None) -> ValueResponse or None:
         if parameters_dict is None:
             parameters_dict = {}
         request = ValueRequest(address=address,
@@ -34,7 +36,8 @@ class ClientAPI:
 
     async def put_async(self, address, time_of_data: float or None = None,
                         time_of_data_tolerance: float or None = None,
-                        request_timeout: float or None = None, parameters_dict: dict = None, no_wait=True):
+                        request_timeout: float or None = None,
+                        parameters_dict: dict = None, no_wait=True) -> ValueResponse or None:
         if parameters_dict is None:
             parameters_dict = {}
         request = ValueRequest(address=address,
@@ -90,3 +93,39 @@ class ClientAPI:
                 re = ResponseError(4001, 'Can not build request from ordered data', repr(self.client), 'CRITICAL')
                 vr.append(ValueResponse('', None, False, re))
         return vr
+
+    async def subscribe(self, address, time_of_data_tolerance: float or None = None,
+                        delay: float or None = None, parameters_dict: dict = None,
+                        log_missed_msg: bool = False) -> CycleQuery:
+        """
+        This method create cycle query from given simple parameters.
+
+        :param address: address
+        :param time_of_data_tolerance: how old data can be returned. If 0 date will be the freshest.
+        :param delay: request delay
+        :param parameters_dict: dict of parameters to send witch request GET/PUT/etc...
+        :param log_missed_msg: If is False missed messages will be skipped. Default False
+        :return: object CycleQuery
+        """
+        if not time_of_data_tolerance:
+            time_of_data_tolerance = delay * 0.9  # 90% delay time
+        if parameters_dict is None:
+            parameters_dict = {}
+        request = ValueRequest(address=address,
+                               time_of_data_tolerance=time_of_data_tolerance,
+                               request_data=parameters_dict,
+                               user=self.user)
+        return await self.send_cycle_multipart([request], delay=delay, log_missed_msg=log_missed_msg)
+
+    async def send_cycle_multipart(self, requests: List[ValueRequest], delay: float or None = None,
+                                   log_missed_msg: bool = False) -> CycleQuery:
+        """
+        This method making cycle query witch given request and return object CycleQuery.
+
+        :param requests: list requests objects
+        :param delay: request delay
+        :param log_missed_msg: If is False missed messages will be skipped. Default False
+        :return: object CycleQuery
+        """
+        CQ_API = CycleQuery(client=self.client, list_request=requests, delay=delay, log_missed_msg=log_missed_msg)
+        return CQ_API

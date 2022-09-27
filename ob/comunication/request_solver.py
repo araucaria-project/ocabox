@@ -16,12 +16,12 @@ class RequestSolver(BaseRequestSolver):
     def __init__(self, data_provider: ProvidesResponseProtocol, **kwargs):
         super(RequestSolver, self).__init__(data_provider, **kwargs)
 
-    async def get_answer(self, request: List[bytes], user_id: bytes) -> List[bytes]:
+    async def get_answer(self, request: List[bytes], user_id: bytes, timeout=None) -> List[bytes]:
         # docstring is imported from parent
         response = []
         coroutines = []
         for r in request:
-            coroutines.append(self.get_single_answer(r, user_id))
+            coroutines.append(self.get_single_answer(r, user_id, timeout=timeout))
         result = await asyncio.gather(*coroutines, return_exceptions=True)
         for r in result:
             if not isinstance(r, Exception):
@@ -37,7 +37,7 @@ class RequestSolver(BaseRequestSolver):
                 response.append(resp)
         return response
 
-    async def get_single_answer(self, request: bytes, user_id: bytes) -> bytes:
+    async def get_single_answer(self, request: bytes, user_id: bytes, timeout=None) -> bytes:
         # docstring is imported from parent
         response: bytes
         try:
@@ -51,6 +51,11 @@ class RequestSolver(BaseRequestSolver):
             return response
         # set user ID
         v_request.user.socket_id = user_id
+        # set timeout - this is only for make sure
+        if v_request.request_timeout != timeout and timeout:
+            # logger.warning('The timeout value passed in the request does not match the actually set. It will be set '
+            #                'to real')
+            v_request.request_timeout = timeout
         # Can not find value provider application
         if not self.data_provider or not isinstance(self.data_provider, ProvidesResponseProtocol):
             logger.error('Can not find value provider application.')

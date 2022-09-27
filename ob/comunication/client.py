@@ -5,6 +5,7 @@ import zmq
 from typing import List
 from ob.comunication.base_communication_object import BaseCommunicationObject
 from ob.comunication.comunication_error import CommunicationRuntimeError, CommunicationTimeoutError
+from ob.comunication.cycle_query import CycleQuery
 from ob.comunication.message_serializer import MessageSerializer
 from ob.comunication.multipart_structure import MultipartStructure
 
@@ -104,6 +105,7 @@ class Client(BaseCommunicationObject):
         return message
 
     async def _receive_msgs(self):
+        self._msg_event.clear()
         try:
             while True:
                 multipart = await self._front_socket.recv_multipart()
@@ -156,7 +158,7 @@ class Client(BaseCommunicationObject):
             raise CommunicationRuntimeError(message='Can not get current async loop')
         self._loop = loop
         # create event
-        self._msg_event = asyncio.Event()
+        self._msg_event = asyncio.Event(loop=self._loop)
         self._receive_task = loop.create_task(self._receive_msgs())
 
     async def _stop_receiver(self):
@@ -169,9 +171,9 @@ class Client(BaseCommunicationObject):
         if task:
             task.cancel()
             self._receive_task = None
+            await asyncio.sleep(0)
             self._loop = None
             self._msg_event = None
-            await asyncio.sleep(0)
             if task.done():
                 logger.info(f"The retrieve task was stopped")
 

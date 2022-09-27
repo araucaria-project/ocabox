@@ -45,7 +45,7 @@ class Router(BaseCommunicationObject):
         answer = None
         if self.request_solver:
             zmq_id_ = ms.prefix_data[0] if ms.prefix_size > 0 else b''
-            answer = await self.request_solver.get_answer(ms.data, zmq_id_)
+            answer = await self.request_solver.get_answer(ms.data, zmq_id_, timeout=ms.request_timeout_float)
         else:
             logger.error(f"Can not find request solver. The router can't send response to client.")
         return answer

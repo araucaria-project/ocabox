@@ -25,7 +25,8 @@ class Value:
 
     def is_expired(self, dt: float, tolerance: float = None):
         """
-        This method check if date of this value is older then give date minus tolerance.
+        This method check if date of this value is older than give date minus tolerance.
+
         :param dt: date what is needed
         :param tolerance: allowable time delay
         :return: true if date of this value is older what is needed.

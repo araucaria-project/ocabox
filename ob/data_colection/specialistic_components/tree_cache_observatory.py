@@ -66,8 +66,10 @@ class TreeCache(TreeBaseProvider):
         logger.info(f"stop waiting for other task and try ask by yourself")
         raise TreeStructureError
 
-    def _on_subcontractor_return(self, result: ValueResponse):
+    def _on_subcontractor_return(self, result: ValueResponse, request: ValueRequest):
         # docstring is imported from parent
+        if request.request_type != 'GET':
+            return
         kv = self._find_in_known_values(result.address)
         if not kv:
             logger.error(f'Can not find current value in list cached values and should be')

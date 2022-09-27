@@ -143,6 +143,9 @@ class TreeCacheTest(unittest.TestCase):
         new_value.v += 20
         self.tree_provider2.test_values[0] = (self.tree_provider2.test_values[0][0], new_value)
 
+        # make request again witch refresh index
+        request = ValueRequest(address, self.v1[1].ts)
+
         # get value again, value should be provided by cache witch old value
         response = asyncio.run(self.tree_provider1.get_response(request))
         self.assertEqual(response.value.v, self.v1[1].v)
@@ -176,6 +179,16 @@ class TreeCacheTest(unittest.TestCase):
             self.assertTrue(time_end - time_start < self.tree_provider2.response_delay * nr_of_requests)
 
         asyncio.run(coro())
+
+    def test_no_save_put_request(self):
+        """Test no save Put, EXECUTE or other request except GET"""
+        address = Address('.'.join([self.tree_provider1.get_source_name(), self.tree_provider2.get_source_name(),
+                                    self.v1[0]]))
+        request = ValueRequest(address, self.v1[1].ts, request_type='PUT')
+
+        response = asyncio.run(self.tree_provider1.get_response(request))
+
+        self.assertFalse(len(self.tree_cache._known_values))
 
 
 if __name__ == '__main__':

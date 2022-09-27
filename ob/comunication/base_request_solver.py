@@ -10,7 +10,7 @@ class BaseRequestSolver(ABC):
         self.data_provider: ProvidesResponseProtocol = data_provider
 
     @abstractmethod
-    async def get_answer(self, request: List[bytes], user_id: bytes) -> List[bytes]:
+    async def get_answer(self, request: List[bytes], user_id: bytes, timeout=None) -> List[bytes]:
         """
         This method is designed to provide a response to given request by calling to data_provider. The received query
         is a list of minor queries for single values. This method runs a separate task for each query in order to
@@ -19,16 +19,18 @@ class BaseRequestSolver(ABC):
 
         :param request: List of bytes representing ValueRequest
         :param user_id: User id
+        :param timeout: request timeout
         :return: List of bytes representing ValueResponse
         """
         pass
 
-    async def get_single_answer(self, request: bytes, user_id: bytes) -> bytes:
+    async def get_single_answer(self, request: bytes, user_id: bytes, timeout=None) -> bytes:
         """
         The method reads the query details and calls the provider for an answer for a single query.
 
         :param request: bytes representing ValueRequest
         :param user_id: User id
+        :param timeout: request timeout
         :return: bytes representing ValueResponse
         """
         pass
