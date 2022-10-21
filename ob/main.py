@@ -11,6 +11,7 @@ from ob.comunication.router import Router
 from ob.data_colection.specialistic_components.tree_alpaca import TreeAlpacaObservatory
 from ob.data_colection.specialistic_components.tree_blocker_access_grantor import TreeBlockerAccessGrantor
 from ob.data_colection.specialistic_components.tree_cache_observatory import TreeCache
+from ob.data_colection.specialistic_components.tree_conditional_freezer import TreeConditionalFreezer
 from ob.data_colection.specialistic_components.tree_request_alpaca_blocker import TreeRequestAlpacaBlocker
 from ob.ob_config import SingletonConfig
 
@@ -29,9 +30,10 @@ def main(argv):
     alpaca_module = TreeAlpacaObservatory('zibi_sample', observatory_name='zibi-ocabox-800')
     alpaca_blocker = TreeRequestAlpacaBlocker('zibi_blocker', alpaca_module)
     cache_800 = TreeCache('sample_cache', alpaca_blocker)
+    conditional_freezer_800 = TreeConditionalFreezer('conditional_freezer_800', cache_800)
 
     blocker_grantor = TreeBlockerAccessGrantor('grantor_800', 'access_grantor', alpaca_blocker)
-    broker_800 = TreeBaseBrokerDefaultTarget('broker_800', [blocker_grantor], default_provider=cache_800)
+    broker_800 = TreeBaseBrokerDefaultTarget('broker_800', [blocker_grantor], default_provider=conditional_freezer_800)
     tp_800 = TreeProvider('module_800', '800', broker_800)
 
     vb = TreeBaseBroker('front_broker', [tp_800])

@@ -43,6 +43,8 @@ data_collection:
     black_list:
       GET: []
       PUT: []
+  TreeConditionalFreezer:
+    max_unsuccessful_refreshes: 10
 
 tree:
   test_sample_blocker:

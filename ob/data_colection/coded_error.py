@@ -87,7 +87,8 @@ class TreeStructureError(BaseCodedError):
 class TreeOtherError(BaseCodedError):
     CODE_GROUP = 4000
     _KNOWN_LOCAL_CODES = [(1, 'Wrong request'),
-                          (2, 'Application do not answer')]
+                          (2, 'Application do not answer'),
+                          (3, 'This request cannot be subscribed. The cache does not store the value for this request')]
 
     def __init__(self, code: int = CODE_GROUP, message="", **kwargs):
         super().__init__(message=message, code=code, **kwargs)

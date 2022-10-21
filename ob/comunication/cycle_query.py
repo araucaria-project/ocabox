@@ -25,8 +25,10 @@ class CycleQuery:
     :param log_missed_msg: If is False missed messages will be skipped. Default False
     :raise CommunicationRuntimeError: if not provide async loop and czn not get existing loop
     """
+
     def __init__(self, client, list_request: List[ValueRequest], delay: float or None = None, loop=None,
-                 log_missed_msg: bool = False, **kwargs):
+                 log_missed_msg: bool = False, only_new_data=False, **kwargs):
+        # todo mikolaj chcial zeby jakiś auto start dodac - tutaj albo w api
         self._client = client
         self._event: asyncio.Event = asyncio.Event()
         self._last_msg: List[bytes] or None = None
@@ -40,6 +42,11 @@ class CycleQuery:
         self._list_request: List[ValueRequest] = list_request
         self._errors = None
         self._log_missed_msg: bool = log_missed_msg
+        self._only_new_data = only_new_data
+        if self._only_new_data:
+            for r in self._list_request:
+                r.cycle_query=True
+        self._timeout = 60
 
     # TODO co jeśli user zapomni zatrzymać petle? MIKOŁAJ
 
@@ -84,17 +91,51 @@ class CycleQuery:
         start_time = time.time()
         self._errors = None
         while True:
-            wait_range = start_time + self._delay - time.time()
-            if wait_range > 0:
-                await asyncio.sleep(wait_range)
+
+            if not self._only_new_data:
+                wait_range = start_time + self._delay - time.time()
+                if wait_range > 0:
+                    await asyncio.sleep(wait_range)
+
+
             start_time = time.time()
-            # move request time of data tolerance
-            self._change_time(start_time)
+
+            if not self._only_new_data:
+                # move request time of data tolerance
+                self._change_time(start_time)
+
+
+
+
+            if self._only_new_data:
+                if self._last_msg:
+                    last_msg_vr = [ValueResponse.from_byte(r) for r in self._last_msg]
+
+                    for i, lm in enumerate(last_msg_vr):
+                        if lm.value is not None:
+                            time_of_known_change = lm.value.ts
+                            self._list_request[i].request_data['time_of_known_change'] = time_of_known_change
+                            no_send_before = lm.value.ts+self._delay
+                            self._list_request[i].request_data['no_send_before'] = no_send_before
+                            # self._list_request[i].cycle_query=True
+                            self._change_time(no_send_before)  # Not used but set for routine
+
+
+            # todo jeszcze dodać ponawianie zapytania gdy timeout albo jakiś błąd
+            # await asyncio.sleep(1)
+
             # make query
             try:
                 list_part = [r.to_byte() for r in self._list_request]
                 result = await self._client.send_multipart(list_part=list_part,
-                                                           request_timeout=start_time + self._delay)
+                                                           request_timeout=start_time + (self._timeout if self._only_new_data else self._delay))
+                # todo co z timeout miałem się tym nie przejmować, ale jak czas client-ruter się rozjedzie to może być
+                #  luka pomiędzy wartościami - może dodać jakąś komunikacje nawet jak nie ma nowych value? MIKOŁAJ
+                #  POMYSŁ: może dać jakąś wartość wewnętrznego timeouta gdzie ruter odeśle info że dana jest cały czas
+                #  stara i klięt ma zapytac ponownie żeby dał znać że żyje - ten wewnętrzny timeout będzie przed
+                #  głównym zanim kolejka ubije task.wtedy jak client nie dostanie odpowiedzi przed głównym timeout to
+                #  wie że ruter zdechł a jak cos dostanie to zapyta sobie ponownie - TO JEST DOBRE MYSLE i wykorzystam
+                #  przy okazji ten timeout który siedzi w requeście i muszę go ciągnąc niewieadomo poco
                 self._last_msg = result
                 missed = 0
                 self._event.set()

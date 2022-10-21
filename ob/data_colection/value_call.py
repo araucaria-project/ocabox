@@ -1,3 +1,4 @@
+import copy
 import logging
 import time
 from dataclasses import dataclass, fields, field
@@ -87,7 +88,7 @@ class ValueRequest(ValueExchange):
     # master keys that store essential data
     STANDARD_KEYS: ClassVar[list] = list(
         set(ValueExchange.STANDARD_KEYS + ['address', 'time_of_data', 'time_of_data_tolerance', 'request_timeout',
-                                           'request_type', 'request_data', 'user']))
+                                           'request_type', 'request_data', 'user', 'cycle_query']))
     KNOWN_REQUEST_TYPES: ClassVar[list] = ['GET', 'PUT', 'EXECUTE']
     address: str or Address or dict
     time_of_data: float or None = None  # default - now
@@ -97,6 +98,7 @@ class ValueRequest(ValueExchange):
     request_type: str = field(default='GET')
     request_data: dict or None = None
     user: BaseTreeUser = None
+    cycle_query: bool = False
 
     def __post_init__(self):
         if self.request_timeout is None:
@@ -140,6 +142,9 @@ class ValueRequest(ValueExchange):
             self.user = TreeUser(**self.user)
         else:
             raise ValueError
+
+    def copy(self):
+        return copy.deepcopy(self)
 
 
 @dataclass

@@ -96,7 +96,7 @@ class ClientAPI:
 
     async def subscribe(self, address, time_of_data_tolerance: float or None = None,
                         delay: float or None = None, parameters_dict: dict = None,
-                        log_missed_msg: bool = False) -> CycleQuery:
+                        log_missed_msg: bool = False, only_new_data: bool = True) -> CycleQuery:
         """
         This method create cycle query from given simple parameters.
 
@@ -105,6 +105,8 @@ class ClientAPI:
         :param delay: request delay
         :param parameters_dict: dict of parameters to send witch request GET/PUT/etc...
         :param log_missed_msg: If is False missed messages will be skipped. Default False
+        :param only_new_data: If true will retrieve value only if it changed else receives the message at a
+            specified time
         :return: object CycleQuery
         """
         # TODO zrobić coś z tym żeby time_of_data_tolerance było ustawiane też na delay domyślnie bo teraz może
@@ -117,17 +119,21 @@ class ClientAPI:
                                time_of_data_tolerance=time_of_data_tolerance,
                                request_data=parameters_dict,
                                user=self.user)
-        return await self.send_cycle_multipart([request], delay=delay, log_missed_msg=log_missed_msg)
+        return await self.send_cycle_multipart([request], delay=delay, log_missed_msg=log_missed_msg,
+                                               only_new_data=only_new_data)
 
     async def send_cycle_multipart(self, requests: List[ValueRequest], delay: float or None = None,
-                                   log_missed_msg: bool = False) -> CycleQuery:
+                                   log_missed_msg: bool = False, only_new_data: bool = True) -> CycleQuery:
         """
         This method making cycle query witch given request and return object CycleQuery.
 
         :param requests: list requests objects
         :param delay: request delay
         :param log_missed_msg: If is False missed messages will be skipped. Default False
+        :param only_new_data: If true will retrieve value only if it changed else receives the message at a
+            specified time
         :return: object CycleQuery
         """
-        CQ_API = CycleQuery(client=self.client, list_request=requests, delay=delay, log_missed_msg=log_missed_msg)
+        CQ_API = CycleQuery(client=self.client, list_request=requests, delay=delay, log_missed_msg=log_missed_msg,
+                            only_new_data=only_new_data)
         return CQ_API

@@ -343,7 +343,7 @@ class Router(BaseCommunicationObject):
         :return: true if router is stopped or false if don't.
         """
         if self._current_loop:
-            tasks = [self._main_task, self._ping_task, self._message_tasks, self._stop_task]
+            tasks = [self._main_task, self._ping_task, *self._message_tasks, self._stop_task]
             for t in tasks:
                 if t and t in asyncio.all_tasks(self._current_loop):
                     return False
