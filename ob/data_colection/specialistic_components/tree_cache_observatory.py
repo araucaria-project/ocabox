@@ -58,7 +58,7 @@ class TreeCache(TreeBaseProvider):
         # docstring is imported from parent
         recall = kwargs.get('recall', 0)
         address = request.address
-        # skip cache if request is not type GET
+        # skip cache if request is not cachable all other values should be initialized in cache
         if not self.is_cachable_request(request=request):
             raise TreeStructureError
         known_value = self._find_in_known_values(address)
@@ -97,7 +97,7 @@ class TreeCache(TreeBaseProvider):
 
     def _on_subcontractor_return(self, result: ValueResponse, request: ValueRequest):
         # docstring is imported from parent
-        if request.request_type != 'GET':
+        if not self.is_cachable_request(request=request):
             return
         kv = self._find_in_known_values(result.address)
         if not kv:
@@ -105,7 +105,7 @@ class TreeCache(TreeBaseProvider):
         self._update_known_value(result.address, result.value, kv)
         self._remove_the_value_lock(result.address, kv)
 
-    def _find_in_known_values(self, address) -> _KnownValue or None:
+    def _find_in_known_values(self, address: Address) -> _KnownValue or None:
         """
         This method check if value for given address exists in known values and return it.
 
@@ -194,5 +194,5 @@ class TreeCache(TreeBaseProvider):
         if self._conditional_freezer is not None:
             self._conditional_freezer.set_change_event()
 
-    def get_k_val(self, address) -> KnownValueProtocol or None:
+    def get_k_val(self, address: Address) -> KnownValueProtocol or None:
         return self._find_in_known_values(address=address)

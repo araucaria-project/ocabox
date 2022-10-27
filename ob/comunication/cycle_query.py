@@ -15,76 +15,68 @@ logger = logging.getLogger(__name__)
 class CycleQuery:
     """
     This class represents a circular query. It can only be created in a running asynchronous event loop or elsewhere
-    when the asynchronous event loop is delivered in an argument. the class provides a methods 'wait_for_response' and
+    when the asynchronous event loop is delivered in an argument. the class provides a methods
     'get_response' thanks to which one can wait for the next message for any number of tasks.
 
     :param client: client object
     :param list_request: list of requests to cycle send
     :param delay: request delay, default is getting from config file
     :param loop: async loop
-    :param log_missed_msg: If is False missed messages will be skipped. Default False
+    :param log_missed_msg: If is False missed messages will be skipped. Default False.
+        Used only when is `only_new_data` set to False
+    :param only_new_data: If set True, server will only send data when it changes. Default True.
+    :param query_name: cycle query name used to distinguish queries in logs
+    :param max_missed_msg: number of missed messages before stop cycle query. Default is give from config. It can be
+        set from -1 to inf. If it is ste to -1 that mean isn't max missed messages and query will be renewing all time
+    :param request_timeout: The maximum waiting time for a response from the router, exceeding this time means that
+        there are communication problems or the router is turned off. Recommended to leave the default value
     :raise CommunicationRuntimeError: if not provide async loop and czn not get existing loop
     """
 
     def __init__(self, client, list_request: List[ValueRequest], delay: float or None = None, loop=None,
-                 log_missed_msg: bool = False, only_new_data=False, **kwargs):
+                 log_missed_msg: bool = False, only_new_data=True, query_name: str = 'Default cycle query',
+                 max_missed_msg: int = None, request_timeout: int = None, **kwargs):
         # todo mikolaj chcial zeby jakiś auto start dodac - tutaj albo w api
+        self._query_name = query_name
         self._client = client
         self._event: asyncio.Event = asyncio.Event()
-        self._last_msg: List[bytes] or None = None
+        self._last_response: List[ValueResponse] = []
         if delay is None or delay <= 0:
             delay = SingletonConfig.get_config()['comunication'][type(self).__name__]['default_delay'].get()
         self._delay: float = delay
-        self._max_missed_msg: int = 2
+        if max_missed_msg is None:
+            max_missed_msg = SingletonConfig.get_config()['comunication'][type(self).__name__]['max_missed_msg'].get()
+        self._max_missed_msg: int = max_missed_msg  # can be number from -1 to inf
         self._task: asyncio.Task or None = None
         self._loop = loop
         self._set_loop()  # can raise CommunicationRuntimeError
         self._list_request: List[ValueRequest] = list_request
         self._errors = None
         self._log_missed_msg: bool = log_missed_msg
+        if request_timeout is None:
+            request_timeout = SingletonConfig.get_config()['comunication'][type(self).__name__]['request_timeout'].get()
+        self._timeout = request_timeout
         self._only_new_data = only_new_data
-        if self._only_new_data:
-            for r in self._list_request:
-                r.cycle_query=True
-        self._timeout = 60
-
+        for r in self._list_request:
+            r.request_timeout=self._timeout
+            if self._only_new_data:
+                r.cycle_query = True
     # TODO co jeśli user zapomni zatrzymać petle? MIKOŁAJ
 
-    async def wait_for_response(self) -> List[bytes]:
-        """
-        This method waits for the next recursive query and returns it when it comes as raw bytes.
-
-        :raise CommunicationRuntimeError: when cycle request loop was stopped or message can't retrieve for other reason
-        :return: new response as list of bytes
-        """
-        if not self.is_stopped() and not self._task.done():
-            await self._event.wait()
-            await asyncio.sleep(0)  # let main task set event to false before return control to client's tasks
-            if self._errors:
-                raise self._errors
-            return self._last_msg
-        raise CommunicationRuntimeError
-
-    async def get_response(self) -> List[ValueResponse] or None:
+    async def get_response(self) -> List[ValueResponse]:
         """
         This is a high level equivalent of the method 'wait_for_response'.
 
         :raise CommunicationRuntimeError: when cycle request loop was stopped or message can't retrieve for other reason
         :return: new response as object ValueResponse
         """
-        resp = await self.wait_for_response()
-        if resp is None:
-            return None
-        vr = []
-        for r in resp:
-            try:
-                vr.append(ValueResponse.from_byte(r))
-            except (ValueError, AddressError, TypeError):
-                # can not create ValueRequest object (data is damaged) - return empty response witch error
-                logger.info('Can not convert request dictionary to request object.')
-                re = ResponseError(4001, 'Can not build request from ordered data', repr(self._client), 'CRITICAL')
-                vr.append(ValueResponse('', None, False, re))
-        return vr
+        if not self.is_stopped() and not self._task.done():
+            await self._event.wait()
+            await asyncio.sleep(0)  # let main task set event to false before return control to client's tasks
+            if self._errors:
+                raise self._errors
+            return self._last_response
+        raise CommunicationRuntimeError
 
     async def _send_message(self):
         missed = 0
@@ -92,71 +84,81 @@ class CycleQuery:
         self._errors = None
         while True:
 
+            # wait before  send nex request
             if not self._only_new_data:
                 wait_range = start_time + self._delay - time.time()
                 if wait_range > 0:
                     await asyncio.sleep(wait_range)
 
-
             start_time = time.time()
 
+            # move request time of data tolerance
             if not self._only_new_data:
-                # move request time of data tolerance
                 self._change_time(start_time)
 
-
-
-
+            # update request data
             if self._only_new_data:
-                if self._last_msg:
-                    last_msg_vr = [ValueResponse.from_byte(r) for r in self._last_msg]
-
-                    for i, lm in enumerate(last_msg_vr):
-                        if lm.value is not None:
-                            time_of_known_change = lm.value.ts
-                            self._list_request[i].request_data['time_of_known_change'] = time_of_known_change
-                            no_send_before = lm.value.ts+self._delay
-                            self._list_request[i].request_data['no_send_before'] = no_send_before
-                            # self._list_request[i].cycle_query=True
-                            self._change_time(no_send_before)  # Not used but set for routine
-
-
-            # todo jeszcze dodać ponawianie zapytania gdy timeout albo jakiś błąd
-            # await asyncio.sleep(1)
+                self._update_request_data()
 
             # make query
             try:
                 list_part = [r.to_byte() for r in self._list_request]
                 result = await self._client.send_multipart(list_part=list_part,
-                                                           request_timeout=start_time + (self._timeout if self._only_new_data else self._delay))
-                # todo co z timeout miałem się tym nie przejmować, ale jak czas client-ruter się rozjedzie to może być
-                #  luka pomiędzy wartościami - może dodać jakąś komunikacje nawet jak nie ma nowych value? MIKOŁAJ
-                #  POMYSŁ: może dać jakąś wartość wewnętrznego timeouta gdzie ruter odeśle info że dana jest cały czas
-                #  stara i klięt ma zapytac ponownie żeby dał znać że żyje - ten wewnętrzny timeout będzie przed
-                #  głównym zanim kolejka ubije task.wtedy jak client nie dostanie odpowiedzi przed głównym timeout to
-                #  wie że ruter zdechł a jak cos dostanie to zapyta sobie ponownie - TO JEST DOBRE MYSLE i wykorzystam
-                #  przy okazji ten timeout który siedzi w requeście i muszę go ciągnąc niewieadomo poco
-                self._last_msg = result
+                                                           request_timeout=start_time + (
+                                                               self._timeout if self._only_new_data else self._delay))
+                if result is None:
+                    logger.error(f"{self._query_name}: Can not get response for giving request")
+                    raise CommunicationRuntimeError(message="Can not get response for giving request, check "
+                                                            "that the 'no_wait' flag is not set to true")
+
+                self._last_response = self._read_response(result)
                 missed = 0
+
+                # only checking errors when is needed only new data else it can return response witch errors to client
+                if self._only_new_data:
+                    # check errors
+                    for r in self._last_response:
+
+                        if r.value is None or 'from_cf' not in r.value.tags:
+                            logger.info(f'{self._query_name}: this address does not support recursive conditional '
+                                        f'queries')
+                            raise CommunicationRuntimeError(message=f"this address ({str(r.address)}) does not support "
+                                                                    f"recursive conditional queries")
+
+                        if not r.status and r.error and r.error.code == 4004:  # 4004 - timeout waiting for change value
+                            # the value is not changed so client need refresh request and keep waiting
+                            logger.info(f'{self._query_name}: subscription expired - renewing')
+                            continue  # everything is ok, just router need confirmation that the client is alive
+                        # One of the responses received has an error
+
+                        elif not r.status:
+                            self._errors = CommunicationRuntimeError(message=f"Client retrieve response witch error: "
+                                                                             f"{str(r.error)}")
+                            self._event.set()
+                            break
                 self._event.set()
             except CommunicationRuntimeError as e:
                 self._errors = e
-                self._last_msg = None
+                self._last_response = []
                 self._event.set()
-                raise
+                break
             except CommunicationTimeoutError:
                 missed += 1
-                self._last_msg = None
-                logger.warning(f'Message missed')
-                if self._log_missed_msg:
+                self._last_response = []
+                logger.warning(f'{self._query_name}: The waiting time for the message has expired. The router is not '
+                               f'responding. Number of missing answers: {missed}')
+                if self._log_missed_msg and not self._only_new_data:
                     self._event.set()
-            except Exception:
-                self._last_msg = None
-                self._errors = CommunicationRuntimeError(message='Unrecognized error')
+
+            except Exception as e:
+                self._last_response = []
+                logger.error(f'{self._query_name}: Unrecognized error in cycle query: {str(e)}')
+                self._errors = CommunicationRuntimeError(message=f'Unrecognized error')
                 self._event.set()
-                raise
-            if missed > self._max_missed_msg:
-                logger.error("Too many missed messages at same time")
+                break
+
+            if missed > self._max_missed_msg >= 0:
+                logger.error(f"{self._query_name}: Too many missed messages at same time")
                 self._errors = CommunicationRuntimeError(message='Too many missed messages at same time')
                 self._event.set()
                 break
@@ -166,6 +168,33 @@ class CycleQuery:
     def _change_time(self, time_now):
         for r in self._list_request:
             r.time_of_data = time_now
+
+    def _update_request_data(self):
+        """
+        This method repack last response data to nex request
+        """
+        if self._last_response:
+            last_msg_vr = self._last_response
+            for i, lm in enumerate(last_msg_vr):
+                if lm.value is not None:
+                    time_of_known_change = lm.value.ts
+                    self._list_request[i].request_data['time_of_known_change'] = time_of_known_change
+                    no_send_before = lm.value.ts + self._delay
+                    self._list_request[i].request_data['no_send_before'] = no_send_before
+                    self._list_request[i].cycle_query = True
+                    self._change_time(no_send_before)
+
+    def _read_response(self, list_bytes: List[bytes]) -> List[ValueResponse]:
+        vr = []
+        for r in list_bytes:
+            try:
+                vr.append(ValueResponse.from_byte(r))
+            except (ValueError, AddressError, TypeError):
+                # can not create ValueRequest object (data is damaged) - return empty response witch error
+                logger.info(f'{self._query_name}: Can not convert request dictionary to request object.')
+                re = ResponseError(4001, 'Can not build request from ordered data', repr(self._client), 'CRITICAL')
+                vr.append(ValueResponse('', None, False, re))
+        return vr
 
     def _run(self):
         self._task = self._loop.create_task(self._send_message())
@@ -180,7 +209,7 @@ class CycleQuery:
             try:
                 self._loop = asyncio.get_running_loop()
             except RuntimeError:
-                logger.error(f"Can not get current async loop, something goes wrong")
+                logger.error(f"{self._query_name}: Can not get current async loop, something goes wrong")
                 raise CommunicationRuntimeError(message='Can not get current async loop')
 
     def start(self):
@@ -190,7 +219,7 @@ class CycleQuery:
         if self.is_stopped():
             self._run()
         else:
-            logger.warning("This cycle query is already started")
+            logger.warning(f"{self._query_name}: This cycle query is already started")
 
     def stop(self):
         """Method stop cycle query."""

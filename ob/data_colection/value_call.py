@@ -101,10 +101,11 @@ class ValueRequest(ValueExchange):
     cycle_query: bool = False
 
     def __post_init__(self):
+        # check timeout
         if self.request_timeout is None:
             self.request_timeout = time.time() + SingletonConfig.get_config()['data_collection'][type(self).__name__][
                 'default_request_timeout'].get()
-            # check address
+        # check address
         if isinstance(self.address, dict):
             self.address = Address(**self.address)
         elif isinstance(self.address, Address):

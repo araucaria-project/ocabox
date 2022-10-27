@@ -1,4 +1,5 @@
 import asyncio
+import random
 import time
 from typing import List, Tuple
 
@@ -31,6 +32,7 @@ class SampleTestValueProvider(TreeProvider):
         self.response_delay = self.RESPONSE_DELAY
         # statistic
         self.nr_requests = 0
+        self.static_val = 55
         self.test_values: List[Tuple[str, Value]] = test_values if test_values else self.SAMPLE_VALUES
         super().__init__(component_name=component_name, source_name=source_name, subcontractor=subcontractor,
                          **kwargs)
@@ -59,5 +61,7 @@ class SampleTestValueProvider(TreeProvider):
         elif value_name == 'address_error':
             raise AddressError
         elif value_name == 'new_val':
-            return Value(1, time.time())
+            return Value(random.randint(0, 1000), time.time())
+        elif value_name == 'static_val':
+            return Value(55, time.time())
         return None

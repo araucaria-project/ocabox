@@ -66,12 +66,11 @@ class ValueRequestTest(unittest.TestCase):
         # test request type
         self.assertEqual(vr.request_type,copy_vr.request_type)
 
-
     def test_to_dict(self):
         expected_dict = {'address': {'adr': 'aaa.bbb.ccc'},
                          'time_of_data': 1661349399.030824, 'time_of_data_tolerance': 23.0,
                          'request_timeout': 1661349399.030824 - 100, 'request_type': 'GET', 'request_data': {},
-                         'user': TreeUser().to_dict()}
+                         'user': TreeUser().to_dict(), 'cycle_query': False}
         vr = ValueRequest(address=expected_dict['address'], time_of_data=expected_dict['time_of_data'],
                           time_of_data_tolerance=expected_dict['time_of_data_tolerance'],
                           request_timeout=expected_dict['request_timeout'])

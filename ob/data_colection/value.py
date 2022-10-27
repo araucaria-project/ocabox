@@ -1,3 +1,4 @@
+import copy
 import logging
 from ob.data_colection.coded_error import BaseCodedError
 
@@ -6,10 +7,13 @@ logger = logging.getLogger(__name__)
 
 class Value:
 
-    def __init__(self, v, ts: float, value_type=None, **kwargs):
+    def __init__(self, v, ts: float, value_type=None, tags: dict = None, **kwargs):
         self.v = v
         self.ts: float = ts
         self.type = value_type
+        if tags is None:
+            tags = {}
+        self.tags: dict = tags
 
     def __eq__(self, other):
         return self.v == other.v
@@ -20,8 +24,8 @@ class Value:
     def __lt__(self, other):
         return self.v < other.v
 
-    def __copy__(self):
-        return Value(self.v, self.ts, self.type)
+    # def __copy__(self):
+    #     return Value(self.v, self.ts, self.type, self.tags)
 
     def is_expired(self, dt: float, tolerance: float = None):
         """
@@ -40,6 +44,9 @@ class Value:
         for k, v in self.__dict__.items():
             d[k] = v
         return d
+
+    def copy(self):
+        return copy.deepcopy(self)
 
 
 class TreeValueError(BaseCodedError):

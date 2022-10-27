@@ -89,7 +89,7 @@ class TreeCacheTest(unittest.TestCase):
 
         # test change value to newer
         address2 = Address('.'.join(['sample_address', self.v2[0]]))
-        v2 = self.v2[1].__copy__()
+        v2 = self.v2[1].copy()
         v2.ts = v2.ts + 10
         v2.v = v2.v + 10
         tc._update_known_value(address2, v2)
@@ -100,7 +100,7 @@ class TreeCacheTest(unittest.TestCase):
 
         # test do not change value to older
         address2 = Address('.'.join(['sample_address', self.v2[0]]))
-        v3 = self.v2[1].__copy__()
+        v3 = self.v2[1].copy()
         v3.ts = v3.ts - 10
         v3.v = v3.v + 20
         tc._update_known_value(address2, v3)
@@ -139,7 +139,7 @@ class TreeCacheTest(unittest.TestCase):
         asyncio.run(self.tree_provider1.get_response(request))
 
         # change value returned by provider but set the same timestamp
-        new_value = self.tree_provider2.test_values[0][1].__copy__()  # chere change return value in lase component
+        new_value = self.tree_provider2.test_values[0][1].copy()  # chere change return value in lase component
         new_value.v += 20
         self.tree_provider2.test_values[0] = (self.tree_provider2.test_values[0][0], new_value)
 

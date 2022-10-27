@@ -1,5 +1,6 @@
 from typing import Protocol, runtime_checkable
 
+from ob.data_colection.address import Address
 from ob.data_colection.base_components.tree_component import ProvidesResponseProtocol
 from ob.data_colection.value import Value
 from ob.data_colection.value_call import ValueRequest
@@ -27,7 +28,7 @@ class TreeCacheProtocol(ProvidesResponseProtocol, Protocol):
     def remove_conditional_freezer(self):
         pass
 
-    def get_k_val(self, address) -> KnownValueProtocol or None:
+    def get_k_val(self, address: Address) -> KnownValueProtocol or None:
         pass
 
     def is_cachable_request(self, request: ValueRequest) -> bool:
