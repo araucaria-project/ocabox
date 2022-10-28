@@ -96,15 +96,15 @@ class ClientAPI:
 
     async def subscribe(self, address, time_of_data_tolerance: float or None = None,
                         delay: float or None = None, parameters_dict: dict = None,
-                        log_missed_msg: bool = False) -> CycleQuery:
+                        name: str = 'Default_subscription') -> CycleQuery:
         """
         This method create cycle query from given simple parameters.
 
         :param address: address
         :param time_of_data_tolerance: how old data can be returned. If 0 date will be the freshest.
-        :param delay: request delay
+        :param delay: request delay, minimum interval between responses
         :param parameters_dict: dict of parameters to send witch request GET/PUT/etc...
-        :param log_missed_msg: If is False missed messages will be skipped. Default False
+        :param name: name of the subscription
         :return: object CycleQuery
         """
         # TODO zrobić coś z tym żeby time_of_data_tolerance było ustawiane też na delay domyślnie bo teraz może
@@ -117,17 +117,23 @@ class ClientAPI:
                                time_of_data_tolerance=time_of_data_tolerance,
                                request_data=parameters_dict,
                                user=self.user)
-        return await self.send_cycle_multipart([request], delay=delay, log_missed_msg=log_missed_msg)
+        return await self.send_cycle_multipart([request], delay=delay, name=name)
 
     async def send_cycle_multipart(self, requests: List[ValueRequest], delay: float or None = None,
-                                   log_missed_msg: bool = False) -> CycleQuery:
+                                   log_missed_msg: bool = False,
+                                   request_timeout: float = None, max_missed_msg: int = None,
+                                   name: str = 'Default_subscription') -> CycleQuery:
         """
         This method making cycle query witch given request and return object CycleQuery.
 
         :param requests: list requests objects
         :param delay: request delay
         :param log_missed_msg: If is False missed messages will be skipped. Default False
+        :param name: name of the subscription
+        :param request_timeout: more information in :class:`.cycle_query.CycleQuery`
+        :param max_missed_msg: more information in :class:`.cycle_query.CycleQuery`
         :return: object CycleQuery
         """
-        CQ_API = CycleQuery(client=self.client, list_request=requests, delay=delay, log_missed_msg=log_missed_msg)
+        CQ_API = CycleQuery(client=self.client, list_request=requests, delay=delay, log_missed_msg=log_missed_msg,
+                            max_missed_msg=max_missed_msg, name=name, request_timeout=request_timeout)
         return CQ_API

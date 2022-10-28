@@ -11,6 +11,8 @@ from ob.data_colection.value_call import ValueRequest
 
 logger = logging.getLogger(__name__)
 
+# todo dodać wywłaszczanie osób
+
 
 class TreeBlockerAccessGrantor(TreeProvider):
     """

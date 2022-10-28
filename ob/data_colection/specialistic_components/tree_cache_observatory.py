@@ -3,11 +3,12 @@ from dataclasses import dataclass
 import logging
 from asyncio import Task
 from typing import List
-
 from ob.data_colection.address import Address
 from ob.data_colection.base_components.tree_base_provider import TreeBaseProvider
 from ob.data_colection.base_components.tree_component import ProvidesResponseProtocol
 from ob.data_colection.coded_error import TreeStructureError
+from ob.data_colection.specialistic_components.tree_cache_observatory_protocols import KnownValueProtocol
+from ob.data_colection.specialistic_components.tree_conditional_freezer_protocol import TreeConditionalFreezerProtocol
 from ob.data_colection.value import Value
 from ob.data_colection.value_call import ValueRequest, ValueResponse
 
@@ -15,6 +16,16 @@ logger = logging.getLogger(__name__)
 
 
 class TreeCache(TreeBaseProvider):
+    """
+    This class is responsible for responding to request with data contained in the cache of this object.
+    New _KnownValue in the list '_known_values' should only be created once at the beginning for each address and only
+    edited afterwards, because an object of that value is temporarily stored elsewhere in the code.
+
+    :param component_name: this is name of tree component, used for debug
+    :param subcontractor: instance of next component in tree
+    """
+
+    COMPONENT_DEFAULT_NAME: str = 'TreeCache'
 
     def __init__(self, component_name: str, subcontractor: ProvidesResponseProtocol = None, **kwargs):
         super().__init__(component_name=component_name, subcontractor=subcontractor, **kwargs)
@@ -23,23 +34,37 @@ class TreeCache(TreeBaseProvider):
         if self._max_recall < 1:
             logger.warning(f"The _max_recall value is lover than one. It is unacceptable so will be set to 1 !")
             self._max_recall = 1
+        self._conditional_freezer: TreeConditionalFreezerProtocol or None = None
 
     @dataclass
     class _KnownValue:
         address: Address
         value: Value or None
         task: Task or None
+        change_time: float
+
+        def get_change_time(self) -> float:
+            return self.change_time
+
+        def get_timestamp(self) -> float or None:
+            if self.value:
+                return self.value.ts
+            return None
+
+        def get_value(self) -> Value:
+            return self.value
 
     async def get_value(self, request: ValueRequest, **kwargs) -> Value or None:
         # docstring is imported from parent
         recall = kwargs.get('recall', 0)
         address = request.address
-        # skip cache if request is not type GET
-        if request.request_type != 'GET':
+        # skip cache if request is not cachable all other values should be initialized in cache
+        if not self.is_cachable_request(request=request):
             raise TreeStructureError
         known_value = self._find_in_known_values(address)
         if not known_value:
-            known_value = self._KnownValue(address, None, None)
+            # Initializing this value even when it cannot be updated later means the request is cachable
+            known_value = self._KnownValue(address=address, value=None, task=None, change_time=0)
             self._known_values.append(known_value)
         value = known_value.value if self._value_meets_requirements(known_value, request.time_of_data,
                                                                     request.time_of_data_tolerance) else None
@@ -62,13 +87,17 @@ class TreeCache(TreeBaseProvider):
             if recall < self._max_recall:
                 await task
                 return await self.get_value(request, recall=recall + 1)
-
         logger.info(f"stop waiting for other task and try ask by yourself")
         raise TreeStructureError
 
+    def is_cachable_request(self, request: ValueRequest) -> bool:
+        if request.request_type != 'GET':
+            return False
+        return True
+
     def _on_subcontractor_return(self, result: ValueResponse, request: ValueRequest):
         # docstring is imported from parent
-        if request.request_type != 'GET':
+        if not self.is_cachable_request(request=request):
             return
         kv = self._find_in_known_values(result.address)
         if not kv:
@@ -76,7 +105,7 @@ class TreeCache(TreeBaseProvider):
         self._update_known_value(result.address, result.value, kv)
         self._remove_the_value_lock(result.address, kv)
 
-    def _find_in_known_values(self, address) -> _KnownValue or None:
+    def _find_in_known_values(self, address: Address) -> _KnownValue or None:
         """
         This method check if value for given address exists in known values and return it.
 
@@ -121,12 +150,20 @@ class TreeCache(TreeBaseProvider):
             kv = known_value if known_value else self._find_in_known_values(address)
             # if value isn't on list yet
             if not kv:
-                kv = self._KnownValue(address=address, value=value, task=None)
+                kv = self._KnownValue(address=address, value=value, task=None, change_time=value.ts)  # first initial
                 self._known_values.append(kv)
                 return
             # if new provided data is earlier than the date currently stored in list
-            if not kv.value or kv.value.ts < value.ts:
+            if not kv.value:
+                # initial know value after create it
                 kv.value = value
+                kv.change_time = value.ts
+            else:
+                if kv.value.ts < value.ts:
+                    if self._is_changed(new_v=value, old_v=kv.value):
+                        kv.change_time = value.ts
+                        self._report_new_value()  # report that there is a new value if conditional_freezer is known
+                    kv.value = value
 
     def _remove_the_value_lock(self, address, known_value: _KnownValue = None):
         kv = known_value if known_value else self._find_in_known_values(address)
@@ -137,7 +174,25 @@ class TreeCache(TreeBaseProvider):
             return
         if not kv:
             return
-        if kv.task == current_task:
+        if kv.task == current_task:  # if not that mean current task no wait and ask by yourself
             kv.task = None
-        else:
-            logger.error(f'the current task is not a stored task')
+
+    @staticmethod
+    def _is_changed(new_v, old_v):
+        # compare value
+        if new_v == old_v:
+            return False
+        return True
+
+    def set_conditional_freezer(self, cf: TreeConditionalFreezerProtocol):
+        self._conditional_freezer = cf
+
+    def remove_conditional_freezer(self):
+        self._conditional_freezer = None
+
+    def _report_new_value(self):
+        if self._conditional_freezer is not None:
+            self._conditional_freezer.set_change_event()
+
+    def get_k_val(self, address: Address) -> KnownValueProtocol or None:
+        return self._find_in_known_values(address=address)

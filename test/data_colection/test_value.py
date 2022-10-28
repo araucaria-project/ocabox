@@ -51,7 +51,7 @@ class ValueTest(unittest.TestCase):
         self.assertFalse(v1.is_expired(past))
 
     def test_to_dict(self):
-        value_dict = {'v': 234, 'ts': 1661348770.4527519, 'type': None}
+        value_dict = {'v': 234, 'ts': 1661348770.4527519, 'type': None, 'tags': {}}
         v = Value(**value_dict)
         self.assertIsInstance(v.ts, float)
         dic = v.to_dict()

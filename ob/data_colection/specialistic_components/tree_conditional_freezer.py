@@ -1,0 +1,240 @@
+import asyncio
+import contextlib
+import time
+import logging
+
+from ob.data_colection.address import Address
+from ob.data_colection.base_components.tree_base_provider import TreeBaseProvider
+from ob.data_colection.coded_error import TreeStructureError, TreeOtherError
+from ob.data_colection.specialistic_components.tree_cache_observatory_protocols import TreeCacheProtocol, \
+    KnownValueProtocol
+from ob.data_colection.value import Value, TreeValueError
+from ob.data_colection.value_call import ValueRequest
+
+logger = logging.getLogger(__name__)
+
+
+# todo zapytać  o podwojne zapytania do rutera, jedna wartość może się zmienić szybciej nisz druga i co wtedy?
+#  Zdajemy się na inteligęcje urzytkownika? może niech będzie taka opcja ale w client_API się to uniemożliwi?
+
+
+class TreeConditionalFreezer(TreeBaseProvider):
+    COMPONENT_DEFAULT_NAME: str = 'TreeConditionalFreezer'
+
+    def __init__(self, component_name: str, subcontractor: TreeCacheProtocol = None, **kwargs):
+        super().__init__(component_name=component_name, subcontractor=subcontractor, **kwargs)
+        self._subcontractor: TreeCacheProtocol = subcontractor
+        subcontractor.set_conditional_freezer(cf=self)
+        self._event_change_data_in_cache: asyncio.Event or None = None
+        self._event_change_data: asyncio.Event or None = None
+        self._sink_task: asyncio.Task or None = None
+        # How many times it will keep trying to update the value with one can not be updated before returning an error
+        self._max_unsuccessful_refreshes: int = self._get_cfg('max_unsuccessful_refreshes')
+        # how many seconds before timeout expires component is to return an empty message to the clone
+        self._alarm_timeout_offset: float = self._get_cfg('alarm_timeout')
+
+    def set_max_refreshes(self, max_: int):
+        self._max_unsuccessful_refreshes = max_
+
+    async def get_value(self, request: ValueRequest, **kwargs) -> Value or None:
+        if not request.cycle_query:
+            raise TreeStructureError  # this is no subscribe request so push is forward
+
+        # have to be connected witch cache
+        if not self._subcontractor:
+            raise TreeStructureError
+
+        # check request is cachable
+        if not self._subcontractor.is_cachable_request(request=request):
+            logger.info(f'Retrieve a cycle query for a non-cacheable value {request.address}')
+            raise TreeOtherError(code=4003)
+
+        time_of_known_change = request.request_data.get('time_of_known_change', None)
+        t_tolerance = request.time_of_data_tolerance
+        wait_offset_error: float = 0
+        nr_of_unsuccessful_refreshes: int = 0
+        timeout = request.request_timeout
+        # sanity check but probably never happened
+        if not isinstance(timeout, float):
+            raise TreeOtherError(code=4001, message='Wrong type timeout in request')
+        waiting_timeout = timeout - self._alarm_timeout_offset
+
+        # wait some before doing anything, no send message to fast
+        # At this level, we do not check if there is a timeout because we assume that the client has configured the
+        # query correctly. If not then he will get a no answer error
+        wait_to = request.request_data.get('no_send_before', 0)
+        current_time = time.time()
+        if current_time < wait_to:
+            await asyncio.sleep(wait_to - current_time)
+
+        k_value: KnownValueProtocol or None = None
+
+        while True:
+            if k_value is None:
+                try:
+                    k_value: KnownValueProtocol or None = self._get_value_from_cache(request.address)
+                except ValueError:
+                    raise TreeValueError(code=2002, message='Cache for this request is not response.')
+                # If he has downloaded the value, he should check it with the client if it is suitable for returning
+                # to the wedge before waiting for the moment to refresh
+                if k_value is not None:
+                    continue
+            elif k_value.get_value() is None:
+                pass
+            elif time_of_known_change is None or time_of_known_change < k_value.get_change_time():
+                returned_value = k_value.get_value().copy()
+                returned_value.tags['from_cf'] = True  # Add a tag to the value that it comes from ConditionalFreezer
+                return returned_value
+            # check is not too many updates if it is no wait, no update just return error
+            # This should be checked before wait and update so that it does not unnecessarily check or wait if it has
+            # exceeded the number of new queries
+            if nr_of_unsuccessful_refreshes >= self._max_unsuccessful_refreshes:
+                logger.info(f'Too many failed attempts to refresh a value {request.address}')
+                raise TreeValueError(code=2003)
+
+            # skip waiting if value is None and refresh it in the cache first to initialize it first
+            if k_value is not None:
+                # wait
+                await asyncio.sleep(0)  # let other tasks do work
+                result_waiter = await self._waiter(k_value=k_value,
+                                                   t_tolerance=t_tolerance,
+                                                   waiting_timeout=waiting_timeout,
+                                                   min_wait=wait_offset_error)  # can raise TreeValueError
+                if result_waiter:
+                    continue  # continue because event was call so is not necessary to update value again
+                elif waiting_timeout - time.time() <= 0:
+                    # response timeout so stop refreshing value and send empty message
+                    raise TreeOtherError(code=4004)
+
+            # update value
+            logger.info(f"Update value ({request.address})")
+            status_update = await self._update_value(request)
+            if status_update:
+                wait_offset_error = 0
+                nr_of_unsuccessful_refreshes = 0
+            else:
+                logger.info(f'Can not update value in cache: {request.address}')
+                wait_offset_error = t_tolerance
+                nr_of_unsuccessful_refreshes += 1
+
+    async def _waiter(self, k_value: KnownValueProtocol, t_tolerance: float, waiting_timeout: float,
+                      min_wait: float = 0) -> bool:
+        """
+        This method is used to wait for the value in the cache or time to change before the specified expiration
+        date will expire
+
+        :param k_value: Object of known value from cache block
+        :param t_tolerance: the allowable difference between the present moment and timestamp of the value
+        :param waiting_timeout: timeout before which an empty message must be sent to the client
+        :param min_wait: minimum wait time
+        :raise TreeValueError: When can not find _event_change_data
+        :return: True if waiter finish by event call
+        """
+        while True:
+            current_time = time.time()
+            if k_value.get_timestamp() is None:
+                waiting_time = 0
+            else:
+                waiting_time = k_value.get_timestamp() + t_tolerance - current_time
+            # check and set min waiting time
+            if min_wait != 0:
+                if waiting_time < min_wait:
+                    waiting_time = min_wait
+                min_wait = 0  # Restore 0 because the minimum expectation can only be the first time the loop passes
+            if waiting_time <= 0:
+                return False  # it's time to update value - return False because it is not event call
+            # Compare waiting_time to timeout before waiting
+            time_to_timeout = waiting_timeout - current_time
+            if time_to_timeout <= 0:  # sanity check
+                return False
+            if time_to_timeout < waiting_time:
+                waiting_time = time_to_timeout
+            if self._event_change_data is None:
+                raise TreeValueError(code=2002)
+            is_event = await self._event_wait(self._event_change_data, waiting_time)
+            if is_event:  # event call
+                return True  # value was changed
+
+    async def _update_value(self, request: ValueRequest) -> bool:
+        """
+        This method call subcontractor to get response and update cache module.
+
+        :param request: request object
+        :raise ValueError: when can not update value
+        :return: return True if value was updated
+        """
+
+        request.time_of_data = time.time()
+        result = await self._subcontractor.get_response(request=request.copy())
+        if result.status:
+            return True
+        else:
+            return False
+
+    def _get_value_from_cache(self, address: Address) -> None or KnownValueProtocol:
+        """
+        Method search and return value from cache.
+
+        :param address:
+        :raise ValueError: when subcontractor is not defined
+        :return: known value from cache
+        """
+        if not self._subcontractor:
+            raise ValueError
+        k_value = self._subcontractor.get_k_val(address)
+        return k_value
+
+    async def _sink(self):
+        try:
+            if self._event_change_data_in_cache is None:
+                self._event_change_data_in_cache = asyncio.Event()
+            if self._event_change_data is None:
+                self._event_change_data = asyncio.Event()
+            while True:
+                await self._event_change_data_in_cache.wait()
+                self._event_change_data_in_cache.clear()
+                self._event_change_data.set()
+                await asyncio.sleep(0)
+                self._event_change_data.clear()
+        finally:
+            # clear events because sink not working no del because some task can wait and should have some time to
+            # close self before delete event
+            if self._event_change_data_in_cache is not None:
+                self._event_change_data_in_cache = None
+            if self._event_change_data is not None:
+                self._event_change_data = None
+
+    @staticmethod
+    async def _event_wait(evt, timeout):
+        try:
+            # WARNING method 'wait_for' creates a new task and needs 2 passes of the async loop to finish, so the event
+            # is already set back to False before going back to this method.
+            await asyncio.wait_for(evt.wait(), timeout)
+            return True
+        except asyncio.TimeoutError:
+            return False
+
+    def set_change_event(self):
+        """Method set the event"""
+        if self._event_change_data is not None:
+            self._event_change_data_in_cache.set()
+
+    def clear_change_event(self):
+        """Method unset the event"""
+        if self._event_change_data is not None:
+            self._event_change_data_in_cache.clear()
+
+    async def run(self):
+        # todo pomyslec nad czyms sprytniejszym niz odpalanie go na zawsze
+        self._sink_task = asyncio.create_task(self._sink())
+        await asyncio.sleep(0)  # let the sink task run
+        await super().run()
+
+    async def stop(self):
+        if self._sink_task is not None:
+            self._sink_task.cancel()
+            try:
+                await self._sink_task
+            except asyncio.CancelledError:
+                pass
+        await super().stop()

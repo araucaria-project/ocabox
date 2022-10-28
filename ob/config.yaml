@@ -25,6 +25,8 @@ client:
 comunication:
   CycleQuery:
     default_delay: 5
+    max_missed_msg: 3
+    request_timeout: 30
 
 data_collection:
   ValueRequest:
@@ -43,6 +45,9 @@ data_collection:
     black_list:
       GET: []
       PUT: []
+  TreeConditionalFreezer:
+    max_unsuccessful_refreshes: 10
+    alarm_timeout: 2
 
 tree:
   test_sample_blocker:

@@ -42,7 +42,7 @@ class TreeCacheTest(unittest.TestCase):
     def setUp(self):
         super().setUp()
         self.v1 = ('val1', Value(1, 1661349399.030824))
-        self.v2 = ('val2', Value(2, 1661349399.030824-152))
+        self.v2 = ('val2', Value(2, 1661349399.030824 - 152))
 
         self.tree_provider2 = self.SampleTestValueProvider('sample_name2', 'provider2', [self.v1, self.v2])
         self.tree_cache = TreeCache('sample_name_cache', self.tree_provider2)
@@ -57,7 +57,7 @@ class TreeCacheTest(unittest.TestCase):
         :return:
         """
         address = Address('.'.join(['sample_address', self.v1[0]]))
-        kv = TreeCache._KnownValue(address, self.v1[1], None)
+        kv = TreeCache._KnownValue(address, self.v1[1], None, change_time=0)
 
         expected_date = self.v1[1].ts + 10
         result = TreeCache._value_meets_requirements(kv, expected_date, 20)
@@ -89,7 +89,7 @@ class TreeCacheTest(unittest.TestCase):
 
         # test change value to newer
         address2 = Address('.'.join(['sample_address', self.v2[0]]))
-        v2 = self.v2[1].__copy__()
+        v2 = self.v2[1].copy()
         v2.ts = v2.ts + 10
         v2.v = v2.v + 10
         tc._update_known_value(address2, v2)
@@ -100,7 +100,7 @@ class TreeCacheTest(unittest.TestCase):
 
         # test do not change value to older
         address2 = Address('.'.join(['sample_address', self.v2[0]]))
-        v3 = self.v2[1].__copy__()
+        v3 = self.v2[1].copy()
         v3.ts = v3.ts - 10
         v3.v = v3.v + 20
         tc._update_known_value(address2, v3)
@@ -136,10 +136,10 @@ class TreeCacheTest(unittest.TestCase):
         request = ValueRequest(address, self.v1[1].ts)
 
         # get first time and save in cache
-        response = asyncio.run(self.tree_provider1.get_response(request))
+        asyncio.run(self.tree_provider1.get_response(request))
 
         # change value returned by provider but set the same timestamp
-        new_value = self.tree_provider2.test_values[0][1].__copy__()  # chere change return value in lase component
+        new_value = self.tree_provider2.test_values[0][1].copy()  # chere change return value in lase component
         new_value.v += 20
         self.tree_provider2.test_values[0] = (self.tree_provider2.test_values[0][0], new_value)
 
@@ -149,6 +149,27 @@ class TreeCacheTest(unittest.TestCase):
         # get value again, value should be provided by cache witch old value
         response = asyncio.run(self.tree_provider1.get_response(request))
         self.assertEqual(response.value.v, self.v1[1].v)
+
+    def test_wrong_address_behind_cache(self):
+
+        # change last provider
+        self.tree_cache._subcontractor = TreeProvider('sample_name3', 'provider3', None)
+        self.assertEqual(len(self.tree_cache._known_values), 0)
+
+        address = Address('.'.join([self.tree_provider1.get_source_name(), 'no_existing_provider',
+                                    self.v1[0]]))
+        request = ValueRequest(address, self.v1[1].ts)
+        # get first time and save in cache
+        response = asyncio.run(self.tree_provider1.get_response(request))
+
+        self.assertIsNone(response.value)  # no value return
+        self.assertFalse(response.status)  # have some errors
+
+        self.assertEqual(len(self.tree_cache._known_values), 1)
+        k_val = self.tree_cache.get_k_val(address=address)
+        self.assertIsNotNone(k_val)
+        self.assertIsNone(k_val.value)
+        self.assertEqual(k_val.change_time, 0)
 
     def test_flow_no_repeat_answer(self):
         """
@@ -160,14 +181,13 @@ class TreeCacheTest(unittest.TestCase):
         self.tree_provider2.response_delay = 1
         address = Address('.'.join([self.tree_provider1.get_source_name(), self.tree_provider2.get_source_name(),
                                     self.v1[0]]))
-        request = ValueRequest(address, self.v1[1].ts)
         nr_of_requests = 3
 
         # sample_list_request = [request for _ in range(nr_of_requests)]  # list witch 10 requests
 
         async def coro():
-            request_tasks = [asyncio.create_task(self.tree_provider1.get_response(request)) for _ in
-                             range(nr_of_requests)]
+            request_tasks = [asyncio.create_task(self.tree_provider1.get_response(
+                ValueRequest(address, self.v1[1].ts))) for _ in range(nr_of_requests)]
             time_start = time.time()
 
             await asyncio.sleep(0)
@@ -186,9 +206,42 @@ class TreeCacheTest(unittest.TestCase):
                                     self.v1[0]]))
         request = ValueRequest(address, self.v1[1].ts, request_type='PUT')
 
-        response = asyncio.run(self.tree_provider1.get_response(request))
+        asyncio.run(self.tree_provider1.get_response(request))
 
         self.assertFalse(len(self.tree_cache._known_values))
+
+    def test_exceeding_number_of_recalls(self):
+        """This test checks that the task correctly stops waiting for other tasks when they exceed number of recalls.
+        By running e.g. 6 tasks and setting recall to 3 means that tasks from 0-3 should wait for others and the last
+        two tasks number 4-5 should get bored with waiting and asking without waiting. Tasks 5-6 should not block
+        value"""
+        self.tree_provider2.response_delay = 1
+        address = Address('.'.join([self.tree_provider1.get_source_name(), self.tree_provider2.get_source_name(),
+                                    self.v1[0]]))
+        nr_of_requests = 6
+        # sample_list_request = [request for _ in range(nr_of_requests)]  # list witch 10 requests
+
+        async def coro():
+            self.tree_cache._max_recall = 3
+            request_tasks = [asyncio.create_task(self.tree_provider1.get_response(
+                ValueRequest(address, time_of_data=time.time() + 5,
+                             time_of_data_tolerance=1))) for _ in range(nr_of_requests)]
+
+            time_start = time.time()
+
+            await asyncio.sleep(0)
+            self.assertTrue(self.tree_provider2.count_current_tasks == 1)
+            count_recalls = 0
+            for t in request_tasks:
+                # this count how many task lock value in cache for others.
+                count_recalls += 1 if self.tree_cache._find_in_known_values(address=address).task is t else 0
+                await t
+            time_end = time.time()
+            self.assertTrue(count_recalls == self.tree_cache._max_recall+1)
+            self.assertTrue(self.tree_provider2.count_tasks == nr_of_requests)
+            self.assertTrue(time_end - time_start < self.tree_provider2.response_delay * nr_of_requests)
+
+        asyncio.run(coro())
 
 
 if __name__ == '__main__':
