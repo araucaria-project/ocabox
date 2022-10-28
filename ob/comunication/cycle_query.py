@@ -20,7 +20,7 @@ class CycleQuery:
 
     :param client: client object
     :param list_request: list of requests to cycle send
-    :param delay: request delay, default is getting from config file
+    :param delay: request delay - minimum interval between responses, default is getting from config file
     :param loop: async loop
     :param log_missed_msg: If is False missed messages will be skipped. Default False.
         Used only when is `only_new_data` set to False
@@ -35,7 +35,7 @@ class CycleQuery:
 
     def __init__(self, client, list_request: List[ValueRequest], delay: float or None = None, loop=None,
                  log_missed_msg: bool = False, only_new_data=True, query_name: str = 'Default cycle query',
-                 max_missed_msg: int = None, request_timeout: int = None, **kwargs):
+                 max_missed_msg: int = None, request_timeout: float = None, **kwargs):
         # todo mikolaj chcial zeby jakiś auto start dodac - tutaj albo w api
         self._query_name = query_name
         self._client = client
@@ -55,12 +55,13 @@ class CycleQuery:
         self._log_missed_msg: bool = log_missed_msg
         if request_timeout is None:
             request_timeout = SingletonConfig.get_config()['comunication'][type(self).__name__]['request_timeout'].get()
-        self._timeout = request_timeout
+        self._timeout: float = request_timeout
         self._only_new_data = only_new_data
         for r in self._list_request:
-            r.request_timeout=self._timeout
+            r.request_timeout = self._timeout
             if self._only_new_data:
                 r.cycle_query = True
+
     # TODO co jeśli user zapomni zatrzymać petle? MIKOŁAJ
 
     async def get_response(self) -> List[ValueResponse]:

@@ -2,6 +2,7 @@ from typing import Protocol, runtime_checkable
 
 from ob.data_colection.address import Address
 from ob.data_colection.base_components.tree_component import ProvidesResponseProtocol
+from ob.data_colection.specialistic_components.tree_conditional_freezer_protocol import TreeConditionalFreezerProtocol
 from ob.data_colection.value import Value
 from ob.data_colection.value_call import ValueRequest
 
@@ -22,7 +23,7 @@ class KnownValueProtocol(Protocol):
 @runtime_checkable
 class TreeCacheProtocol(ProvidesResponseProtocol, Protocol):
 
-    def set_conditional_freezer(self):
+    def set_conditional_freezer(self, cf: TreeConditionalFreezerProtocol):
         pass
 
     def remove_conditional_freezer(self):

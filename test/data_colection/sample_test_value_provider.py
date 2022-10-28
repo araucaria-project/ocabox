@@ -14,8 +14,9 @@ from ob.data_colection.value_call import ValueRequest
 class SampleTestValueProvider(TreeProvider):
     """
     This is sample ValueProvider class who return sample value. Return values are defined in the list SAMPLE_VALUES or
-    create a new one by calling 'new_val'. It can return errors by calling the appropriate
-    address: [error,structure_error,value_error,address_error] or by specifying the request parameter.
+    create a new one from 1 to 1000 by calling `new_val` or return always the same value by calling `static_val`. It
+    can return errors by calling the appropriate address: [`error`,`structure_error`,`value_error`,`address_error`]
+    or by specifying the request parameter.
 
     This block handles the request parameters:
         - raise_value_error - return response with TreeValueError

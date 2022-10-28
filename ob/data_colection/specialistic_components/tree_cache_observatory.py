@@ -8,7 +8,7 @@ from ob.data_colection.base_components.tree_base_provider import TreeBaseProvide
 from ob.data_colection.base_components.tree_component import ProvidesResponseProtocol
 from ob.data_colection.coded_error import TreeStructureError
 from ob.data_colection.specialistic_components.tree_cache_observatory_protocols import KnownValueProtocol
-from ob.data_colection.specialistic_components.tree_conditional_freezer import TreeConditionalFreezerProtocol
+from ob.data_colection.specialistic_components.tree_conditional_freezer_protocol import TreeConditionalFreezerProtocol
 from ob.data_colection.value import Value
 from ob.data_colection.value_call import ValueRequest, ValueResponse
 

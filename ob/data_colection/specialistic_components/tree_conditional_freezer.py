@@ -2,7 +2,6 @@ import asyncio
 import contextlib
 import time
 import logging
-from typing import Protocol, runtime_checkable
 
 from ob.data_colection.address import Address
 from ob.data_colection.base_components.tree_base_provider import TreeBaseProvider
@@ -25,6 +24,7 @@ class TreeConditionalFreezer(TreeBaseProvider):
     def __init__(self, component_name: str, subcontractor: TreeCacheProtocol = None, **kwargs):
         super().__init__(component_name=component_name, subcontractor=subcontractor, **kwargs)
         self._subcontractor: TreeCacheProtocol = subcontractor
+        subcontractor.set_conditional_freezer(cf=self)
         self._event_change_data_in_cache: asyncio.Event or None = None
         self._event_change_data: asyncio.Event or None = None
         self._sink_task: asyncio.Task or None = None
@@ -75,16 +75,27 @@ class TreeConditionalFreezer(TreeBaseProvider):
                     k_value: KnownValueProtocol or None = self._get_value_from_cache(request.address)
                 except ValueError:
                     raise TreeValueError(code=2002, message='Cache for this request is not response.')
+                # If he has downloaded the value, he should check it with the client if it is suitable for returning
+                # to the wedge before waiting for the moment to refresh
+                if k_value is not None:
+                    continue
             elif k_value.get_value() is None:
                 pass
-
             elif time_of_known_change is None or time_of_known_change < k_value.get_change_time():
                 returned_value = k_value.get_value().copy()
                 returned_value.tags['from_cf'] = True  # Add a tag to the value that it comes from ConditionalFreezer
                 return returned_value
+            # check is not too many updates if it is no wait, no update just return error
+            # This should be checked before wait and update so that it does not unnecessarily check or wait if it has
+            # exceeded the number of new queries
+            if nr_of_unsuccessful_refreshes >= self._max_unsuccessful_refreshes:
+                logger.info(f'Too many failed attempts to refresh a value {request.address}')
+                raise TreeValueError(code=2003)
 
+            # skip waiting if value is None and refresh it in the cache first to initialize it first
             if k_value is not None:
                 # wait
+                await asyncio.sleep(0)  # let other tasks do work
                 result_waiter = await self._waiter(k_value=k_value,
                                                    t_tolerance=t_tolerance,
                                                    waiting_timeout=waiting_timeout,
@@ -105,9 +116,6 @@ class TreeConditionalFreezer(TreeBaseProvider):
                 logger.info(f'Can not update value in cache: {request.address}')
                 wait_offset_error = t_tolerance
                 nr_of_unsuccessful_refreshes += 1
-            if nr_of_unsuccessful_refreshes > self._max_unsuccessful_refreshes:
-                logger.info(f'Too many failed attempts to refresh a value {request.address}')
-                raise TreeValueError(code=2003)
 
     async def _waiter(self, k_value: KnownValueProtocol, t_tolerance: float, waiting_timeout: float,
                       min_wait: float = 0) -> bool:
@@ -198,10 +206,13 @@ class TreeConditionalFreezer(TreeBaseProvider):
 
     @staticmethod
     async def _event_wait(evt, timeout):
-        # suppress TimeoutError because we'll return False in case of timeout
-        with contextlib.suppress(asyncio.TimeoutError):
+        try:
+            # WARNING method 'wait_for' creates a new task and needs 2 passes of the async loop to finish, so the event
+            # is already set back to False before going back to this method.
             await asyncio.wait_for(evt.wait(), timeout)
-        return evt.is_set()
+            return True
+        except asyncio.TimeoutError:
+            return False
 
     def set_change_event(self):
         """Method set the event"""
@@ -227,13 +238,3 @@ class TreeConditionalFreezer(TreeBaseProvider):
             except asyncio.CancelledError:
                 pass
         await super().stop()
-
-
-@runtime_checkable
-class TreeConditionalFreezerProtocol(Protocol):
-
-    def set_change_event(self):
-        pass
-
-    def clear_change_event(self):
-        pass
