@@ -32,6 +32,7 @@ class TreeConditionalFreezer(TreeBaseProvider):
         self._max_unsuccessful_refreshes: int = self._get_cfg('max_unsuccessful_refreshes')
         # how many seconds before timeout expires component is to return an empty message to the clone
         self._alarm_timeout_offset: float = self._get_cfg('alarm_timeout')
+        self._min_time_of_data_tolerance = self._get_cfg('min_time_of_data_tolerance')
 
     def set_max_refreshes(self, max_: int):
         self._max_unsuccessful_refreshes = max_
@@ -51,6 +52,10 @@ class TreeConditionalFreezer(TreeBaseProvider):
 
         time_of_known_change = request.request_data.get('time_of_known_change', None)
         t_tolerance = request.time_of_data_tolerance
+        if t_tolerance < self._min_time_of_data_tolerance:
+            logger.warning(f"the time_of_data_tolerance for the request {request.address} is too short. "
+                           f"Should be greater than {self._min_time_of_data_tolerance} (now is {t_tolerance})")
+            t_tolerance = self._min_time_of_data_tolerance
         wait_offset_error: float = 0
         nr_of_unsuccessful_refreshes: int = 0
         timeout = request.request_timeout

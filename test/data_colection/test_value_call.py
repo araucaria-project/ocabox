@@ -64,7 +64,7 @@ class ValueRequestTest(unittest.TestCase):
         # check data dict was correctly copied
         self.assertDictEqual(vr.request_data, copy_vr.request_data)
         # test request type
-        self.assertEqual(vr.request_type,copy_vr.request_type)
+        self.assertEqual(vr.request_type, copy_vr.request_type)
 
     def test_to_dict(self):
         expected_dict = {'address': {'adr': 'aaa.bbb.ccc'},
@@ -117,7 +117,7 @@ class ValueResponseTest(unittest.TestCase):
         self.assertTrue(vr.value.ts == value_dict['ts'])
 
     def test_to_dict(self):
-        value_dict = {'v': 234, 'ts': 1661349399.030824, 'type': None}
+        value_dict = {'v': 234, 'ts': 1661349399.030824, 'type': None, 'tags': {}}
         expected_dict = {'address': {'adr': 'aaa.bbb.ccc'}, 'value': value_dict, 'status': False,
                          'error': {'code': 230, 'message': 'message error', 'component_name': 'sample_source',
                                    'severity': 'NORMAL'}}

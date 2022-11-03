@@ -2,8 +2,8 @@ import logging
 from typing import List
 from ob.comunication.client import Client
 from ob.comunication.comunication_error import CommunicationTimeoutError, CommunicationRuntimeError
-from ob.comunication.cycle_query import CycleQuery
-from ob.data_colection.address import AddressError
+from ob.comunication.cycle_query import ConditionalCycleQuery, BaseCycleQuery, PeriodicCycleQuery
+from ob.data_colection.address import AddressError, Address
 from ob.data_colection.response_error import ResponseError
 from ob.data_colection.tree_user import TreeUser
 from ob.data_colection.value_call import ValueRequest, ValueResponse
@@ -94,46 +94,58 @@ class ClientAPI:
                 vr.append(ValueResponse('', None, False, re))
         return vr
 
-    async def subscribe(self, address, time_of_data_tolerance: float or None = None,
+    async def subscribe(self, address: str or Address, time_of_data_tolerance: float or None = None,
                         delay: float or None = None, parameters_dict: dict = None,
-                        name: str = 'Default_subscription') -> CycleQuery:
+                        name: str = 'Default_subscription', max_missed_msg: int = None) -> BaseCycleQuery:
         """
-        This method create cycle query from given simple parameters.
+        This method creates a cycle query that only returns new values. The `ConditionalCycleQuery` object is
+        created and returned.
 
         :param address: address
-        :param time_of_data_tolerance: how old data can be returned. If 0 date will be the freshest.
+        :param time_of_data_tolerance: how old data can be returned. This time should be greater than that specified
+            in config file for `TreeConditionalFreezer` object
         :param delay: request delay, minimum interval between responses
         :param parameters_dict: dict of parameters to send witch request GET/PUT/etc...
         :param name: name of the subscription
-        :return: object CycleQuery
+        :param max_missed_msg: more information in :class:`.cycle_query.ConditionalCycleQuery`
+        :return: object `ConditionalCycleQuery`
         """
-        # TODO zrobić coś z tym żeby time_of_data_tolerance było ustawiane też na delay domyślnie bo teraz może
-        #  być delay=1 a time_of_data_tolerance=30
-        if not time_of_data_tolerance and delay:
-            time_of_data_tolerance = delay * 0.9  # 90% delay time
+        if time_of_data_tolerance is None and delay:
+            time_of_data_tolerance = delay
         if parameters_dict is None:
             parameters_dict = {}
         request = ValueRequest(address=address,
                                time_of_data_tolerance=time_of_data_tolerance,
                                request_data=parameters_dict,
                                user=self.user)
-        return await self.send_cycle_multipart([request], delay=delay, name=name)
+        CQ_API = ConditionalCycleQuery(client=self.client, list_request=[request], delay=delay,
+                                       max_missed_msg=max_missed_msg, name=name)
+        return CQ_API
 
-    async def send_cycle_multipart(self, requests: List[ValueRequest], delay: float or None = None,
-                                   log_missed_msg: bool = False,
-                                   request_timeout: float = None, max_missed_msg: int = None,
-                                   name: str = 'Default_subscription') -> CycleQuery:
+    async def send_cycle_multipart(self, address: str or Address, time_of_data_tolerance: float or None = None,
+                                   delay: float or None = None, parameters_dict: dict = None,
+                                   name: str = 'Default_cycle_request', max_missed_msg: int = None,
+                                   log_missed_msg: bool = False) -> BaseCycleQuery:
         """
-        This method making cycle query witch given request and return object CycleQuery.
+        This method creates a cycle query that returns a value once per specified interval of time (`delay`).
 
-        :param requests: list requests objects
+        :param address: address
+        :param time_of_data_tolerance: how old data can be returned.
         :param delay: request delay
         :param log_missed_msg: If is False missed messages will be skipped. Default False
+        :param parameters_dict: dict of parameters to send witch request GET/PUT/etc...
         :param name: name of the subscription
-        :param request_timeout: more information in :class:`.cycle_query.CycleQuery`
-        :param max_missed_msg: more information in :class:`.cycle_query.CycleQuery`
-        :return: object CycleQuery
+        :param max_missed_msg: more information in :class:`.cycle_query.ConditionalCycleQuery`
+        :return: object PeriodicCycleQuery
         """
-        CQ_API = CycleQuery(client=self.client, list_request=requests, delay=delay, log_missed_msg=log_missed_msg,
-                            max_missed_msg=max_missed_msg, name=name, request_timeout=request_timeout)
+        if not time_of_data_tolerance and delay:
+            time_of_data_tolerance = delay
+        if parameters_dict is None:
+            parameters_dict = {}
+        request = ValueRequest(address=address,
+                               time_of_data_tolerance=time_of_data_tolerance,
+                               request_data=parameters_dict,
+                               user=self.user)
+        CQ_API = PeriodicCycleQuery(client=self.client, list_request=[request], delay=delay,
+                                    max_missed_msg=max_missed_msg, name=name, log_missed_msg=log_missed_msg)
         return CQ_API

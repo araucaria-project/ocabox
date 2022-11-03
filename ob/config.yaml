@@ -23,10 +23,15 @@ client:
     timeout: 1
 
 comunication:
-  CycleQuery:
+  ConditionalCycleQuery:
     default_delay: 5
     max_missed_msg: 3
     request_timeout: 30
+  PeriodicCycleQuery:
+    default_delay: 5
+    max_missed_msg: 3
+    request_timeout: 30
+    min_delay: 0.5
 
 data_collection:
   ValueRequest:
@@ -48,6 +53,7 @@ data_collection:
   TreeConditionalFreezer:
     max_unsuccessful_refreshes: 10
     alarm_timeout: 2
+    min_time_of_data_tolerance: 0.2 # !!! Never set to 0 or less
 
 tree:
   test_sample_blocker:
@@ -60,6 +66,10 @@ tree:
       GET:
         - telescope.some_val3
         - telescope.some_val4
+  test_sample_freezer:
+    max_unsuccessful_refreshes: 10
+    alarm_timeout: 2
+    min_time_of_data_tolerance: 0.2
 
 test_observatory:
   observatory:
