@@ -5,7 +5,6 @@ import zmq
 from typing import List
 from ob.comunication.base_communication_object import BaseCommunicationObject
 from ob.comunication.comunication_error import CommunicationRuntimeError, CommunicationTimeoutError
-from ob.comunication.cycle_query import CycleQuery
 from ob.comunication.message_serializer import MessageSerializer
 from ob.comunication.multipart_structure import MultipartStructure
 

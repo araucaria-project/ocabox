@@ -22,11 +22,12 @@ class TestTreeConditionalFreezer(unittest.TestCase):
 
         self.tree_provider2 = SampleTestValueProvider('sample_name2', 'provider2', [self.v1, self.v2])
         self.tree_cache = TreeCache('sample_name_cache', self.tree_provider2)
-        self.tree_freezer = TreeConditionalFreezer('sample_freezer', self.tree_cache)
+        self.tree_freezer = TreeConditionalFreezer('test_sample_freezer', self.tree_cache)
         self.tree_provider1 = TreeProvider('sample_name1', 'provider1', self.tree_freezer)
         self.max_refreshes = 3
         self.tree_freezer.set_max_refreshes(self.max_refreshes)
         self.time_interval = 0.2  # number of seconds to test the temporal aspects of the module
+        self.tree_freezer._min_time_of_data_tolerance = self.time_interval  # maximum value refresh rate
 
     def tearDown(self) -> None:
         super().tearDown()
@@ -324,7 +325,7 @@ class TestTreeConditionalFreezer(unittest.TestCase):
         time_of_data_tolerance2 = time_of_data_tolerance / 2  # two times faster than first client
         client1_number_of_repetitions = 6
         client2_number_of_repetitions = 6
-
+        self.tree_freezer._min_time_of_data_tolerance = time_of_data_tolerance2  # Allow the values to refresh faster
         # request witch raising StructureError by end provider and witch information about past data
         request = ValueRequest(address, time.time(),
                                time_of_data_tolerance=time_of_data_tolerance,

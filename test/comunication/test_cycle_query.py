@@ -5,7 +5,7 @@ import unittest
 from typing import List
 from ob.comunication.client import Client
 from ob.comunication.comunication_error import CommunicationRuntimeError, CommunicationTimeoutError
-from ob.comunication.cycle_query import CycleQuery
+from ob.comunication.cycle_query import ConditionalCycleQuery
 from ob.comunication.message_serializer import MessageSerializer
 from ob.comunication.multipart_structure import MultipartStructure
 from ob.comunication.request_solver import RequestSolver
@@ -94,7 +94,7 @@ class TestCycleQuery(unittest.TestCase):
         delay = 0.5
 
         async def coro():
-            cq = CycleQuery(client=self.client, list_request=[request], delay=delay, only_new_data=True)
+            cq = ConditionalCycleQuery(client=self.client, list_request=[request], delay=delay)
             try:
                 cq.start()
                 with self.assertRaises(CommunicationRuntimeError):
