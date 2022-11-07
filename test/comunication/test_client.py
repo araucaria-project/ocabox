@@ -218,7 +218,7 @@ class ClientTest(unittest.TestCase):
             old_ms = MultipartStructure([b'',
                                          b'2222222',
                                          b'0',
-                                         MessageSerializer.pack_b(time.time()-1),
+                                         MessageSerializer.pack_b(time.time() - 1),
                                          b'', ValueResponse('some.some').to_byte()])
             client._new_msgs.append(old_ms)
             self.assertTrue(len(client._new_msgs) == 1)
@@ -239,6 +239,36 @@ class ClientTest(unittest.TestCase):
             self.assertTrue(len(client._new_msgs) == 0)  # list is empty because task get his message and clear list
             # from old messages
             await asyncio.sleep(0)
+
+        self.loop.run_until_complete(coro())
+
+    def test_fast_rebooting_receive_task(self):
+        """This test is enough that it does not throw any errors.
+        This test checks if there is a problem with the timing of closing and opening the task when sending quick
+        queries when the receive task is exiting and reopening. Before the old task closed and the event was set
+        to None, the new one started and set the correct new Event, and then the old task deleted the Event, and then
+        it was attempted to refer to the None methods, and it caused a crash."""
+        client = Client(name='SampleTestClient')
+        client.default_timeout = 0.2
+        client._cleaning_length = 5
+
+        async def task_coro():
+            await client.send_multipart([ValueRequest('sample_telescope.dibi.azimuth.1',
+                                                      time.time(), 20).to_byte()])
+            # allow the client to start shutting down the task to receive a reply from the server
+            await asyncio.sleep(0)
+            # only check for the last task
+            if client._waiting_amount == 0:
+                self.assertTrue(client._msg_event is not None)
+            # make fast response again
+            await client.send_multipart([ValueRequest('sample_telescope.dibi.azimuth.1',
+                                                      time.time(), 20).to_byte()])
+
+        async def coro():
+            task1 = asyncio.create_task(task_coro())
+            task2 = asyncio.create_task(task_coro())
+            await task1
+            await task2
 
         self.loop.run_until_complete(coro())
 

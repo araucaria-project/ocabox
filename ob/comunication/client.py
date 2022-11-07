@@ -1,6 +1,8 @@
 import asyncio
 import logging
 import time
+from contextlib import suppress
+
 import zmq
 from typing import List
 from ob.comunication.base_communication_object import BaseCommunicationObject
@@ -95,8 +97,8 @@ class Client(BaseCommunicationObject):
                 logger.error(f"The receive task was stopped before retrieve some waiting messages")
                 raise CommunicationRuntimeError(message=f"The receive task was stopped before retrieve some waiting "
                                                         f"messages")
-            await asyncio.sleep(0)  # this will allow other tasks to change event
             await self._msg_event.wait()
+            await asyncio.sleep(0)  # this will allow other tasks to change event
             message = self._check_message_comes(msg_create_time_b, msg_id_b)
             if message:
                 break
@@ -157,7 +159,8 @@ class Client(BaseCommunicationObject):
             raise CommunicationRuntimeError(message='Can not get current async loop')
         self._loop = loop
         # create event
-        self._msg_event = asyncio.Event(loop=self._loop)
+        if self._msg_event is None:
+            self._msg_event = asyncio.Event()
         self._receive_task = loop.create_task(self._receive_msgs())
 
     async def _stop_receiver(self):
@@ -170,9 +173,12 @@ class Client(BaseCommunicationObject):
         if task:
             task.cancel()
             self._receive_task = None
-            await asyncio.sleep(0)
             self._loop = None
-            self._msg_event = None
+            # last query, wait for the receive task to close before returning a response.
+            # IN CASE OF PERFORMANCE PROBLEMS, rethink the options witch 'await asyncio.sleep(0)'
+            with suppress(asyncio.CancelledError):
+                await task
+            # self._msg_event = None  # DO NOT CLEAR EVENT !!! not like this here
             if task.done():
                 logger.info(f"The retrieve task was stopped")
 
