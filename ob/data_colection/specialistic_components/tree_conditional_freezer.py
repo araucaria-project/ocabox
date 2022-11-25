@@ -199,7 +199,6 @@ class TreeConditionalFreezer(TreeBaseProvider):
                 await self._event_change_data_in_cache.wait()
                 self._event_change_data_in_cache.clear()
                 self._event_change_data.set()
-                await asyncio.sleep(0)
                 self._event_change_data.clear()
         finally:
             # clear events because sink not working no del because some task can wait and should have some time to
@@ -210,7 +209,7 @@ class TreeConditionalFreezer(TreeBaseProvider):
                 self._event_change_data = None
 
     @staticmethod
-    async def _event_wait(evt, timeout):
+    async def _event_wait(evt: asyncio.Event, timeout):
         try:
             # WARNING method 'wait_for' creates a new task and needs 2 passes of the async loop to finish, so the event
             # is already set back to False before going back to this method.
@@ -221,12 +220,12 @@ class TreeConditionalFreezer(TreeBaseProvider):
 
     def set_change_event(self):
         """Method set the event"""
-        if self._event_change_data is not None:
+        if self._event_change_data_in_cache is not None:
             self._event_change_data_in_cache.set()
 
     def clear_change_event(self):
         """Method unset the event"""
-        if self._event_change_data is not None:
+        if self._event_change_data_in_cache is not None:
             self._event_change_data_in_cache.clear()
 
     async def run(self):

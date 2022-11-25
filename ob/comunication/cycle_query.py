@@ -321,14 +321,14 @@ class ConditionalCycleQuery(BaseCycleQuery):
                 self._last_response = []
                 logger.warning(f'{self._query_name}: The waiting time for the message has expired. The router is not '
                                f'responding. Number of missing answers: {missed}')
-
+            except asyncio.CancelledError:
+                raise
             except Exception as e:
                 self._last_response = []
                 logger.error(f'{self._query_name}: Unrecognized error in cycle query: {str(e)}')
                 self._errors = CommunicationRuntimeError(message=f'Unrecognized error')
                 self._event.set()
                 break
-
             if missed >= self._max_missed_msg >= 0:
                 logger.error(f"{self._query_name}: Too many missed messages at same time")
                 self._errors = CommunicationRuntimeError(message='Too many missed messages at same time')
