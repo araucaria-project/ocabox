@@ -47,7 +47,7 @@ class TreeBaseProvider(TreeComponent, ABC):
         """
         raise TreeStructureError
 
-    def _on_subcontractor_return(self, result: ValueResponse, request: ValueRequest):
+    async def _on_subcontractor_return(self, result: ValueResponse, request: ValueRequest):
         """
         This method is run after receiving a response from the subcontractor. It can be used to decorate a reply or
         delete temporary data.
@@ -77,7 +77,7 @@ class TreeBaseProvider(TreeComponent, ABC):
             if self._subcontractor:
                 try:
                     result = await self._subcontractor.get_response(request)
-                    self._on_subcontractor_return(result, request)
+                    await self._on_subcontractor_return(result, request)
                     return result
                 except AttributeError:
                     re = ResponseError(3002, '', repr(self), 'CRITICAL')

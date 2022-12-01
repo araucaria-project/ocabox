@@ -95,14 +95,14 @@ class TreeCache(TreeBaseProvider):
             return False
         return True
 
-    def _on_subcontractor_return(self, result: ValueResponse, request: ValueRequest):
+    async def _on_subcontractor_return(self, result: ValueResponse, request: ValueRequest):
         # docstring is imported from parent
         if not self.is_cachable_request(request=request):
             return
         kv = self._find_in_known_values(result.address)
         if not kv:
             logger.error(f'Can not find current value in list cached values and should be')
-        self._update_known_value(result.address, result.value, kv)
+        await self._update_known_value(result.address, result.value, kv)
         self._remove_the_value_lock(result.address, kv)
 
     def _find_in_known_values(self, address: Address) -> _KnownValue or None:
@@ -135,7 +135,7 @@ class TreeCache(TreeBaseProvider):
             return False
         return not kv.value.is_expired(ts, t_delta)
 
-    def _update_known_value(self, address: Address, value: Value, known_value: _KnownValue = None):
+    async def _update_known_value(self, address: Address, value: Value, known_value: _KnownValue = None):
         """
         This method update known values.
 
@@ -162,7 +162,7 @@ class TreeCache(TreeBaseProvider):
                 if kv.value.ts < value.ts:
                     if self._is_changed(new_v=value, old_v=kv.value):
                         kv.change_time = value.ts
-                        self._report_new_value()  # report that there is a new value if conditional_freezer is known
+                        await self._report_new_value()  # report that there is new value if conditional_freezer is known
                     kv.value = value
 
     def _remove_the_value_lock(self, address, known_value: _KnownValue = None):
@@ -190,9 +190,9 @@ class TreeCache(TreeBaseProvider):
     def remove_conditional_freezer(self):
         self._conditional_freezer = None
 
-    def _report_new_value(self):
+    async def _report_new_value(self):
         if self._conditional_freezer is not None:
-            self._conditional_freezer.set_change_event()
+            await self._conditional_freezer.set_change_event()
 
     def get_k_val(self, address: Address) -> KnownValueProtocol or None:
         return self._find_in_known_values(address=address)

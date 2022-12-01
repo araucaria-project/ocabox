@@ -77,14 +77,14 @@ class TreeCacheTest(unittest.TestCase):
 
         # test add any value
         self.assertTrue(len(tc._known_values) == 0)
-        tc._update_known_value(address, self.v1[1])
+        asyncio.run(tc._update_known_value(address, self.v1[1]))
         self.assertTrue(len(tc._known_values) == 1)
         self.assertEqual(tc._known_values[0].value, self.v1[1])
         self.assertEqual(tc._known_values[0].address, address)
 
         # test add new value
         address2 = Address('.'.join(['sample_address', self.v2[0]]))
-        tc._update_known_value(address2, self.v2[1])
+        asyncio.run(tc._update_known_value(address2, self.v2[1]))
         self.assertTrue(len(tc._known_values) == 2)
 
         # test change value to newer
@@ -92,7 +92,7 @@ class TreeCacheTest(unittest.TestCase):
         v2 = self.v2[1].copy()
         v2.ts = v2.ts + 10
         v2.v = v2.v + 10
-        tc._update_known_value(address2, v2)
+        asyncio.run(tc._update_known_value(address2, v2))
 
         self.assertTrue(len(tc._known_values) == 2)
         self.assertEqual(tc._known_values[1].value, v2)
@@ -103,7 +103,7 @@ class TreeCacheTest(unittest.TestCase):
         v3 = self.v2[1].copy()
         v3.ts = v3.ts - 10
         v3.v = v3.v + 20
-        tc._update_known_value(address2, v3)
+        asyncio.run(tc._update_known_value(address2, v3))
 
         self.assertTrue(len(tc._known_values) == 2)
         self.assertNotEqual(tc._known_values[1].value, v3)

@@ -7,6 +7,7 @@ from ob.comunication.base_communication_object import BaseCommunicationObject
 from ob.comunication.base_request_solver import BaseRequestSolver
 from ob.comunication.comunication_error import CommunicationTimeoutError
 from ob.comunication.multipart_structure import MultipartStructure
+from ob.util_functions.asyncio_util_functions import wait_for_psce
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +100,7 @@ class Router(BaseCommunicationObject):
             logger.error(e.message)
             return
         try:
-            answer = await asyncio.wait_for(self._solve_request(ms), timeout=time_to_expire)
+            answer = await wait_for_psce(self._solve_request(ms), timeout=time_to_expire)
         except ValueError:
             # Obsolete and shouldn't have happened
             # Don't answer for incorrect requests. Close task.

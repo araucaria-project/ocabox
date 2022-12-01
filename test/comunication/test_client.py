@@ -11,6 +11,7 @@ from ob.data_colection.address import AddressError
 from ob.comunication.router import Router
 from ob.data_colection.value import Value
 from ob.data_colection.value_call import ValueRequest, ValueResponse
+from ob.util_functions.asyncio_util_functions import wait_for_psce
 from test.comunication.sample_test_resolver import SampleTestResolver
 
 logger = logging.getLogger(__name__)
@@ -199,11 +200,11 @@ class ClientTest(unittest.TestCase):
             await asyncio.sleep(0)
 
             with self.assertRaises(CommunicationTimeoutError):
-                result = self.multipart_to_V_response(await asyncio.wait_for(task1, timeout=client.default_timeout * 2))
+                result = self.multipart_to_V_response(await wait_for_psce(task1, timeout=client.default_timeout * 2))
             with self.assertRaises(CommunicationTimeoutError):
-                result = self.multipart_to_V_response(await asyncio.wait_for(task2, timeout=client.default_timeout * 2))
+                result = self.multipart_to_V_response(await wait_for_psce(task2, timeout=client.default_timeout * 2))
             with self.assertRaises(CommunicationTimeoutError):
-                result = self.multipart_to_V_response(await asyncio.wait_for(task3, timeout=client.default_timeout * 2))
+                result = self.multipart_to_V_response(await wait_for_psce(task3, timeout=client.default_timeout * 2))
             await asyncio.sleep(0)
 
         self.loop.run_until_complete(coro())
@@ -226,7 +227,7 @@ class ClientTest(unittest.TestCase):
                                                                             time.time(), 20).to_byte()))
             await asyncio.sleep(0)
             self.assertTrue(len(client._new_msgs) > 0)  # old message is on the list
-            result = self.multipart_to_V_response(await asyncio.wait_for(task1, timeout=client.default_timeout * 2))
+            result = self.multipart_to_V_response(await wait_for_psce(task1, timeout=client.default_timeout * 2))
             self.assertTrue(len(client._new_msgs) > 0)  # old message steal is on the list because _cleaning_length
             # param is higher than 0
 
@@ -235,7 +236,7 @@ class ClientTest(unittest.TestCase):
             task2 = asyncio.create_task(client.send_singlepart(ValueRequest('sample_telescope.dibi.azimuth.2',
                                                                             time.time(), 20).to_byte()))
             await asyncio.sleep(0)
-            result = self.multipart_to_V_response(await asyncio.wait_for(task2, timeout=client.default_timeout * 2))
+            result = self.multipart_to_V_response(await wait_for_psce(task2, timeout=client.default_timeout * 2))
             self.assertTrue(len(client._new_msgs) == 0)  # list is empty because task get his message and clear list
             # from old messages
             await asyncio.sleep(0)
@@ -269,6 +270,38 @@ class ClientTest(unittest.TestCase):
             task2 = asyncio.create_task(task_coro())
             await task1
             await task2
+
+        self.loop.run_until_complete(coro())
+
+    def test_cancel_receive_message(self):
+        """
+        Test a situation where a sub-task created by asyncio.wait_for() is in the done state but the wait_for()
+        method has not read its status yet and at this moment there is a canceled task with the wait_for() method.
+        In such a situation, the wait_for() method will suppress the asyncio.CanceledError error, which is
+        unacceptable. The problem is difficult to reproduce in a full environment and occurs intermittently.
+        Occurred while testing cycle_query and was tested there. The solution is to use the wait_for_psce() method
+        instead of the original asyncio._wait_for() method.
+        """
+
+        async def waiting_coro():
+            # this method quickly completes and returns some value
+            await asyncio.sleep(0)
+            return 4
+
+        async def task_coro():
+            # this is a main task body
+            return await wait_for_psce(waiting_coro(), 10)
+
+        async def coro():
+            # this is the service method to trigger the event
+            task1 = asyncio.create_task(task_coro())
+
+            # wait two times
+            await asyncio.sleep(0)
+            await asyncio.sleep(0)
+            task1.cancel()
+            with self.assertRaises(asyncio.CancelledError):
+                await task1
 
         self.loop.run_until_complete(coro())
 

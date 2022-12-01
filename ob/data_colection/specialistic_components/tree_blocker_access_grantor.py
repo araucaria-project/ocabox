@@ -12,6 +12,7 @@ from ob.data_colection.value_call import ValueRequest
 logger = logging.getLogger(__name__)
 
 # todo dodać wywłaszczanie osób
+# TODO dodać logowanie np jak ktoś zablokuje jak odblokuje żeby można było śledzić co się dzieje
 
 
 class TreeBlockerAccessGrantor(TreeProvider):

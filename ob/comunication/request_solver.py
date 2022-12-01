@@ -67,6 +67,8 @@ class RequestSolver(BaseRequestSolver):
         # get_response method shouldn't raise any errors !!!
         try:
             v_response = await self.data_provider.get_response(v_request)
+        except asyncio.CancelledError:
+            raise
         except Exception as e:
             logger.error(f'{str(e)}')
             re = ResponseError(4002, '', repr(self), 'CRITICAL')
