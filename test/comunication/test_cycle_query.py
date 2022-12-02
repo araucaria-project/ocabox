@@ -24,7 +24,7 @@ logger.addHandler(logging.StreamHandler())
 logger.setLevel(logging.INFO)
 
 
-class TestCycleQuery(unittest.TestCase):
+class TestConditionalCycleQuery(unittest.TestCase):
 
     def setUp(self):
         super().setUp()
@@ -45,12 +45,15 @@ class TestCycleQuery(unittest.TestCase):
         name = 'SampleTestRouter'
         self.vr = Router(RequestSolver(self.tree_provider1), name=name)
         self.vr.start(self.loop)
+        self.loop.run_until_complete(self.vr.request_solver.run_tree())
         self.client = Client(name='SampleTestClient')
 
     def tearDown(self) -> None:
         self.vr.stop()
-        vr_stop = asyncio.gather(self.vr.get_stop_task(), return_exceptions=True)
-        self.loop.run_until_complete(vr_stop)
+        stop_task = self.vr.get_stop_task()
+        if stop_task:
+            vr_stop = asyncio.gather(stop_task, self.vr.request_solver.stop_tree(), return_exceptions=True)
+            self.loop.run_until_complete(vr_stop)
         try:
             all_tasks = asyncio.all_tasks(self.loop)
             for t in all_tasks:
@@ -83,7 +86,7 @@ class TestCycleQuery(unittest.TestCase):
     def test_get_no_cachable_value(self):
         address = Address('.'.join([self.tree_provider1.get_source_name(),
                                     self.tree_provider2.get_source_name(),
-                                    'value_error']))
+                                    'new_val']))
         time_of_data_tolerance = self.time_interval
 
         request = ValueRequest(address, time.time(),
@@ -102,6 +105,83 @@ class TestCycleQuery(unittest.TestCase):
                 self.assertTrue(cq.is_stopped())
             finally:
                 cq.stop()
+
+        self.loop.run_until_complete(coro())
+
+    def test_router_not_response(self):
+        address = Address('.'.join([self.tree_provider1.get_source_name(),
+                                    self.tree_provider2.get_source_name(),
+                                    'new_val']))
+        time_of_data_tolerance = self.time_interval
+
+        request = ValueRequest(address, time.time(),
+                               time_of_data_tolerance=time_of_data_tolerance,
+                               request_type='GET',
+                               request_data={'time_of_known_change': None},
+                               cycle_query=True)
+        delay = 0.2
+        max_missed_msg = 5
+        request_timeout = 0.2
+
+        async def coro():
+            cq = ConditionalCycleQuery(client=self.client, list_request=[request], delay=delay,
+                                       max_missed_msg=max_missed_msg, request_timeout=request_timeout)
+            try:
+                self.vr.stop()
+                await self.vr.wait_for_stop()  # stop the router
+                start_time = time.time()
+                cq.start()
+                with self.assertRaises(CommunicationRuntimeError):
+                    result = await cq.get_response()
+                end_time = time.time()
+                self.assertTrue(
+                    (max_missed_msg + 1) * request_timeout > end_time - start_time > max_missed_msg * request_timeout)
+                self.assertTrue(cq.is_stopped())
+            finally:
+                cq.stop()
+
+        self.loop.run_until_complete(coro())
+
+    def test_two_clients_at_the_same_time(self):
+        """This test checks if the slow task will be in sync with the fast task. A slow task should wait for the
+        moment to update the value in the cache, but the fast task should overtake it and both tasks should return
+        the same value to the client at once."""
+        address = Address('.'.join([self.tree_provider1.get_source_name(),
+                                    self.tree_provider2.get_source_name(),
+                                    'new_val']))
+        time_of_data_tolerance = self.time_interval
+        time_of_data_tolerance2 = self.time_interval * 5
+        current_time = time.time()
+        request = ValueRequest(address, time.time(),
+                               time_of_data_tolerance=time_of_data_tolerance,
+                               request_type='GET',
+                               request_data={'time_of_known_change': current_time},  # client known about past
+                               cycle_query=True)
+        request2 = request.copy()
+        request2.time_of_data_tolerance = time_of_data_tolerance2
+        # initialize cache list witch some value
+        self.tree_cache._known_values.append(self.tree_cache._KnownValue(address=address,
+                                                                         value=Value(v=6000, ts=current_time),
+                                                                         task=None, change_time=current_time))
+        delay = 0.2
+
+        async def coro():
+            cq = ConditionalCycleQuery(client=self.client, list_request=[request], delay=delay, query_name='fast query')
+            cq2 = ConditionalCycleQuery(client=self.client, list_request=[request2], delay=delay,
+                                        query_name='slow query')
+            try:
+                start_time = time.time()
+                cq2.start()
+                cq.start()
+                result1, result2 = await asyncio.gather(cq2.get_response(), cq.get_response())
+                end_time = time.time()
+                self.assertIsNotNone(result1[0].value)
+                self.assertIsNotNone(result2[0].value)
+                self.assertEqual(result1[0].value.v, result2[0].value.v)
+                self.assertTrue(time_of_data_tolerance < end_time - start_time < time_of_data_tolerance2)
+            finally:
+                await cq2.stop_and_wait()
+                await cq.stop_and_wait()
 
         self.loop.run_until_complete(coro())
 

@@ -1,7 +1,7 @@
 import asyncio
-import contextlib
 import time
 import logging
+from typing import Optional
 
 from ob.data_colection.address import Address
 from ob.data_colection.base_components.tree_base_provider import TreeBaseProvider
@@ -10,6 +10,7 @@ from ob.data_colection.specialistic_components.tree_cache_observatory_protocols 
     KnownValueProtocol
 from ob.data_colection.value import Value, TreeValueError
 from ob.data_colection.value_call import ValueRequest
+from ob.util_functions.asyncio_util_functions import wait_for_psce
 
 logger = logging.getLogger(__name__)
 
@@ -25,9 +26,7 @@ class TreeConditionalFreezer(TreeBaseProvider):
         super().__init__(component_name=component_name, subcontractor=subcontractor, **kwargs)
         self._subcontractor: TreeCacheProtocol = subcontractor
         subcontractor.set_conditional_freezer(cf=self)
-        self._event_change_data_in_cache: asyncio.Event or None = None
-        self._event_change_data: asyncio.Event or None = None
-        self._sink_task: asyncio.Task or None = None
+        self._condition_change_data: Optional[asyncio.Condition] = None
         # How many times it will keep trying to update the value with one can not be updated before returning an error
         self._max_unsuccessful_refreshes: int = self._get_cfg('max_unsuccessful_refreshes')
         # how many seconds before timeout expires component is to return an empty message to the clone
@@ -132,7 +131,7 @@ class TreeConditionalFreezer(TreeBaseProvider):
         :param t_tolerance: the allowable difference between the present moment and timestamp of the value
         :param waiting_timeout: timeout before which an empty message must be sent to the client
         :param min_wait: minimum wait time
-        :raise TreeValueError: When can not find _event_change_data
+        :raise TreeValueError: When can not find _condition_change_data
         :return: True if waiter finish by event call
         """
         while True:
@@ -154,9 +153,15 @@ class TreeConditionalFreezer(TreeBaseProvider):
                 return False
             if time_to_timeout < waiting_time:
                 waiting_time = time_to_timeout
-            if self._event_change_data is None:
+            condition = self._condition_change_data
+            if condition is None:
                 raise TreeValueError(code=2002)
-            is_event = await self._event_wait(self._event_change_data, waiting_time)
+            # WARNING Before this method there can be no place (await) where the task will lose focus. If it will be
+            # necessary to add such a method, you should get a lock on the condition before (you will need to
+            # rebuild the _condition_wait() method). The point is that condition.wait() must follow the wait
+            # time calculation
+            is_event = await self._condition_wait(condition, waiting_time)
+            await asyncio.sleep(0)
             if is_event:  # event call
                 return True  # value was changed
 
@@ -189,57 +194,35 @@ class TreeConditionalFreezer(TreeBaseProvider):
         k_value = self._subcontractor.get_k_val(address)
         return k_value
 
-    async def _sink(self):
-        try:
-            if self._event_change_data_in_cache is None:
-                self._event_change_data_in_cache = asyncio.Event()
-            if self._event_change_data is None:
-                self._event_change_data = asyncio.Event()
-            while True:
-                await self._event_change_data_in_cache.wait()
-                self._event_change_data_in_cache.clear()
-                self._event_change_data.set()
-                await asyncio.sleep(0)
-                self._event_change_data.clear()
-        finally:
-            # clear events because sink not working no del because some task can wait and should have some time to
-            # close self before delete event
-            if self._event_change_data_in_cache is not None:
-                self._event_change_data_in_cache = None
-            if self._event_change_data is not None:
-                self._event_change_data = None
-
     @staticmethod
-    async def _event_wait(evt, timeout):
+    async def _event_wait(evt: asyncio.Event, timeout):
         try:
-            # WARNING method 'wait_for' creates a new task and needs 2 passes of the async loop to finish, so the event
-            # is already set back to False before going back to this method.
-            await asyncio.wait_for(evt.wait(), timeout)
+            await wait_for_psce(evt.wait(), timeout)
             return True
         except asyncio.TimeoutError:
             return False
 
-    def set_change_event(self):
-        """Method set the event"""
-        if self._event_change_data is not None:
-            self._event_change_data_in_cache.set()
+    @staticmethod
+    async def _condition_wait(con: asyncio.Condition, timeout):
+        try:
+            async with con:
+                await wait_for_psce(con.wait(), timeout=timeout)
+            return True
+        except asyncio.TimeoutError:
+            return False
 
-    def clear_change_event(self):
-        """Method unset the event"""
-        if self._event_change_data is not None:
-            self._event_change_data_in_cache.clear()
+    async def set_change_event(self):
+        """Method set the event"""
+        condition = self._condition_change_data
+        if condition is not None:
+            async with condition:
+                condition.notify_all()
 
     async def run(self):
-        # todo pomyslec nad czyms sprytniejszym niz odpalanie go na zawsze
-        self._sink_task = asyncio.create_task(self._sink())
-        await asyncio.sleep(0)  # let the sink task run
+        if self._condition_change_data is None:
+            self._condition_change_data = asyncio.Condition()
         await super().run()
 
     async def stop(self):
-        if self._sink_task is not None:
-            self._sink_task.cancel()
-            try:
-                await self._sink_task
-            except asyncio.CancelledError:
-                pass
+        self._condition_change_data = None
         await super().stop()

@@ -35,7 +35,6 @@ class BaseCycleQuery(ABC):
 
     def __init__(self, client, list_request: List[ValueRequest], delay: float or None = None, loop=None,
                  query_name: str = 'Default cycle query', max_missed_msg: int = None, **kwargs):
-        # todo mikolaj chcial zeby jakiś auto start dodac - tutaj albo w api
         self._query_name = query_name
         self._client = client
         self._event: asyncio.Event = asyncio.Event()
@@ -119,6 +118,14 @@ class BaseCycleQuery(ABC):
             self._task.cancel()
             self._event.set()
 
+    async def stop_and_wait(self):
+        if not self.is_stopped():
+            self.stop()
+            try:
+                await self._task
+            except asyncio.CancelledError:
+                pass
+
     def is_stopped(self):
         """
         Method return true if cycle query is actually running.
@@ -187,6 +194,7 @@ class PeriodicCycleQuery(BaseCycleQuery):
                 list_part = [r.to_byte() for r in self._list_request]
                 result = await self._client.send_multipart(list_part=list_part,
                                                            request_timeout=start_time + self._delay)
+                self._errors = None
                 if result is None:
                     logger.error(f"{self._query_name}: Can not get response for giving request")
                     raise CommunicationRuntimeError(message="Can not get response for giving request, check "
@@ -274,6 +282,7 @@ class ConditionalCycleQuery(BaseCycleQuery):
                 list_part = [r.to_byte() for r in self._list_request]
                 result = await self._client.send_multipart(list_part=list_part,
                                                            request_timeout=start_time + self._timeout)
+                self._errors = None
                 if result is None:
                     logger.error(f"{self._query_name}: Can not get response for giving request")
                     raise CommunicationRuntimeError(message="Can not get response for giving request, check "
@@ -284,9 +293,8 @@ class ConditionalCycleQuery(BaseCycleQuery):
 
                 # check errors
                 for r in self._last_response:
-
                     if r.value is None or 'from_cf' not in r.value.tags:
-                        logger.info(f'{self._query_name}: this address does not support recursive conditional '
+                        logger.info(f'{self._query_name}: this address does not support cycle conditional '
                                     f'queries')
                         raise CommunicationRuntimeError(message=f"this address ({str(r.address)}) does not support "
                                                                 f"recursive conditional queries")
@@ -313,15 +321,15 @@ class ConditionalCycleQuery(BaseCycleQuery):
                 self._last_response = []
                 logger.warning(f'{self._query_name}: The waiting time for the message has expired. The router is not '
                                f'responding. Number of missing answers: {missed}')
-
+            except asyncio.CancelledError:
+                raise
             except Exception as e:
                 self._last_response = []
                 logger.error(f'{self._query_name}: Unrecognized error in cycle query: {str(e)}')
                 self._errors = CommunicationRuntimeError(message=f'Unrecognized error')
                 self._event.set()
                 break
-
-            if missed > self._max_missed_msg >= 0:
+            if missed >= self._max_missed_msg >= 0:
                 logger.error(f"{self._query_name}: Too many missed messages at same time")
                 self._errors = CommunicationRuntimeError(message='Too many missed messages at same time')
                 self._event.set()

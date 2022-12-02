@@ -1,12 +1,15 @@
 import asyncio
 import logging
 import time
+from contextlib import suppress
+
 import zmq
 from typing import List
 from ob.comunication.base_communication_object import BaseCommunicationObject
 from ob.comunication.comunication_error import CommunicationRuntimeError, CommunicationTimeoutError
 from ob.comunication.message_serializer import MessageSerializer
 from ob.comunication.multipart_structure import MultipartStructure
+from ob.util_functions.asyncio_util_functions import wait_for_psce
 
 logger = logging.getLogger(__name__)
 
@@ -73,8 +76,9 @@ class Client(BaseCommunicationObject):
             try:
                 await self._stand_in_line()  # can raise CommunicationRuntimeError
                 try:
-                    return await asyncio.wait_for(self._wait_for_response(ms.create_time, ms.id_),
-                                                  timeout=time_to_expire)
+                    # WARNING: do not use the 'asyncio.wait_for()' method, instead use 'wait_for_psce()'
+                    # read more in the method description !!!
+                    return await wait_for_psce(self._wait_for_response(ms.create_time, ms.id_), timeout=time_to_expire)
                 except asyncio.TimeoutError:
                     # logger.info(f"the response did not come before timeout {self.timeout}s")
                     raise CommunicationTimeoutError(
@@ -95,11 +99,11 @@ class Client(BaseCommunicationObject):
                 logger.error(f"The receive task was stopped before retrieve some waiting messages")
                 raise CommunicationRuntimeError(message=f"The receive task was stopped before retrieve some waiting "
                                                         f"messages")
-            await asyncio.sleep(0)  # this will allow other tasks to change event
             await self._msg_event.wait()
             message = self._check_message_comes(msg_create_time_b, msg_id_b)
             if message:
                 break
+            await asyncio.sleep(0)  # this will allow other tasks to do something
         self._new_msgs.remove(message)
         return message
 
@@ -115,16 +119,13 @@ class Client(BaseCommunicationObject):
                     self._new_msgs.append(ms)
                 except ValueError:
                     logger.error(f"The received message is corrupted, it will be discarded.")
-                # this try is for situation when task will be canceled when sleep always should set event to false
-                try:
-                    self._msg_event.set()
-                    await asyncio.sleep(0)  # this will allow other tasks to react to the event
-                finally:
-                    self._msg_event.clear()
+                self._msg_event.set()
+                self._msg_event.clear()
+                await asyncio.sleep(0)  # this will allow other tasks to react
         # catch Cancelled of a task and set the flag to true to wake up all pending tasks and let them finish
         except asyncio.CancelledError:
             self._msg_event.set()
-            await asyncio.sleep(0)
+            # no wait here
             raise
 
     async def _stand_in_line(self):
@@ -157,7 +158,8 @@ class Client(BaseCommunicationObject):
             raise CommunicationRuntimeError(message='Can not get current async loop')
         self._loop = loop
         # create event
-        self._msg_event = asyncio.Event(loop=self._loop)
+        if self._msg_event is None:
+            self._msg_event = asyncio.Event()
         self._receive_task = loop.create_task(self._receive_msgs())
 
     async def _stop_receiver(self):
@@ -170,9 +172,13 @@ class Client(BaseCommunicationObject):
         if task:
             task.cancel()
             self._receive_task = None
-            await asyncio.sleep(0)
             self._loop = None
-            self._msg_event = None
+            # last query, wait for the receive task to close before returning a response.
+            # IN CASE OF PERFORMANCE PROBLEMS, rethink the options witch 'await asyncio.sleep(0)'
+            with suppress(asyncio.CancelledError):
+                await task
+            # self._msg_event = None  # DO NOT CLEAR EVENT !!! not like this here. Maby use Condition instead if we
+            # want set to None
             if task.done():
                 logger.info(f"The retrieve task was stopped")
 
