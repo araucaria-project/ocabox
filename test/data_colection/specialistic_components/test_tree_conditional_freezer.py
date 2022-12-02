@@ -314,7 +314,7 @@ class TestTreeConditionalFreezer(unittest.TestCase):
     def test_concurrent_requests_waking_up_by_fastest_client(self):
         """Test situation when it is two client asking about the same value but one of them ask faster and alvays was
         a new value. In this situation, the fastest client should update the value and the rest of the clients should
-        be awakened by the event. We assume that clients do not have a minimum time between requests set, but the
+        be awakened by the condition. We assume that clients do not have a minimum time between requests set, but the
         value should always be reported immediately. The expected result should also be that everyone will finish at
         the same time."""
         address = Address('.'.join([self.tree_provider1.get_source_name(),
@@ -326,7 +326,6 @@ class TestTreeConditionalFreezer(unittest.TestCase):
         client1_number_of_repetitions = 6
         client2_number_of_repetitions = 6
         self.tree_freezer._min_time_of_data_tolerance = time_of_data_tolerance2  # Allow the values to refresh faster
-        # request witch raising StructureError by end provider and witch information about past data
         request = ValueRequest(address, time.time(),
                                time_of_data_tolerance=time_of_data_tolerance,
                                request_type='GET',
@@ -377,10 +376,43 @@ class TestTreeConditionalFreezer(unittest.TestCase):
         # as many times as the fastest client
         self.assertEqual(self.tree_provider2.nr_requests, client2_number_of_repetitions)
 
+    def test_async_react_for_condition(self):
+        """test checks if the pending task will be woken up after the condition is reported and will not make
+        additional attempts to update the value."""
+        address = Address('.'.join([self.tree_provider1.get_source_name(),
+                                    self.tree_provider2.get_source_name(),
+                                    'new_val']))
+        current_time = time.time()
+        time_of_data_tolerance = self.time_interval * 6
+        request = ValueRequest(address, time.time(),
+                               time_of_data_tolerance=time_of_data_tolerance,
+                               request_type='GET',
+                               request_data={'time_of_known_change': current_time},
+                               cycle_query=True)
+        # simulates that the cache has the old values
+        self.tree_cache._known_values.append(self.tree_cache._KnownValue(address=address,
+                                                                         value=Value(v=6000, ts=current_time),
+                                                                         task=None, change_time=current_time))
 
-# todo co z ytuacją gdy jest kilku klientów i provider nie działa to wszyscy będą odświerzać wartość nie zwracając
-#  uwagi na innych - może trzeba przeniźć ten czas pomiędzy zapytaniami z błędem do cache albo zrobić osobne pole na
-#  timestampa (np 'kiedy sprawdzono') a nie brać go z value?
+        async def simple_client(req):
+            r = await self.tree_provider1.get_response(req)
+            return r
+
+        async def coro():
+            client1 = asyncio.create_task(simple_client(request))
+            await asyncio.sleep(time_of_data_tolerance / 12)  # wait for the task to set itself up to wait
+            self.assertFalse(client1.done())  # make sure the job is still running
+            await self.tree_cache._update_known_value(address=address, value=Value(v=8000, ts=time.time()))
+            await asyncio.sleep(0)
+            self.assertFalse(client1.done())  # make sure the job is still running
+            result = await client1
+            self.assertEqual(result.value.v, 8000)
+            return result
+
+        response = asyncio.run(self._start_stop_tree(coro()))
+        self.assertIsNotNone(response.value)
+        self.assertTrue(response.status)
+        self.assertEqual(len(self.tree_cache._known_values), 1)
 
 
 if __name__ == '__main__':
