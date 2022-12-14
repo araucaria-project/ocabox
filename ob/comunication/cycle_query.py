@@ -257,7 +257,7 @@ class ConditionalCycleQuery(BaseCycleQuery):
     """
 
     def __init__(self, client, list_request: List[ValueRequest], delay: float or None = None, loop=None,
-                 query_name: str = 'Default periodic query', max_missed_msg: int = None,
+                 query_name: str = 'Default conditional query', max_missed_msg: int = None,
                  request_timeout: float = None, **kwargs):
         super().__init__(client=client, list_request=list_request, delay=delay, loop=loop,
                          query_name=query_name, max_missed_msg=max_missed_msg, **kwargs)
