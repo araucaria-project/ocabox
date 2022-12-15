@@ -37,6 +37,7 @@ class BaseCycleQuery(ABC):
                  query_name: str = 'Default cycle query', max_missed_msg: int = None, **kwargs):
         self._query_name = query_name
         self._client = client
+        # TODO sprawdziś czy nie ma problemów z synchronizacją przez Event
         self._event: asyncio.Event = asyncio.Event()
         self._last_response: List[ValueResponse] = []
         if delay is None or delay <= 0:
@@ -128,9 +129,9 @@ class BaseCycleQuery(ABC):
 
     def is_stopped(self):
         """
-        Method return true if cycle query is actually running.
+        Method return false if cycle query is actually running.
 
-        :return: True if running
+        :return: False if running
         """
         if self._task and self._task in asyncio.all_tasks(self._loop):
             return False
@@ -299,10 +300,8 @@ class ConditionalCycleQuery(BaseCycleQuery):
                         continue  # everything is ok, just router need confirmation that the client is alive
 
                     elif not r.status:  # One of the responses received has an error
-                        self._errors = CommunicationRuntimeError(message=f"Client retrieve response witch error: "
-                                                                         f"{str(r.error)}")
-                        self._event.set()
-                        break
+                        raise CommunicationRuntimeError(message=f"Client retrieve response witch error: "
+                                                                f"{str(r.error)}")
 
                     elif r.value is not None and 'from_cf' not in r.value.tags:
                         logger.info(f'{self._query_name}: this address ({str(r.address)}) does not support cycle '
