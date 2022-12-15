@@ -26,12 +26,13 @@ class Client(BaseCommunicationObject):
         self._front_socket.setsockopt(zmq.LINGER, 0)
         self._front_socket.connect(f"{self._get_cfg('protocol')}://{self._get_cfg('url')}:{self._port}")
         # message service
-        self._msg_event: asyncio.Event or None = None
+        self._msg_condition: asyncio.Condition or None = None
         self._new_msgs: List[MultipartStructure] = []
         self._cleaning_length = 10
         self._create_time = 0
         self._next_id: int = 0
         self._receive_task: asyncio.Task or None = None
+        self._is_working_receive_task = False
         self._loop = None
         self._waiting_amount = 0
 
@@ -69,9 +70,9 @@ class Client(BaseCommunicationObject):
         :raise CommunicationTimeoutError:
         :return: MultipartStructure or None
         """
-        logger.info(f"The {self._TYPE} named {self.name} is sending request...")
+        logger.debug(f"<{self._TYPE}><{self.name}> sending request... ({ms.create_time} | {ms.id_})")
         sending_result = await self._front_socket.send_multipart(ms.multipart)
-        logger.info(f"The {self._TYPE} named {self.name} sent the request")
+        logger.debug(f"<{self._TYPE}><{self.name}> message was send the request ({ms.create_time} | {ms.id_})")
         if not no_wait:
             try:
                 await self._stand_in_line()  # can raise CommunicationRuntimeError
@@ -93,23 +94,30 @@ class Client(BaseCommunicationObject):
             return None
 
     async def _wait_for_response(self, msg_create_time_b: bytes, msg_id_b: bytes) -> MultipartStructure:
-        logger.info(f"The {self._TYPE} named {self.name} is waiting for response...")
-        while True:
-            if not self._receive_task or self._receive_task.done():  # sanity check
-                logger.error(f"The receive task was stopped before retrieve some waiting messages")
-                raise CommunicationRuntimeError(message=f"The receive task was stopped before retrieve some waiting "
-                                                        f"messages")
-            await self._msg_event.wait()
-            message = self._check_message_comes(msg_create_time_b, msg_id_b)
-            if message:
-                break
-            await asyncio.sleep(0)  # this will allow other tasks to do something
+        logger.debug(f"<{self._TYPE}><{self.name}> waiting for response...")
+        condition = self._msg_condition
+        if condition is None:
+            logger.debug(f"<{self._TYPE}><{self.name}> in wait for response _msg_condition is None")
+            raise CommunicationRuntimeError(message=f"The condition has not been set")
+
+        async with condition:
+            while True:
+                if not self._receive_task or self._receive_task.done() or not self._is_working_receive_task:
+                    logger.error(f"The receive task was stopped before retrieve some waiting messages")
+                    raise CommunicationRuntimeError(message=f"The receive task was stopped before retrieve some waiting"
+                                                            f"messages")
+                await condition.wait()
+                message = self._check_message_comes(msg_create_time_b, msg_id_b)
+                if message:
+                    logger.debug(f"<{self._TYPE}><{self.name}> response comes")
+                    break
+                await asyncio.sleep(0)  # this will allow other tasks to do something
         self._new_msgs.remove(message)
         return message
 
     async def _receive_msgs(self):
-        self._msg_event.clear()
         try:
+            self._is_working_receive_task = True
             while True:
                 multipart = await self._front_socket.recv_multipart()
                 try:
@@ -118,15 +126,19 @@ class Client(BaseCommunicationObject):
                     ms = self._open_envelope(multipart)
                     self._new_msgs.append(ms)
                 except ValueError:
-                    logger.error(f"The received message is corrupted, it will be discarded.")
-                self._msg_event.set()
-                self._msg_event.clear()
+                    logger.error(f"<{self._TYPE}><{self.name}> received message is corrupted, it will be discarded.")
+                condition = self._msg_condition
+                async with condition:
+                    condition.notify_all()
                 await asyncio.sleep(0)  # this will allow other tasks to react
         # catch Cancelled of a task and set the flag to true to wake up all pending tasks and let them finish
         except asyncio.CancelledError:
-            self._msg_event.set()
-            # no wait here
             raise
+        finally:
+            self._is_working_receive_task = False
+            condition = self._msg_condition
+            async with condition:
+                condition.notify_all()
 
     async def _stand_in_line(self):
         """
@@ -157,10 +169,12 @@ class Client(BaseCommunicationObject):
             logger.error(f"Can not get current async loop, something goes wrong")
             raise CommunicationRuntimeError(message='Can not get current async loop')
         self._loop = loop
-        # create event
-        if self._msg_event is None:
-            self._msg_event = asyncio.Event()
+        # create condition
+        if self._msg_condition is None:
+            self._msg_condition = asyncio.Condition()
+            logger.debug(f"<{self._TYPE}><{self.name}> create event")
         self._receive_task = loop.create_task(self._receive_msgs())
+        logger.debug(f"<{self._TYPE}><{self.name}> run receiver")
 
     async def _stop_receiver(self):
         """
@@ -171,6 +185,7 @@ class Client(BaseCommunicationObject):
         task = self._receive_task
         if task:
             task.cancel()
+            logger.debug(f"<{self._TYPE}><{self.name}> stop receiver")
             self._receive_task = None
             self._loop = None
             # last query, wait for the receive task to close before returning a response.
@@ -180,7 +195,7 @@ class Client(BaseCommunicationObject):
             # self._msg_event = None  # DO NOT CLEAR EVENT !!! not like this here. Maby use Condition instead if we
             # want set to None
             if task.done():
-                logger.info(f"The retrieve task was stopped")
+                logger.info(f"<{self._TYPE}><{self.name}> retrieve task was stopped")
 
     def _clear_old_msg(self):
         """This method cleaning the _new_msgs list from old messages witch no one wanting for."""

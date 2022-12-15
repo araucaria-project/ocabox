@@ -257,7 +257,7 @@ class ConditionalCycleQuery(BaseCycleQuery):
     """
 
     def __init__(self, client, list_request: List[ValueRequest], delay: float or None = None, loop=None,
-                 query_name: str = 'Default periodic query', max_missed_msg: int = None,
+                 query_name: str = 'Default conditional query', max_missed_msg: int = None,
                  request_timeout: float = None, **kwargs):
         super().__init__(client=client, list_request=list_request, delay=delay, loop=loop,
                          query_name=query_name, max_missed_msg=max_missed_msg, **kwargs)
@@ -293,23 +293,27 @@ class ConditionalCycleQuery(BaseCycleQuery):
 
                 # check errors
                 for r in self._last_response:
-                    if r.value is None or 'from_cf' not in r.value.tags:
-                        logger.info(f'{self._query_name}: this address does not support cycle conditional '
-                                    f'queries')
-                        raise CommunicationRuntimeError(message=f"this address ({str(r.address)}) does not support "
-                                                                f"recursive conditional queries")
-
                     if not r.status and r.error and r.error.code == 4004:  # 4004 - timeout waiting for change value
                         # the value is not changed so client need refresh request and keep waiting
-                        logger.info(f'{self._query_name}: subscription expired - renewing')
+                        logger.info(f'{self._query_name}: address ({str(r.address)}) subscription expired - renewing')
                         continue  # everything is ok, just router need confirmation that the client is alive
-                    # One of the responses received has an error
 
-                    elif not r.status:
+                    elif not r.status:  # One of the responses received has an error
                         self._errors = CommunicationRuntimeError(message=f"Client retrieve response witch error: "
                                                                          f"{str(r.error)}")
                         self._event.set()
                         break
+
+                    elif r.value is not None and 'from_cf' not in r.value.tags:
+                        logger.info(f'{self._query_name}: this address ({str(r.address)}) does not support cycle '
+                                    f'conditional')
+                        raise CommunicationRuntimeError(message=f"this address ({str(r.address)}) does not support "
+                                                                f"recursive conditional queries")
+                    elif r.value is None:
+                        logger.info(f'{self._query_name}: this address ({str(r.address)}) does not return any value')
+                        raise CommunicationRuntimeError(message=f"this address ({str(r.address)}) does not return any "
+                                                                f"value")
+
                 self._event.set()
             except CommunicationRuntimeError as e:
                 self._errors = e
