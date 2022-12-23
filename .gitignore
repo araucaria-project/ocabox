@@ -6,4 +6,6 @@ ob/router/__pycache__/
 
 ob/configuration/*
 !ob/configuration/.gitkeep
+!ob/configuration/__init__.py
+!ob/configuration/tree_build_example.py
 !ob/configuration/sample_config.yaml

@@ -1,44 +1,50 @@
 #!/usr/bin/env python
 import asyncio
+import importlib
 import logging
+import os
 import sys
-
-from ob.data_colection.base_components.tree_base_broker import TreeBaseBroker
-from ob.data_colection.base_components.tree_base_broker_default_target import TreeBaseBrokerDefaultTarget
-from ob.data_colection.base_components.tree_provider import TreeProvider
-from ob.comunication.request_solver import RequestSolver
-from ob.comunication.router import Router
-from ob.data_colection.specialistic_components.tree_alpaca import TreeAlpacaObservatory
-from ob.data_colection.specialistic_components.tree_blocker_access_grantor import TreeBlockerAccessGrantor
-from ob.data_colection.specialistic_components.tree_cache_observatory import TreeCache
-from ob.data_colection.specialistic_components.tree_conditional_freezer import TreeConditionalFreezer
-from ob.data_colection.specialistic_components.tree_request_alpaca_blocker import TreeRequestAlpacaBlocker
 from ob.ob_config import SingletonConfig
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
-async def stop_router_timeout(vrr):
-    await asyncio.sleep(10)
-    logger.warning('close router from stop_router_timeout()')
-    vrr.stop()
+# config najpierw z ob/config.yaml potem z configuration.config.yaml
+# taka wartośc w env dla build file OCABOX_BUILD_FILE_NAME
 
 
-def main(argv):
-    SingletonConfig.add_config_file_from_config_dir('sample_config.yaml')
-    alpaca_module = TreeAlpacaObservatory('zibi_sample', observatory_name='zibi-ocabox-800')
-    alpaca_blocker = TreeRequestAlpacaBlocker('zibi_blocker', alpaca_module)
-    cache_800 = TreeCache('sample_cache', alpaca_blocker)
-    conditional_freezer_800 = TreeConditionalFreezer('conditional_freezer_800', cache_800)
+def load_from_file(filename, method_name):
+    """Method importing a file by given name and return method witch give name from it"""
+    method_inst = None
+    mod_name, file_ext = os.path.splitext(os.path.split(filename)[-1])
+    if file_ext.lower() == '.py':
+        py_mod = importlib.import_module('ob.configuration.'+mod_name, __name__)
+    else:
+        logger.error(f"wrong file type witch tree build. Expected '.py' file got: {filename}")
+        raise RuntimeError
+    if hasattr(py_mod, method_name):
+        method_inst = getattr(py_mod, method_name)()
+    else:
+        logger.error(f"Can not find method '{method_name}' in file {filename}")
+        raise RuntimeError
+    return method_inst
 
-    blocker_grantor = TreeBlockerAccessGrantor('grantor_800', 'access_grantor', alpaca_blocker)
-    broker_800 = TreeBaseBrokerDefaultTarget('broker_800', [blocker_grantor], default_provider=conditional_freezer_800)
-    tp_800 = TreeProvider('module_800', '800', broker_800)
 
-    vb = TreeBaseBroker('front_broker', [tp_800])
-    rs = RequestSolver(vb)
-    vr = Router(rs)
+def main(argv=None):
+    if argv is None:
+        argv = sys.argv
+
+    BUILD_FILE = os.environ.get('OCABOX_BUILD_FILE_NAME', None)
+    if BUILD_FILE is None:
+        BUILD_FILE = SingletonConfig.get_config()['OCABOX_BUILD_FILE_NAME'].get()
+    if BUILD_FILE is None:
+        logger.error(f"Can not find any build tree file")
+        raise RuntimeError
+    logger.info(f"Tree will be build from: {BUILD_FILE}")
+
+    vr = load_from_file(BUILD_FILE, 'tree_build')
+    rs = vr.request_solver
+
     coro = vr.main_coroutine()
 
     try:
@@ -70,11 +76,6 @@ def main(argv):
             loop.run_until_complete(loop.shutdown_asyncgens())
         finally:
             loop.close()
-
-    # try:
-    #     asyncio.run(coro)
-    # except KeyboardInterrupt as e:
-    #     logger.info('Caught keyboard interrupt. Canceling tasks...')
 
     return 0
 

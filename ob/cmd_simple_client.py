@@ -3,9 +3,11 @@ import sys
 from ob.cmd_client import CMD_Client
 
 
-def main(argv):
+def main(argv=None):
     """Command line entry point"""
 
+    if argv is None:
+        argv = sys.argv
     cmd_client = CMD_Client()
     cmd_client.main_method(argv[1:])
 
