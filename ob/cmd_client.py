@@ -161,7 +161,11 @@ class CMD_Client(OBApp):
         return 1
 
 
-if __name__ == "__main__":
+def main():
     client = CMD_Client()
     retcode = client.run_CMD()
     sys.exit(retcode)
+
+
+if __name__ == "__main__":
+    main()

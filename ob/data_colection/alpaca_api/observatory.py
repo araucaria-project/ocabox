@@ -114,10 +114,10 @@ class Observatory(Component):
     def __init__(self):
         configuration = SingletonConfig.get_config()
         self.config = configuration
-        self.preset = 'default'
+        self.preset: List[str] = ['default']
         super().__init__('obs', None)
 
-    def connect(self, preset: Optional[str] = 'default', connector: Connector = None) -> None:
+    def connect(self, preset: List[str] or str = 'default', connector: Connector = None) -> None:
         """
         Connect to servers if needed, builds Devices tree
         Args:
@@ -128,9 +128,16 @@ class Observatory(Component):
             self._connector = connector
         if preset is None:
             preset = 'default'
+        if not isinstance(preset, List):
+            preset = [preset]
         self.preset = preset
+
+        o = self.config
+        for p in preset:
+            o = o[p]
+
         # options = self.config.data[preset]['observatory']
-        options = self.config[preset]['observatory'].get()
+        options = o['observatory'].get()
         self._setup(options)
 
 

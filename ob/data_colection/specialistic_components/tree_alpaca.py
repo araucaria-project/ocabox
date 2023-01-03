@@ -32,7 +32,7 @@ class TreeAlpacaObservatory(TreeBaseProvider):
 
     def _connect_to_observatory(self):
         self._connector = AlpacaConnector()
-        self._observatory.connect(self.observatory_name, connector=self._connector)
+        self._observatory.connect(['tree', self.observatory_name], connector=self._connector)
 
     async def run(self):
         result = await self._connector.create_http_session()

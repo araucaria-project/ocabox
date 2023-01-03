@@ -15,7 +15,7 @@ class ObservatoryTest(unittest.TestCase, BaseAsyncTest):
         super().setUp()
         self._setUpLoop()
         self.observatory = Observatory()
-        self.observatory.connect('dibi-camk')
+        self.observatory.connect(['tree','test_observatory'])
 
     def tearDown(self) -> None:
         self._tearDownLoop()
@@ -39,7 +39,7 @@ class TelescopeTest(unittest.TestCase, BaseAsyncTest):
         super().setUp()
         self._setUpLoop()
         self.observatory = Observatory()
-        self.observatory.connect('dibi-camk')
+        self.observatory.connect(['tree','test_observatory'])
 
     def tearDown(self) -> None:
         self._tearDownLoop()
