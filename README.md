@@ -47,8 +47,9 @@ available scripts
 
 The default configuration is stored in the `ob/config.yaml` file. It can be overwritten by other configuration files in 
 the `ob/configuration/` directory. There are also scripts that build the application in this directory. By default, 
-the `ob/configuration/config.yaml` file is imported and overwrites the default configuration. Files with different 
-names must be explicitly added in the build script or client application.
+the `ob/configuration/config.yaml` file (if exist) is imported and overwrites the default configuration. Files with different 
+names must be explicitly added in the build script or client application. It is recommended to keep the configuration 
+in the `ob/configuration/config.yaml` file, the file must be created during the first installation.
 
 The configuration file is divided into sections. They can be overwritten in full or in parts. Since the application can 
 operate in two modes, as a [server](#server) or as a [client](#client), it is not necessary to configure all sections at once.
@@ -113,6 +114,12 @@ for `TreeAlpacaObservatory`
 * `observatory` - This parameter is a dictionary containing information about the construction of the alpaca server. 
 More about this in the `TreeAlpacaObservatory` class documentation.
 
+
+#### OCABOX_BUILD_FILE_NAME
+This parameter indicates the name of the tree building script. The script should be in directory `ob/configuration/`.
+There should be a method `tree_build()` in the script that returns a router object with a complete tree. An example 
+script is in the file `ob/configuration/tree_build_example.py`.
+
 ### Client
 
 #### client
@@ -137,9 +144,6 @@ client:
 In this model, the configuration of various types of queries is included. Among others, recurring queries (subscription).
 The configuration is the same as in the other sections.
 
-#### OCABOX_BUILD_FILE_NAME
-This parameter indicates the name of the tree building script. The script should be in directory `ob/configuration/`
-
 ## Running Tests
 
 If you installed the project correctly, you can run all tests by execute the command:
@@ -150,8 +154,20 @@ Warning ! Some tests require alpaca simulator running.
 
 ## Run Locally
 
-Clone the project
+To run the sample server, you must successfully install the project. Then make sure that the example builder script is set in the configuration:
+```yaml
+OCABOX_BUILD_FILE_NAME: "tree_build_example.py"
+```
+then just run the command:
+```bash
+  poetry run server
+```
+In case of problems, it is recommended to remove all overwritten configurations and run the server with default one.
 
+### Alpaca simulator
+
+A working alpaca server is required for the full operation of the example programs and some tests. For this, it 
+is recommended to use the alpaca simulator available [**here**](https://github.com/ASCOMInitiative/ASCOM.Alpaca.Simulators).
 
 ## License
 
