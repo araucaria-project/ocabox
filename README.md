@@ -1,1 +1,157 @@
-# ocabox
+# Ocabox
+
+The aim of the project was to create a single API to support many telemetry tools and systems used in astronomical
+research. Initially, the project was to mediate in the exchange of data between users and the local server managing
+the astronomical telescope. At the same time, by using caching in the program, it was supposed to relieve the server
+managing the telescope.
+
+## Installation
+
+### Install with poetry
+
+First, make sure you have poetry installed. For this, use the command:
+```bash
+poetry --version
+```
+If the poetry version is displayed, you can proceed to the next step. Otherwise, install poetry first.
+In the next step, download and go to the main directory of the project:
+```bash
+  git clone https://github.com/araucaria-project/ocabox.git
+  cd ocabox/
+```
+Next install requirements
+```bash
+  poetry install
+```
+If you also want to run examples of using the program then instead of the above command you have to use.
+```bash
+  poetry install --extras "examples"  
+```
+
+## Usage/Examples
+
+If you installed the project correctly, you can run one of the available scripts. To do this, execute the command:
+```bash
+  poetry run <script_name> <params>
+```
+available scripts
+
+| Script name       | Description                                                                                      | Params                              |
+|-------------------|--------------------------------------------------------------------------------------------------|-------------------------------------|
+| tests             | Run all unit test. Read [Running Tests](#running-tests) for mor <br/>information                 |                                     |
+| cmd_client        | Run CMD client console                                                                           |                                     |
+| cmd_simple_client | Run CMD client single command                                                                    | Type '--help' to see all parameters |
+| server            | Run server from build file. Read [configuration](#configuration) <br/>section to mor information |                                     |
+
+## Configuration
+
+The default configuration is stored in the `ob/config.yaml` file. It can be overwritten by other configuration files in 
+the `ob/configuration/` directory. There are also scripts that build the application in this directory. By default, 
+the `ob/configuration/config.yaml` file is imported and overwrites the default configuration. Files with different 
+names must be explicitly added in the build script or client application.
+
+The configuration file is divided into sections. They can be overwritten in full or in parts. Since the application can 
+operate in two modes, as a [server](#server) or as a [client](#client), it is not necessary to configure all sections at once.
+
+### Server
+
+#### router
+In the `router` section, network socket parameters and general requests parameters are configured.
+
+For example, to configure a server that has a router class called `MySampleRouterName` on the front, 
+the configuration should look like this:
+```yaml
+router:
+  MySampleRouterName:
+    port: 5559
+    url: *
+    protocol: tcp
+    timeout: 30
+```
+* `port` - port where requests will be received
+* `url` - url address
+* `protocol` - used protocol
+* `timeout` - timeout after which the query expires and is canceled
+
+#### data_collection
+In the `data_collector` section, the default parameters of individual module types in the tree are set.
+Please note that in this section there are only default values for modules, and they can be overwritten individually 
+for each block in the [tree](#tree) section.
+
+For example, module `TreeAlpacaObservatory` configuration will look like this:
+
+```yaml
+data_collection:
+  TreeAlpacaObservatory:
+    address: localhost:80
+    api_version: 1
+    url_protocol: http
+```
+* `address` - address alpaca server
+* `api_version` - alpaca api version
+* `url_protocol` - url protocol
+
+#### tree
+In this section, you configure each block of the tree individually. Block names in the tree cannot be duplicated, 
+so the configurations in this section are unique for each block.
+
+For example, given a block named `test_observatory` of type `TreeAlpacaObservatory`, its configuration would look like this:
+
+```yaml
+tree:
+  test_observatory:
+    address: 192.168.2.1:80
+    observatory:
+      comment: Simulated observatory for tests
+      components:
+        dome:
+          kind: dome
+          device_number: 0
+```
+* `address` - address alpaca server. this address will override the default address given in section `data_collection` 
+for `TreeAlpacaObservatory`
+* `observatory` - This parameter is a dictionary containing information about the construction of the alpaca server. 
+More about this in the `TreeAlpacaObservatory` class documentation.
+
+### Client
+
+#### client
+In the `client` section, network socket parameters and general request parameters for clients are configured.
+
+For example, to configure client class that has name `MySampleClientName`:
+
+```yaml
+client:
+  MySampleClientName:
+    port: 5559
+    url: 192.168.0.0
+    protocol: tcp
+    timeout: 30
+```
+* `port` - port where requests will be sent
+* `url` - url address
+* `protocol` - used protocol
+* `timeout` - timeout after which the query expires and is canceled
+
+#### comunication
+In this model, the configuration of various types of queries is included. Among others, recurring queries (subscription).
+The configuration is the same as in the other sections.
+
+#### OCABOX_BUILD_FILE_NAME
+This parameter indicates the name of the tree building script. The script should be in directory `ob/configuration/`
+
+## Running Tests
+
+If you installed the project correctly, you can run all tests by execute the command:
+```bash
+  poetry run tests
+```
+Warning ! Some tests require alpaca simulator running.
+
+## Run Locally
+
+Clone the project
+
+
+## License
+

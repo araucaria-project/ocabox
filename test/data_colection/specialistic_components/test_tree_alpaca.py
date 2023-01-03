@@ -30,7 +30,7 @@ class TreeAlpacaTest(unittest.TestCase, BaseAsyncTest):
         """
         sample_alpaca_call = 'name'
 
-        sample_components = SingletonConfig.get_config()[self.OBSERVATORY_NAME]['observatory']['components'].get()
+        sample_components = SingletonConfig.get_config()['tree'][self.OBSERVATORY_NAME]['observatory']['components'].get()
         component = list(sample_components.keys())[0]
 
         address = Address('.'.join([component, sample_alpaca_call]))
@@ -46,7 +46,7 @@ class TreeAlpacaTest(unittest.TestCase, BaseAsyncTest):
     def test_alpaca_wrong_call(self):
         sample_alpaca_call = 'no_existing_method'
 
-        sample_components = SingletonConfig.get_config()[self.OBSERVATORY_NAME]['observatory']['components'].get()
+        sample_components = SingletonConfig.get_config()['tree'][self.OBSERVATORY_NAME]['observatory']['components'].get()
         component = list(sample_components.keys())[0]
 
         address = Address('.'.join([component, sample_alpaca_call]))
@@ -65,7 +65,7 @@ class TreeAlpacaTest(unittest.TestCase, BaseAsyncTest):
         """Test situation when address alpaca module is different from the name of the observatory"""
         sample_alpaca_call = 'name'
 
-        sample_components = SingletonConfig.get_config()[self.OBSERVATORY_NAME]['observatory']['components'].get()
+        sample_components = SingletonConfig.get_config()['tree'][self.OBSERVATORY_NAME]['observatory']['components'].get()
         component = list(sample_components.keys())[0]
 
         address = Address('.'.join([component, sample_alpaca_call]))

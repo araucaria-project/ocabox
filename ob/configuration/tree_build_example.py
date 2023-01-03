@@ -14,6 +14,8 @@ from ob.ob_config import SingletonConfig
 def tree_build() -> Router:
     # load custom config file
     SingletonConfig.add_config_file_from_config_dir('sample_config.yaml')
+    SingletonConfig.get_config(rebuild=True).get()  # this method refreshes the configuration with newly added files,
+    # it must be called once after adding all files
     # tree
     alpaca_module = TreeAlpacaObservatory('zibi_sample', observatory_name='zibi-ocabox-800')
     alpaca_blocker = TreeRequestAlpacaBlocker('zibi_blocker', alpaca_module)

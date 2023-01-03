@@ -73,20 +73,20 @@ tree:
     alarm_timeout: 2
     min_time_of_data_tolerance: 0.2
 
-test_observatory:
-  observatory:
-    comment: Simulated observatory for tests
-    lon: 12.345    # Paranal
-    lat: 67.890
-    elev: 2635.0
-    protocol: alpaca
-    address: http://localhost:80/api/v1
-    components:
-      dibi:
-        kind: telescope
-        comment: DIBI Autoslew Simulated Telescope
-        device_number: 0
-        components:
-          derotator:
-            kind: rotator
-            device_number: 0
+  test_observatory:
+    observatory:
+      comment: Simulated observatory for tests
+      lon: 12.345    # Paranal
+      lat: 67.890
+      elev: 2635.0
+      protocol: alpaca
+      address: http://localhost:80/api/v1
+      components:
+        dibi:
+          kind: telescope
+          comment: DIBI Autoslew Simulated Telescope
+          device_number: 0
+          components:
+            derotator:
+              kind: rotator
+              device_number: 0
