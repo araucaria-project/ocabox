@@ -7,28 +7,20 @@ from ob.data_colection.base_components.tree_provider import TreeProvider
 from ob.data_colection.specialistic_components.tree_blocker_access_grantor import TreeBlockerAccessGrantor
 from ob.data_colection.specialistic_components.tree_request_alpaca_blocker import TreeRequestAlpacaBlocker
 from ob.data_colection.tree_user import TreeServiceUser
-from ob.data_colection.value import TreeValueError, Value
 from ob.data_colection.value_call import ValueRequest
 from test.data_colection.base_async_test import BaseAsyncTest
+from test.data_colection.sample_test_value_provider import SampleTestValueProvider
 
 logger = logging.getLogger(__name__)
 
 
 class TreeRequestAlpacaBlockerTest(unittest.TestCase, BaseAsyncTest):
-    class SampleTestValueProvider(TreeProvider):
-        async def get_value(self, request: ValueRequest, **kwargs) -> Value or None:
-            if request.index < len(request.address) and request.address[request.index] in {'some_val',
-                                                                                           'some_other_val'}:
-                return Value(5, time.time())
-            else:
-                raise TreeValueError
 
     def setUp(self):
         super().setUp()
         self.sample_provider_name = 'sample_name'
         self.sample_provider_source_name = 'source_sample_name'
-        self.sample_provider = self.SampleTestValueProvider(self.sample_provider_name, self.sample_provider_source_name,
-                                                            None)
+        self.sample_provider = SampleTestValueProvider(self.sample_provider_name, self.sample_provider_source_name, [])
         self.blocker_name = 'test_sample_blocker'  # this name is used in config file
         self.blocker = TreeRequestAlpacaBlocker(component_name=self.blocker_name, subcontractor=self.sample_provider)
         self.provider_name = 'provider_sample_name'
@@ -51,7 +43,7 @@ class TreeRequestAlpacaBlockerTest(unittest.TestCase, BaseAsyncTest):
         """ test command: take_control"""
         async def coro():
             user = TreeServiceUser(name='some_user')
-            req = ValueRequest('.'.join([self.provider_source_name, self.sample_provider_source_name, 'some_val']),
+            req = ValueRequest('.'.join([self.provider_source_name, self.sample_provider_source_name, 'new_val']),
                                request_type='PUT',
                                user=user)
             result = await self.broker.get_response(request=req)
@@ -65,7 +57,7 @@ class TreeRequestAlpacaBlockerTest(unittest.TestCase, BaseAsyncTest):
             self.assertTrue(result.value.v)
             self.assertTrue(self.blocker.get_current_user is not None)
             # make request again, now can go ahead
-            req = ValueRequest('.'.join([self.provider_source_name, self.sample_provider_source_name, 'some_val']),
+            req = ValueRequest('.'.join([self.provider_source_name, self.sample_provider_source_name, 'new_val']),
                                request_type='PUT',
                                user=user)
             result = await self.broker.get_response(request=req)
@@ -135,6 +127,22 @@ class TreeRequestAlpacaBlockerTest(unittest.TestCase, BaseAsyncTest):
             self.assertIsNotNone(result.value.v)
             rest_time = self.blocker.get_timeout_current_reservation() - time.time()
             self.assertTrue(0 < rest_time < sample_timeout and rest_time > sample_timeout - 10)
+
+        self.loop.run_until_complete(coro())
+
+    def test_break_control(self):
+        """test command: break_control"""
+        async def coro():
+            user = TreeServiceUser(name='some_user')
+            self.blocker.make_reservation(user=user)
+            self.assertIsNotNone(self.blocker.get_current_user)
+
+            other_user = TreeServiceUser(name='some_other_user')
+            req = ValueRequest('.'.join([self.grantor_source_name, 'break_control']),
+                               request_type='GET', user=other_user)
+            result = await self.broker.get_response(request=req)
+            self.assertIsNone(self.blocker.get_current_user())
+            self.assertTrue(result.value.v)
 
         self.loop.run_until_complete(coro())
 

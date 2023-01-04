@@ -169,5 +169,25 @@ In case of problems, it is recommended to remove all overwritten configurations 
 A working alpaca server is required for the full operation of the example programs and some tests. For this, it 
 is recommended to use the alpaca simulator available [**here**](https://github.com/ASCOMInitiative/ASCOM.Alpaca.Simulators).
 
+## Construction and how it works
+
+In general, the server consists of 2 parts, **router** and **tree**. The router is the front block of the application 
+and is responsible for network communication, receiving and sending messages. The server works on the request-response 
+principle, which means that it can generate only one response per request. The router block consists of 
+the `Router` and `RequestSolver` classes. This second class has been separated from the main `Router` class 
+to be able to change the communication protocol in the future. In this class, you create tasks (in asynchronous 
+code, think of a task as a thread) and encode/decode requests/response messages into their `ValueResponse` and 
+`ValueRequest` object representation.
+
+The second part of the server is **tree**. It is a tree of interconnected modules responsible for processing requests 
+and generating responses. The creation of the tree is done in the build file. More described in 
+section [OCABOX_BUILD_FILE_NAME](#OCABOX_BUILD_FILE_NAME) and examples directory.
+
+There are many modules, please refer to the documentation of each module before using it, as some of them 
+have special requirements for adjacency with other modules. Each module has a unique id name. With its help, it is 
+possible to configure it individually. If it is missing, it will be taken from the values set for the given module type. 
+Some modules have an address that is used in requests to redirect them to the right place. For this reason, the very 
+construction of the tree depends on how the queries sent by clients will look like.
+
 ## License
 
