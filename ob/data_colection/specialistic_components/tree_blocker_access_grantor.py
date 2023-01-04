@@ -11,9 +11,6 @@ from ob.data_colection.value_call import ValueRequest
 
 logger = logging.getLogger(__name__)
 
-# todo dodać wywłaszczanie osób
-# TODO dodać logowanie np jak ktoś zablokuje jak odblokuje żeby można było śledzić co się dzieje
-
 
 class TreeBlockerAccessGrantor(TreeProvider):
     """
@@ -47,15 +44,29 @@ class TreeBlockerAccessGrantor(TreeProvider):
         if command == 'take_control':
             try:
                 self._target_blocker.make_reservation(user=user, timeout_reservation=timeout_reservation)
+                logger.info(f"The user: {user} successfully take control of the blocker.")
                 return Value(v=True, ts=time.time())
             except ReservationError:
+                logger.info(f"The user: {user} failed to take control of the blocker. Blocker is already in use.")
                 return Value(v=False, ts=time.time())
+
+        if command == 'break_control':
+            current_user = self._target_blocker.get_current_user()
+            if current_user is None:
+                logger.info(f"The user: {user} tried to take control of the blocker, but no one had it.")
+                return Value(v=True, ts=time.time())
+            else:
+                logger.info(f"The user: {user} cancel control of the blocker for current user {current_user}.")
+                self._target_blocker.cancel_reservation()
+                return Value(v=True, ts=time.time())
 
         if command == 'return_control':
             current_user = self._target_blocker.get_current_user()
             if current_user is None or current_user == user:
+                logger.info(f"The user: {user} successfully return control of the blocker.")
                 self._target_blocker.cancel_reservation()
                 return Value(v=True, ts=time.time())
+            logger.info(f"The user: {user} failed return control of the blocker.")
             return Value(v=False, ts=time.time())
 
         if command == 'current_user':
