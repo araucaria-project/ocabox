@@ -3,6 +3,9 @@
 ob/__pycache__/
 
 ob/router/__pycache__/
+poetry.lock
+
+ocabox.egg-info/
 
 ob/configuration/*
 !ob/configuration/.gitkeep
