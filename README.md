@@ -190,4 +190,4 @@ Some modules have an address that is used in requests to redirect them to the ri
 construction of the tree depends on how the queries sent by clients will look like.
 
 ## License
-
+The [MIT](LICENSE) License
