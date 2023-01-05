@@ -1,8 +1,11 @@
 import asyncio
 import unittest
+import logging
 
 from ob.data_colection.alpaca_api.connector import AlpacaConnector
-import logging
+from ob.ob_config import SingletonConfig
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -108,8 +111,8 @@ class AlpacaConnectorTest(unittest.TestCase):
 
     def test__get(self):
         alpaca = AlpacaConnector()
-        # TODO ustawic jakis domyslny adres dla testow w configu
-        url = "http://localhost/api/v1/telescope/0/altitude?ClientID=0&ClientTransactionID=0"
+        url_address_from_config = SingletonConfig.get_config()['tree']['test_observatory']['observatory']['address'].get()
+        url = f"{url_address_from_config}/telescope/0/altitude?ClientID=0&ClientTransactionID=0"
 
         async def coro():
             await alpaca.create_http_session()
@@ -125,8 +128,8 @@ class AlpacaConnectorTest(unittest.TestCase):
 
     def test_scan_connection(self):
         alpaca = AlpacaConnector()
-        # TODO ustawic jakis domyslny adres dla testow w configu
-        url = "http://localhost:80/api/v1"
+        url_address_from_config = SingletonConfig.get_config()['tree']['test_observatory']['observatory']['address'].get()
+        url = url_address_from_config
 
         async def coro():
             await alpaca.create_http_session()

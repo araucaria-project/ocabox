@@ -9,7 +9,7 @@ from ob.data_colection.value_call import ValueRequest
 
 @runtime_checkable
 class KnownValueProtocol(Protocol):
-    # TODO może ten protokol powinien być w sierodku TreeCacheProtocol MIKOŁAJ
+
     def get_change_time(self) -> float:
         pass
 
