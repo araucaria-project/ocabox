@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ocabox"
-version = "0.1.0"
+version = "0.1.1"
 license = "MIT"
 description = ""
 authors = ["Ernest Lasek <elasek@akond.com>, Mikołaj Kałuszyński <mkalusz@camk.edu.pl>"]
@@ -10,6 +10,7 @@ keywords = ["ocabox"]
 packages = [
     { include = "ob" },
     { include = "examples" },
+    { include = "test" },
 ]
 
 [tool.poetry.dependencies]

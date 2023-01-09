@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.1.1] - 2023-01-09
+### Fixed
+- Fixed cmd_client console
+### Changed
+- path to test folder will be getting from project dir root instead current context
+
 ## [0.1.0] - 2023-01-05
 ### Added
 - The first working version of the project

@@ -191,11 +191,12 @@ class Client(BaseCommunicationObject):
             # last query, wait for the receive task to close before returning a response.
             # IN CASE OF PERFORMANCE PROBLEMS, rethink the options witch 'await asyncio.sleep(0)'
             with suppress(asyncio.CancelledError):
-                await task
-            # self._msg_event = None  # DO NOT CLEAR EVENT !!! not like this here. Maby use Condition instead if we
-            # want set to None
+                await task  # WARNING, If this fragment is removed, condition cannot be set to none
             if task.done():
                 logger.info(f"<{self._TYPE}><{self.name}> retrieve task was stopped")
+        # Condition can be set to None because if there is a task, this method waiting for him 'await task'.
+        # and all other methods get the condition into a local variable
+        self._msg_condition = None
 
     def _clear_old_msg(self):
         """This method cleaning the _new_msgs list from old messages witch no one wanting for."""
