@@ -105,7 +105,7 @@ class TreeAlpacaObservatory(TreeBaseProvider):
             # when can not connect to alpaca
             logger.warning(f"Server alpaca is not responding")
             raise TreeValueError(address=None, code=2002, message=f"Server alpaca is not responding")
-        except TypeError:
+        except (TypeError, ValueError):
             # when given arguments is wrong
             logger.warning(f"Alpaca driver get wrong arguments to run function")
             raise AddressError(address=address, code=1003, message=f"Wrong arguments for method")
