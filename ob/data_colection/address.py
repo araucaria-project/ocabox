@@ -82,6 +82,6 @@ class AddressError(BaseCodedError):
 
     def __init__(self, address: Address or str = '', code: int = CODE_GROUP, message="", **kwargs):
         self.address = address
-        if address and (isinstance(address, Address) or isinstance(address, str)):
+        if not message and address and (isinstance(address, Address) or isinstance(address, str)):
             message = f'The address {str(address)} is incorrect'
         super().__init__(message=message, code=code, **kwargs)

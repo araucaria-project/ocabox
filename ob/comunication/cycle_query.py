@@ -51,6 +51,9 @@ class BaseCycleQuery(ABC):
         self._set_loop()  # can raise CommunicationRuntimeError
         self._list_request: List[ValueRequest] = list_request
         self._errors: CommunicationRuntimeError or None = None
+        self._callback_methods_a: list = []
+        self._callback_methods: list = []
+        self._callback_task: asyncio.Task or None = None
 
     async def get_response(self) -> List[ValueResponse]:
         """
@@ -110,6 +113,7 @@ class BaseCycleQuery(ABC):
         """
         if self.is_stopped():
             self._run()
+            self._run_callbacks()
         else:
             logger.warning(f"{self._query_name}: This cycle query is already started")
 
@@ -118,14 +122,20 @@ class BaseCycleQuery(ABC):
         if not self.is_stopped() and not self._task.done():
             self._task.cancel()
             self._event.set()
+        if not (self._callback_task and self._callback_task in asyncio.all_tasks(
+                self._loop)) and not self._callback_task.done():
+            self._callback_task.cancel()
 
     async def stop_and_wait(self):
-        if not self.is_stopped():
-            self.stop()
-            try:
-                await self._task
-            except asyncio.CancelledError:
-                pass
+        self.stop()
+        try:
+            await self._task
+        except asyncio.CancelledError:
+            pass
+        try:
+            await self._callback_task
+        except asyncio.CancelledError:
+            pass
 
     def is_stopped(self):
         """
@@ -143,6 +153,40 @@ class BaseCycleQuery(ABC):
             logger.warning(f"{self._query_name}: Object cycle query was destroyed before the main task exited. The "
                            f"main task has stopped but is still in the event loop. Before ending the program, you have "
                            f"to wait for it to be properly removed from the event loop.")
+
+    def add_callback_async_method(self, method):
+        self._callback_methods_a.append(method)
+
+    def add_callback_method(self, method):
+        self._callback_methods.append(method)
+
+    def _run_callbacks(self):
+        self._callback_task = self._loop.create_task(self._execute_callbacks())
+
+    async def _execute_callbacks(self):
+        """Main loop for callback runner task"""
+        while True:
+            # it is not necessary to check main task is still running because it is realized in 'get_response'
+            await asyncio.sleep(0)
+            try:
+                result = await self.get_response()
+            except CommunicationRuntimeError:
+                return
+            for a_method in self._callback_methods_a:
+                if callable(a_method):
+                    try:
+                        logger.debug(f"{self._query_name}: Execute callback {a_method.__name__}")
+                        await a_method(result)
+                    except TypeError as e:
+                        logger.error(f"Error in callback method {a_method.__name__}. Error: {e}")
+
+            for method in self._callback_methods:
+                if callable(method):
+                    try:
+                        logger.debug(f"{self._query_name}: Execute callback {method.__name__}")
+                        method(result)
+                    except TypeError as e:
+                        logger.error(f"Error in callback method {method.__name__}. Error: {e}")
 
 
 class PeriodicCycleQuery(BaseCycleQuery):
