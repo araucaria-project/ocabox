@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 class Router(BaseCommunicationObject):
     DEFAULT_NAME = 'DefaultRouter'
-    _TYPE = 'router'
+    TYPE = 'router'
 
     def __init__(self, request_solver: BaseRequestSolver or None, name: str = None, port: int = None, **kwargs):
         super().__init__(name=name, port=port, **kwargs)
