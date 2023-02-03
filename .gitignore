@@ -1,6 +1,6 @@
 .DS_Store
 .idea/
-ob/__pycache__/
+__pycache__
 
 ob/router/__pycache__/
 poetry.lock
@@ -12,3 +12,6 @@ ob/configuration/*
 !ob/configuration/__init__.py
 !ob/configuration/tree_build_example.py
 !ob/configuration/sample_config.yaml
+
+venv/
+.venv/
