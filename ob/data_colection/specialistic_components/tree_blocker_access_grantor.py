@@ -19,6 +19,7 @@ class TreeBlockerAccessGrantor(TreeProvider):
         - take_control - this command reserves access for the user, is posible to give specific timeout in request
             data, use 'timeout_reservation' parameter
         - return_control - this command cancel reserves access for the user
+        - break_control - this command cancel control from the current user, every one can send this
         - current_user - this command return current user witch one is currently accessing
         - timeout_current_control - this command return timeout for currently accessing user
     """

@@ -156,9 +156,10 @@ class CMD_Client(OBApp):
         except KeyboardInterrupt as e:
             self.logger.error(f'Request was stop by KeyboardInterrupt')
             return 0
-        finally:
-            del self.c_api
         return 1
+
+    def __del__(self):
+        del self.c_api
 
 
 def main():

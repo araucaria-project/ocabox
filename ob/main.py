@@ -38,7 +38,7 @@ def main(argv=None):
     if BUILD_FILE is None:
         BUILD_FILE = SingletonConfig.get_config()['OCABOX_BUILD_FILE_NAME'].get()
     if BUILD_FILE is None:
-        logger.error(f"Can not find any build tree file")
+        logger.error(f"Can not find any bu§ild tree file")
         raise RuntimeError
     logger.info(f"Tree will be build from: {BUILD_FILE}")
 

@@ -1,9 +1,10 @@
 import unittest
+from definitions import TEST_DIR
 
 
 def main():
     loader = unittest.TestLoader()
-    start_dir = '.'
+    start_dir = TEST_DIR
     suite = loader.discover(start_dir)
 
     runner = unittest.TextTestRunner()
