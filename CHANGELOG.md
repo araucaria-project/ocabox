@@ -4,7 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-## [0.1.1] - 2023-01-09
+## [0.1.1] - 2023-02-03
+### Added
+- Callback method to cycle query
 ### Fixed
 - Fixed cmd_client console
 ### Changed
@@ -21,4 +23,4 @@ All notable changes to this project will be documented in this file.
 
 [Unreleased]: https://github.com/araucaria-project/ocabox
 
-[0.1.0]: https://github.com/araucaria-project/ocabox
+[0.1.1]: https://github.com/araucaria-project/ocabox

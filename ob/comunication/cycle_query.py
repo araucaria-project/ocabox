@@ -155,9 +155,17 @@ class BaseCycleQuery(ABC):
                            f"to wait for it to be properly removed from the event loop.")
 
     def add_callback_async_method(self, method):
+        """
+        This method added a given method to list method with one run after cycle query retrieve a nev message
+        :param method: asyncio method
+        """
         self._callback_methods_a.append(method)
 
     def add_callback_method(self, method):
+        """
+        This method added a given method to list method with one run after cycle query retrieve a nev message
+        :param method: no async method
+        """
         self._callback_methods.append(method)
 
     def _run_callbacks(self):
