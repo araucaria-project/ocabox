@@ -122,6 +122,34 @@ class ClientAPI:
                                        max_missed_msg=max_missed_msg, name=name)
         return CQ_API
 
+    async def subscribe_with_callback(self, address: str or Address, time_of_data_tolerance: float or None = None,
+                                      delay: float or None = None, parameters_dict: dict = None,
+                                      name: str = 'Default_subscription', max_missed_msg: int = None,
+                                      callback_method=None, async_callback_method=None) -> BaseCycleQuery:
+        """
+        This method creates a cycle query that only returns new values. The `ConditionalCycleQuery` object is
+        created, started and returned.
+
+        :param address: address
+        :param time_of_data_tolerance: how old data can be returned. This time should be greater than that specified
+            in config file for `TreeConditionalFreezer` object
+        :param delay: request delay, minimum interval between responses
+        :param parameters_dict: dict of parameters to send witch request GET/PUT/etc...
+        :param name: name of the subscription
+        :param max_missed_msg: more information in :class:`.cycle_query.ConditionalCycleQuery`
+        :param callback_method: method with one will be run after CycleQuery retrieve message from server
+        :param async_callback_method: async method with one will be run after CycleQuery retrieve message from server
+        :return:
+        """
+        cq = await self.subscribe(address=address, time_of_data_tolerance=time_of_data_tolerance, delay=delay,
+                                  parameters_dict=parameters_dict, name=name, max_missed_msg=max_missed_msg)
+        if callback_method is not None:
+            cq.add_callback_method(callback_method)
+        if async_callback_method is not None:
+            cq.add_callback_async_method(async_callback_method)
+        cq.start()
+        return cq
+
     async def send_cycle_multipart(self, address: str or Address, time_of_data_tolerance: float or None = None,
                                    delay: float or None = None, parameters_dict: dict = None,
                                    name: str = 'Default_cycle_request', max_missed_msg: int = None,

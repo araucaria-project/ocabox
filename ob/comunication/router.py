@@ -25,6 +25,7 @@ class Router(BaseCommunicationObject):
         # IMPORTANT Pending messages shall be discarded immediately when the socket is closed
         self._front_socket.setsockopt(zmq.LINGER, 0)
         address = f"{self._get_cfg('protocol', 'tcp')}://{self._get_cfg('url', '*')}:{self._port}"
+        logger.info(f"Router start on: {address}")
         try:
             self._front_socket.bind(address)
         except zmq.error.ZMQError:
