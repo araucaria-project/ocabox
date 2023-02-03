@@ -12,13 +12,13 @@ logger = logging.getLogger(__name__)
 
 class BaseCommunicationObject(ABC):
     DEFAULT_NAME = 'BaseCommunicationObject'
-    _TYPE = 'default_communication_object'
+    TYPE = 'default_communication_object'
 
     def __init__(self, name: str = None, port: int = None, **kwargs):
         self.name = name if name else self.DEFAULT_NAME
         self._port = port if port else self._get_cfg('port')
         if not self._port or not isinstance(self._port, int):
-            logger.error(f"Can not get correct port for {self._TYPE}")
+            logger.error(f"Can not get correct port ({self._port}) for {self.TYPE}")
             raise RuntimeError
         # OMQ
         self.context = Context()
@@ -39,11 +39,11 @@ class BaseCommunicationObject(ABC):
         :return: config value or None if method can't find it
         """
         try:
-            value = SingletonConfig.get_config()[self._TYPE][self.name][name_cfg].get()
+            value = SingletonConfig.get_config()[self.TYPE][self.name][name_cfg].get()
         except confuse.exceptions.NotFoundError:
             if default is None and use_default_settings:
                 try:
-                    value = SingletonConfig.get_config()[self._TYPE][self.DEFAULT_NAME][name_cfg].get()
+                    value = SingletonConfig.get_config()[self.TYPE][self.DEFAULT_NAME][name_cfg].get()
                 except confuse.exceptions.NotFoundError:
                     value = default
             else:

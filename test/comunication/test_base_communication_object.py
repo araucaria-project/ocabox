@@ -10,7 +10,7 @@ from ob.comunication.multipart_structure import MultipartStructure
 class BaseCommunicationObjectTest(unittest.TestCase):
     class SampleBaseCommunicationObject(BaseCommunicationObject):
         DEFAULT_NAME = 'SampleBaseCommunicationObject'
-        _TYPE = 'client'
+        TYPE = 'client'
 
     def test__get_time_to_expire(self):
         bco = self.SampleBaseCommunicationObject(name='SampleTestClient')

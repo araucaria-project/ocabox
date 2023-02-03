@@ -7,6 +7,7 @@ from ob.data_colection.address import AddressError, Address
 from ob.data_colection.response_error import ResponseError
 from ob.data_colection.tree_user import TreeUser
 from ob.data_colection.value_call import ValueRequest, ValueResponse
+from ob.ob_config import SingletonConfig
 
 logger = logging.getLogger(__name__)
 
@@ -177,3 +178,7 @@ class ClientAPI:
         CQ_API = PeriodicCycleQuery(client=self.client, list_request=[request], delay=delay,
                                     max_missed_msg=max_missed_msg, name=name, log_missed_msg=log_missed_msg)
         return CQ_API
+
+    @staticmethod
+    def client_config():
+        return SingletonConfig.get_config()

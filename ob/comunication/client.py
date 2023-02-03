@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 class Client(BaseCommunicationObject):
     DEFAULT_NAME = 'DefaultClient'
-    _TYPE = 'client'
+    TYPE = 'client'
 
     def __init__(self, name: str = None, port: int = None, **kwargs):
         super().__init__(name=name, port=port, **kwargs)
@@ -70,9 +70,9 @@ class Client(BaseCommunicationObject):
         :raise CommunicationTimeoutError:
         :return: MultipartStructure or None
         """
-        logger.debug(f"<{self._TYPE}><{self.name}> sending request... ({ms.create_time} | {ms.id_})")
+        logger.debug(f"<{self.TYPE}><{self.name}> sending request... ({ms.create_time} | {ms.id_})")
         sending_result = await self._front_socket.send_multipart(ms.multipart)
-        logger.debug(f"<{self._TYPE}><{self.name}> message was send the request ({ms.create_time} | {ms.id_})")
+        logger.debug(f"<{self.TYPE}><{self.name}> message was send the request ({ms.create_time} | {ms.id_})")
         if not no_wait:
             try:
                 await self._stand_in_line()  # can raise CommunicationRuntimeError
@@ -94,10 +94,10 @@ class Client(BaseCommunicationObject):
             return None
 
     async def _wait_for_response(self, msg_create_time_b: bytes, msg_id_b: bytes) -> MultipartStructure:
-        logger.debug(f"<{self._TYPE}><{self.name}> waiting for response...")
+        logger.debug(f"<{self.TYPE}><{self.name}> waiting for response...")
         condition = self._msg_condition
         if condition is None:
-            logger.debug(f"<{self._TYPE}><{self.name}> in wait for response _msg_condition is None")
+            logger.debug(f"<{self.TYPE}><{self.name}> in wait for response _msg_condition is None")
             raise CommunicationRuntimeError(message=f"The condition has not been set")
 
         async with condition:
@@ -109,7 +109,7 @@ class Client(BaseCommunicationObject):
                 await condition.wait()
                 message = self._check_message_comes(msg_create_time_b, msg_id_b)
                 if message:
-                    logger.debug(f"<{self._TYPE}><{self.name}> response comes")
+                    logger.debug(f"<{self.TYPE}><{self.name}> response comes")
                     break
                 await asyncio.sleep(0)  # this will allow other tasks to do something
         self._new_msgs.remove(message)
@@ -126,7 +126,7 @@ class Client(BaseCommunicationObject):
                     ms = self._open_envelope(multipart)
                     self._new_msgs.append(ms)
                 except ValueError:
-                    logger.error(f"<{self._TYPE}><{self.name}> received message is corrupted, it will be discarded.")
+                    logger.error(f"<{self.TYPE}><{self.name}> received message is corrupted, it will be discarded.")
                 condition = self._msg_condition
                 async with condition:
                     condition.notify_all()
@@ -172,9 +172,9 @@ class Client(BaseCommunicationObject):
         # create condition
         if self._msg_condition is None:
             self._msg_condition = asyncio.Condition()
-            logger.debug(f"<{self._TYPE}><{self.name}> create event")
+            logger.debug(f"<{self.TYPE}><{self.name}> create event")
         self._receive_task = loop.create_task(self._receive_msgs())
-        logger.debug(f"<{self._TYPE}><{self.name}> run receiver")
+        logger.debug(f"<{self.TYPE}><{self.name}> run receiver")
 
     async def _stop_receiver(self):
         """
@@ -185,7 +185,7 @@ class Client(BaseCommunicationObject):
         task = self._receive_task
         if task:
             task.cancel()
-            logger.debug(f"<{self._TYPE}><{self.name}> stop receiver")
+            logger.debug(f"<{self.TYPE}><{self.name}> stop receiver")
             self._receive_task = None
             self._loop = None
             # last query, wait for the receive task to close before returning a response.
@@ -193,7 +193,7 @@ class Client(BaseCommunicationObject):
             with suppress(asyncio.CancelledError):
                 await task  # WARNING, If this fragment is removed, condition cannot be set to none
             if task.done():
-                logger.info(f"<{self._TYPE}><{self.name}> retrieve task was stopped")
+                logger.info(f"<{self.TYPE}><{self.name}> retrieve task was stopped")
         # Condition can be set to None because if there is a task, this method waiting for him 'await task'.
         # and all other methods get the condition into a local variable
         self._msg_condition = None
