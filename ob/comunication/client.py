@@ -26,7 +26,7 @@ class Client(BaseCommunicationObject):
         self._front_socket.setsockopt(zmq.LINGER, 0)
         self._front_socket.connect(f"{self._get_cfg('protocol')}://{self._get_cfg('url')}:{self._port}")
         # message service
-        self._msg_condition: asyncio.Condition or None = None
+        self._msg_con = None
         self._new_msgs: List[MultipartStructure] = []
         self._cleaning_length = 10
         self._create_time = 0
@@ -35,6 +35,33 @@ class Client(BaseCommunicationObject):
         self._is_working_receive_task = False
         self._loop = None
         self._waiting_amount = 0
+
+    def _get_loop(self):
+        """
+        :raise CommunicationRuntimeError
+        :return:
+        """
+        if self._loop is None:
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                # this shouldn't happen
+                logger.error(f"Can not get current async loop, something goes wrong. "
+                             f"Check that you are not trying to use the same client in 2 different threads")
+                raise CommunicationRuntimeError(message='Can not get current async loop')
+            self._loop = loop
+        return self._loop
+
+    @property
+    def _msg_condition(self) -> asyncio.Condition:
+        """
+        Warning Can be used only when async loop is already created in background otherwise it creates a new loop
+        """
+        self._get_loop()  # init a loop property
+        if self._msg_con is None:
+            self._msg_con = asyncio.Condition()
+            logger.debug(f"<{self.TYPE}><{self.name}> created condition")
+        return self._msg_con
 
     def _get_msg_create_time(self) -> bytes:
         """
@@ -72,7 +99,7 @@ class Client(BaseCommunicationObject):
         """
         logger.debug(f"<{self.TYPE}><{self.name}> sending request... ({ms.create_time} | {ms.id_})")
         sending_result = await self._front_socket.send_multipart(ms.multipart)
-        logger.debug(f"<{self.TYPE}><{self.name}> message was send the request ({ms.create_time} | {ms.id_})")
+        logger.debug(f"<{self.TYPE}><{self.name}> message was send. The request ID: ({ms.create_time} | {ms.id_})")
         if not no_wait:
             try:
                 await self._stand_in_line()  # can raise CommunicationRuntimeError
@@ -83,7 +110,8 @@ class Client(BaseCommunicationObject):
                 except asyncio.TimeoutError:
                     # logger.info(f"the response did not come before timeout {self.timeout}s")
                     raise CommunicationTimeoutError(
-                        message=f"The response did not come before timeout {time_to_expire}s")
+                        message=f"The response did not come before timeout {time_to_expire}s, "
+                                f"The request ID: ({ms.create_time} | {ms.id_})")
                 except CommunicationRuntimeError:
                     raise
             except CommunicationRuntimeError:
@@ -162,19 +190,11 @@ class Client(BaseCommunicationObject):
         :raise CommunicationRuntimeError:
         :return: None
         """
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            # this shouldn't happen
-            logger.error(f"Can not get current async loop, something goes wrong")
-            raise CommunicationRuntimeError(message='Can not get current async loop')
-        self._loop = loop
-        # create condition
-        if self._msg_condition is None:
-            self._msg_condition = asyncio.Condition()
-            logger.debug(f"<{self.TYPE}><{self.name}> create event")
-        self._receive_task = loop.create_task(self._receive_msgs())
-        logger.debug(f"<{self.TYPE}><{self.name}> run receiver")
+        con = self._msg_condition
+        async with con:
+            loop = self._get_loop()
+            self._receive_task = loop.create_task(self._receive_msgs())
+            logger.debug(f"<{self.TYPE}><{self.name}> run receiver")
 
     async def _stop_receiver(self):
         """
@@ -182,21 +202,19 @@ class Client(BaseCommunicationObject):
 
         :return: None
         """
-        task = self._receive_task
-        if task:
-            task.cancel()
-            logger.debug(f"<{self.TYPE}><{self.name}> stop receiver")
-            self._receive_task = None
-            self._loop = None
-            # last query, wait for the receive task to close before returning a response.
-            # IN CASE OF PERFORMANCE PROBLEMS, rethink the options witch 'await asyncio.sleep(0)'
-            with suppress(asyncio.CancelledError):
-                await task  # WARNING, If this fragment is removed, condition cannot be set to none
-            if task.done():
-                logger.info(f"<{self.TYPE}><{self.name}> retrieve task was stopped")
-        # Condition can be set to None because if there is a task, this method waiting for him 'await task'.
-        # and all other methods get the condition into a local variable
-        self._msg_condition = None
+        con = self._msg_condition
+        async with con:
+            task = self._receive_task
+            if task:
+                task.cancel()
+                logger.debug(f"<{self.TYPE}><{self.name}> stop receiver")
+                self._receive_task = None
+        # last query, wait for the receive task to close before returning a response.
+        # IN CASE OF PERFORMANCE PROBLEMS, rethink the options witch 'await asyncio.sleep(0)'
+        with suppress(asyncio.CancelledError):
+            await task  # WARNING, If this fragment is removed, condition cannot be set to none
+        if task.done():
+            logger.info(f"<{self.TYPE}><{self.name}> retrieve task was stopped")
 
     def _clear_old_msg(self):
         """This method cleaning the _new_msgs list from old messages witch no one wanting for."""

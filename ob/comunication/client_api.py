@@ -33,6 +33,7 @@ class ClientAPI:
                                request_timeout=request_timeout,
                                request_data=parameters_dict,
                                user=self.user)
+        # todo tu jest coś nie tak gdy wysyła się 2 razy zapytanie i powołuje nowych client z każdym razem
         return await self.send_single(request)
 
     async def put_async(self, address, time_of_data: float or None = None,
