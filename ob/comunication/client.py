@@ -27,6 +27,7 @@ class Client(BaseCommunicationObject):
         self._front_socket.connect(f"{self._get_cfg('protocol')}://{self._get_cfg('url')}:{self._port}")
         # message service
         self._msg_con = None
+        self._recv_lock = None
         self._new_msgs: List[MultipartStructure] = []
         self._cleaning_length = 10
         self._create_time = 0
@@ -39,7 +40,7 @@ class Client(BaseCommunicationObject):
     def _get_loop(self):
         """
         :raise CommunicationRuntimeError
-        :return:
+        :return: asyncio.Loop
         """
         if self._loop is None:
             try:
@@ -54,14 +55,21 @@ class Client(BaseCommunicationObject):
 
     @property
     def _msg_condition(self) -> asyncio.Condition:
-        """
-        Warning Can be used only when async loop is already created in background otherwise it creates a new loop
-        """
+        """Warning Can be used only when async loop is already created in background otherwise it creates a new loop"""
         self._get_loop()  # init a loop property
         if self._msg_con is None:
             self._msg_con = asyncio.Condition()
             logger.debug(f"<{self.TYPE}><{self.name}> created condition")
         return self._msg_con
+
+    @property
+    def _receiver_lock(self) -> asyncio.Lock:
+        """Warning Can be used only when async loop is already created in background otherwise it creates a new loop"""
+        self._get_loop()  # init a loop property
+        if self._recv_lock is None:
+            self._recv_lock = asyncio.Lock()
+            logger.debug(f"<{self.TYPE}><{self.name}> created receiver lock")
+        return self._recv_lock
 
     def _get_msg_create_time(self) -> bytes:
         """
@@ -152,6 +160,7 @@ class Client(BaseCommunicationObject):
                     if len(self._new_msgs) >= self._cleaning_length:
                         self._clear_old_msg()
                     ms = self._open_envelope(multipart)
+                    logger.debug(f"<{self.TYPE}><{self.name}> new message comes to client socket")
                     self._new_msgs.append(ms)
                 except ValueError:
                     logger.error(f"<{self.TYPE}><{self.name}> received message is corrupted, it will be discarded.")
@@ -174,14 +183,16 @@ class Client(BaseCommunicationObject):
         :raise CommunicationRuntimeError:
         :return:
         """
-        self._waiting_amount += 1
-        if not self._receive_task:
-            await self._run_receiver()
+        async with self._receiver_lock:
+            self._waiting_amount += 1
+            if not self._receive_task:
+                await self._run_receiver()
 
     async def _skip_the_line(self):
-        self._waiting_amount -= 1
-        if self._waiting_amount == 0:
-            await self._stop_receiver()
+        async with self._receiver_lock:
+            self._waiting_amount -= 1
+            if self._waiting_amount == 0:
+                await self._stop_receiver()
 
     async def _run_receiver(self):
         """
@@ -190,11 +201,9 @@ class Client(BaseCommunicationObject):
         :raise CommunicationRuntimeError:
         :return: None
         """
-        con = self._msg_condition
-        async with con:
-            loop = self._get_loop()
-            self._receive_task = loop.create_task(self._receive_msgs())
-            logger.debug(f"<{self.TYPE}><{self.name}> run receiver")
+        loop = self._get_loop()
+        self._receive_task = loop.create_task(self._receive_msgs())
+        logger.debug(f"<{self.TYPE}><{self.name}> run receiver")
 
     async def _stop_receiver(self):
         """
@@ -202,19 +211,17 @@ class Client(BaseCommunicationObject):
 
         :return: None
         """
-        con = self._msg_condition
-        async with con:
-            task = self._receive_task
-            if task:
-                task.cancel()
-                logger.debug(f"<{self.TYPE}><{self.name}> stop receiver")
-                self._receive_task = None
+        task = self._receive_task
+        if task:
+            task.cancel()
+            logger.debug(f"<{self.TYPE}><{self.name}> stop receiver")
+            self._receive_task = None
         # last query, wait for the receive task to close before returning a response.
         # IN CASE OF PERFORMANCE PROBLEMS, rethink the options witch 'await asyncio.sleep(0)'
         with suppress(asyncio.CancelledError):
             await task  # WARNING, If this fragment is removed, condition cannot be set to none
         if task.done():
-            logger.info(f"<{self.TYPE}><{self.name}> retrieve task was stopped")
+            logger.debug(f"<{self.TYPE}><{self.name}> retrieve task was stopped")
 
     def _clear_old_msg(self):
         """This method cleaning the _new_msgs list from old messages witch no one wanting for."""
