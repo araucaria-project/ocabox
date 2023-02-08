@@ -55,6 +55,9 @@ class BaseCycleQuery(ABC):
         self._callback_methods: list = []
         self._callback_task: asyncio.Task or None = None
 
+    def get_name(self):
+        return self._query_name
+
     async def get_response(self) -> List[ValueResponse]:
         """
         This method waits for the next response and returns it when it comes.
