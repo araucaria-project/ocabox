@@ -260,6 +260,10 @@ class Switch(Device):
     """Switch specific methods."""
 
 
+class CoverCalibrator(Device):
+    """CoverCalibrator specific methods."""
+
+
 class SafetyMonitor(Device):
     """Safety monitor specific methods."""
 
@@ -368,4 +372,5 @@ _component_classes = {
     'rotator': Rotator,
     'switch': Switch,
     'safetymonitor': SafetyMonitor,
+    'covercalibrator': CoverCalibrator,
 }
