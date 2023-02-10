@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import List
 from ob.comunication.client import Client
@@ -33,6 +34,7 @@ class ClientAPI:
                                request_timeout=request_timeout,
                                request_data=parameters_dict,
                                user=self.user)
+        # todo tu jest coś nie tak gdy wysyła się 2 razy zapytanie i powołuje nowych client z każdym razem
         return await self.send_single(request)
 
     async def put_async(self, address, time_of_data: float or None = None,
@@ -150,6 +152,29 @@ class ClientAPI:
             cq.add_callback_async_method(async_callback_method)
         cq.start()
         return cq
+
+    async def run_subscription_callbacks(self, address: str or Address, time_of_data_tolerance: float or None = None,
+                                         delay: float or None = None, parameters_dict: dict = None,
+                                         name: str = 'Default_subscription', max_missed_msg: int = None,
+                                         callback_method=None, async_callback_method=None):
+        cq = await self.subscribe_with_callback(address=address, time_of_data_tolerance=time_of_data_tolerance,
+                                                delay=delay,
+                                                parameters_dict=parameters_dict, name=name,
+                                                max_missed_msg=max_missed_msg,
+                                                callback_method=callback_method,
+                                                async_callback_method=async_callback_method)
+        try:
+            while True:
+                await asyncio.sleep(0)
+                await cq.get_response()
+                # todo w przyszłości pomyśleć nad przeniesieniem nieskończonej pętli do CycleQuery i zastąpieniem jej
+                #  przez Condition które jest uwalniane po zamknięciu CycleQuery
+        except CommunicationRuntimeError as e:
+            logger.error(f"updater named {name} receive CommunicationRuntimeError: {e}")
+        finally:
+            await cq.stop_and_wait()  # it is recommended to use this method instead of the usual Stop() because it
+            # waits for the query to finish and the stop method only puts it in a closing state which can take some
+            # time and must be terminated before the end of the program
 
     async def send_cycle_multipart(self, address: str or Address, time_of_data_tolerance: float or None = None,
                                    delay: float or None = None, parameters_dict: dict = None,

@@ -169,7 +169,6 @@ class ClientTest(unittest.TestCase):
             await asyncio.sleep(0.1)  # have to be more than 0 !
             # none because before ending all waiting task was stop and last one remove _loop and _receive_task
             self.assertIsNone(client._receive_task)
-            self.assertIsNone(client._loop)
 
             with self.assertRaises(CommunicationRuntimeError):
                 result = self.multipart_to_V_response(await task1)

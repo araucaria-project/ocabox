@@ -26,7 +26,7 @@ async def make_subscribe(api, cq):
         print('error')
     finally:
         print('stopping...')
-        cq.stop()
+        await cq.stop_and_wait()
 
 
 if __name__ == '__main__':

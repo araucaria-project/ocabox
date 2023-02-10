@@ -14,12 +14,24 @@ tree:
         derotator:
           kind: rotator
           device_number: 0  #  address will be taken from parent if not provided
-        guderrotator:
-          kind: rotator
-          device_number: 1  #  address will be taken from parent if not provided
         focuser:
           kind: focuser
           device_number: 0
         dome:
           kind: dome
+          device_number: 0
+        covercalibrator:
+          kind: covercalibrator
+          device_number: 0
+        camera:
+          kind: camera
+          device_number: 0
+        filterwheel:
+          kind: filterwheel
+          device_number: 0
+        switch:
+          kind: switch
+          device_number: 0
+        safetymonitor:
+          kind: safetymonitor
           device_number: 0
