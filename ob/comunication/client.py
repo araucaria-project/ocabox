@@ -44,7 +44,7 @@ class Client(BaseCommunicationObject):
         """
         if self._loop is None:
             try:
-                loop = asyncio.get_running_loop()
+                loop = asyncio.get_event_loop()
             except RuntimeError:
                 # this shouldn't happen
                 logger.error(f"Can not get current async loop, something goes wrong. "

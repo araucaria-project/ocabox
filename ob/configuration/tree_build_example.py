@@ -19,11 +19,12 @@ def tree_build() -> Router:
     # tree
     alpaca_module = TreeAlpacaObservatory('zibi_sample', observatory_name='zibi-ocabox-800')
     alpaca_blocker = TreeRequestAlpacaBlocker('zibi_blocker', alpaca_module)
-    cache_800 = TreeCache('sample_cache', alpaca_blocker)
-    conditional_freezer_800 = TreeConditionalFreezer('conditional_freezer_800', cache_800)
     blocker_grantor = TreeBlockerAccessGrantor('grantor_800', 'access_grantor', alpaca_blocker)
-    broker_800 = TreeBaseBrokerDefaultTarget('broker_800', [blocker_grantor], default_provider=conditional_freezer_800)
-    tp_800 = TreeProvider('module_800', '800', broker_800)
+    broker_800 = TreeBaseBrokerDefaultTarget('broker_800', [blocker_grantor], default_provider=alpaca_blocker)
+    cache_800 = TreeCache('sample_cache', broker_800)
+    conditional_freezer_800 = TreeConditionalFreezer('conditional_freezer_800', cache_800)
+
+    tp_800 = TreeProvider('module_800', '800', conditional_freezer_800)
     vb = TreeBaseBroker('front_broker', [tp_800])
 
     # front receiver blocks

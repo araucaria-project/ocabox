@@ -32,6 +32,7 @@ class TreeBlockerAccessGrantor(TreeProvider):
 
     async def get_value(self, request: ValueRequest, **kwargs) -> Value or None:
         user = request.user
+        request_type = request.request_type
         timeout_reservation = request.request_data.get('timeout_reservation', None)
         # do nothing if request hasn't user
         if user is None:
@@ -42,7 +43,7 @@ class TreeBlockerAccessGrantor(TreeProvider):
         except IndexError:
             raise AddressError(code=1001, message='The address does not contain a command.')
 
-        if command == 'take_control':
+        if command == 'take_control' and request_type == 'PUT':
             try:
                 self._target_blocker.make_reservation(user=user, timeout_reservation=timeout_reservation)
                 logger.info(f"The user: {user} successfully take control of the blocker.")
@@ -51,7 +52,7 @@ class TreeBlockerAccessGrantor(TreeProvider):
                 logger.info(f"The user: {user} failed to take control of the blocker. Blocker is already in use.")
                 return Value(v=False, ts=time.time())
 
-        if command == 'break_control':
+        if command == 'break_control' and request_type == 'PUT':
             current_user = self._target_blocker.get_current_user()
             if current_user is None:
                 logger.info(f"The user: {user} tried to take control of the blocker, but no one had it.")
@@ -61,7 +62,7 @@ class TreeBlockerAccessGrantor(TreeProvider):
                 self._target_blocker.cancel_reservation()
                 return Value(v=True, ts=time.time())
 
-        if command == 'return_control':
+        if command == 'return_control' and request_type == 'PUT':
             current_user = self._target_blocker.get_current_user()
             if current_user is None or current_user == user:
                 logger.info(f"The user: {user} successfully return control of the blocker.")
