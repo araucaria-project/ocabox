@@ -33,4 +33,4 @@ This allows you to subscribe to these values
 
 [Unreleased]: https://github.com/araucaria-project/ocabox
 
-[0.1.1]: https://github.com/araucaria-project/ocabox
+[0.1.2]: https://github.com/araucaria-project/ocabox
