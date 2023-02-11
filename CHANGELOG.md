@@ -3,7 +3,8 @@ All notable changes to this project will be documented in this file.
 
 
 ## [Unreleased]
-
+### Added
+- Added `__repr__` method to the `ValueResponse` class
 ## [0.1.2] - 2023-02-10
 ### Added
 - Added support for CoverCalibrator component to alpaca driver.
