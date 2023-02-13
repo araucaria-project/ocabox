@@ -9,7 +9,7 @@ from ob.data_colection.value_call import ValueRequest
 logger = logging.getLogger(__name__)
 
 
-class TreeBlockerAccessGrantor(TreeProvider):
+class TreePlanExecutor(TreeProvider):
     """
     This module is responsible for launching and managing alpaca observation plans. The module has several defined
     address commands:
