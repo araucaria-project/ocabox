@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.1.3] - 2023-02-13
+### Added
+- Added `__repr__` method to the `ValueResponse` class
+### Fixed
+- Fixed a problem with the request listener task in Client synchronization, where when the response from the server 
+came quite quickly, the main task did not look for it in the list and waited for it until Timeout expired.
+
 ## [0.1.2] - 2023-02-10
 ### Added
 - Added support for CoverCalibrator component to alpaca driver.
@@ -33,4 +40,4 @@ This allows you to subscribe to these values
 
 [Unreleased]: https://github.com/araucaria-project/ocabox
 
-[0.1.2]: https://github.com/araucaria-project/ocabox
+[0.1.3]: https://github.com/araucaria-project/ocabox

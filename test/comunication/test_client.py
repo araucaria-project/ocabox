@@ -68,8 +68,6 @@ class ClientTest(unittest.TestCase):
     def test_has_cfg(self):
         """
         This checks for critical configuration in default file. Always should return something.
-
-        :return:
         """
         client = Client(name='SampleTestClient')
         self.assertIsNone(client._get_cfg('this_is_not_in_config_file'))
@@ -301,6 +299,33 @@ class ClientTest(unittest.TestCase):
             task1.cancel()
             with self.assertRaises(asyncio.CancelledError):
                 await task1
+
+        self.loop.run_until_complete(coro())
+
+    def test_synchronization_receiver_task(self):
+        """
+        Test the situation when the retrieve task starts and receive a message faster than the main task will start
+        waiting for condition. In this situation, condition should be blocked until the main task starts waiting for it.
+        """
+
+        class ClientFastRetriever(Client):
+            """
+            This client is supposed to trigger a situation where the retrieve task will receive the message before
+            the main task waits for condition
+            """
+
+            async def _stand_in_line(self):
+                await super()._stand_in_line()
+                await asyncio.sleep(0.2)  # let the retrieve task start and retrieve first message
+
+        client = ClientFastRetriever(name='SampleTestClient')
+        client.default_timeout = 0.5
+
+        async def coro():
+
+            result = await client.send_singlepart(
+                    ValueRequest('sample_telescope.dibi.azimuth.1', time.time(), 20).to_byte())
+            # can not raisa a CommunicationTimeoutError
 
         self.loop.run_until_complete(coro())
 

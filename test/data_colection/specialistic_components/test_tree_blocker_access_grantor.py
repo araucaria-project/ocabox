@@ -51,7 +51,7 @@ class TreeRequestAlpacaBlockerTest(unittest.TestCase, BaseAsyncTest):
             self.assertTrue(result.error.code == 1004)
             # take control
             req = ValueRequest('.'.join([self.grantor_source_name, 'take_control']),
-                               request_type='GET',
+                               request_type='PUT',
                                user=user)
             result = await self.broker.get_response(request=req)
             self.assertTrue(result.value.v)
@@ -74,7 +74,7 @@ class TreeRequestAlpacaBlockerTest(unittest.TestCase, BaseAsyncTest):
             self.assertIsNotNone(self.blocker.get_current_user)
 
             req = ValueRequest('.'.join([self.grantor_source_name, 'return_control']),
-                               request_type='GET', user=user)
+                               request_type='PUT', user=user)
             result = await self.broker.get_response(request=req)
             self.assertTrue(result.value.v)
             self.assertIsNone(self.blocker.get_current_user())
@@ -120,7 +120,7 @@ class TreeRequestAlpacaBlockerTest(unittest.TestCase, BaseAsyncTest):
             self.assertIsNotNone(self.blocker.get_current_user)
             sample_timeout = 120
             req = ValueRequest('.'.join([self.grantor_source_name, 'take_control']),
-                               request_type='GET',
+                               request_type='PUT',
                                user=user,
                                request_data={'timeout_reservation': sample_timeout + time.time()})
             result = await self.broker.get_response(request=req)
@@ -139,7 +139,7 @@ class TreeRequestAlpacaBlockerTest(unittest.TestCase, BaseAsyncTest):
 
             other_user = TreeServiceUser(name='some_other_user')
             req = ValueRequest('.'.join([self.grantor_source_name, 'break_control']),
-                               request_type='GET', user=other_user)
+                               request_type='PUT', user=other_user)
             result = await self.broker.get_response(request=req)
             self.assertIsNone(self.blocker.get_current_user())
             self.assertTrue(result.value.v)
