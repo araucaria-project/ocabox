@@ -181,3 +181,7 @@ class ValueResponse(ValueExchange):
             pass
         else:
             raise ValueError
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}(adr={self.address}, val={self.value}, ' \
+               f'status={self.status}, error={self.error})'
