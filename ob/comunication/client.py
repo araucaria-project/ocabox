@@ -142,11 +142,12 @@ class Client(BaseCommunicationObject):
                     logger.error(f"The receive task was stopped before retrieve some waiting messages")
                     raise CommunicationRuntimeError(message=f"The receive task was stopped before retrieve some waiting"
                                                             f"messages")
-                await condition.wait()
+                # first check if the message is already there
                 message = self._check_message_comes(msg_create_time_b, msg_id_b)
                 if message:
                     logger.debug(f"<{self.TYPE}><{self.name}> response comes")
                     break
+                await condition.wait()
                 await asyncio.sleep(0)  # this will allow other tasks to do something
         self._new_msgs.remove(message)
         return message
