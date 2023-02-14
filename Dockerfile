@@ -13,6 +13,6 @@ COPY pyproject.toml ./
 
 EXPOSE $OCABOX_ROUTER_PORT
 
-RUN poetry install
-
-RUN poetry run server
+RUN ["poetry", "install"]
+STOPSIGNAL SIGINT
+ENTRYPOINT ["poetry", "run", "server"]
