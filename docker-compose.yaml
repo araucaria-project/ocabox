@@ -10,6 +10,7 @@ services:
       context: ./
       args:
         OCABOX_ROUTER_PORT: ${OCABOX_ROUTER_PORT}
+    stop_signal: SIGINT
     ports:
       - ${OCABOX_ROUTER_PORT}:${OCABOX_ROUTER_PORT}
     volumes:

@@ -5,9 +5,11 @@ import logging
 import os
 import sys
 from ob.ob_config import SingletonConfig
+import signal
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 # config najpierw z ob/config.yaml potem z configuration.config.yaml
 # taka wartośc w env dla build file OCABOX_BUILD_FILE_NAME
@@ -18,7 +20,7 @@ def load_from_file(filename, method_name):
     method_inst = None
     mod_name, file_ext = os.path.splitext(os.path.split(filename)[-1])
     if file_ext.lower() == '.py':
-        py_mod = importlib.import_module('ob.configuration.'+mod_name, __name__)
+        py_mod = importlib.import_module('ob.configuration.' + mod_name, __name__)
     else:
         logger.error(f"wrong file type witch tree build. Expected '.py' file got: {filename}")
         raise RuntimeError
@@ -51,6 +53,10 @@ def main(argv=None):
         loop = asyncio.get_running_loop()
     except RuntimeError:
         loop = asyncio.new_event_loop()
+
+    def ask_exit():
+        raise KeyboardInterrupt
+    loop.add_signal_handler(signal.SIGINT, ask_exit)
 
     try:
         asyncio.set_event_loop(loop)
