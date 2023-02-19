@@ -1,0 +1,282 @@
+tree:
+  oca:
+    observatory:
+      comment: Observatorio Cerro Armazones
+      lon: 24.59806    # OCA
+      lat: -70.19638
+      elev: 2817  # m
+      components:
+        wk06:
+          kind: telescope
+          comment: Wojtek Krzemiński 0.6m Telescope
+          device_number: 0
+          protocol: alpaca
+          address: http://wk06-tcu.oca.lan:11111/api/v1
+          components:
+            mount:
+              kind: telescope
+              device_number: 0
+            derotator:
+              kind: rotator
+              device_number: 0  #  address will be taken from parent if not provided
+            focuser:
+              kind: focuser
+              device_number: 0
+            dome:
+              kind: dome
+              device_number: 0
+            covercalibrator:
+              kind: covercalibrator
+              device_number: 0
+            camera:
+              kind: camera
+              device_number: 0
+            filterwheel:
+              kind: filterwheel
+              device_number: 0
+            switch:
+              kind: switch
+              device_number: 0
+            safetymonitor:
+              kind: safetymonitor
+              device_number: 0
+        zb08:
+          kind: telescope
+          comment: Zbigniew Zibi Kołaczkowski 0.8m Telescope
+          device_number: 0
+          protocol: alpaca
+          address: http://zb08-tcu.oca.lan:11111/api/v1
+          components:
+            mount:
+              kind: telescope
+              device_number: 0
+            derotator:
+              kind: rotator
+              device_number: 0
+            derotator_f2:
+              kind: rotator
+              device_number: 1
+            focuser:
+              kind: focuser
+              device_number: 0
+            dome:
+              kind: dome
+              device_number: 0
+            covercalibrator:
+              kind: covercalibrator
+              device_number: 0
+            camera:
+              kind: camera
+              device_number: 0
+            filterwheel:
+              kind: filterwheel
+              device_number: 0
+            switch:
+              kind: switch
+              device_number: 0
+            safetymonitor:
+              kind: safetymonitor
+              device_number: 0
+        jk15:
+          kind: telescope
+          comment: Janusz Kałużny 1.5m Telescope
+          device_number: 0
+          protocol: alpaca
+          address: http://jk15-tcu.oca.lan:11111/api/v1
+          components:
+            mount:
+              kind: telescope
+              device_number: 0
+            derotator:
+              kind: rotator
+              device_number: 0
+            derotator_f2:
+              kind: rotator
+              device_number: 1
+            focuser:
+              kind: focuser
+              device_number: 0
+            dome:
+              kind: dome
+              device_number: 0
+            covercalibrator:
+              kind: covercalibrator
+              device_number: 0
+            camera:
+              kind: camera
+              device_number: 0
+            filterwheel:
+              kind: filterwheel
+              device_number: 0
+            switch:
+              kind: switch
+              device_number: 0
+            safetymonitor:
+              kind: safetymonitor
+              device_number: 0
+        wg25:
+          kind: telescope
+          comment: Wolfgang Gieren 2.5m Telescope
+          device_number: 0
+          protocol: alpaca
+          address: http://wg25-tcu.oca.lan:11111/api/v1
+          components:
+            mount:
+              kind: telescope
+              device_number: 0
+            derotator:
+              kind: rotator
+              device_number: 0
+            derotator_f2:
+              kind: rotator
+              device_number: 1
+            focuser:
+              kind: focuser
+              device_number: 0
+            dome:
+              kind: dome
+              device_number: 0
+            covercalibrator:
+              kind: covercalibrator
+              device_number: 0
+            camera:
+              kind: camera
+              device_number: 0
+            filterwheel:
+              kind: filterwheel
+              device_number: 0
+            switch:
+              kind: switch
+              device_number: 0
+            safetymonitor:
+              kind: safetymonitor
+              device_number: 0
+        iris:
+          kind: telescope
+          comment: IRIS InfraRed Imaging System 0.8m Telescope
+          device_number: 0
+          protocol: alpaca
+          address: http://iris-tcu.oca.lan:11111/api/v1
+          components:
+            mount:
+              kind: telescope
+              device_number: 0
+            derotator:
+              kind: rotator
+              device_number: 0
+            derotator_f2:
+              kind: rotator
+              device_number: 1
+            focuser:
+              kind: focuser
+              device_number: 0
+            dome:
+              kind: dome
+              device_number: 0
+            covercalibrator:
+              kind: covercalibrator
+              device_number: 0
+            camera:
+              kind: camera
+              device_number: 0
+            filterwheel:
+              kind: filterwheel
+              device_number: 0
+            switch:
+              kind: switch
+              device_number: 0
+            safetymonitor:
+              kind: safetymonitor
+              device_number: 0
+        sim:
+          kind: telescope
+          comment: ASCOM Simulator at OCA
+          device_number: 0
+          protocol: alpaca
+          address: http://docker.oca.lan:8089/api/v1
+          components:
+            mount:
+              kind: telescope
+              device_number: 0
+            derotator:
+              kind: rotator
+              device_number: 0
+            focuser:
+              kind: focuser
+              device_number: 0
+            dome:
+              kind: dome
+              device_number: 0
+            covercalibrator:
+              kind: covercalibrator
+              device_number: 0
+            camera:
+              kind: camera
+              device_number: 0
+            filterwheel:
+              kind: filterwheel
+              device_number: 0
+            switch:
+              kind: switch
+              device_number: 0
+            safetymonitor:
+              kind: safetymonitor
+              device_number: 0
+        dev:
+          kind: telescope
+          comment: ASCOM Simulator at localhost:80
+          device_number: 0
+          protocol: alpaca
+          address: http://docker.oca.lan:80/api/v1
+          components:
+            mount:
+              kind: telescope
+              device_number: 0
+            derotator:
+              kind: rotator
+              device_number: 0
+            focuser:
+              kind: focuser
+              device_number: 0
+            dome:
+              kind: dome
+              device_number: 0
+            covercalibrator:
+              kind: covercalibrator
+              device_number: 0
+            camera:
+              kind: camera
+              device_number: 0
+            filterwheel:
+              kind: filterwheel
+              device_number: 0
+            switch:
+              kind: switch
+              device_number: 0
+            safetymonitor:
+              kind: safetymonitor
+              device_number: 0
+
+
+
+OCABOX_BUILD_FILE_NAME: tree_build_oca.py
+
+#logging:
+#  handlers:
+#    console:
+#      module: logging
+#      class: StreamHandler
+#      level: INFO
+#      format: '%(asctime)s %(levelname)-8s %(name)-15s %(message)s'
+#    file:
+#      module: logging
+#      class: FileHandler
+#      level: DEBUG
+#      format: '%(asctime)s %(levelname)-8s %(name)-15s %(message)s'
+#      filename: /tmp/ocabox.log
+
+
+
+router:
+  DefaultRouter:
+    port: 5558
