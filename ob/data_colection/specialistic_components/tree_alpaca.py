@@ -37,9 +37,9 @@ class TreeAlpacaObservatory(TreeBaseProvider):
     async def run(self):
         result = await self._connector.create_http_session()
         if result:
-            logger.info(f"Permanent http session was successfully create")
+            logger.info(f"Permanent http session was successfully create for {self}")
         else:
-            logger.warning(f"Can not create permanent http session. A 'on-demand session' will be used")
+            logger.warning(f"Can not create permanent http session for {self}. A 'on-demand session' will be used")
         await super().run()
 
     async def stop(self):

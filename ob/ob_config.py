@@ -72,7 +72,7 @@ class SingletonConfig(metaclass=SingletonMeta):
     def get_config_files(cls):
         return [
                    cls.get_package_file_path(cls._DEFAULT_CONFIG_FILE_NAME),  # /ob/config.yaml
-                   os.path.join('/etc', cls._DEFAULT_CONFIG_FILE_NAME),  # /etc/config.yaml
+                   os.path.join('/etc/ocabox', cls._DEFAULT_CONFIG_FILE_NAME),  # /etc/config.yaml
                    os.path.join(cls._get_inst_dir(), 'configuration', cls._DEFAULT_CONFIG_FILE_NAME),
                    # /ob/configuration/config.yaml
                ] + cls.additional_files
@@ -87,12 +87,16 @@ class SingletonConfig(metaclass=SingletonMeta):
             fil += files
         config = confuse.Configuration(cls.app_name, read=False)
         for f in fil:
-            logger.info('Using config: %s', f)
+            logger.info('Trying config: %s', f)
             try:
                 source = confuse.YamlSource(f, optional=True)
                 config.set(source)
+                if len(source) > 0:
+                    logger.info('Using config: %s', f)
+                else:
+                    logger.info('Empty config: %s', f)
             except confuse.ConfigReadError:
-                pass
+                logger.warning('Corrupted config: %s', f)
         return config
 
 

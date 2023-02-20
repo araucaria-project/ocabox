@@ -46,7 +46,8 @@ class Router(BaseCommunicationObject):
     async def _ping(self):
         while True:
             await asyncio.sleep(1)
-            logger.info(f'{self.name}: Listening...')
+            if self._get_cfg('ping-log', True):
+                logger.info(f'{self.name}: Listening...')
 
     async def _solve_request(self, ms: MultipartStructure) -> List[bytes] or None:
         answer = None
