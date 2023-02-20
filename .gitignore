@@ -13,5 +13,8 @@ ob/configuration/*
 !ob/configuration/tree_build_example.py
 !ob/configuration/sample_config.yaml
 
+!ob/configuration/config_oca.yaml
+!ob/configuration/tree_build_oca.py
+
 venv/
 .venv/
