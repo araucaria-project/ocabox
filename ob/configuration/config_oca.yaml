@@ -239,7 +239,7 @@ tree:
       lat: -70.19638
       elev: 2817  # m      protocol: alpaca
       protocol: alpaca
-      address: http://docker.oca.lan:80/api/v1
+      address: http://localhost:80/api/v1
       components:
         mount:
           kind: telescope
