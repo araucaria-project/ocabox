@@ -11,7 +11,7 @@ from ob.comunication.message_serializer import MessageSerializer
 from ob.comunication.multipart_structure import MultipartStructure
 from ob.util_functions.asyncio_util_functions import wait_for_psce
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class Client(BaseCommunicationObject):

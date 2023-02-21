@@ -7,7 +7,7 @@ from ob.data_colection.base_components.tree_component import AddressedResponderP
 from ob.data_colection.response_error import ResponseError
 from ob.data_colection.value_call import ValueRequest, ValueResponse
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class TreeBroker(TreeBaseBroker, AddressDispatcher):

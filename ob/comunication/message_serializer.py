@@ -2,7 +2,7 @@ import logging
 
 import msgpack
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class MessageSerializer:

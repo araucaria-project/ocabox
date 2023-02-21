@@ -5,7 +5,7 @@ import threading
 import confuse
 from threading import Lock
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class SingletonMeta(type):

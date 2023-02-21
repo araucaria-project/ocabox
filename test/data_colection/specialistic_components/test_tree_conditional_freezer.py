@@ -11,7 +11,7 @@ from ob.data_colection.value import Value
 from ob.data_colection.value_call import ValueRequest
 from test.data_colection.sample_test_value_provider import SampleTestValueProvider
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class TestTreeConditionalFreezer(unittest.TestCase):

@@ -7,7 +7,7 @@ from ob.data_colection.value import Value, TreeValueError
 from ob.data_colection.value_call import ValueRequest
 from test.data_colection.base_async_test import BaseAsyncTest
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class TreeProviderFrontendTest(unittest.TestCase, BaseAsyncTest):

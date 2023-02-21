@@ -6,7 +6,7 @@ from ob.data_colection.alpaca_api.coo import check_equatorial_coordinates
 from ob.data_colection.alpaca_api.observatory import Observatory
 from test.data_colection.base_async_test import BaseAsyncTest
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class ObservatoryTest(unittest.TestCase, BaseAsyncTest):

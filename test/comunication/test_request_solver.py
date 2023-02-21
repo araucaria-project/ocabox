@@ -10,7 +10,7 @@ from ob.data_colection.value import Value
 from ob.data_colection.value_call import ValueRequest
 from ob.comunication.request_solver import RequestSolver
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class RequestSolverTest(unittest.TestCase):

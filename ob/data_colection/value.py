@@ -2,7 +2,7 @@ import copy
 import logging
 from ob.data_colection.coded_error import BaseCodedError
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class Value:

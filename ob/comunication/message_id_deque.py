@@ -2,7 +2,7 @@ import logging
 from collections import deque
 from typing import Deque
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class MessageIdDeque:

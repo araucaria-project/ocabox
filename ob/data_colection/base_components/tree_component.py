@@ -6,7 +6,7 @@ from ob.data_colection.base_components.address_dispatcher import AddressedProtoc
 from ob.data_colection.value_call import ValueRequest, ValueResponse
 from ob.ob_config import SingletonConfig
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class TreeComponent(ABC):

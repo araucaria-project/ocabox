@@ -2,7 +2,7 @@ import logging
 from abc import ABC
 from typing import List, Tuple
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class BaseCodedError(Exception, ABC):

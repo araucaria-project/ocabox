@@ -9,7 +9,7 @@ from ob.data_colection.base_components.tree_base_provider import TreeBaseProvide
 from ob.data_colection.value import Value, TreeValueError
 from ob.data_colection.value_call import ValueRequest
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class TreeAlpacaObservatory(TreeBaseProvider):

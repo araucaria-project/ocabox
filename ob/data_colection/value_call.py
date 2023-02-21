@@ -11,7 +11,7 @@ from ob.data_colection.tree_user import TreeUser, BaseTreeUser
 from ob.data_colection.value import Value
 from ob.ob_config import SingletonConfig
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 @dataclass

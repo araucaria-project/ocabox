@@ -6,7 +6,7 @@ from ob.data_colection.alpaca_api.connector import AlpacaConnector
 from ob.ob_config import SingletonConfig
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class AlpacaConnectorTest(unittest.TestCase):

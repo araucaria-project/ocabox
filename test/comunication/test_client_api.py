@@ -7,7 +7,7 @@ from ob.comunication.router import Router
 from ob.data_colection.value_call import ValueResponse, ValueRequest
 from test.comunication.sample_test_resolver import SampleTestResolver
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class ClientAPITest(unittest.TestCase):

@@ -293,4 +293,4 @@ router:
   Router-Observatorio-Cerro-Armazones:
     port: 5558
     timeout: 30
-    ping-log: True   # set to False to disable Listening... log messages
+#    ping-log: True   # set to False to disable Listening... log messages

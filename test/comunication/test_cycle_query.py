@@ -19,7 +19,7 @@ from ob.data_colection.value_call import ValueRequest, ValueResponse
 from test.comunication.sample_test_resolver import SampleTestResolver
 from test.data_colection.sample_test_value_provider import SampleTestValueProvider
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 logger.addHandler(logging.StreamHandler())
 logger.setLevel(logging.INFO)
 

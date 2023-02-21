@@ -14,7 +14,7 @@ from ob.data_colection.value_call import ValueRequest, ValueResponse
 from ob.util_functions.asyncio_util_functions import wait_for_psce
 from test.comunication.sample_test_resolver import SampleTestResolver
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 logger.addHandler(logging.StreamHandler())
 logger.setLevel(logging.INFO)
 

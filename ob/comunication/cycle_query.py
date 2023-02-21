@@ -10,7 +10,7 @@ from ob.data_colection.value_call import ValueRequest, ValueResponse
 from ob.ob_config import SingletonConfig
 from abc import ABC, abstractmethod
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class BaseCycleQuery(ABC):

@@ -10,7 +10,7 @@ from ob.data_colection.value_call import ValueRequest
 from ob.ob_config import SingletonConfig
 from test.data_colection.base_async_test import BaseAsyncTest
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class TreeRequestAlpacaBlockerTest(unittest.TestCase, BaseAsyncTest):

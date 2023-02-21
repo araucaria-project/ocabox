@@ -12,7 +12,7 @@ from ob.data_colection.specialistic_components.tree_conditional_freezer_protocol
 from ob.data_colection.value import Value
 from ob.data_colection.value_call import ValueRequest, ValueResponse
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class TreeCache(TreeBaseProvider):

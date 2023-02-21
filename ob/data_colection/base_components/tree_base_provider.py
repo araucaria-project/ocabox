@@ -8,7 +8,7 @@ from ob.data_colection.response_error import ResponseError
 from ob.data_colection.value import Value, TreeValueError
 from ob.data_colection.value_call import ValueRequest, ValueResponse
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class TreeBaseProvider(TreeComponent, ABC):

@@ -7,7 +7,7 @@ from ob.comunication.multipart_structure import MultipartStructure
 from ob.ob_config import SingletonConfig
 from zmq.asyncio import Context
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class BaseCommunicationObject(ABC):

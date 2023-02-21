@@ -11,7 +11,7 @@ from ob.data_colection.value_call import ValueRequest
 from test.data_colection.base_async_test import BaseAsyncTest
 from test.data_colection.sample_test_value_provider import SampleTestValueProvider
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class TreeRequestAlpacaBlockerTest(unittest.TestCase, BaseAsyncTest):

@@ -8,7 +8,7 @@ from ob.data_colection.response_error import ResponseError
 from ob.data_colection.value_call import ValueRequest, ValueResponse
 from ob.comunication.base_request_solver import BaseRequestSolver
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class RequestSolver(BaseRequestSolver):

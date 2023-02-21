@@ -12,7 +12,7 @@ from ob.data_colection.value import Value, TreeValueError
 from ob.data_colection.value_call import ValueRequest
 from ob.util_functions.asyncio_util_functions import wait_for_psce
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 # todo zapytać  o podwojne zapytania do rutera, jedna wartość może się zmienić szybciej nisz druga i co wtedy?

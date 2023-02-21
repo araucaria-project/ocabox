@@ -7,7 +7,7 @@ from ob.data_colection.alpaca_api.coo import check_equatorial_coordinates, \
     check_horizontal_coordinates
 from ob.ob_config import SingletonConfig
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class Component:

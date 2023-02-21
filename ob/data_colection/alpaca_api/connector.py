@@ -6,7 +6,7 @@ from typing import Iterable, Callable, Tuple
 from ob.data_colection.alpaca_api.exceptions import AlpacaError, AlpacaHttpError, RequestConnectionError, \
     AlpacaHttp400Error, AlpacaHttp500Error, AlpacaContentTypeError
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class Connector:

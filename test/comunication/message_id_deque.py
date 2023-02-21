@@ -4,7 +4,7 @@ import unittest
 
 from ob.comunication.message_id_deque import MessageIdDeque
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class MessageIdDequeTest(unittest.TestCase):

@@ -4,7 +4,7 @@ from ob.data_colection.address import AddressError
 from ob.data_colection.coded_error import TreeStructureError, TreeOtherError
 from ob.data_colection.value import TreeValueError
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class ResponseError:
