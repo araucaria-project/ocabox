@@ -1,4 +1,6 @@
 from typing import List
+
+from ob.data_colection.address import AddressError
 from ob.data_colection.base_components.tree_base_broker import TreeBaseBroker
 from ob.data_colection.base_components.tree_component import AddressedResponderProtocol, ProvidesResponseProtocol
 from ob.data_colection.value_call import ValueRequest
@@ -49,7 +51,11 @@ class TreeBaseBrokerDefaultTarget(TreeBaseBroker):
         :raise AddressError: if is wrong format address
         :return: return provider if exist or None if not
         """
-        provider = super(TreeBaseBrokerDefaultTarget, self)._get_provider(v_req=v_req)
+        try:
+            provider = super(TreeBaseBrokerDefaultTarget, self)._get_provider(v_req=v_req)
+        except AddressError:
+            # If there is no address pointing to the next block, it takes the default one
+            provider = None
         if not provider:
             provider = self._default_provider
         return provider
