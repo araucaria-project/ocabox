@@ -118,8 +118,7 @@ class Client(BaseCommunicationObject):
                 except asyncio.TimeoutError:
                     # logger.info(f"the response did not come before timeout {self.timeout}s")
                     raise CommunicationTimeoutError(
-                        message=f"The response did not come before timeout {time_to_expire}s, "
-                                f"The request ID: ({ms.create_time} | {ms.id_})")
+                        message=f"Timeout of {time_to_expire:.3}s expired when waiting for response from TIC server")
                 except CommunicationRuntimeError:
                     raise
             except CommunicationRuntimeError:

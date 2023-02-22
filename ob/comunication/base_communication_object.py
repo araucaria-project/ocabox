@@ -80,13 +80,16 @@ class BaseCommunicationObject(ABC):
         """
         try:
             time_to_expire = ms.time_to_expire()
+            logger.debug(f"Time to expire from multipart: {time_to_expire}")
         except CommunicationTimeoutError:
             if not use_default:
                 raise
             time_to_expire = self.default_timeout
+            logger.debug(f"Default time to expire used: {time_to_expire}")
 
         if time_to_expire <= 0:
-            raise CommunicationTimeoutError(message='The received message is already outdated.')
+            raise CommunicationTimeoutError(
+                message=f'The received message is already outdated. expiretime: {time_to_expire}')
         return time_to_expire
 
     def __del__(self):
