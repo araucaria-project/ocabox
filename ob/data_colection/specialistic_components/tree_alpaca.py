@@ -69,6 +69,10 @@ class TreeAlpacaObservatory(TreeBaseProvider):
         request_type = request.request_type
         request_arguments = request.request_data
 
+        if len(alpaca_address) <= 0:
+            logger.debug(f"Incoming address to the {self._component_name} module is too short. Address: {address}")
+            raise AddressError(address=address, code=1001, message="Incoming address is too short")
+
         alpaca_method_name = alpaca_address[len(alpaca_address) - 1]
         alpaca_address[len(alpaca_address) - 1] = 'put' if request_type == 'PUT' else 'get'
         try:

@@ -78,6 +78,24 @@ class TreeAlpacaTest(unittest.TestCase, BaseAsyncTest):
 
         self.loop.run_until_complete(coro())
 
+    def test_too_short_address(self):
+        """Test situation when incoming address is too short"""
+        sample_alpaca_call = 'name'
+
+        sample_components = SingletonConfig.get_config()['tree'][self.OBSERVATORY_NAME]['observatory']['components'].get()
+        component = list(sample_components.keys())[0]
+
+        address = Address("block1.block2")
+        request = ValueRequest(address, time.time())
+        request.index = 2
+
+        async def coro():
+            response = await self.tao.get_response(request)
+            self.assertIsNone(response.value)
+            self.assertFalse(response.status)
+            self.assertTrue(response.error.code == 1001)
+
+        self.loop.run_until_complete(coro())
 
 if __name__ == '__main__':
     unittest.main()
