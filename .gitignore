@@ -18,3 +18,4 @@ ob/configuration/*
 
 venv/
 .venv/
+.ipynb_checkpoints/
