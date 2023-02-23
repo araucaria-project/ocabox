@@ -353,11 +353,13 @@ class ConditionalCycleQuery(BaseCycleQuery):
                 missed = 0
 
                 # check errors
+                continue_while = False  # this parameter is needed to continue the outer loop
                 for r in self._last_response:
                     if not r.status and r.error and r.error.code == 4004:  # 4004 - timeout waiting for change value
                         # the value is not changed so client need refresh request and keep waiting
                         logger.info(f'{self}: address ({str(r.address)}) subscription expired - renewing')
-                        continue  # everything is ok, just router need confirmation that the client is alive
+                        continue_while = True  # continue outer loop
+                        break  # everything is ok, just router need confirmation that the client is alive
 
                     elif not r.status:  # One of the responses received has an error
                         raise CommunicationRuntimeError(message=f"Client retrieve response witch error: "
@@ -372,7 +374,8 @@ class ConditionalCycleQuery(BaseCycleQuery):
                         logger.info(f'{self}: this address ({str(r.address)}) does not return any value')
                         raise CommunicationRuntimeError(message=f"this address ({str(r.address)}) does not return any "
                                                                 f"value")
-
+                if continue_while:
+                    continue
                 self._event.set()
             except CommunicationRuntimeError as e:
                 self._errors = e
