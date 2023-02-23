@@ -43,9 +43,7 @@ tree:
       lat: -70.19638
       elev: 2817  # m
       protocol: alpaca
-#      address: http://zb08-tcu.oca.lan:11111/api/v1
-# temporary address
-      address: http://192.168.20.235:11111/api/v1
+      address: http://zb08-tcu.oca.lan:11111/api/v1
       components:
         mount:
           kind: telescope
