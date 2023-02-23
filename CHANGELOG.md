@@ -3,6 +3,11 @@ All notable changes to this project will be documented in this file.
 
 
 ## [Unreleased]
+### Fixed
+- Fixed an issue with bad error handling when incoming address is too short for `TreeAlpacaObservatory`
+### Changed
+- `TreeBaseBrokerDefaultTarget` from now on will always forward the request to the default provider when there is a 
+problem with finding the provider by address.
 
 ## [0.1.3] - 2023-02-13
 ### Added
