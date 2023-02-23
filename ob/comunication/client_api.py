@@ -208,3 +208,6 @@ class ClientAPI:
     @staticmethod
     def client_config():
         return SingletonConfig.get_config()
+
+    def get_cfg(self, name_cfg: str, default=None, use_default_settings=True):
+        return self.client.get_cfg(name_cfg, default, use_default_settings)

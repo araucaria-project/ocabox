@@ -29,6 +29,9 @@ class BaseCommunicationObject(ABC):
             logger.error(f"Can not find timeout value in settings")
             raise RuntimeError
 
+    def get_cfg(self, name_cfg: str, default=None, use_default_settings=True):
+        return self._get_cfg(name_cfg, default, use_default_settings)
+
     def _get_cfg(self, name_cfg: str, default=None, use_default_settings=True):
         """
         The method looks for a value in the configuration file and returns it.
