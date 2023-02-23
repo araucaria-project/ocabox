@@ -18,6 +18,10 @@ client:
     url: localhost
     protocol: tcp
     timeout: 30
+    time_of_data_tolerance: 0.5
+    request_timeout: 2.0
+    delay: 0.1
+    max_missed_msg: 3
   SampleTestClient:
     port: 5560
     url: localhost
