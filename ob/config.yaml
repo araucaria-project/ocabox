@@ -13,7 +13,16 @@ router:
     timeout: 1
 
 client:
-  OcaClient:
+  TOI_Client:
+    port: 5558
+    url: tic.oca.lan
+    protocol: tcp
+    timeout: 30
+    time_of_data_tolerance: 0.5
+    request_timeout: 2.0
+    delay: 0.1
+    max_missed_msg: 3
+  CliClient:
     port: 5559
     url: localhost
     protocol: tcp
