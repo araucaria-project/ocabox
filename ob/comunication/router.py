@@ -44,10 +44,15 @@ class Router(BaseCommunicationObject):
         self._current_loop = None  # remember async loop with router working
 
     async def _ping(self):
+        enabled = self._get_cfg('ping-tasks-enabled', True)
+        if not enabled:
+            logger.info('Ping task disabled in config, stopping')
+            return
+        delay = self._get_cfg('ping-tasks-interval', 1.0)
+        logger.info(f'Ping task interval: {delay:.2f}s')
         while True:
-            await asyncio.sleep(1)
-            if self._get_cfg('ping-log', True):
-                logger.info(f'{self.name}: Listening...')
+            await asyncio.sleep(delay)
+            logger.info(f'{self.name}: Listening...')
 
     async def _solve_request(self, ms: MultipartStructure) -> List[bytes] or None:
         answer = None

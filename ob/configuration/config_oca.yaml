@@ -288,9 +288,9 @@ OCABOX_BUILD_FILE_NAME: "tree_build_oca.py"
 #      filename: /tmp/ocabox.log
 
 
-
 router:
-  Router-Observatorio-Cerro-Armazones:
+  Router-OCA:
     port: 5558
     timeout: 30
-#    ping-log: True   # set to False to disable Listening... log messages
+    ping-tasks-enabled: True
+    ping-tasks-interval: 30.0
