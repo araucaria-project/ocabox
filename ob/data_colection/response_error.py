@@ -7,7 +7,7 @@ from ob.data_colection.value import TreeValueError
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
-class ResponseError:
+class ResponseError(Exception):
 
     SEVERITY_LEVELS = ['NORMAL', 'CRITICAL']
     SUPPORTED_ERRORS = [TreeValueError, TreeStructureError, AddressError, TreeOtherError]
