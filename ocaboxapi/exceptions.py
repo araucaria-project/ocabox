@@ -1,0 +1,3 @@
+class OcaboxServerError(Exception):
+    pass
+
