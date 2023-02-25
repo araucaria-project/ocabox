@@ -37,8 +37,11 @@ class Observatory():
     #     return ClientAPI.client_config()['client'][client_cfg]
 
 
-    def connect(self):
-        self._client = ClientAPI('CliClient')
+    def connect(self, client: ClientAPI|None = None):
+        if client is None:
+            self._client = ClientAPI('CliClient')
+        else:
+            self._client = client
 
     @property
     def client(self) -> ClientAPI:
@@ -75,7 +78,7 @@ class Observatory():
         @return:
         """
         if request_timeout is None:
-            request_timeout = time() + self.client.get_cfg('request_timeout', default=2.0)
+            request_timeout = time() + self.client.get_cfg('request_timeout', default=2.01)
 
         try:
             res = await self.client.put_async(f'{address}',
@@ -106,7 +109,7 @@ class Observatory():
         if time_of_data_tolerance is None:
             time_of_data_tolerance = self.client.get_cfg('time_of_data_tolerance', default=None)
         if request_timeout is None:
-            request_timeout = time() + self.client.get_cfg('request_timeout', default=2.0)
+            request_timeout = time() + self.client.get_cfg('request_timeout', default=2.02)
 
         # TODO: Something with timeouts with default parameters
         try:
