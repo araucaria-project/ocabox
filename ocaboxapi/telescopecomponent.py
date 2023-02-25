@@ -145,7 +145,11 @@ class TelescopeComponent(param.Parameterized):
                 or getattr(self, f'_{param_name}_value') is None)
 
     def _ensure_value(self, param_name):
-        if (self._needs_refresh(param_name)):
+        ## With the lack of synchronous `get` from ClientAPI, we never lazy refresh
+        ## values get synchronolusly.
+        ## TODO: Add refresh, if when synchronoous get is implemented
+        # if (self._needs_refresh(param_name)):
+        if False:
             setattr(self, f'_{param_name}_value', self._pull_value(param_name))
         return getattr(self, f'_{param_name}_value')
 
