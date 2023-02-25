@@ -3,7 +3,7 @@ from typing import Union, Callable
 
 from ob.comunication.comunication_error import CommunicationRuntimeError
 
-from ocaboxapi.formatter import fmt_hourangle, fmt_ra, fmt_dec, fmt_az, fmt_alt
+# from ocaboxapi.formatter import fmt_hourangle, fmt_ra, fmt_dec, fmt_az, fmt_alt
 from ocaboxapi.telescopecomponent import TelescopeComponentOld
 
 log = logging.getLogger(__name__.rsplit('.')[-1])
