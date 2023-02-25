@@ -30,7 +30,7 @@ class Router(BaseCommunicationObject):
             self._front_socket.bind(address)
         except zmq.error.ZMQError:
             logger.error(f"Can not start router because address {address} is already in use")
-            raise RuntimeError
+            raise RuntimeError(f"Can not start router because address {address} is already in use")
         # Tasks
         self._main_task_name = f'{self.name}_main_task'
         self._main_task = None
