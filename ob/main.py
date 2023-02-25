@@ -36,16 +36,20 @@ def main(argv=None):
     if argv is None:
         argv = sys.argv
 
-    BUILD_FILE = os.environ.get('OCABOX_BUILD_FILE_NAME', None)
-    if BUILD_FILE is None:
-        BUILD_FILE = SingletonConfig.get_config()['OCABOX_BUILD_FILE_NAME'].get()
-    if BUILD_FILE is None:
-        logger.error(f"Can not find any bu§ild tree file")
-        raise RuntimeError
-    logger.info(f"Tree will be build from: {BUILD_FILE}")
+    try:
+        BUILD_FILE = os.environ.get('OCABOX_BUILD_FILE_NAME', None)
+        if BUILD_FILE is None:
+            BUILD_FILE = SingletonConfig.get_config()['OCABOX_BUILD_FILE_NAME'].get()
+        if BUILD_FILE is None:
+            logger.error(f"Can not find any bu§ild tree file")
+            raise RuntimeError
+        logger.info(f"Tree will be build from: {BUILD_FILE}")
 
-    vr = load_from_file(BUILD_FILE, 'tree_build')
-    rs = vr.request_solver
+        vr = load_from_file(BUILD_FILE, 'tree_build')
+        rs = vr.request_solver
+    except RuntimeError as e:
+        logger.error(f"Aborting: {e}")
+        return 1
 
     coro = vr.main_coroutine()
 
