@@ -24,7 +24,9 @@ class Client(BaseCommunicationObject):
         self._front_socket = self.context.socket(zmq.DEALER)
         # IMPORTANT Pending messages shall be discarded immediately when the socket is closed
         self._front_socket.setsockopt(zmq.LINGER, 0)
-        self._front_socket.connect(f"{self._get_cfg('protocol')}://{self._get_cfg('url')}:{self._port}")
+        connect_string = f"{self._get_cfg('protocol')}://{self._get_cfg('url')}:{self._port}"
+        self._front_socket.connect(connect_string)
+        logger.info(f'Connecting to TIC server at {connect_string}')
         # message service
         self._msg_con = None
         self._recv_lock = None
@@ -118,8 +120,7 @@ class Client(BaseCommunicationObject):
                 except asyncio.TimeoutError:
                     # logger.info(f"the response did not come before timeout {self.timeout}s")
                     raise CommunicationTimeoutError(
-                        message=f"The response did not come before timeout {time_to_expire}s, "
-                                f"The request ID: ({ms.create_time} | {ms.id_})")
+                        message=f"Timeout of {time_to_expire:.3}s expired when waiting for response from TIC server")
                 except CommunicationRuntimeError:
                     raise
             except CommunicationRuntimeError:

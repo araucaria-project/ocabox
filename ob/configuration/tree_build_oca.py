@@ -95,5 +95,5 @@ def tree_build() -> Router:
 
     # ------------------------------ front receiver blocks -------------------------------
     rs = RequestSolver(data_provider=broker_front_oca)
-    vr = Router(request_solver=rs, name="Router-Observatorio-Cerro-Armazones")
+    vr = Router(request_solver=rs, name="Router-OCA")
     return vr

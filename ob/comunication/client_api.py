@@ -76,6 +76,7 @@ class ClientAPI:
             if not r.user:
                 r.user = self.user
             request_b.append(r.to_byte())
+        logger.debug(f'Shortest request timeout is {shortest_timeout}')
         if shortest_timeout is None:
             logger.error(f"Unable to get timeout value from request. Request is uncompleted.")
         try:
@@ -207,3 +208,6 @@ class ClientAPI:
     @staticmethod
     def client_config():
         return SingletonConfig.get_config()
+
+    def get_cfg(self, name_cfg: str, default=None, use_default_settings=True):
+        return self.client.get_cfg(name_cfg, default, use_default_settings)

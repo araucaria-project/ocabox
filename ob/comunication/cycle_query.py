@@ -58,6 +58,10 @@ class BaseCycleQuery(ABC):
     def get_name(self):
         return self._query_name
 
+    def __repr__(self):
+        addresses = ' '.join(str(r.address).rsplit('.', maxsplit=1)[-1] for r in self._list_request)
+        return f'{self._query_name} [{addresses}]'
+
     async def get_response(self) -> List[ValueResponse]:
         """
         This method waits for the next response and returns it when it comes.
@@ -71,7 +75,7 @@ class BaseCycleQuery(ABC):
             if self._errors:
                 raise self._errors
             return self._last_response
-        raise CommunicationRuntimeError(message=f"{self._query_name}: Query was stopped. before waiting for a reply "
+        raise CommunicationRuntimeError(message=f"{self}: Query was stopped. before waiting for a reply "
                                                 f"you have to run them first")
 
     @abstractmethod
@@ -89,7 +93,7 @@ class BaseCycleQuery(ABC):
                 vr.append(ValueResponse.from_byte(r))
             except (ValueError, AddressError, TypeError):
                 # can not create ValueRequest object (data is damaged) - return empty response witch error
-                logger.info(f'{self._query_name}: Can not convert request dictionary to request object.')
+                logger.info(f'{self}: Can not convert request dictionary to request object.')
                 re = ResponseError(4001, 'Can not build request from ordered data', repr(self._client), 'CRITICAL')
                 vr.append(ValueResponse('', None, False, re))
         return vr
@@ -107,7 +111,7 @@ class BaseCycleQuery(ABC):
             try:
                 self._loop = asyncio.get_running_loop()
             except RuntimeError:
-                logger.error(f"{self._query_name}: Can not get current async loop, something goes wrong")
+                logger.error(f"{self}: Can not get current async loop, something goes wrong")
                 raise CommunicationRuntimeError(message='Can not get current async loop')
 
     def start(self):
@@ -118,7 +122,7 @@ class BaseCycleQuery(ABC):
             self._run()
             self._run_callbacks()
         else:
-            logger.warning(f"{self._query_name}: This cycle query is already started")
+            logger.warning(f"{self}: This cycle query is already started")
 
     def stop(self):
         """Method stop cycle query."""
@@ -153,7 +157,7 @@ class BaseCycleQuery(ABC):
     def __del__(self):
         self.stop()
         if not self.is_stopped():
-            logger.warning(f"{self._query_name}: Object cycle query was destroyed before the main task exited. The "
+            logger.warning(f"{self}: Object cycle query was destroyed before the main task exited. The "
                            f"main task has stopped but is still in the event loop. Before ending the program, you have "
                            f"to wait for it to be properly removed from the event loop.")
 
@@ -186,7 +190,7 @@ class BaseCycleQuery(ABC):
             for a_method in self._callback_methods_a:
                 if callable(a_method):
                     try:
-                        logger.debug(f"{self._query_name}: Execute callback {a_method.__name__}")
+                        logger.debug(f"{self}: Execute callback {a_method.__name__}")
                         await a_method(result)
                     except TypeError as e:
                         logger.error(f"Error in callback method {a_method.__name__}. Error: {e}")
@@ -194,7 +198,7 @@ class BaseCycleQuery(ABC):
             for method in self._callback_methods:
                 if callable(method):
                     try:
-                        logger.debug(f"{self._query_name}: Execute callback {method.__name__}")
+                        logger.debug(f"{self}: Execute callback {method.__name__}")
                         method(result)
                     except TypeError as e:
                         logger.error(f"Error in callback method {method.__name__}. Error: {e}")
@@ -238,6 +242,7 @@ class PeriodicCycleQuery(BaseCycleQuery):
             # wait before  send nex request
             wait_range = start_time + self._delay - time.time()
             if wait_range > 0:
+                logger.debug(f"{self}: Wait {wait_range} before next request:{self}")
                 await asyncio.sleep(wait_range)
 
             start_time = time.time()
@@ -252,7 +257,7 @@ class PeriodicCycleQuery(BaseCycleQuery):
                                                            request_timeout=start_time + self._delay)
                 self._errors = None
                 if result is None:
-                    logger.error(f"{self._query_name}: Can not get response for giving request")
+                    logger.error(f"{self}: Can not get response for giving request")
                     raise CommunicationRuntimeError(message="Can not get response for giving request, check "
                                                             "that the 'no_wait' flag is not set to true")
 
@@ -267,20 +272,20 @@ class PeriodicCycleQuery(BaseCycleQuery):
             except CommunicationTimeoutError:
                 missed += 1
                 self._last_response = []
-                logger.warning(f'{self._query_name}: The waiting time for the message has expired. The router is not '
+                logger.warning(f'{self}: The waiting time for the message: has expired. The router is not '
                                f'responding. Number of missing answers: {missed}')
                 if self._log_missed_msg:
                     self._event.set()
 
             except Exception as e:
                 self._last_response = []
-                logger.error(f'{self._query_name}: Unrecognized error in cycle query: {str(e)}')
+                logger.error(f'{self}: Unrecognized error in cycle query: {str(e)}')
                 self._errors = CommunicationRuntimeError(message=f'Unrecognized error')
                 self._event.set()
                 break
 
             if missed > self._max_missed_msg >= 0:
-                logger.error(f"{self._query_name}: Too many missed messages at same time")
+                logger.error(f"{self}: Too many missed messages at same time")
                 self._errors = CommunicationRuntimeError(message='Too many missed messages at same time')
                 self._event.set()
                 break
@@ -340,7 +345,7 @@ class ConditionalCycleQuery(BaseCycleQuery):
                                                            request_timeout=start_time + self._timeout)
                 self._errors = None
                 if result is None:
-                    logger.error(f"{self._query_name}: Can not get response for giving request")
+                    logger.error(f"{self}: Can not get response for giving request")
                     raise CommunicationRuntimeError(message="Can not get response for giving request, check "
                                                             "that the 'no_wait' flag is not set to true")
 
@@ -348,26 +353,29 @@ class ConditionalCycleQuery(BaseCycleQuery):
                 missed = 0
 
                 # check errors
+                continue_while = False  # this parameter is needed to continue the outer loop
                 for r in self._last_response:
                     if not r.status and r.error and r.error.code == 4004:  # 4004 - timeout waiting for change value
                         # the value is not changed so client need refresh request and keep waiting
-                        logger.info(f'{self._query_name}: address ({str(r.address)}) subscription expired - renewing')
-                        continue  # everything is ok, just router need confirmation that the client is alive
+                        logger.info(f'{self}: address ({str(r.address)}) subscription expired - renewing')
+                        continue_while = True  # continue outer loop
+                        break  # everything is ok, just router need confirmation that the client is alive
 
                     elif not r.status:  # One of the responses received has an error
                         raise CommunicationRuntimeError(message=f"Client retrieve response witch error: "
                                                                 f"{str(r.error)}")
 
                     elif r.value is not None and 'from_cf' not in r.value.tags:
-                        logger.info(f'{self._query_name}: this address ({str(r.address)}) does not support cycle '
+                        logger.info(f'{self}: this address ({str(r.address)}) does not support cycle '
                                     f'conditional')
                         raise CommunicationRuntimeError(message=f"this address ({str(r.address)}) does not support "
                                                                 f"recursive conditional queries")
                     elif r.value is None:
-                        logger.info(f'{self._query_name}: this address ({str(r.address)}) does not return any value')
+                        logger.info(f'{self}: this address ({str(r.address)}) does not return any value')
                         raise CommunicationRuntimeError(message=f"this address ({str(r.address)}) does not return any "
                                                                 f"value")
-
+                if continue_while:
+                    continue
                 self._event.set()
             except CommunicationRuntimeError as e:
                 self._errors = e
@@ -377,18 +385,18 @@ class ConditionalCycleQuery(BaseCycleQuery):
             except CommunicationTimeoutError:
                 missed += 1
                 self._last_response = []
-                logger.warning(f'{self._query_name}: The waiting time for the message has expired. The router is not '
+                logger.warning(f'{self}: The waiting time for the message has expired. The router is not '
                                f'responding. Number of missing answers: {missed}')
             except asyncio.CancelledError:
                 raise
             except Exception as e:
                 self._last_response = []
-                logger.error(f'{self._query_name}: Unrecognized error in cycle query: {str(e)}')
+                logger.error(f'{self}: Unrecognized error in cycle query: {str(e)}')
                 self._errors = CommunicationRuntimeError(message=f'Unrecognized error')
                 self._event.set()
                 break
             if missed >= self._max_missed_msg >= 0:
-                logger.error(f"{self._query_name}: Too many missed messages at same time")
+                logger.error(f"{self}: Too many missed messages at same time")
                 self._errors = CommunicationRuntimeError(message='Too many missed messages at same time')
                 self._event.set()
                 break

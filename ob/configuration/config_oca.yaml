@@ -287,10 +287,20 @@ OCABOX_BUILD_FILE_NAME: "tree_build_oca.py"
 #      format: '%(asctime)s %(levelname)-8s %(name)-15s %(message)s'
 #      filename: /tmp/ocabox.log
 
+CliClient:
+  port: 5558
+  url: tic.oca.lan
+  protocol: tcp
+  timeout: 31.7
+  time_of_data_tolerance: 0.5
+  request_timeout: 2.17
+  delay: 0.1
+  max_missed_msg: 3
 
 
 router:
-  Router-Observatorio-Cerro-Armazones:
+  Router-OCA:
     port: 5558
     timeout: 30
-#    ping-log: True   # set to False to disable Listening... log messages
+    ping-tasks-enabled: True
+    ping-tasks-interval: 30.0

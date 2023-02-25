@@ -2,7 +2,19 @@
 All notable changes to this project will be documented in this file.
 
 
-## [Unreleased]
+## [0.1.4] - 2023-02-25
+### Added
+- Added `get_cfg` methos to `ClientAPI` class. Easy access to client conf with possible default value.
+- Configuration for `OcaClient`
+- Configuration for the Ping-Task output interval
+### Fixed
+- Fixed an issue with bad error handling when incoming address is too short for `TreeAlpacaObservatory`
+- Fixed issue with reporting timeout errors 4004 by `ConditionalCycleQuery`
+### Changed
+- `TreeBaseBrokerDefaultTarget` from now on will always forward the request to the default provider when there is a 
+problem with finding the provider by address.
+- Lots of logging improvements
+- Change of default log-messages format (e.g. `2023-02-23 21:24:26 [INFO] [router] start main task`)
 
 ## [0.1.3] - 2023-02-13
 ### Added
@@ -40,4 +52,4 @@ This allows you to subscribe to these values
 
 [Unreleased]: https://github.com/araucaria-project/ocabox
 
-[0.1.3]: https://github.com/araucaria-project/ocabox
+[0.1.4]: https://github.com/araucaria-project/ocabox

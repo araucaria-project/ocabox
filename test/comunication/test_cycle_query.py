@@ -2,21 +2,18 @@ import asyncio
 import logging
 import time
 import unittest
-from typing import List
+
 from ob.comunication.client import Client
-from ob.comunication.comunication_error import CommunicationRuntimeError, CommunicationTimeoutError
+from ob.comunication.comunication_error import CommunicationRuntimeError
 from ob.comunication.cycle_query import ConditionalCycleQuery
-from ob.comunication.message_serializer import MessageSerializer
-from ob.comunication.multipart_structure import MultipartStructure
 from ob.comunication.request_solver import RequestSolver
-from ob.data_colection.address import AddressError, Address
 from ob.comunication.router import Router
+from ob.data_colection.address import AddressError, Address
 from ob.data_colection.base_components.tree_provider import TreeProvider
 from ob.data_colection.specialistic_components.tree_cache_observatory import TreeCache
 from ob.data_colection.specialistic_components.tree_conditional_freezer import TreeConditionalFreezer
 from ob.data_colection.value import Value
 from ob.data_colection.value_call import ValueRequest, ValueResponse
-from test.comunication.sample_test_resolver import SampleTestResolver
 from test.data_colection.sample_test_value_provider import SampleTestValueProvider
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -181,6 +178,45 @@ class TestConditionalCycleQuery(unittest.TestCase):
                 self.assertTrue(time_of_data_tolerance < end_time - start_time < time_of_data_tolerance2)
             finally:
                 await cq2.stop_and_wait()
+                await cq.stop_and_wait()
+
+        self.loop.run_until_complete(coro())
+
+    def test_correct_renewing_message(self):
+        """This test checks correct renewing message after it expire in server."""
+        address = Address('.'.join([self.tree_provider1.get_source_name(),
+                                    self.tree_provider2.get_source_name(),
+                                    self.tree_provider2.SAMPLE_VALUES[0][0]]))
+        time_of_data_tolerance = 0.2
+        time_expire = 0.5
+        current_time = time.time()
+        request = ValueRequest(address, current_time,
+                               time_of_data_tolerance=time_of_data_tolerance,
+                               request_type='GET',
+                               request_data={'time_of_known_change': current_time},  # client known about past
+                               cycle_query=True)
+        self.tree_freezer._alarm_timeout_offset = time_expire / 2  # set short time to expire
+        # initialize cache list witch some value
+        self.tree_cache._known_values.append(self.tree_cache._KnownValue(address=address,
+                                                                         value=Value(v=1, ts=current_time),
+                                                                         task=None, change_time=current_time))
+        delay = 0.2
+
+        async def val_changer():
+            await asyncio.sleep(time_expire)
+            self.tree_provider2.SAMPLE_VALUES[0][1].v += 1
+            self.tree_provider2.SAMPLE_VALUES[0][1].ts = time.time()
+
+        async def coro():
+            cq = ConditionalCycleQuery(client=self.client, list_request=[request], delay=delay, query_name='sample',
+                                       request_timeout=time_expire)  # set short timeout message
+            try:
+                cq.start()
+                asyncio.create_task(val_changer())
+                result = await cq.get_response()
+                self.assertIsNotNone(result[0].value)
+                self.assertTrue(result[0].status)
+            finally:
                 await cq.stop_and_wait()
 
         self.loop.run_until_complete(coro())
