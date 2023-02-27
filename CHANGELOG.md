@@ -1,6 +1,14 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+### Added
+- New module `ocaboxapi`. 
+- Added first version of new high level client API: `Observatory`, `Telescope`, `Dome`,...
+- Added `ocaboxapi.formatter` module with formatters for sexadecimal values, and cover status
+
+### Breaking Changes
+- `ClientAPI` and `Client` class has been moved to new `ocaboxapi` module!
 
 ## [0.1.4] - 2023-02-25
 ### Added
