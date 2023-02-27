@@ -18,35 +18,37 @@ class Dome(TelescopeComponent):
         ret = await self.aget_value('azimuth')
         return ret
 
-    async def asubscribe_az(self, callback:Callable):
+    async def asubscribe_az(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
         log.debug(f'Subscribing AZ from {self.tel_addr}')
-        await self.subscribe('azimuth', callback=callback)
+        return await self.subscribe('azimuth', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
     async def aget_shutterstatus(self) -> int:
         log.debug(f'Getting dome shutterstatus from {self.tel_addr}')
         ret = await self.aget_value('shutterstatus')
         return ret
-    async def asubscribe_shutterstatus(self, callback:Callable):
+
+    async def asubscribe_shutterstatus(self, callback: Callable | None = None,
+                                       time_of_data_tolerance: float | None = None):
         log.debug(f'Subscribing shutterstatus from {self.tel_addr}')
-        await self.subscribe('shutterstatus', callback=callback)
+        return await self.subscribe('shutterstatus', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
     async def aget_slaved(self) -> bool:
         log.debug(f'Getting dome slaved from {self.tel_addr}')
         ret = await self.aget_value('slaved')
         return ret
-    async def asubscribe_slaved(self, callback:Callable):
+
+    async def asubscribe_slaved(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
         log.debug(f'Subscribing slaved from {self.tel_addr}')
-        await self.subscribe('slaved', callback=callback)
+        return await self.subscribe('slaved', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
     async def aget_slewing(self) -> bool:
         log.debug(f'Getting dome slewing from {self.tel_addr}')
         ret = await self.aget_value('slewing')
         return ret
 
-
-    async def asubscribe_slewing(self, callback: Callable):
+    async def asubscribe_slewing(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
         log.debug(f'Subscribing slewing from {self.tel_addr}')
-        await self.subscribe('slewing', callback=callback)
+        return await self.subscribe('slewing', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
 # class DomeOld(TelescopeComponentOld):
 #     async def aget_az(self) -> float:
@@ -55,11 +57,10 @@ class Dome(TelescopeComponent):
 #         return ret
 #
 #
-#     async def asubscribe_az(self, callback:Callable):
+#     async def asubscribe_az(self, callback: Callable|None = None, time_of_data_tolerance: float|None = None):
 #         log.debug(f'Subscribing AZ from {self.tel_addr}')
 #         await self._asubscribe('azimuth', callback=callback)
 #
-#     # TODO: Remove sexadecimal and formatting at all from here
 #     async def _asubscribe_new(self, addr:str, callback:Callable, sexagesimal: bool, sex_formatter: Callable):
 #         """New version, which is going to use `ClientAPI.subscribe_with_callback (not working yet)"""
 #         # TODO: @Ernest może `subscribe_with_callback` powinno się przemianować na `run_subscription_callbacks`
