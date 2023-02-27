@@ -1,13 +1,16 @@
 from __future__ import annotations
 
-import asyncio
 import logging
+import asyncio
 from time import time
+import os
+import pwd
+import socket
 
 from ob.comunication.comunication_error import CommunicationTimeoutError, CommunicationRuntimeError
 
 from ocaboxapi import ClientAPI
-from ocaboxapi.exceptions import OcaboxServerError
+from ocaboxapi.exceptions import OcaboxServerError, OcaboxAccessDenied
 
 logger = logging.getLogger("observatory")
 
@@ -39,7 +42,9 @@ class Observatory():
 
     def connect(self, client: ClientAPI|None = None):
         if client is None:
-            self._client = ClientAPI('CliClient')
+            host = socket.gethostname()
+            user = pwd.getpwuid(os.getuid())[0]
+            self._client = ClientAPI('CliClient', user_name=f'{user}@{host} [CLI]')
         else:
             self._client = client
 
@@ -91,6 +96,19 @@ class Observatory():
             logger.debug(f'client.put_async {address} returned result: {res}')
         except (CommunicationTimeoutError, CommunicationRuntimeError) as e:
             raise e
+
+        if not res.status:
+            if res.error.code == 1004:
+                logger.info(f' {address}: {res.error.message}')
+                raise OcaboxAccessDenied(f'Access Denied for {address}: {res.error}')
+            else:
+                raise OcaboxServerError(f'OCABOX error on {address}: {res.error}')
+        # try:
+        #     ret = res.value.v
+        # except Exception as e:
+        #     logger.error(f'Unknown error setting value to {address}: {e}')
+        #     raise OcaboxServerError(f'Value error on {address}: {res.error}', e)
+
 
     async def get_async(self, address: str,
                   time_of_data: float or None = None,

@@ -23,7 +23,7 @@ class OcaBoxParam(param.Dynamic):
 # noinspection PyUnresolvedReferences
 class TelescopeComponent(param.Parameterized):
     id = param.String()
-    telescope: AbstractTelescope = param.ClassSelector(class_=AbstractTelescope)
+    telescope: 'Telescope' = param.ClassSelector(class_=AbstractTelescope)
     connected = OcaBoxParam(default=False, doc="Is component connected")
     name = OcaBoxParam(default='', doc="Component name")
     description = OcaBoxParam(default='', doc="Component description")
@@ -88,6 +88,7 @@ class TelescopeComponent(param.Parameterized):
             await self._aput_value(param_name, **kwargs)
         except OcaboxServerError as e:
             logger.info(f'Error while putting value {kwargs} for {param_name}: {e}')
+            raise
 
     def watch(self, param_names, callback, queued=False):
         """ Add watcher for local value(s) change, callback will be called with Event as argument
