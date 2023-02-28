@@ -45,7 +45,7 @@ class Dome(TelescopeComponent):
         logger.debug(f'Putting openshutter to {self.tel_addr}')
         return await self.aput_value('openshutter')
 
-    async def aput_closehutter(self):
+    async def aput_closeshutter(self):
         logger.debug(f'Putting closeshutter to {self.tel_addr}')
         return await self.aput_value('closeshutter')
 
