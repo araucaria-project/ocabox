@@ -18,8 +18,10 @@ logger = logging.getLogger("observatory")
 class Observatory():
     """The Observatory maintains connection to the single observatory server using `ocabox.Client`"""
 
-    def __init__(self) -> None:
+    def __init__(self, client_name = 'DefaultClient', software_id = None) -> None:
         self._client = None
+        self.client_name = client_name
+        self.software_id = software_id
         self.telescopes = {}
         self._subscribers = []
         super().__init__()
@@ -44,7 +46,8 @@ class Observatory():
         if client is None:
             host = socket.gethostname()
             user = pwd.getpwuid(os.getuid())[0]
-            self._client = ClientAPI('CliClient', user_name=f'{user}@{host} [CLI]')
+            self._client = ClientAPI(name=self.client_name,
+                                     user_name=f'{user}@{host}'+ (f' [{self.software_id}]' if self.software_id else ''))
         else:
             self._client = client
 
