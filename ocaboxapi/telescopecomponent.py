@@ -239,6 +239,9 @@ class TelescopeComponent(param.Parameterized):
         logger.debug(f'Got get {address}, response: {ret}')
         return ret
 
+    def __str__(self):
+        return f'{self.id}'
+
 
 class TelescopeComponentOld():
 
