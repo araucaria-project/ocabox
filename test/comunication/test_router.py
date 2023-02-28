@@ -27,6 +27,7 @@ class RouterTest(unittest.TestCase):
                       b'123456789',
                       b'0',
                       b'123456789',
+                      b'\xc2',
                       b'',
                       b'\x84\xa7address\x81\xa3adr\xb8sample_telescope.any_val\xactime_of_data\xcbA\xd8\xb8\xab7w\xc1a'
                       b'\xb6time_of_data_tolerance\xcb@N\x00\x00\x00\x00\x00\x00\xafrequest_timeout\xcbA\xd8\xb8\xab'

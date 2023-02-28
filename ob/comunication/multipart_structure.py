@@ -13,9 +13,10 @@ class MultipartStructure:
     CREATE_TIME = 1
     ID_ = 2
     REQUEST_TIMEOUT = 3
-    EMPTY_BYTE_2 = 4
-    DATA = 5
-    _MIN_SIZE = 6
+    SERVICE_MSG = 4
+    EMPTY_BYTE_2 = 5
+    DATA = 6
+    _MIN_SIZE = 7
 
     def __init__(self, multipart: List[bytes], prefix_size: int = 0, **kwargs):
         super().__init__(**kwargs)
@@ -41,6 +42,14 @@ class MultipartStructure:
     @property
     def request_timeout_float(self):
         return self.get_request_timeout_float(self.multipart, self.prefix_size)
+
+    @property
+    def service_msg(self):
+        return self.get_service_msg(self.multipart, self.prefix_size)
+
+    @property
+    def service_msg_bool(self):
+        return self.get_service_msg_bool(self.multipart, self.prefix_size)
 
     @property
     def data(self):
@@ -72,20 +81,34 @@ class MultipartStructure:
         return timeout
 
     @staticmethod
+    def get_service_msg(multipart, prefix_size: int = 0):
+        return multipart[(MultipartStructure.SERVICE_MSG + prefix_size)]
+
+    @staticmethod
+    def get_service_msg_bool(multipart, prefix_size: int = 0) -> bool:
+        try:
+            msg_bool = MessageSerializer.unpack_b(MultipartStructure.get_service_msg(multipart=multipart,
+                                                                                     prefix_size=prefix_size))
+            msg_bool = bool(msg_bool)
+        except ValueError:
+            msg_bool = None
+        return msg_bool
+
+    @staticmethod
     def get_data(multipart, prefix_size: int = 0):
         return multipart[(MultipartStructure.DATA + prefix_size):]
 
     @staticmethod
     def create_multipart(create_time: bytes, id_: bytes, data: List[bytes], request_timeout: bytes = b'',
-                         prefix_data: List[bytes] = None):
+                         service_msg: bytes = b'\xc2', prefix_data: List[bytes] = None):
         prefix_data = [] if prefix_data is None else prefix_data
-        return [*prefix_data, b'', create_time, id_, request_timeout, b'', *data]
+        return [*prefix_data, b'', create_time, id_, request_timeout, service_msg, b'', *data]
 
     @classmethod
     def from_parts(cls, create_time: bytes, id_: bytes, data: List[bytes], request_timeout: bytes = b'',
-                   prefix_data: List[bytes] = None):
+                   service_msg: bytes = b'\xc2', prefix_data: List[bytes] = None):
         return cls(cls.create_multipart(create_time=create_time, id_=id_, data=data, request_timeout=request_timeout,
-                                        prefix_data=prefix_data), prefix_size=len(prefix_data))
+                                        service_msg=service_msg, prefix_data=prefix_data), prefix_size=len(prefix_data))
 
     @staticmethod
     def validate_multipart(multipart: List[bytes], ps: int = 0):
@@ -108,6 +131,8 @@ class MultipartStructure:
             raise ValueError(f'Request has not message id')
         if not multipart[MS.REQUEST_TIMEOUT + ps]:
             raise ValueError(f'Request has not message timeout')
+        if not multipart[MS.SERVICE_MSG + ps]:
+            raise ValueError(f'Request has not service msg')
         if not multipart[MS.DATA + ps]:
             raise ValueError(f'No data in multipart')
         return True

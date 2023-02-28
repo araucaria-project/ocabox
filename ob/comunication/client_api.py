@@ -207,3 +207,13 @@ class ClientAPI:
     @staticmethod
     def client_config():
         return SingletonConfig.get_config()
+
+    async def server_is_alive(self, request_timeout: float = None):
+        """
+        The method checks if the server responds
+
+        :param request_timeout: waiting for answer timeout
+        :return: True if server responds
+        """
+        result = await self.client.ping_server(request_timeout=request_timeout)
+        return result is not None

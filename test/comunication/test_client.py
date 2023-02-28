@@ -85,7 +85,7 @@ class ClientTest(unittest.TestCase):
         msg_id = b'0'
         msg_wrong_id = b'1'
         msg_timeout = MessageSerializer.pack_b(time.time() + 100)
-        sample_message = [b'', msg_time, msg_id, msg_timeout, b'', b'sample_data']
+        sample_message = [b'', msg_time, msg_id, msg_timeout, b'\xc2', b'', b'sample_data']
         ms = MultipartStructure(sample_message)
         client._new_msgs.append(ms)
 
@@ -217,7 +217,9 @@ class ClientTest(unittest.TestCase):
                                          b'2222222',
                                          b'0',
                                          MessageSerializer.pack_b(time.time() - 1),
-                                         b'', ValueResponse('some.some').to_byte()])
+                                         b'\xc2',
+                                         b'',
+                                         ValueResponse('some.some').to_byte()])
             client._new_msgs.append(old_ms)
             self.assertTrue(len(client._new_msgs) == 1)
             task1 = asyncio.create_task(client.send_singlepart(ValueRequest('sample_telescope.dibi.azimuth.1',
@@ -322,12 +324,34 @@ class ClientTest(unittest.TestCase):
         client.default_timeout = 0.5
 
         async def coro():
-
             result = await client.send_singlepart(
-                    ValueRequest('sample_telescope.dibi.azimuth.1', time.time(), 20).to_byte())
+                ValueRequest('sample_telescope.dibi.azimuth.1', time.time(), 20).to_byte())
             # can not raisa a CommunicationTimeoutError
 
         self.loop.run_until_complete(coro())
+
+    def test_ping_server(self):
+        """Test method ping_server"""
+        client = Client(name='SampleTestClient')
+        client.default_timeout = 0.5
+
+        # correct response
+        async def coro():
+            result = await client.ping_server()
+            self.assertTrue(isinstance(result, float))
+            self.assertTrue(0 < result < (client.default_timeout/1000))
+
+        self.loop.run_until_complete(coro())
+
+        # incorrect response
+        async def coro():
+            self.vr.stop()
+            await self.vr.wait_for_stop()
+            result = await client.ping_server()
+            self.assertIsNone(result)
+
+        self.loop.run_until_complete(coro())
+        self.vr.start(self.loop)
 
 
 if __name__ == '__main__':

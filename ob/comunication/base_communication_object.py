@@ -56,7 +56,7 @@ class BaseCommunicationObject(ABC):
 
     @staticmethod
     def _pack_to_envelope(target: List[bytes], create_time: bytes, msg_id: bytes, request_timeout: bytes,
-                          data_b: list) -> MultipartStructure:
+                          service_msg: bytes, data_b: list) -> MultipartStructure:
         """
 
         :param target: address of clients should be one address or many witch empty byte separate.
