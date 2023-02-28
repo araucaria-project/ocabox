@@ -22,5 +22,13 @@ class AccessGrantor(TelescopeComponent):
 
     async def aput_take_control(self):
         logger.debug(f'Putting take_control to {self.tel_addr}')
-        await self.aput_value('take_control')
+        return await self.aput_value('take_control')
+
+    async def aput_break_control(self):
+        logger.debug(f'Putting break_control to {self.tel_addr}')
+        return await self.aput_value('break_control')
+
+    async def aput_return_control(self):
+        logger.debug(f'Putting return_control to {self.tel_addr}')
+        return await self.aput_value('return_control')
 

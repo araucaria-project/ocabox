@@ -11,7 +11,7 @@ from ob.data_colection.value_call import ValueResponse
 from ocaboxapi.abstelescope import AbstractTelescope
 from ocaboxapi.exceptions import OcaboxServerError
 
-logger = logging.getLogger('tel component')
+logger = logging.getLogger('telcomponent')
 
 param.parameterized.async_executor = lambda f: asyncio.create_task(f())
 
@@ -45,7 +45,7 @@ class TelescopeComponent(param.Parameterized):
 
     async def aput_connect(self, connect: bool):
         logger.debug(f'Putting  connect = {connect} to {self.tel_addr}')
-        await self.aput_value('connected', connected=connect)
+        await self.aput_value('connected', Connected=connect)
 
     async def asubscribe_name(self, callback: Callable | None = None,
                               time_of_data_tolerance: float | None = None):
@@ -85,7 +85,7 @@ class TelescopeComponent(param.Parameterized):
     async def aput_value(self, param_name, **kwargs):
         """Asynchronously put value, value will be pushed to OCABOX"""
         try:
-            await self._aput_value(param_name, **kwargs)
+            return await self._aput_value(param_name, **kwargs)
         except OcaboxServerError as e:
             logger.info(f'Error while putting value {kwargs} for {param_name}: {e}')
             raise
@@ -189,7 +189,7 @@ class TelescopeComponent(param.Parameterized):
         return self._get(param_name)
 
     async def _aput_value(self, param_name, **kwargs):
-        await self._put_async(param_name, parameters_dict=kwargs)
+        return await self._put_async(param_name, parameters_dict=kwargs)
 
     def _put_value(self, param_name, value):
         self._put(param_name, value)

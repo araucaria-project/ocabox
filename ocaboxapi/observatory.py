@@ -103,11 +103,12 @@ class Observatory():
                 raise OcaboxAccessDenied(f'Access Denied for {address}: {res.error}')
             else:
                 raise OcaboxServerError(f'OCABOX error on {address}: {res.error}')
-        # try:
-        #     ret = res.value.v
-        # except Exception as e:
-        #     logger.error(f'Unknown error setting value to {address}: {e}')
-        #     raise OcaboxServerError(f'Value error on {address}: {res.error}', e)
+        try:
+            ret = res.value.v
+        except Exception as e:
+            logger.error(f'Return value not exisit regardless status=True, when setting value to {address}: {e}')
+            raise OcaboxServerError(f'Value error on {address}: {res.error}', e)
+        return ret
 
 
     async def get_async(self, address: str,
@@ -145,7 +146,7 @@ class Observatory():
         try:
             ret = res.value.v
         except Exception as e:
-            logger.error(f'Unknown error getting value from {address}: {e}')
+            logger.error(f'Return value not exisit regardless status=True when getting value from {address}: {e}')
             raise OcaboxServerError(f'Value error on {address}: {res.error}', e)
 
         return ret
