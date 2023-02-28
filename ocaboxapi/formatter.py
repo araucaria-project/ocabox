@@ -93,6 +93,13 @@ def parse_deg_or_dms(deg_or_dms: str) -> float:
         """
     return deg_to_decimal_deg(deg_or_dms)
 
+def is_decimal(deg_or_dms_or_hms: str) -> bool:
+    """Check if a string is a decimal number"""
+    try:
+        float(deg_or_dms_or_hms)
+        return True
+    except ValueError:
+        return False
 
 
 def fmt_deg_min_sec(deg: float, sign=True, sep=':', precision=1) -> str:

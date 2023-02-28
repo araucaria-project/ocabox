@@ -68,6 +68,10 @@ class Dome(TelescopeComponent):
         logger.debug(f'Subscribing slewing from {self.tel_addr}')
         return await self.subscribe('slewing', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
+    async def aput_slewtoazimuth(self, az: float):
+        logger.debug(f'Putting slew to {self.tel_addr}')
+        await self.aput_value('slewtoazimuth', Azimuth=az)
+
     async def aput_abortslew(self):
         logger.debug(f'Putting abortslew to {self.tel_addr}')
         await self.aput_value('abortslew')
