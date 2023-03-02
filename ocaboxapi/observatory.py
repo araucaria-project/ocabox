@@ -6,7 +6,7 @@ from time import time
 import os
 import pwd
 import socket
-
+from ob.util_functions.asyncio_util_functions import wait_for_psce
 from ob.comunication.comunication_error import CommunicationTimeoutError, CommunicationRuntimeError
 
 from ocaboxapi import ClientAPI
@@ -200,6 +200,22 @@ class Observatory():
         del self._subscribers[self._subscribers.index(cq)]
         cq.stop()
 
+    async def aunsubscribe_all(self):
+        for cq in self._subscribers:
+            await self.aunsubscribe_psce(cq)
+
+    async def aunsubscribe_psce(self, cq):
+        del self._subscribers[self._subscribers.index(cq)]
+        cq.stop()
+        time_to_close = 0.5
+        try:
+
+            await wait_for_psce(
+                cq.stop_and_wait(),
+                timeout=time_to_close
+            )  # the task should finish in less than 0.5 seconds
+        except asyncio.TimeoutError:
+            pass
 
     async def subscribe_async_old(self, address: str, callback,
                               time_of_data_tolerance: float | None = None,

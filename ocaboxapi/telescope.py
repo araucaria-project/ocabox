@@ -24,7 +24,7 @@ class Telescope(AbstractTelescope):
         try:
             return self.mounts[id]
         except LookupError:
-            dev = Mount(id, self)
+            dev = Mount(id=id, telescope=self)
             self.mounts[id] = dev
             return dev
 
