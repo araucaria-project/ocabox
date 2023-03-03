@@ -18,17 +18,18 @@ class BaseCommunicationObjectTest(unittest.TestCase):
         delta = 1
         # fresh message
         ms = MultipartStructure(
-            [b'', MessageSerializer.pack_b(now), b'0', MessageSerializer.pack_b(now + delta), b'sample_data'])
+            [b'', MessageSerializer.pack_b(now), b'0', MessageSerializer.pack_b(now + delta), b'\xc2', b'',
+             b'sample_data'])
         time_to_expire = bco._get_time_to_expire(ms=ms)
         self.assertTrue(0 < time_to_expire < delta)
         # expire message
         ms = MultipartStructure(
-            [b'', MessageSerializer.pack_b(now), b'0', MessageSerializer.pack_b(now - delta), b'sample_data'])
+            [b'', MessageSerializer.pack_b(now), b'0', MessageSerializer.pack_b(now - delta), b'\xc2', b'', b'sample_data'])
         with self.assertRaises(CommunicationTimeoutError):
             bco._get_time_to_expire(ms=ms)
         # message hasn't timeout value
         ms = MultipartStructure(
-            [b'', MessageSerializer.pack_b(now), b'0', b'', b'sample_data'])
+            [b'', MessageSerializer.pack_b(now), b'0', b'', b'\xc2', b'', b'sample_data'])
         with self.assertRaises(CommunicationTimeoutError):
             bco._get_time_to_expire(ms=ms)
         # message hasn't timeout value and try to get default value

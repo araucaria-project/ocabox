@@ -6,6 +6,7 @@ from zmq.asyncio import Poller
 from ob.comunication.base_communication_object import BaseCommunicationObject
 from ob.comunication.base_request_solver import BaseRequestSolver
 from ob.comunication.comunication_error import CommunicationTimeoutError
+from ob.comunication.message_serializer import MessageSerializer
 from ob.comunication.multipart_structure import MultipartStructure
 from ob.util_functions.asyncio_util_functions import wait_for_psce
 
@@ -56,12 +57,30 @@ class Router(BaseCommunicationObject):
 
     async def _solve_request(self, ms: MultipartStructure) -> List[bytes] or None:
         answer = None
-        if self.request_solver:
-            zmq_id_ = ms.prefix_data[0] if ms.prefix_size > 0 else b''
-            answer = await self.request_solver.get_answer(ms.data, zmq_id_, timeout=ms.request_timeout_float)
+        if ms.service_msg_bool:
+            answer = await self._get_answer(ms)
         else:
-            logger.error(f"Can not find request solver. The router can't send response to client.")
+            if self.request_solver:
+                zmq_id_ = ms.prefix_data[0] if ms.prefix_size > 0 else b''
+                answer = await self.request_solver.get_answer(ms.data, zmq_id_, timeout=ms.request_timeout_float)
+            else:
+                logger.error(f"Can not find request solver. The router can't send response to client.")
         return answer
+
+    async def _get_answer(self, ms: MultipartStructure) -> List[bytes]:
+
+        response = []
+        # TODO In the future, when the number of commands increases, think about a class instead of a dictionary
+        r = None
+        if ms.data and isinstance(ms.data, list) and len(ms.data) > 0:
+            message_dict = MessageSerializer.from_bytes(ms.data[0])
+            order = message_dict.get("command")
+            if order is not None and order == "is_alive":
+                r = {"command": order, "response": True}
+        resp = MessageSerializer.pack_b(r)
+        response.append(resp)
+
+        return response
 
     @staticmethod
     def _open_envelope(multipart: List[bytes]) -> MultipartStructure:
@@ -79,7 +98,7 @@ class Router(BaseCommunicationObject):
 
     @staticmethod
     def _pack_to_envelope(target: List[bytes], create_time: bytes, msg_id: bytes, request_timeout: bytes,
-                          data_b: list) -> MultipartStructure:
+                          service_msg: bytes, data_b: list) -> MultipartStructure:
         if not target:
             logger.error(f'Wrong client address for multipart.')
             raise ValueError
@@ -87,7 +106,8 @@ class Router(BaseCommunicationObject):
             data_b = [b'']
             logger.warning(f'No data to send. Task send empty bit to client. ')
         multipart = MultipartStructure.from_parts(create_time=create_time, id_=msg_id, data=data_b,
-                                                  request_timeout=request_timeout, prefix_data=target)
+                                                  request_timeout=request_timeout, service_msg=service_msg,
+                                                  prefix_data=target)
         multipart.validate()
         return multipart
 
@@ -137,7 +157,7 @@ class Router(BaseCommunicationObject):
             return
         try:
             answer_multipart = Router._pack_to_envelope(ms.prefix_data, ms.create_time, ms.id_, ms.request_timeout,
-                                                        answer)
+                                                        ms.service_msg, answer)
         except ValueError:
             # Don't answer for incorrect requests. Close task.
             remove_task_inner()
