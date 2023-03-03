@@ -63,7 +63,6 @@ class Telescope(AbstractTelescope):
             self.focusers[id] = dev
             return dev
 
-
     def get_access_grantor(self) -> AccessGrantor:
         if self._access_grantor is None:
             self._access_grantor = AccessGrantor(id='access_grantor', telescope=self)

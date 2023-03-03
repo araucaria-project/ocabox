@@ -17,6 +17,18 @@ def fmt_domeshutter(shutter: int | None):
         'Error',
     ][shutter]
 
+def fmt_camerastate(state: int | None):
+    """Format shutter status for display"""
+    if state is None:
+        return 'n/a'
+    return [
+        'Idle',
+        'Waiting',
+        'Exposing',
+        'Reading',
+        'Downloading',
+        'Error'
+    ][state]
 
 def fmt_az(az, sexagesimal=True):
     """Format azimuth for display"""
