@@ -5,5 +5,7 @@ from ocaboxapi.telescope import Telescope
 from ocaboxapi.dome import Dome
 from ocaboxapi.mount import Mount
 from ocaboxapi.camera import Camera
+from ocaboxapi.focuser import Focuser
+from ocaboxapi.filterwheel import FilterWheel
 
-__all__ = ['Observatory', 'Telescope', 'Dome', 'Mount', 'Camera']
+__all__ = ['Observatory', 'Telescope', 'Dome', 'Mount', 'Camera', 'FilterWheel', 'Focuser']
