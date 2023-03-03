@@ -2,12 +2,14 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+
+## [0.2.0]
 ### Added
 - New module `ocaboxapi`. 
 - Added first version of new high level client API: `Observatory`, `Telescope`, `Dome`, `AccessGrantor`, ...
 - Added `ocaboxapi.formatter` module with formatters for sexadecimal values, and cover status
 
-### Breaking Changes
+### Changed
 - `ClientAPI` and `Client` class has been moved to new `ocaboxapi` module!
 
 ## [0.1.4] - 2023-02-25
@@ -60,4 +62,4 @@ This allows you to subscribe to these values
 
 [Unreleased]: https://github.com/araucaria-project/ocabox
 
-[0.1.4]: https://github.com/araucaria-project/ocabox
+[0.2.0]: https://github.com/araucaria-project/ocabox

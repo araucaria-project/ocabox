@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from typing import List
-from ocaboxapi.client import Client
+from ob.comunication.client import Client
 from ob.comunication.comunication_error import CommunicationTimeoutError, CommunicationRuntimeError
 from ob.comunication.cycle_query import ConditionalCycleQuery, BaseCycleQuery, PeriodicCycleQuery
 from ob.data_colection.address import AddressError, Address

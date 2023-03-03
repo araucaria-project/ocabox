@@ -2,7 +2,7 @@
 import asyncio
 import sys
 from ob.OBApp import OBApp
-from ob.comunication.client_api import ClientAPI
+from ocaboxapi.client_api import ClientAPI
 from ob.comunication.comunication_error import CommunicationRuntimeError, CommunicationTimeoutError
 from ob.data_colection.value import Value
 from ob.data_colection.value_call import ValueResponse
