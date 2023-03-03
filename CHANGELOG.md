@@ -1,6 +1,22 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+## [0.2.0]
+### Added
+- New module `ocaboxapi`. 
+- Added first version of new high level client API: `Observatory`, `Telescope`, `Dome`, `AccessGrantor`, ...
+- Added `ocaboxapi.formatter` module with formatters for sexadecimal values, and cover status
+- The `MultipartStructure` template has been extended with a flag (`SERVICE_MSG`) redirecting messages to local 
+service by the server. When the flag is set to true, messages will not go to the tree.
+- Added the ability to ping the server by using internal queries to the server. That is, the ones with the 
+`SERVICE_MSG` flag.
+- Added methods `ping_server` to `Client` and `server_is_alive` to `ClientAPI`, which uses a new mechanism for sending 
+messages to the server that allows to ping the server. Read more in the method documentation.
+
+### Changed
+- `ClientAPI` and `Client` class has been moved to new `ocaboxapi` module!
 
 ## [0.1.4] - 2023-02-25
 ### Added
@@ -52,4 +68,4 @@ This allows you to subscribe to these values
 
 [Unreleased]: https://github.com/araucaria-project/ocabox
 
-[0.1.4]: https://github.com/araucaria-project/ocabox
+[0.2.0]: https://github.com/araucaria-project/ocabox
