@@ -1,7 +1,7 @@
 import asyncio
 
 from ob.comunication.client import Client
-from ob.comunication.client_api import ClientAPI
+from ocaboxapi.client_api import ClientAPI
 from ob.comunication.comunication_error import CommunicationRuntimeError
 
 

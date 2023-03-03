@@ -249,10 +249,23 @@ class Client(BaseCommunicationObject):
         :raise CommunicationTimeoutError:
         :return: list of responses
         """
+        return await self._send_multipart(list_part=list_part, request_timeout=request_timeout, no_wait=no_wait)
+
+    async def _send_multipart(self, list_part: List[bytes], request_timeout: float = None,
+                              no_wait: bool = False, service_msg: bool = False) -> List[bytes] or None:
+        """
+        :param no_wait:
+        :param request_timeout:
+        :param list_part:
+        :raise CommunicationRuntimeError:
+        :raise CommunicationTimeoutError:
+        :return:
+        """
         # create message timestamp
         msg_create_time_b = self._get_msg_create_time()
         # create message id
         msg_id_b = self._get_msg_id()
+        serv_msg_b = MessageSerializer.pack_b(service_msg)
         # create message timeout
         if request_timeout is None:
             request_timeout = time.time() + self.default_timeout
@@ -260,7 +273,7 @@ class Client(BaseCommunicationObject):
                         f"second)")
         request_timeout_b = MessageSerializer.pack_b(request_timeout)
         # TODO If some performance problems occurs, here it is place to change potentially unneeded deserialization
-        ms = self._pack_to_envelope([], msg_create_time_b, msg_id_b, request_timeout_b, list_part)
+        ms = self._pack_to_envelope([], msg_create_time_b, msg_id_b, request_timeout_b, serv_msg_b, list_part)
         try:
             resp = await self._send_to_server(ms, time_to_expire=self._get_time_to_expire(ms), no_wait=no_wait)
         except CommunicationRuntimeError:
@@ -271,6 +284,37 @@ class Client(BaseCommunicationObject):
             return resp.data
         else:
             return None
+
+    async def ping_server(self, request_timeout: float = None) -> None or float:
+        """
+        The method checks if the server is responding, if everything is ok it will return the response time.
+        Otherwise, it will give None.
+
+        :param request_timeout: waiting for answer timeout
+        :return: None or time in milliseconds
+        """
+        request = {"command": "is_alive"}
+        list_part = [MessageSerializer.pack_b(request)]
+        start = time.time()
+        try:
+            response = await self._send_multipart(list_part=list_part, request_timeout=request_timeout,
+                                                  service_msg=True, no_wait=False)
+        except CommunicationTimeoutError:
+            return None
+        except CommunicationRuntimeError:
+            return None
+        end = time.time()
+        if response and isinstance(response, list) and len(response) > 0:
+            result = MessageSerializer.unpack_b(response[0])
+            if result.get('response', False):
+                r = (end - start)/1000
+            else:
+                logger.warning(f"the server returned corrupted data")
+                r = None
+        else:
+            r = None
+            logger.warning(f"the server returned corrupted data")
+        return r
 
     async def send_singlepart(self, part: bytes, request_timeout: float = None, no_wait: bool = False) -> bytes:
         """
@@ -298,7 +342,7 @@ class Client(BaseCommunicationObject):
 
     @staticmethod
     def _pack_to_envelope(target: List[bytes], create_time: bytes, msg_id: bytes, request_timeout: bytes,
-                          data_b: list) -> MultipartStructure:
+                          service_msg: bytes, data_b: list) -> MultipartStructure:
         """
 
         :param target: Not used. Always be empty []
@@ -311,7 +355,7 @@ class Client(BaseCommunicationObject):
         if not data_b:
             data_b = [b'']
             logger.warning(f'No data to send. Task send empty bit to router. ')
-        return MultipartStructure.from_parts(create_time=create_time, id_=msg_id, data=data_b,
+        return MultipartStructure.from_parts(create_time=create_time, id_=msg_id, data=data_b, service_msg=service_msg,
                                              request_timeout=request_timeout, prefix_data=target)
 
     def __del__(self):
