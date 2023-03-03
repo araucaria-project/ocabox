@@ -53,7 +53,7 @@ class TelescopeComponent(param.Parameterized):
         await self.subscribe('name', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
     async def aget_name(self) -> str:
-        logger.debug(f'Getting  name from {self.tel_addr}')
+        logger.debug(f'Getting name from {self.tel_addr}')
         ret = await self.aget_value('name')
         return ret
 
@@ -243,7 +243,7 @@ class TelescopeComponent(param.Parameterized):
         return f'{self.id}'
 
 
-class TelescopeComponentOld():
+"""class TelescopeComponentOld():
 
     def __init__(self, id: str, telescope: "AbstractTelescope") -> None:
         self.id = id
@@ -268,4 +268,4 @@ class TelescopeComponentOld():
                                                          request_timeout=request_timeout,
                                                          parameters_dict=parameters_dict)
         logger.debug(f'Got get_async {address}, response: {ret}')
-        return ret
+        return ret"""

@@ -4,6 +4,7 @@ from ocaboxapi.abstelescope import AbstractTelescope
 from ocaboxapi.access import AccessGrantor
 from ocaboxapi.dome import Dome
 from ocaboxapi.mount import Mount
+from ocaboxapi.camera import Camera
 
 logger = logging.getLogger("telescope")
 
@@ -34,6 +35,14 @@ class Telescope(AbstractTelescope):
         except LookupError:
             dev = Dome(id=id, telescope=self)
             self.domes[id] = dev
+            return dev
+
+    def get_camera(self, id='camera') -> Camera:
+        try:
+            return self.domes[id]
+        except LookupError:
+            dev = Camera(id=id, telescope=self)
+            self.cameras[id] = dev
             return dev
 
 

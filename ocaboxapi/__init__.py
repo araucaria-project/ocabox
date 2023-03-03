@@ -4,5 +4,6 @@ from ocaboxapi.observatory import Observatory
 from ocaboxapi.telescope import Telescope
 from ocaboxapi.dome import Dome
 from ocaboxapi.mount import Mount
+from ocaboxapi.camera import Camera
 
-__all__ = ['Observatory', 'Telescope', 'Dome', 'Mount']
+__all__ = ['Observatory', 'Telescope', 'Dome', 'Mount', 'Camera']
