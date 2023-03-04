@@ -20,9 +20,9 @@ class AccessGrantor(TelescopeComponent):
         logger.debug(f'Subscribing telescope controlling user from {self.tel_addr}')
         return await self.subscribe('current_user', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aput_take_control(self):
+    async def aput_take_control(self, time: float):
         logger.debug(f'Putting take_control to {self.tel_addr}')
-        return await self.aput_value('take_control')
+        return await self.aput_value('take_control', timeout_reservation=time)
 
     async def aput_break_control(self):
         logger.debug(f'Putting break_control to {self.tel_addr}')
