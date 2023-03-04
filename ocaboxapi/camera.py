@@ -1,6 +1,6 @@
 from __future__ import annotations
 import logging
-from typing import Callable
+from typing import Callable, List
 from ocaboxapi.telescopecomponent import TelescopeComponent, OcaBoxParam
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -140,6 +140,21 @@ class Camera(TelescopeComponent):
     async def asubscribe_percentcompleted(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing exposure percent competed from {self.tel_addr}')
         return await self.subscribe('percentcompleted', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
+
+    async def aget_imagearray(self) -> List[int]:
+        logger.debug(f'Getting imagearray from {self.tel_addr}')
+        ret = await self.aget_value('imagearray')
+        return ret
+
+    async def aget_imageready(self) -> bool:
+        logger.debug(f'Getting imageready from {self.tel_addr}')
+        ret = await self.aget_value('imageready')
+        return ret
+
+    async def asubscribe_imageready(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
+        logger.debug(f'Subscribing image ready from {self.tel_addr}')
+        return await self.subscribe('imageready', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
+
 
     async def aput_binx(self, binx: int) -> None:
         logger.debug(f'Putting binx to {self.tel_addr}')
