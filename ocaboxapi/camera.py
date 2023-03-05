@@ -20,6 +20,8 @@ class Camera(TelescopeComponent):
     percentcompleted = OcaBoxParam(default=0.0, doc="Camera exposure percent competed")
     coolerpower = OcaBoxParam(default=0.0, doc="Camera cooler power level")
     cooleron = OcaBoxParam(default=False, doc="Camera is cooler on")
+    imageready = OcaBoxParam(default=False, doc="Camera is image ready")
+    imagearray = OcaBoxParam(default=[0], doc="Camera image array")
 
 
     camerastate_to_code = {
