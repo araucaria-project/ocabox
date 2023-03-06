@@ -67,8 +67,3 @@ class Telescope(AbstractTelescope):
         if self._access_grantor is None:
             self._access_grantor = AccessGrantor(id='access_grantor', telescope=self)
         return self._access_grantor
-
-    async def take_control(self, telescope: str):
-        logger.info(f'Take control')
-        await self.observatory.put_async(f'{self.tel_addr}.access_grantor.take_control')
-
