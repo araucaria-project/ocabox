@@ -22,6 +22,8 @@ class Camera(TelescopeComponent):
     cooleron = OcaBoxParam(default=False, doc="Camera is cooler on")
     imageready = OcaBoxParam(default=False, doc="Camera is image ready")
     imagearray = OcaBoxParam(default=[0], doc="Camera image array")
+    readoutmode = OcaBoxParam(default=0, doc="Camera readoutmode")
+    readoutmodes = OcaBoxParam(default=[0], doc="Camera readoutmodes")
 
 
     camerastate_to_code = {
@@ -157,6 +159,23 @@ class Camera(TelescopeComponent):
         logger.debug(f'Subscribing image ready from {self.tel_addr}')
         return await self.subscribe('imageready', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
+    async def aget_readoutmode(self) -> int:
+        logger.debug(f'Getting readoutmode from {self.tel_addr}')
+        ret = await self.aget_value('readoutmode')
+        return ret
+
+    async def asubscribe_readoutmode(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
+        logger.debug(f'Subscribing readoutmode from {self.tel_addr}')
+        return await self.subscribe('readoutmode', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
+
+    async def aget_readoutmodes(self) -> List[str]:
+        logger.debug(f'Getting readoutmodes from {self.tel_addr}')
+        ret = await self.aget_value('readoutmodes')
+        return ret
+
+    async def asubscribe_readoutmodes(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
+        logger.debug(f'Subscribing readoutmodes from {self.tel_addr}')
+        return await self.subscribe('readoutmodes', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
     async def aput_binx(self, binx: int) -> None:
         logger.debug(f'Putting binx to {self.tel_addr}')
@@ -197,3 +216,7 @@ class Camera(TelescopeComponent):
     async def aput_abortexposure(self) -> None:
         logger.debug(f'Putting abort exposure to {self.tel_addr}')
         await self.aput_value('abortexposure')
+
+    async def aput_readoutmode(self, romode: int) -> None:
+        logger.debug(f'Putting readoutmode to {self.tel_addr}')
+        await self.aput_value('readoutmode', ReadoutMode=romode)
