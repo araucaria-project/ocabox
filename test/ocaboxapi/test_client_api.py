@@ -2,7 +2,7 @@ import asyncio
 import logging
 import time
 import unittest
-from ob.comunication.client_api import ClientAPI
+from ocaboxapi.client_api import ClientAPI
 from ob.comunication.router import Router
 from ob.data_colection.value_call import ValueResponse, ValueRequest
 from test.comunication.sample_test_resolver import SampleTestResolver

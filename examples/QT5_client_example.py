@@ -2,7 +2,7 @@ import sys
 import asyncio
 
 from ob.comunication.client import Client
-from ob.comunication.client_api import ClientAPI
+from ocaboxapi.client_api import ClientAPI
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QGridLayout
 from qasync import QEventLoop
