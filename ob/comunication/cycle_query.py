@@ -375,6 +375,7 @@ class ConditionalCycleQuery(BaseCycleQuery):
                         raise CommunicationRuntimeError(message=f"this address ({str(r.address)}) does not return any "
                                                                 f"value")
                 if continue_while:
+                    await asyncio.sleep(0)
                     continue
                 self._event.set()
             except CommunicationRuntimeError as e:
