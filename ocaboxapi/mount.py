@@ -124,3 +124,15 @@ class Mount(TelescopeComponent):
     async def aput_findhome(self) -> None:
         logger.debug(f'Putting findhome to {self.tel_addr}')
         await self.aput_value('findhome')
+
+    async def aput_action(self, action: str, param: str | None = None) -> None:
+        logger.debug(f'Putting action to {self.tel_addr}')
+        await self.aput_value('action', Action=action, Parameters=param)
+
+    async def aput_opencover(self) -> None:
+        logger.debug(f'Putting telescope opencover to {self.tel_addr}')
+        await self.aput_value('action', Action='telescope:opencover')
+
+    async def aput_closecover(self) -> None:
+        logger.debug(f'Putting telescope closecover to {self.tel_addr}')
+        await self.aput_value('action', Action='telescope:closecover')
