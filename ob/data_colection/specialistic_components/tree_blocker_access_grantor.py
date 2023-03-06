@@ -16,12 +16,13 @@ class TreeBlockerAccessGrantor(TreeProvider):
     """
     This module is responsible for reserving access to the locking module for users. The module has several defined
     address commands:
-        - take_control - this command reserves access for the user, is posible to give specific timeout in request
+        - take_control - this command reserves access for the user, is possible to give specific timeout in request
             data, use 'timeout_reservation' parameter
         - return_control - this command cancel reserves access for the user
         - break_control - this command cancel control from the current user, every one can send this
         - current_user - this command return current user witch one is currently accessing
         - timeout_current_control - this command return timeout for currently accessing user
+        - is_access - this method checks if the requesting user has control and return True if so
     """
 
     COMPONENT_DEFAULT_NAME: str = 'TreeBlockerAccessGrantor'
@@ -88,4 +89,12 @@ class TreeBlockerAccessGrantor(TreeProvider):
             # this must be first before get user otherwise may hit the moment when the user expires
             timeout_control = self._target_blocker.get_timeout_current_reservation()
             return Value(v=timeout_control, ts=time.time())
+
+        if command == 'is_access':
+            current_user = self._target_blocker.get_current_user()
+            if current_user is not None and current_user == user:
+                return Value(v=True, ts=time.time())
+            else:
+                return Value(v=False, ts=time.time())
+
         raise AddressError(code=1002, message=f'Unrecognised method for module {self.get_name()}')
