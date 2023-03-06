@@ -9,4 +9,4 @@ from ocaboxapi.focuser import Focuser
 from ocaboxapi.filterwheel import FilterWheel
 from ocaboxapi.access import AccessGrantor
 
-__all__ = ['Observatory', 'Telescope', 'Dome', 'Mount', 'Camera', 'FilterWheel', 'Focuser', 'AccessGrantor']
+__alllls__ = ['Observatory', 'Telescope', 'Dome', 'Mount', 'Camera', 'FilterWheel', 'Focuser', 'AccessGrantor']
