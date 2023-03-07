@@ -2,6 +2,8 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+## Changed
+- Improved error severity handling
 
 ## [0.2.2] - 2023-03-07
 ## Added

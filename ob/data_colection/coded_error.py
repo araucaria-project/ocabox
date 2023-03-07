@@ -5,7 +5,22 @@ from typing import List, Tuple
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
-class BaseCodedError(Exception, ABC):
+class ErrorSeverity(ABC):
+    """
+    It's a class that stores error severities.
+
+    :cvar SEVERITY_LEVELS: severity levels
+    :cvar SEVERITY_NORMAL: severity normal
+    :cvar SEVERITY_CRITICAL: severity critical
+    :cvar SEVERITY_TEMPORARY: severity temporary
+    """
+    SEVERITY_NORMAL: str = 'NORMAL'
+    SEVERITY_CRITICAL: str = 'CRITICAL'
+    SEVERITY_TEMPORARY: str = 'TEMPORARY'
+    SEVERITY_LEVELS: list = [SEVERITY_NORMAL, SEVERITY_CRITICAL, SEVERITY_TEMPORARY]
+
+
+class BaseCodedError(Exception, ErrorSeverity, ABC):
     """
     This is a base exception with code.
 
@@ -14,6 +29,10 @@ class BaseCodedError(Exception, ABC):
     :cvar CODE_GROUP: Number of error group, must be the number of whole thousands
     :cvar _KNOWN_LOCAL_CODES: List of known errors with local codes (codes without number of group can be number
         between 1 and 999)
+    :cvar SEVERITY_LEVELS: severity levels
+    :cvar SEVERITY_NORMAL: severity normal
+    :cvar SEVERITY_CRITICAL: severity critical
+    :cvar SEVERITY_TEMPORARY: severity temporary
 
     :param code: Error code
     :param message: Error message
@@ -23,7 +42,9 @@ class BaseCodedError(Exception, ABC):
     _KNOWN_LOCAL_CODES: List[Tuple[int, str]] = []
     ERROR_CODE: List[Tuple[int, str]] = [(c + CODE_GROUP, d) for c, d in _KNOWN_LOCAL_CODES]
 
-    def __init__(self, code: int = CODE_GROUP, message: str = "", **kwargs):
+    def __init__(self, code: int = CODE_GROUP, message: str = "", severity: str = None, **kwargs):
+        if severity is None:
+            severity = self.SEVERITY_NORMAL
         if message:
             message = message
         elif code != self.CODE_GROUP:
@@ -32,6 +53,7 @@ class BaseCodedError(Exception, ABC):
             message = "Default error."
         self.message = message
         self.code = code
+        self.severity: str = severity
         super().__init__(self.message)
 
     @classmethod
@@ -89,7 +111,8 @@ class TreeOtherError(BaseCodedError):
     _KNOWN_LOCAL_CODES = [(1, 'Wrong request'),
                           (2, 'Application do not answer'),
                           (3, 'This request cannot be subscribed. The cache does not store the value for this request'),
-                          (4, 'The time to generate the value has been exceeded')]
+                          (4, 'The time to generate the value has been exceeded'),
+                          (5, 'The module could not connect to the external service.')]
 
     def __init__(self, code: int = CODE_GROUP, message="", **kwargs):
         super().__init__(message=message, code=code, **kwargs)
