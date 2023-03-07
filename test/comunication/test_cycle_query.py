@@ -36,6 +36,7 @@ class TestConditionalCycleQuery(unittest.TestCase):
         self.tree_freezer = TreeConditionalFreezer('sample_freezer', self.tree_cache)
         self.tree_provider1 = TreeProvider('sample_name1', 'provider1', self.tree_freezer)
         self.max_refreshes = 3
+        self.tree_freezer._alarm_timeout_offset = 0.1  # Manual timeout alarm setting for tests
         self.tree_freezer.set_max_refreshes(self.max_refreshes)
         self.time_interval = 0.2  # number of seconds to test the temporal aspects of the module
         # router

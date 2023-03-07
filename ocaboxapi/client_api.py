@@ -208,6 +208,9 @@ class ClientAPI:
     def client_config():
         return SingletonConfig.get_config()
 
+    def get_cfg(self, name_cfg: str, default=None, use_default_settings=True):
+        return self.client.get_cfg(name_cfg, default, use_default_settings)
+
     async def server_is_alive(self, request_timeout: float = None):
         """
         The method checks if the server responds

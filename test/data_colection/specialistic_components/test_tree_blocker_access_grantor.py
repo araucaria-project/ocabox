@@ -146,6 +146,28 @@ class TreeRequestAlpacaBlockerTest(unittest.TestCase, BaseAsyncTest):
 
         self.loop.run_until_complete(coro())
 
+    def test_is_access(self):
+        """test command: is_access"""
+        async def coro():
+            user = TreeServiceUser(name='some_user')
+            self.blocker.make_reservation(user=user)
+            self.assertIsNotNone(self.blocker.get_current_user)
+
+            # haven't access
+            other_user = TreeServiceUser(name='some_other_user')
+            req = ValueRequest('.'.join([self.grantor_source_name, 'is_access']),
+                               request_type='PUT', user=other_user)
+            result = await self.broker.get_response(request=req)
+            self.assertFalse(result.value.v)
+
+            # have access
+            req = ValueRequest('.'.join([self.grantor_source_name, 'is_access']),
+                               request_type='PUT', user=user)
+            result = await self.broker.get_response(request=req)
+            self.assertTrue(result.value.v)
+
+        self.loop.run_until_complete(coro())
+
 
 if __name__ == '__main__':
     unittest.main()

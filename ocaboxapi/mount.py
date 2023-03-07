@@ -1,94 +1,138 @@
+from __future__ import annotations
 import logging
-from typing import Union, Callable
+from typing import Callable
+from ocaboxapi.telescopecomponent import TelescopeComponent, OcaBoxParam
 
-from ob.comunication.comunication_error import CommunicationRuntimeError
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
-# from ocaboxapi.formatter import fmt_hourangle, fmt_ra, fmt_dec, fmt_az, fmt_alt
-from ocaboxapi.telescopecomponent import TelescopeComponentOld
 
-log = logging.getLogger(__name__.rsplit('.')[-1])
+class Mount(TelescopeComponent):
 
-class Mount(TelescopeComponentOld):
-    def slew(self):
-        pass
+    rightascension = OcaBoxParam(default=0.0, doc="Mount rightascension")
+    declination = OcaBoxParam(default=0.0, doc="Mount declination")
+    azimuth = OcaBoxParam(default=0.0, doc="Mount azimuth")
+    altitude = OcaBoxParam(default=0.0, doc="Mount altitude")
+    athome = OcaBoxParam(default=False, doc="Mount is athome")
+    atpark = OcaBoxParam(default=False, doc="Mount is atpark")
+    slewing = OcaBoxParam(default=False, doc="Mount is slewing")
+    tracking = OcaBoxParam(default=False, doc="Mount is tracking")
 
-    async def aget_ra(self, sexagesimal: bool = False) -> Union[float, str]:
-        log.debug(f'Getting RA from {self.tel_addr}')
-        ret = await self.get_async('rightascension')
-        return fmt_ra(ret, sexagesimal=sexagesimal)
+    async def aget_ra(self) -> float:
+        logger.debug(f'Getting mount RA from {self.tel_addr}')
+        ret = await self.aget_value('rightascension')
+        return ret
 
-    async def aget_dec(self, sexagesimal: bool = False) -> Union[float, str]:
-        log.debug(f'Getting DEC from {self.tel_addr}')
-        ret = await self.get_async('declination')
-        return fmt_dec(ret, sexagesimal=sexagesimal)
+    async def asubscribe_ra(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
+        logger.debug(f'Subscribing mount RA from {self.tel_addr}')
+        return await self.subscribe('rightascension', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_az(self, sexagesimal: bool = False) -> Union[float, str]:
-        log.debug(f'Getting AZ from {self.tel_addr}')
-        ret = await self.get_async('azimuth')
-        return fmt_az(ret, sexagesimal=sexagesimal)
+    async def aget_dec(self) -> float:
+        logger.debug(f'Getting mount DEC from {self.tel_addr}')
+        ret = await self.aget_value('declination')
+        return ret
 
-    async def aget_alt(self, sexagesimal: bool = False) -> Union[float, str]:
-        log.debug(f'Getting ALT from {self.tel_addr}')
-        ret = await self.get_async('altitude')
-        return fmt_alt(ret, sexagesimal=sexagesimal)
+    async def asubscribe_dec(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
+        logger.debug(f'Subscribing mount DEC from {self.tel_addr}')
+        return await self.subscribe('declination', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
-    async def asubscribe_ra(self, callback:Callable, sexagesimal: bool = False):
-        log.debug(f'Subscribing RA from {self.tel_addr}')
-        await self._asubscribe_coo_formatted('rightascension', callback=callback,
-                                             sexagesimal=sexagesimal, sex_formatter=fmt_ra)
+    async def aget_az(self) -> float:
+        logger.debug(f'Getting mount AZ from {self.tel_addr}')
+        ret = await self.aget_value('azimuth')
+        return ret
 
-    async def asubscribe_dec(self, callback:Callable, sexagesimal: bool = False):
-        log.debug(f'Subscribing DEC from {self.tel_addr}')
-        await self._asubscribe_coo_formatted('declination', callback=callback,
-                                             sexagesimal=sexagesimal, sex_formatter=fmt_dec)
+    async def asubscribe_az(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
+        logger.debug(f'Subscribing mount AZ from {self.tel_addr}')
+        return await self.subscribe('azimuth', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
-    async def asubscribe_az(self, callback:Callable, sexagesimal: bool = False):
-        log.debug(f'Subscribing AZ from {self.tel_addr}')
-        await self._asubscribe_coo_formatted('azimuth', callback=callback,
-                                             sexagesimal=sexagesimal, sex_formatter=fmt_az)
+    async def aget_alt(self) -> float:
+        logger.debug(f'Getting mount ALT from {self.tel_addr}')
+        ret = await self.aget_value('altitude')
+        return ret
 
-    async def asubscribe_alt(self, callback:Callable, sexagesimal: bool = False):
-        log.debug(f'Subscribing ALT from {self.tel_addr}')
-        await self._asubscribe_coo_formatted('altitude', callback=callback,
-                                             sexagesimal=sexagesimal, sex_formatter=fmt_alt)
+    async def asubscribe_alt(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
+        logger.debug(f'Subscribing mount ALT from {self.tel_addr}')
+        return await self.subscribe('altitude', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
-    # TODO: Remove sexadecimal and formatting at all from here
-    async def _asubscribe_new(self, addr:str, callback:Callable, sexagesimal: bool, sex_formatter: Callable):
-        """New version, which is going to use `ClientAPI.subscribe_with_callback (not working yet)"""
-        # TODO: @Ernest może `subscribe_with_callback` powinno się przemianować na `run_subscription_callbacks`
-        # TODO: i niech ma pętlę taką jak w exmaplu Twoim lub w `_asubscribe` poniżej?
-        # TODO: W sumie o to chodzi żeby wywalać w Clienta kod niespecyficzny dla użytkownika zmiennych etc...
-        def fmt_callback(x: float, sex: bool, formatter: Callable, callback: Callable):
-            """Optionally formats sexagesimal before calling user callback"""
-            callback(formatter(x) if sex else x)
+    async def aget_athome(self) -> bool:
+        logger.debug(f'Getting mount athome from {self.tel_addr}')
+        ret = await self.aget_value('athome')
+        return ret
 
-        res = await self.telescope.observatory.client.subscribe_with_callback(
-            f'{self.tel_addr}.mount.{addr}',
-            callback_method=lambda x: fmt_callback(x, sex=sexagesimal, formatter=sex_formatter, callback=callback),
-            delay=0.2
-        )
-        self.subscriptions.append(res)
+    async def asubscribe_athome(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
+        logger.debug(f'Subscribing mount athome from {self.tel_addr}')
+        return await self.subscribe('athome', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
-    async def _asubscribe_coo_formatted(self, addr:str, callback:Callable, sexagesimal: bool, sex_formatter: Callable):
-        """Lik in example version, using `ClientAPI.subscribe`"""
-        def fmt_callback(x: float, sex: bool, formatter: Callable, callback: Callable):
-            """Optionally formats sexagesimal before calling user callback"""
-            callback(formatter(x, sex))
+    async def aget_atpark(self) -> bool:
+        logger.debug(f'Getting mount atpark from {self.tel_addr}')
+        ret = await self.aget_value('atpark')
+        return ret
 
-        cq = await self.telescope.observatory.client.subscribe(f'{self.tel_addr}.mount.{addr}',
-                                                               delay=0.3,
-                                                               time_of_data_tolerance=0.2
-                                                               )
-        cq.start()
-        try:
-            while True:
-                result = await cq.get_response()
-                log.debug(f'Got {addr} from {self.tel_addr}')
-                if result and result[0].value:
-                    fmt_callback(result[0].value.v, sex=sexagesimal, formatter=sex_formatter, callback=callback)
-        except CommunicationRuntimeError as e:
-            log.error('Communication error: %s', e)
-        finally:
-            log.info(f'Stopping {addr} subscription...')
-            cq.stop()
+    async def asubscribe_atpark(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
+        logger.debug(f'Subscribing mount atpark from {self.tel_addr}')
+        return await self.subscribe('atpark', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
+    async def aget_slewing(self) -> bool:
+        logger.debug(f'Getting mount slewing from {self.tel_addr}')
+        ret = await self.aget_value('slewing')
+        return ret
+
+    async def asubscribe_slewing(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
+        logger.debug(f'Subscribing mount slewing from {self.tel_addr}')
+        return await self.subscribe('slewing', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
+
+    async def aget_tracking(self) -> bool:
+        logger.debug(f'Getting mount tracking from {self.tel_addr}')
+        ret = await self.aget_value('tracking')
+        return ret
+
+    async def asubscribe_tracking(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
+        logger.debug(f'Subscribing mount tracking from {self.tel_addr}')
+        return await self.subscribe('tracking', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
+
+    async def aput_slewtocoo(self, ra: float, dec: float) -> None:
+        logger.debug(f'Putting slew coo to {self.tel_addr}')
+        await self.aput_value('slewtocoordinates', RightAscension=ra, Declination=dec)
+
+    async def aput_slewtocoo_async(self, ra: float, dec: float) -> None:
+        logger.debug(f'Putting slew coo async to {self.tel_addr}')
+        await self.aput_value('slewtocoordinatesasync', RightAscension=ra, Declination=dec)
+
+    async def aput_slewtoaltaz(self, az: float, alt: float) -> None:
+        logger.debug(f'Putting slew altaz to {self.tel_addr}')
+        await self.aput_value('slewtoaltaz', Azimuth=az, Altitude=alt)
+
+    async def aput_slewtoaltaz_async(self, az: float, alt: float) -> None:
+        logger.debug(f'Putting slew altaz async to {self.tel_addr}')
+        await self.aput_value('slewtoaltazasync', Azimuth=az, Altitude=alt)
+
+    async def aput_tracking(self, track: bool) -> None:
+        logger.debug(f'Putting tracking to {self.tel_addr}')
+        await self.aput_value('tracking', Tracking=track)
+
+    async def aput_abortslew(self) -> None:
+        logger.debug(f'Putting abortslew to {self.tel_addr}')
+        await self.aput_value('abortslew')
+
+    async def aput_park(self) -> None:
+        logger.debug(f'Putting park to {self.tel_addr}')
+        await self.aput_value('park')
+
+    async def aput_unpark(self) -> None:
+        logger.debug(f'Putting unpark to {self.tel_addr}')
+        await self.aput_value('unpark')
+
+    async def aput_findhome(self) -> None:
+        logger.debug(f'Putting findhome to {self.tel_addr}')
+        await self.aput_value('findhome')
+
+    async def aput_action(self, action: str, param: str | None = None) -> None:
+        logger.debug(f'Putting action to {self.tel_addr}')
+        await self.aput_value('action', Action=action, Parameters=param)
+
+    async def aput_opencover(self) -> None:
+        logger.debug(f'Putting telescope opencover to {self.tel_addr}')
+        await self.aput_value('action', Action='telescope:opencover', Parameters='')
+
+    async def aput_closecover(self) -> None:
+        logger.debug(f'Putting telescope closecover to {self.tel_addr}')
+        await self.aput_value('action', Action='telescope:closecover', Parameters='')
