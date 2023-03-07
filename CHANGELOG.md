@@ -3,9 +3,18 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-## [0.2.1]
+## [0.2.2] - 2023-03-07
+## Added
+- Added new classes: `Camera`, `FilterWheel`, `Focuser`, supporting alpaca components to ocaboxapi
+
+## Changed
+- Updated classes: `Mount`, `AccessGrantor`, `Observatory`, in ocaboxapi
+
+## [0.2.1] - 2023-03-06
 ### Added
 - Added a new command to `TreeBlockerAccessGrantor` that checks if the requesting user has access
+### Changed
+-`Client` class has been moved back to `ob` module
 
 ## [0.2.0] - 2023-03-03
 ### Added
@@ -72,4 +81,4 @@ This allows you to subscribe to these values
 
 [Unreleased]: https://github.com/araucaria-project/ocabox
 
-[0.2.1]: https://github.com/araucaria-project/ocabox
+[0.2.2]: https://github.com/araucaria-project/ocabox
