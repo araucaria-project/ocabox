@@ -75,7 +75,7 @@ data_collection:
       PUT: []
   TreeConditionalFreezer:
     max_unsuccessful_refreshes: 10
-    alarm_timeout: 2
+    alarm_timeout: 2 # WARNING, the value should be greater than the overall timeout
     min_time_of_data_tolerance: 0.2 # !!! Never set to 0 or less
 
 tree:
