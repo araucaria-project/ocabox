@@ -131,8 +131,8 @@ class Mount(TelescopeComponent):
 
     async def aput_opencover(self) -> None:
         logger.debug(f'Putting telescope opencover to {self.tel_addr}')
-        await self.aput_value('action', Action='telescope:opencover')
+        await self.aput_value('action', Action='telescope:opencover', Parameters='')
 
     async def aput_closecover(self) -> None:
         logger.debug(f'Putting telescope closecover to {self.tel_addr}')
-        await self.aput_value('action', Action='telescope:closecover')
+        await self.aput_value('action', Action='telescope:closecover', Parameters='')
