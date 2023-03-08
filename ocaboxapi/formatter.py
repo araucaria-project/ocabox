@@ -30,6 +30,17 @@ def fmt_camerastate(state: int | None):
         'Error'
     ][state]
 
+def fmt_coverstate(state: int | None):
+    """Format cover status for display"""
+    if state is None:
+        return 'n/a'
+    return [
+        'unknown',
+        'Closed',
+        'Moving',
+        'Open'
+    ][state]
+
 def fmt_az(az, sexagesimal=True):
     """Format azimuth for display"""
     if az is None:
