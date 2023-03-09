@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class Dome(TelescopeComponent):
+
     azimuth = OcaBoxParam(default=0.0, doc="Dome azimuth")
     shutterstatus = OcaBoxParam(default=0, doc="Dome shutter status")
     slaved = OcaBoxParam(default=False, doc="Dome slawed to telescope")
@@ -78,8 +79,7 @@ class Dome(TelescopeComponent):
         await self.aput_value('abortslew')
 
     async def slave_to_telescope(self, tel_az: float, tolerance: float = 0.1) -> None:
-        dome_az = await self.aget_az()
-        diff = tel_az - dome_az
+        diff = tel_az - self.azimuth
         if self.slave_on:
             if abs(diff) > tolerance:
                 await self.aput_slewtoazimuth(tel_az)
