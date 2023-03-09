@@ -12,6 +12,7 @@ class Dome(TelescopeComponent):
     shutterstatus = OcaBoxParam(default=0, doc="Dome shutter status")
     slaved = OcaBoxParam(default=False, doc="Dome slawed to telescope")
     slewing = OcaBoxParam(default=False, doc="Dome is moving")
+    slave_on = OcaBoxParam(default=False, doc="Slave to telescope on")
 
     shutter_status_to_code = {
         'open': 0,
@@ -75,3 +76,10 @@ class Dome(TelescopeComponent):
     async def aput_abortslew(self):
         logger.debug(f'Putting abortslew to {self.tel_addr}')
         await self.aput_value('abortslew')
+
+    async def slave_to_telescope(self, tel_az: float, tolerance: float = 0.1) -> None:
+        dome_az = await self.aget_az()
+        diff = tel_az - dome_az
+        if self.slave_on:
+            if abs(diff) > tolerance:
+                await self.aput_slewtoazimuth(tel_az)
