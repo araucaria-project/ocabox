@@ -10,22 +10,26 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class ResponseError(ErrorSeverity):
     SUPPORTED_ERRORS = [TreeValueError, TreeStructureError, AddressError, TreeOtherError]
 
-    def __init__(self, code: int, message: str, component_name: str, severity: str = None):
+    def __init__(self, code: int, message: str, component_name: str, severity: str = None, **kwargs):
         if severity is None:
             severity = self.SEVERITY_NORMAL
         self.code: int = code
         self.message: str = message
         self.component_name: str = component_name
         self.severity: str = severity
+        self.kwargs = kwargs
 
     def to_dict(self) -> dict:
         d = {}
         for k, v in self.__dict__.items():
-            d[k] = v
+            if k == 'kwargs':
+                d = dict(d, **v)
+            else:
+                d[k] = v
         return d
 
     def __copy__(self):
-        return ResponseError(self.code, self.message, self.component_name, self.severity)
+        return ResponseError(self.code, self.message, self.component_name, self.severity, **self.kwargs)
 
     def __str__(self):
         return f'ResponseError ({self.severity}) code: {str(self.code)} - ' \
@@ -64,5 +68,5 @@ class ResponseError(ErrorSeverity):
         :return: instance of ResponseError
         """
         new_ResErr = ResponseError(code=err.code, message=err.message, component_name=component_name,
-                                   severity=err.severity)
+                                   severity=err.severity, **err.kwargs)
         return new_ResErr

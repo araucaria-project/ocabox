@@ -3,9 +3,10 @@ import time
 import logging
 from typing import Optional
 
-from ob.data_colection.address import Address
+from ob.data_colection.address import Address, AddressError
 from ob.data_colection.base_components.tree_base_provider import TreeBaseProvider
 from ob.data_colection.coded_error import TreeStructureError, TreeOtherError
+from ob.data_colection.response_error import ResponseError
 from ob.data_colection.specialistic_components.tree_cache_observatory_protocols import TreeCacheProtocol, \
     KnownValueProtocol
 from ob.data_colection.value import Value, TreeValueError
@@ -56,7 +57,10 @@ class TreeConditionalFreezer(TreeBaseProvider):
                            f"Should be greater than {self._min_time_of_data_tolerance} (now is {t_tolerance})")
             t_tolerance = self._min_time_of_data_tolerance
         wait_offset_error: float = 0
-        nr_of_unsuccessful_refreshes: int = 0
+        try:
+            nr_of_unsuccessful_refreshes: int = int(request.request_data.get('nr_of_unsuccessful_refreshes', 0))
+        except Exception as e:
+            raise AddressError(code=1003)
         timeout = request.request_timeout
         # sanity check but probably never happened
         if not isinstance(timeout, float):
@@ -72,7 +76,7 @@ class TreeConditionalFreezer(TreeBaseProvider):
             await asyncio.sleep(wait_to - current_time)
 
         k_value: KnownValueProtocol or None = None
-
+        highest_update_error_severity = None
         while True:
             if k_value is None:
                 try:
@@ -94,7 +98,7 @@ class TreeConditionalFreezer(TreeBaseProvider):
             # exceeded the number of new queries
             if nr_of_unsuccessful_refreshes >= self._max_unsuccessful_refreshes:
                 logger.info(f'Too many failed attempts to refresh a value {request.address}')
-                raise TreeValueError(code=2003)
+                raise TreeValueError(code=2003, severity=highest_update_error_severity)
 
             # skip waiting if value is None and refresh it in the cache first to initialize it first
             if k_value is not None:
@@ -108,18 +112,22 @@ class TreeConditionalFreezer(TreeBaseProvider):
                     continue  # continue because event was call so is not necessary to update value again
                 elif waiting_timeout - time.time() <= 0:
                     # response timeout so stop refreshing value and send empty message
-                    raise TreeOtherError(code=4004)
+                    # Send subscription details so that it can be reopened when will be requested again
+                    raise TreeOtherError(code=4004, nr_of_unsuccessful_refreshes=nr_of_unsuccessful_refreshes)
 
             # update value
             logger.info(f"Update value ({request.address})")
-            status_update = await self._update_value(request)
+            status_update, err = await self._update_value(request)
             if status_update:
                 wait_offset_error = 0
                 nr_of_unsuccessful_refreshes = 0
+                highest_update_error_severity = None
             else:
                 logger.info(f'Can not update value in cache: {request.address}')
                 wait_offset_error = t_tolerance
                 nr_of_unsuccessful_refreshes += 1
+                if err is not None:
+                    highest_update_error_severity = err.severity
 
     async def _waiter(self, k_value: KnownValueProtocol, t_tolerance: float, waiting_timeout: float,
                       min_wait: float = 0) -> bool:
@@ -155,7 +163,8 @@ class TreeConditionalFreezer(TreeBaseProvider):
                 waiting_time = time_to_timeout
             condition = self._condition_change_data
             if condition is None:
-                raise TreeValueError(code=2002)
+                raise TreeValueError(code=2002, message="For Unknown reasons condition is None",
+                                     severity=TreeValueError.SEVERITY_CRITICAL)
             # WARNING Before this method there can be no place (await) where the task will lose focus. If it will be
             # necessary to add such a method, you should get a lock on the condition before (you will need to
             # rebuild the _condition_wait() method). The point is that condition.wait() must follow the wait
@@ -165,7 +174,7 @@ class TreeConditionalFreezer(TreeBaseProvider):
             if is_event:  # event call
                 return True  # value was changed
 
-    async def _update_value(self, request: ValueRequest) -> bool:
+    async def _update_value(self, request: ValueRequest) -> (bool, None or ResponseError):
         """
         This method call subcontractor to get response and update cache module.
 
@@ -177,9 +186,9 @@ class TreeConditionalFreezer(TreeBaseProvider):
         request.time_of_data = time.time()
         result = await self._subcontractor.get_response(request=request.copy())
         if result.status:
-            return True
+            return True, result.error
         else:
-            return False
+            return False, result.error
 
     def _get_value_from_cache(self, address: Address) -> None or KnownValueProtocol:
         """

@@ -358,10 +358,15 @@ class ConditionalCycleQuery(BaseCycleQuery):
                 for r in self._last_response:
                     if not r.status and r.error and r.error.code == 4004:  # 4004 - timeout waiting for change value
                         # the value is not changed so client need refresh request and keep waiting
-                        logger.info(f'{self}: address ({str(r.address)}) subscription expired - renewing')
+                        logger.debug(f'{self}: address ({str(r.address)}) subscription expired - renewing')
                         continue_while = True  # continue outer loop
                         break  # everything is ok, just router need confirmation that the client is alive
-
+                    elif not r.status and r.error and r.error.severity == ResponseError.SEVERITY_TEMPORARY:
+                        logger.warning(f'{self}: address ({str(r.address)}) subscription return error severity: '
+                                       f'{ResponseError.SEVERITY_TEMPORARY}. Error message: {r.error.message}')
+                        print('okokiiu')
+                        continue_while = True
+                        break  # The server is returning a low priority error, need resubscribe
                     elif not r.status:  # One of the responses received has an error
                         raise CommunicationRuntimeError(message=f"Client retrieve response witch error: "
                                                                 f"{str(r.error)}")
@@ -419,3 +424,6 @@ class ConditionalCycleQuery(BaseCycleQuery):
                     self._list_request[i].request_data['no_send_before'] = no_send_before
                     self._list_request[i].cycle_query = True
                     self._change_time(no_send_before)
+                # add subscription parameters returned by the server if error to resend
+                if not lm.status and lm.error:
+                    self._list_request[i].request_data.update(lm.error.kwargs)

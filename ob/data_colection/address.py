@@ -80,8 +80,9 @@ class AddressError(BaseCodedError):
                           (3, 'Wrong parameters for address'),
                           (4, 'Access denied')]
 
-    def __init__(self, address: Address or str = '', code: int = CODE_GROUP, message="", **kwargs):
+    def __init__(self, address: Address or str = '', code: int = CODE_GROUP, message="", severity: str = None,
+                 **kwargs):
         self.address = address
         if not message and address and (isinstance(address, Address) or isinstance(address, str)):
             message = f'The address {str(address)} is incorrect'
-        super().__init__(message=message, code=code, **kwargs)
+        super().__init__(message=message, code=code, severity=severity, **kwargs)

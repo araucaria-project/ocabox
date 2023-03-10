@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 ## Changed
 - Improved error severity handling
+- changed the mechanism for closing subscriptions when the server cannot update the value due to an error. From now on, 
+the subscription will be renewed when temporary errors occur.
+
+## Fixed
+- Fixed an issue with unsuccessful refreshes value counter in `TreeConditionalFreezer` resetting when a short timeout 
+was set.
 
 ## [0.2.2] - 2023-03-07
 ## Added
