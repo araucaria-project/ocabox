@@ -114,10 +114,10 @@ class TreeConditionalFreezer(TreeBaseProvider):
                                                    min_wait=wait_offset_error)  # can raise TreeValueError
                 if result_waiter:
                     continue  # continue because event was call so is not necessary to update value again
-                elif waiting_timeout - time.time() <= 0:
-                    # response timeout so stop refreshing value and send empty message
-                    # Send subscription details so that it can be reopened when will be requested again
-                    raise TreeOtherError(code=4004, nr_of_unsuccessful_refreshes=nr_of_unsuccessful_refreshes)
+            if waiting_timeout - time.time() <= 0:
+                # response timeout so stop refreshing value and send empty message
+                # Send subscription details so that it can be reopened when will be requested again
+                raise TreeOtherError(code=4004, nr_of_unsuccessful_refreshes=nr_of_unsuccessful_refreshes)
 
             # update value
             logger.info(f"Update value ({request.address})")
