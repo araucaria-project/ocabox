@@ -73,7 +73,11 @@ class TreeConditionalFreezer(TreeBaseProvider):
         wait_to = request.request_data.get('no_send_before', 0)
         current_time = time.time()
         if current_time < wait_to:
-            await asyncio.sleep(wait_to - current_time)
+            if waiting_timeout<wait_to:
+                w = waiting_timeout
+            else:
+                w = wait_to
+            await asyncio.sleep(w - current_time)
 
         k_value: KnownValueProtocol or None = None
         highest_update_error_severity = None
