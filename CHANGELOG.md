@@ -10,6 +10,7 @@ the subscription will be renewed when temporary errors occur.
 ## Fixed
 - Fixed an issue with unsuccessful refreshes value counter in `TreeConditionalFreezer` resetting when a short timeout 
 was set.
+- Fixed bugs in module `TreeConditionalFreezer` logic
 
 ## [0.2.2] - 2023-03-07
 ## Added
