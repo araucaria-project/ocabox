@@ -2,21 +2,27 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
-## Changed
+
+## [0.2.3] - 2023-03-14
+### Added
+- Added new classes: `CoverCalibrator`, supporting alpaca components to ocaboxapi
+- Added a new method to `ocaboxapi` class
+
+### Changed
 - Improved error severity handling
 - changed the mechanism for closing subscriptions when the server cannot update the value due to an error. From now on, 
 the subscription will be renewed when temporary errors occur.
 
-## Fixed
+### Fixed
 - Fixed an issue with unsuccessful refreshes value counter in `TreeConditionalFreezer` resetting when a short timeout 
 was set.
 - Fixed bugs in module `TreeConditionalFreezer` logic
 
 ## [0.2.2] - 2023-03-07
-## Added
+### Added
 - Added new classes: `Camera`, `FilterWheel`, `Focuser`, supporting alpaca components to ocaboxapi
 
-## Changed
+### Changed
 - Updated classes: `Mount`, `AccessGrantor`, `Observatory`, in ocaboxapi
 
 ## [0.2.1] - 2023-03-06
@@ -90,4 +96,4 @@ This allows you to subscribe to these values
 
 [Unreleased]: https://github.com/araucaria-project/ocabox
 
-[0.2.2]: https://github.com/araucaria-project/ocabox
+[0.2.3]: https://github.com/araucaria-project/ocabox

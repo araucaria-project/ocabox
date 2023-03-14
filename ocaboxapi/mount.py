@@ -16,6 +16,7 @@ class Mount(TelescopeComponent):
     atpark = OcaBoxParam(default=False, doc="Mount is atpark")
     slewing = OcaBoxParam(default=False, doc="Mount is slewing")
     tracking = OcaBoxParam(default=False, doc="Mount is tracking")
+    ispulseguiding = OcaBoxParam(default=False, doc="Mount is pulseguiding")
 
     async def aget_ra(self) -> float:
         logger.debug(f'Getting mount RA from {self.tel_addr}')
@@ -89,6 +90,18 @@ class Mount(TelescopeComponent):
         logger.debug(f'Subscribing mount tracking from {self.tel_addr}')
         return await self.subscribe('tracking', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
+    async def aget_ispulseguiding(self) -> bool:
+        logger.debug(f'Getting mount ispulseguiding from {self.tel_addr}')
+        ret = await self.aget_value('ispulseguiding')
+        return ret
+
+    async def asubscribe_ispulseguiding(self, callback: Callable | None = None,
+                                        time_of_data_tolerance: float | None = None):
+        logger.debug(f'Subscribing mount ispulseguiding from {self.tel_addr}')
+        return await self.subscribe('ispulseguiding',
+                                    callback=callback,
+                                    time_of_data_tolerance=time_of_data_tolerance)
+
     async def aput_slewtocoo(self, ra: float, dec: float) -> None:
         logger.debug(f'Putting slew coo to {self.tel_addr}')
         await self.aput_value('slewtocoordinates', RightAscension=ra, Declination=dec)
@@ -136,3 +149,11 @@ class Mount(TelescopeComponent):
     async def aput_closecover(self) -> None:
         logger.debug(f'Putting telescope closecover to {self.tel_addr}')
         await self.aput_value('action', Action='telescope:closecover', Parameters='')
+
+    async def aput_motoron(self) -> None:
+        logger.debug(f'Putting telescope motoron to {self.tel_addr}')
+        await self.aput_value('action', Action='telescope:motoron', Parameters='')
+
+    async def aput_motoroff(self) -> None:
+        logger.debug(f'Putting telescope motoroff to {self.tel_addr}')
+        await self.aput_value('action', Action='telescope:motoroff', Parameters='')

@@ -241,31 +241,3 @@ class TelescopeComponent(param.Parameterized):
 
     def __str__(self):
         return f'{self.id}'
-
-
-"""class TelescopeComponentOld():
-
-    def __init__(self, id: str, telescope: "AbstractTelescope") -> None:
-        self.id = id
-        self.telescope: "AbstractTelescope" = telescope
-        self.subscriptions = []
-        super().__init__()
-
-    @property
-    def tel_addr(self) -> str:
-        return self.telescope.tel_addr
-
-    async def get_async(self, path: str,
-                        time_of_data: float | None = None,
-                        time_of_data_tolerance: float | None = None,
-                        request_timeout: float | None = None,
-                        parameters_dict: dict | None = None) -> Any:
-        address = f'{self.tel_addr}.{self.id}.{path}'
-        logger.debug(f'Awaiting for get_async {address}')
-        ret = await self.telescope.observatory.get_async(address,
-                                                         time_of_data=time_of_data,
-                                                         time_of_data_tolerance=time_of_data_tolerance,
-                                                         request_timeout=request_timeout,
-                                                         parameters_dict=parameters_dict)
-        logger.debug(f'Got get_async {address}, response: {ret}')
-        return ret"""
