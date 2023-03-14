@@ -46,6 +46,8 @@ class SampleTestValueProvider(TreeProvider):
             raise AddressError
         elif request.request_data.get('raise_structure_error', False):
             raise TreeStructureError
+        elif request.request_data.get('raise_value_error_temporary', False):
+            raise TreeValueError(code=4005, severity=TreeValueError.SEVERITY_TEMPORARY)
 
         address = request.address
         value_name = address[address.get_last_index()]

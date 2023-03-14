@@ -6,6 +6,7 @@ from ob.data_colection.alpaca_api.exceptions import AlpacaHttp400Error, AlpacaHt
     AlpacaError, AlpacaHttpError, RequestConnectionError
 from ob.data_colection.alpaca_api.observatory import Observatory
 from ob.data_colection.base_components.tree_base_provider import TreeBaseProvider
+from ob.data_colection.coded_error import TreeOtherError
 from ob.data_colection.value import Value, TreeValueError
 from ob.data_colection.value_call import ValueRequest
 
@@ -108,7 +109,8 @@ class TreeAlpacaObservatory(TreeBaseProvider):
         except RequestConnectionError:
             # when can not connect to alpaca
             logger.warning(f"Server alpaca is not responding")
-            raise TreeValueError(address=None, code=2002, message=f"Server alpaca is not responding")
+            raise TreeOtherError(address=None, code=4005, message=f"Server alpaca is not responding",
+                                 severity=TreeOtherError.SEVERITY_TEMPORARY)
         except (TypeError, ValueError):
             # when given arguments is wrong
             logger.warning(f"Alpaca driver get wrong arguments to run function")

@@ -14,6 +14,7 @@ from ob.data_colection.specialistic_components.tree_cache_observatory import Tre
 from ob.data_colection.specialistic_components.tree_conditional_freezer import TreeConditionalFreezer
 from ob.data_colection.value import Value
 from ob.data_colection.value_call import ValueRequest, ValueResponse
+from ob.util_functions.asyncio_util_functions import wait_for_psce
 from test.data_colection.sample_test_value_provider import SampleTestValueProvider
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -219,6 +220,78 @@ class TestConditionalCycleQuery(unittest.TestCase):
                 self.assertTrue(result[0].status)
             finally:
                 await cq.stop_and_wait()
+
+        self.loop.run_until_complete(coro())
+
+    def test_renewing_subscription_with_error(self):
+        """Test the renewal subscription when the server fails to update the value due to an error and reaches a
+        timeout before it exceeds the number of re-refreshes. After renewing the subscription, it should continue
+        retrying the number with which it ended"""
+        address = Address('.'.join([self.tree_provider1.get_source_name(),
+                                    self.tree_provider2.get_source_name(),
+                                    'new_val']))
+        time_of_data_tolerance = self.time_interval
+
+        request = ValueRequest(address, time.time(),
+                               time_of_data_tolerance=time_of_data_tolerance,
+                               request_type='GET',
+                               request_data={'time_of_known_change': None},
+                               cycle_query=True)
+        delay = 0.2
+        max_missed_msg = 7
+        request_timeout = 0.2
+
+        async def time_coro():
+            cq = ConditionalCycleQuery(client=self.client, list_request=[request], delay=delay,
+                                       max_missed_msg=max_missed_msg, request_timeout=request_timeout)
+            try:
+                cq.start()
+                request.request_data['raise_value_error'] = True
+                with self.assertRaises(CommunicationRuntimeError):
+                    result = await cq.get_response()
+            finally:
+                cq.stop()
+
+        async def coro():
+            # if there is a TimeoutError here, it means that the freezer is blocked indefinitely because parameters
+            # are not sent back to it
+            await wait_for_psce(time_coro(), 2)
+
+        self.loop.run_until_complete(coro())
+
+    def test_renewing_if_temporary_error(self):
+        """Test reeving subscription when server return temporary errors"""
+        address = Address('.'.join([self.tree_provider1.get_source_name(),
+                                    self.tree_provider2.get_source_name(),
+                                    'new_val']))
+        time_of_data_tolerance = self.time_interval
+
+        request = ValueRequest(address, time.time(),
+                               time_of_data_tolerance=time_of_data_tolerance,
+                               request_type='GET',
+                               request_data={'time_of_known_change': None},
+                               cycle_query=True)
+        delay = 0.2
+        max_missed_msg = 5
+        request_timeout = 0.2
+
+        async def time_coro(cq):
+            result = await cq.get_response()
+
+        async def coro():
+            cq = ConditionalCycleQuery(client=self.client, list_request=[request], delay=delay,
+                                       max_missed_msg=max_missed_msg, request_timeout=request_timeout)
+            try:
+                cq.start()
+                await asyncio.sleep(0.2)
+                result = await cq.get_response()
+                request.request_data['raise_value_error_temporary'] = True
+                with self.assertRaises(asyncio.TimeoutError):
+                    result = await wait_for_psce(time_coro(cq), 0.5)
+                await asyncio.sleep(0.1)  # wait to make sure cycle query doesn't close
+                self.assertFalse(cq.is_stopped())
+            finally:
+                cq.stop()
 
         self.loop.run_until_complete(coro())
 

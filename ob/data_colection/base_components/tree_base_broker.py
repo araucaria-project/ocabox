@@ -37,11 +37,11 @@ class TreeBaseBroker(TreeComponent):
         try:
             provider = self._get_provider(request)  # Here can raise AddressError
         except AddressError as e:
-            re = ResponseError(e.code, '', repr(self))
+            re = ResponseError.from_coded_error(component_name=repr(self), err=e)
             logger.info(f'Wrong format request address {request.address} - make error response')
             return ValueResponse(request.address, None, False, re)  # address is damaged
         if not provider:
-            re = ResponseError(1002, '', repr(self))
+            re = ResponseError(1002, '', repr(self), severity=ResponseError.SEVERITY_NORMAL)
             logger.info(f'Unrecognised provider: {request.address} lever: {request.index}')
             return ValueResponse(request.address, None, False, re)  # address is unknown
         response = await provider.get_response(request)

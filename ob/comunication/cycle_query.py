@@ -50,6 +50,7 @@ class BaseCycleQuery(ABC):
         self._loop = loop
         self._set_loop()  # can raise CommunicationRuntimeError
         self._list_request: List[ValueRequest] = list_request
+        self._additional_request_data = [{} for _ in range(len(self._list_request))]  # data to put to nex request in `request_data` dict
         self._errors: CommunicationRuntimeError or None = None
         self._callback_methods_a: list = []
         self._callback_methods: list = []
@@ -61,6 +62,14 @@ class BaseCycleQuery(ABC):
     def __repr__(self):
         addresses = ' '.join(str(r.address).rsplit('.', maxsplit=1)[-1] for r in self._list_request)
         return f'{self._query_name} [{addresses}]'
+
+    def _get_list_request_with_extinction(self) -> List[ValueRequest]:
+        out = []
+        for i, r in enumerate(self._list_request):
+            new_r = r.copy()
+            new_r.request_data.update(self._additional_request_data[i])
+            out.append(new_r)
+        return out
 
     async def get_response(self) -> List[ValueResponse]:
         """
@@ -94,7 +103,8 @@ class BaseCycleQuery(ABC):
             except (ValueError, AddressError, TypeError):
                 # can not create ValueRequest object (data is damaged) - return empty response witch error
                 logger.info(f'{self}: Can not convert request dictionary to request object.')
-                re = ResponseError(4001, 'Can not build request from ordered data', repr(self._client), 'CRITICAL')
+                re = ResponseError(4001, 'Can not build request from ordered data', repr(self._client),
+                                   ResponseError.SEVERITY_CRITICAL)
                 vr.append(ValueResponse('', None, False, re))
         return vr
 
@@ -252,7 +262,7 @@ class PeriodicCycleQuery(BaseCycleQuery):
 
             # make query
             try:
-                list_part = [r.to_byte() for r in self._list_request]
+                list_part = [r.to_byte() for r in self._get_list_request_with_extinction()]
                 result = await self._client.send_multipart(list_part=list_part,
                                                            request_timeout=start_time + self._delay)
                 self._errors = None
@@ -340,7 +350,7 @@ class ConditionalCycleQuery(BaseCycleQuery):
 
             # make query
             try:
-                list_part = [r.to_byte() for r in self._list_request]
+                list_part = [r.to_byte() for r in self._get_list_request_with_extinction()]
                 result = await self._client.send_multipart(list_part=list_part,
                                                            request_timeout=start_time + self._timeout)
                 self._errors = None
@@ -357,10 +367,14 @@ class ConditionalCycleQuery(BaseCycleQuery):
                 for r in self._last_response:
                     if not r.status and r.error and r.error.code == 4004:  # 4004 - timeout waiting for change value
                         # the value is not changed so client need refresh request and keep waiting
-                        logger.info(f'{self}: address ({str(r.address)}) subscription expired - renewing')
+                        logger.debug(f'{self}: address ({str(r.address)}) subscription expired - renewing')
                         continue_while = True  # continue outer loop
                         break  # everything is ok, just router need confirmation that the client is alive
-
+                    elif not r.status and r.error and r.error.severity == ResponseError.SEVERITY_TEMPORARY:
+                        logger.warning(f'{self}: address ({str(r.address)}) subscription return error severity: '
+                                       f'{ResponseError.SEVERITY_TEMPORARY}. Error message: {r.error.message}')
+                        continue_while = True
+                        break  # The server is returning a low priority error, need resubscribe
                     elif not r.status:  # One of the responses received has an error
                         raise CommunicationRuntimeError(message=f"Client retrieve response witch error: "
                                                                 f"{str(r.error)}")
@@ -411,6 +425,7 @@ class ConditionalCycleQuery(BaseCycleQuery):
         if self._last_response:
             last_msg_vr = self._last_response
             for i, lm in enumerate(last_msg_vr):
+                self._additional_request_data[i] = {}
                 if lm.value is not None:
                     time_of_known_change = lm.value.ts
                     self._list_request[i].request_data['time_of_known_change'] = time_of_known_change
@@ -418,3 +433,6 @@ class ConditionalCycleQuery(BaseCycleQuery):
                     self._list_request[i].request_data['no_send_before'] = no_send_before
                     self._list_request[i].cycle_query = True
                     self._change_time(no_send_before)
+                # add subscription parameters returned by the server if error to resend
+                if not lm.status and lm.error:
+                    self._additional_request_data[i] = lm.error.kwargs

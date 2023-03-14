@@ -33,7 +33,8 @@ class TreeBroker(TreeBaseBroker, AddressDispatcher):
             logger.warning(f"The request was passed to a block ({'.'.join(self.get_source_names())}) not contained in "
                            f"the address ({request.address.__str__()}).")
             re = ResponseError(1002, f"The request was passed to a block named ({'.'.join(self.get_source_names())}) "
-                                     f"not contained in the address ({request.address.__str__()}).", repr(self))
+                                     f"not contained in the address ({request.address.__str__()}).", repr(self),
+                               severity=ResponseError.SEVERITY_NORMAL)
             return ValueResponse(request.address, None, False, re)  # address is wrong
         request.index += 1
         return await super().get_response(request)

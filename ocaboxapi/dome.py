@@ -8,10 +8,13 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class Dome(TelescopeComponent):
+
     azimuth = OcaBoxParam(default=0.0, doc="Dome azimuth")
     shutterstatus = OcaBoxParam(default=0, doc="Dome shutter status")
     slaved = OcaBoxParam(default=False, doc="Dome slawed to telescope")
     slewing = OcaBoxParam(default=False, doc="Dome is moving")
+    slave_on = OcaBoxParam(default=False, doc="Slave to telescope on")
+
 
     shutter_status_to_code = {
         'open': 0,
@@ -68,10 +71,17 @@ class Dome(TelescopeComponent):
         logger.debug(f'Subscribing slewing from {self.tel_addr}')
         return await self.subscribe('slewing', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aput_slewtoazimuth(self, az: float):
+    async def aput_slewtoazimuth(self, az: float) -> None:
         logger.debug(f'Putting slew to {self.tel_addr}')
         await self.aput_value('slewtoazimuth', Azimuth=az)
 
-    async def aput_abortslew(self):
+    async def aput_abortslew(self) -> None:
         logger.debug(f'Putting abortslew to {self.tel_addr}')
         await self.aput_value('abortslew')
+
+    async def slave_to_telescope(self, tel_az: float, tolerance: float = 0.1) -> None:
+        if self.azimuth:
+            diff = tel_az - self.azimuth
+            if self.slave_on:
+                if abs(diff) > tolerance:
+                    await self.aput_slewtoazimuth(tel_az)
