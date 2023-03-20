@@ -7,7 +7,7 @@ from ob.data_colection.specialistic_components.tree_alpaca import TreeAlpacaObse
 from ob.data_colection.specialistic_components.tree_blocker_access_grantor import TreeBlockerAccessGrantor
 from ob.data_colection.specialistic_components.tree_cache_observatory import TreeCache
 from ob.data_colection.specialistic_components.tree_conditional_freezer import TreeConditionalFreezer
-from ob.data_colection.specialistic_components.tree_request_alpaca_blocker import TreeRequestAlpacaBlocker
+from ob.data_colection.specialistic_components.tree_base_request_blocker import TreeBaseRequestBlocker
 from ob.ob_config import SingletonConfig
 
 
@@ -18,7 +18,7 @@ def tree_build() -> Router:
     # it must be called once after adding all files
     # tree
     alpaca_module = TreeAlpacaObservatory('zibi_sample', observatory_name='zibi-ocabox-800')
-    alpaca_blocker = TreeRequestAlpacaBlocker('zibi_blocker', alpaca_module)
+    alpaca_blocker = TreeBaseRequestBlocker('zibi_blocker', alpaca_module)
     blocker_grantor = TreeBlockerAccessGrantor('grantor_800', 'access_grantor', alpaca_blocker)
     broker_800 = TreeBaseBrokerDefaultTarget('broker_800', [blocker_grantor], default_provider=alpaca_blocker)
     cache_800 = TreeCache('sample_cache', broker_800)

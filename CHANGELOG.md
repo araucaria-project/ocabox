@@ -2,6 +2,8 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+### Changed
+- Rename class `TreeRequestAlpacaBlocker` to `TreeBaseRequestBlocker` and move it to file `tree_base_request_blocker.py`
 
 ## [0.2.3] - 2023-03-14
 ### Added

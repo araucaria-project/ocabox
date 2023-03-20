@@ -4,10 +4,10 @@ from ob.data_colection.base_components.tree_base_broker import TreeBaseBroker
 from ob.data_colection.base_components.tree_base_broker_default_target import TreeBaseBrokerDefaultTarget
 from ob.data_colection.base_components.tree_provider import TreeProvider
 from ob.data_colection.specialistic_components.tree_alpaca import TreeAlpacaObservatory
+from ob.data_colection.specialistic_components.tree_base_request_blocker import TreeBaseRequestBlocker
 from ob.data_colection.specialistic_components.tree_blocker_access_grantor import TreeBlockerAccessGrantor
 from ob.data_colection.specialistic_components.tree_cache_observatory import TreeCache
 from ob.data_colection.specialistic_components.tree_conditional_freezer import TreeConditionalFreezer
-from ob.data_colection.specialistic_components.tree_request_alpaca_blocker import TreeRequestAlpacaBlocker
 
 
 def tree_build() -> Router:
@@ -15,7 +15,7 @@ def tree_build() -> Router:
 
     # --------------------------------------- wk06 ---------------------------------------
     alpaca_wk06 = TreeAlpacaObservatory('alpaca-wk06', observatory_name='wk06')
-    alpaca_blocker_wk06 = TreeRequestAlpacaBlocker('alpaca-blocker-wk06', alpaca_wk06)
+    alpaca_blocker_wk06 = TreeBaseRequestBlocker('alpaca-blocker-wk06', alpaca_wk06)
     blocker_grantor_wk06 = TreeBlockerAccessGrantor('access-grantor-wk06', 'access_grantor', alpaca_blocker_wk06)
     broker_components_wk06 = TreeBaseBrokerDefaultTarget('broker-components-wk06', [blocker_grantor_wk06],
                                                          default_provider=alpaca_blocker_wk06)
@@ -25,7 +25,7 @@ def tree_build() -> Router:
 
     # --------------------------------------- zb08 ---------------------------------------
     alpaca_zb08 = TreeAlpacaObservatory('alpaca-zb08', observatory_name='zb08')
-    alpaca_blocker_zb08 = TreeRequestAlpacaBlocker('alpaca-blocker-zb08', alpaca_zb08)
+    alpaca_blocker_zb08 = TreeBaseRequestBlocker('alpaca-blocker-zb08', alpaca_zb08)
     blocker_grantor_zb08 = TreeBlockerAccessGrantor('access-grantor-zb08', 'access_grantor', alpaca_blocker_zb08)
     broker_components_zb08 = TreeBaseBrokerDefaultTarget('broker-components-zb08', [blocker_grantor_zb08],
                                                          default_provider=alpaca_blocker_zb08)
@@ -35,7 +35,7 @@ def tree_build() -> Router:
 
     # --------------------------------------- jk15 ---------------------------------------
     alpaca_jk15 = TreeAlpacaObservatory('alpaca-jk15', observatory_name='jk15')
-    alpaca_blocker_jk15 = TreeRequestAlpacaBlocker('alpaca-blocker-jk15', alpaca_jk15)
+    alpaca_blocker_jk15 = TreeBaseRequestBlocker('alpaca-blocker-jk15', alpaca_jk15)
     blocker_grantor_jk15 = TreeBlockerAccessGrantor('access-grantor-jk15', 'access_grantor', alpaca_blocker_jk15)
     broker_components_jk15 = TreeBaseBrokerDefaultTarget('broker-components-jk15', [blocker_grantor_jk15],
                                                          default_provider=alpaca_blocker_jk15)
@@ -45,7 +45,7 @@ def tree_build() -> Router:
 
     # --------------------------------------- wg25 ---------------------------------------
     alpaca_wg25 = TreeAlpacaObservatory('alpaca-wg25', observatory_name='wg25')
-    alpaca_blocker_wg25 = TreeRequestAlpacaBlocker('alpaca-blocker-wg25', alpaca_wg25)
+    alpaca_blocker_wg25 = TreeBaseRequestBlocker('alpaca-blocker-wg25', alpaca_wg25)
     blocker_grantor_wg25 = TreeBlockerAccessGrantor('access-grantor-wg25', 'access_grantor', alpaca_blocker_wg25)
     broker_components_wg25 = TreeBaseBrokerDefaultTarget('broker-components-wg25', [blocker_grantor_wg25],
                                                          default_provider=alpaca_blocker_wg25)
@@ -55,7 +55,7 @@ def tree_build() -> Router:
 
     # --------------------------------------- iris ---------------------------------------
     alpaca_iris = TreeAlpacaObservatory('alpaca-iris', observatory_name='iris')
-    alpaca_blocker_iris = TreeRequestAlpacaBlocker('alpaca-blocker-iris', alpaca_iris)
+    alpaca_blocker_iris = TreeBaseRequestBlocker('alpaca-blocker-iris', alpaca_iris)
     blocker_grantor_iris = TreeBlockerAccessGrantor('access-grantor-iris', 'access_grantor', alpaca_blocker_iris)
     broker_components_iris = TreeBaseBrokerDefaultTarget('broker-components-iris', [blocker_grantor_iris],
                                                          default_provider=alpaca_blocker_iris)
@@ -65,7 +65,7 @@ def tree_build() -> Router:
 
     # --------------------------------------- sim ---------------------------------------
     alpaca_sim = TreeAlpacaObservatory('alpaca-sim', observatory_name='sim')
-    alpaca_blocker_sim = TreeRequestAlpacaBlocker('alpaca-blocker-sim', alpaca_sim)
+    alpaca_blocker_sim = TreeBaseRequestBlocker('alpaca-blocker-sim', alpaca_sim)
     blocker_grantor_sim = TreeBlockerAccessGrantor('access-grantor-sim', 'access_grantor', alpaca_blocker_sim)
     broker_components_sim = TreeBaseBrokerDefaultTarget('broker-components-sim', [blocker_grantor_sim],
                                                         default_provider=alpaca_blocker_sim)
@@ -75,7 +75,7 @@ def tree_build() -> Router:
 
     # --------------------------------------- dev ---------------------------------------
     alpaca_dev = TreeAlpacaObservatory('alpaca-dev', observatory_name='dev')
-    alpaca_blocker_dev = TreeRequestAlpacaBlocker('alpaca-blocker-dev', alpaca_dev)
+    alpaca_blocker_dev = TreeBaseRequestBlocker('alpaca-blocker-dev', alpaca_dev)
     blocker_grantor_dev = TreeBlockerAccessGrantor('access-grantor-dev', 'access_grantor', alpaca_blocker_dev)
     broker_components_dev = TreeBaseBrokerDefaultTarget('broker-components-dev', [blocker_grantor_dev],
                                                         default_provider=alpaca_blocker_dev)
