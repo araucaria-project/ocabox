@@ -7,5 +7,16 @@ from ocaboxapi.camera import Camera
 from ocaboxapi.focuser import Focuser
 from ocaboxapi.filterwheel import FilterWheel
 from ocaboxapi.access import AccessGrantor
+from ocaboxapi.covercalibrator import CoverCalibrator
 
-__all__ = ['Observatory', 'Telescope', 'Dome', 'Mount', 'Camera', 'FilterWheel', 'Focuser', 'AccessGrantor', 'ClientAPI']
+__all__ = ['Observatory',
+           'Telescope',
+           'Dome',
+           'Mount',
+           'Camera',
+           'FilterWheel',
+           'Focuser',
+           'AccessGrantor',
+           'ClientAPI',
+            'CoverCalibrator'
+           ]

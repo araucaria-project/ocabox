@@ -69,6 +69,7 @@ class TreeValueError(BaseCodedError):
                           (2, 'Error creating value'),
                           (3, 'Too many retries to generate the value')]
 
-    def __init__(self, value: Value or None = None, code: int = CODE_GROUP, message: str = "", **kwargs):
+    def __init__(self, value: Value or None = None, code: int = CODE_GROUP, message: str = "", severity: str = None,
+                 **kwargs):
         self.value = value
-        super().__init__(message=message, code=code, **kwargs)
+        super().__init__(message=message, code=code, severity=severity, **kwargs)

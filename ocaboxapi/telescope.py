@@ -7,6 +7,7 @@ from ocaboxapi.mount import Mount
 from ocaboxapi.camera import Camera
 from ocaboxapi.focuser import Focuser
 from ocaboxapi.filterwheel import FilterWheel
+from ocaboxapi.covercalibrator import CoverCalibrator
 
 logger = logging.getLogger("telescope")
 
@@ -21,6 +22,7 @@ class Telescope(AbstractTelescope):
         self.focusers = {}
         self.filterwheels = {}
         self.cameras = {}
+        self.covercalibrators = {}
         self._access_grantor = None
 
     def get_mount(self, id='mount') -> Mount:
@@ -61,6 +63,14 @@ class Telescope(AbstractTelescope):
         except LookupError:
             dev = Focuser(id=id, telescope=self)
             self.focusers[id] = dev
+            return dev
+
+    def get_covercalibrator(self, id='covercalibrator') -> CoverCalibrator:
+        try:
+            return self.covercalibrators[id]
+        except LookupError:
+            dev = CoverCalibrator(id=id, telescope=self)
+            self.covercalibrators[id] = dev
             return dev
 
     def get_access_grantor(self) -> AccessGrantor:

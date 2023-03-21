@@ -3,9 +3,10 @@ import time
 import logging
 from typing import Optional
 
-from ob.data_colection.address import Address
+from ob.data_colection.address import Address, AddressError
 from ob.data_colection.base_components.tree_base_provider import TreeBaseProvider
 from ob.data_colection.coded_error import TreeStructureError, TreeOtherError
+from ob.data_colection.response_error import ResponseError
 from ob.data_colection.specialistic_components.tree_cache_observatory_protocols import TreeCacheProtocol, \
     KnownValueProtocol
 from ob.data_colection.value import Value, TreeValueError
@@ -56,72 +57,103 @@ class TreeConditionalFreezer(TreeBaseProvider):
                            f"Should be greater than {self._min_time_of_data_tolerance} (now is {t_tolerance})")
             t_tolerance = self._min_time_of_data_tolerance
         wait_offset_error: float = 0
-        nr_of_unsuccessful_refreshes: int = 0
+        try:
+            nr_of_unsuccessful_refreshes: int = int(request.request_data.get('nr_of_unsuccessful_refreshes', 0))
+        except Exception as e:
+            raise AddressError(code=1003)
         timeout = request.request_timeout
         # sanity check but probably never happened
         if not isinstance(timeout, float):
             raise TreeOtherError(code=4001, message='Wrong type timeout in request')
         waiting_timeout = timeout - self._alarm_timeout_offset
+        wait_to = request.request_data.get('no_send_before', 0)
 
         # wait some before doing anything, no send message to fast
         # At this level, we do not check if there is a timeout because we assume that the client has configured the
         # query correctly. If not then he will get a no answer error
-        wait_to = request.request_data.get('no_send_before', 0)
-        current_time = time.time()
-        if current_time < wait_to:
-            await asyncio.sleep(wait_to - current_time)
+        await self._delayer(wait_to=wait_to, waiting_timeout=waiting_timeout)
 
         k_value: KnownValueProtocol or None = None
+        highest_update_error_severity = None
 
         while True:
+            # trying to initialize the k_value first
             if k_value is None:
                 try:
                     k_value: KnownValueProtocol or None = self._get_value_from_cache(request.address)
                 except ValueError:
                     raise TreeValueError(code=2002, message='Cache for this request is not response.')
-                # If he has downloaded the value, he should check it with the client if it is suitable for returning
-                # to the wedge before waiting for the moment to refresh
-                if k_value is not None:
-                    continue
-            elif k_value.get_value() is None:
-                pass
-            elif time_of_known_change is None or time_of_known_change < k_value.get_change_time():
+
+            # k_value is corrupted. Behave as if no value has been get - try refresh and get again
+            if k_value is not None and k_value.get_value() is None:
+                k_value = None
+
+            # whether k_value is ready to be sent
+            if k_value is not None and (
+                    time_of_known_change is None or time_of_known_change < k_value.get_change_time()):
                 returned_value = k_value.get_value().copy()
                 returned_value.tags['from_cf'] = True  # Add a tag to the value that it comes from ConditionalFreezer
                 return returned_value
-            # check is not too many updates if it is no wait, no update just return error
-            # This should be checked before wait and update so that it does not unnecessarily check or wait if it has
-            # exceeded the number of new queries
+
+            # whether the number of re-refreshes has been exceeded
             if nr_of_unsuccessful_refreshes >= self._max_unsuccessful_refreshes:
                 logger.info(f'Too many failed attempts to refresh a value {request.address}')
-                raise TreeValueError(code=2003)
+                raise TreeValueError(code=2003, severity=highest_update_error_severity)
 
-            # skip waiting if value is None and refresh it in the cache first to initialize it first
-            if k_value is not None:
-                # wait
-                await asyncio.sleep(0)  # let other tasks do work
-                result_waiter = await self._waiter(k_value=k_value,
-                                                   t_tolerance=t_tolerance,
-                                                   waiting_timeout=waiting_timeout,
-                                                   min_wait=wait_offset_error)  # can raise TreeValueError
-                if result_waiter:
-                    continue  # continue because event was call so is not necessary to update value again
-                elif waiting_timeout - time.time() <= 0:
-                    # response timeout so stop refreshing value and send empty message
-                    raise TreeOtherError(code=4004)
+            await asyncio.sleep(0)  # let other tasks do work
+            # waiting logic
+            result_waiter = await self._waiter(k_value=k_value,
+                                               t_tolerance=t_tolerance,
+                                               waiting_timeout=waiting_timeout,
+                                               min_wait=wait_offset_error)  # can raise TreeValueError
+            # if event was call - that mean some other task refreshes value
+            if result_waiter:
+                continue  # continue because event was call so is not necessary to update value again
+
+            # check is time to return anything because timeout is coming
+            await self._expire_checker(waiting_timeout, nr_of_unsuccessful_refreshes)  # can raise TreeOtherError
 
             # update value
-            logger.info(f"Update value ({request.address})")
-            status_update = await self._update_value(request)
+            try:
+                logger.debug(f"Update value ({request.address})")
+                status_update, err = await wait_for_psce(self._update_value(request), waiting_timeout - time.time())
+            except asyncio.TimeoutError:
+                logger.debug(f"A timeout occurred while waiting for a value update")
+                await self._expire_checker(waiting_timeout, nr_of_unsuccessful_refreshes)  # can raise TreeOtherError
+                logger.error(f"An attempt to refresh the content was interrupted by timeout but the timeout condition "
+                             f"was not met. Timeout calculated incorrectly. Address: {request.address}")
+                raise TreeOtherError(code=4006,
+                                     message=f"An attempt to refresh the content was interrupted by timeout but the "
+                                             f"timeout condition was not met. Timeout calculated incorrectly. "
+                                             f"Address: {request.address}",
+                                     severity=TreeOtherError.SEVERITY_CRITICAL)
             if status_update:
                 wait_offset_error = 0
                 nr_of_unsuccessful_refreshes = 0
+                highest_update_error_severity = None
             else:
                 logger.info(f'Can not update value in cache: {request.address}')
                 wait_offset_error = t_tolerance
                 nr_of_unsuccessful_refreshes += 1
+                if err is not None:
+                    if highest_update_error_severity is None or \
+                            ResponseError.compare_severity(err.severity, highest_update_error_severity):
+                        highest_update_error_severity = err.severity
 
-    async def _waiter(self, k_value: KnownValueProtocol, t_tolerance: float, waiting_timeout: float,
+    async def _expire_checker(self, waiting_timeout, nr_of_unsuccessful_refreshes):
+        """
+        The method checks if the timeout is about to expire and throws an error if so.
+        :param waiting_timeout: timeout with buffer
+        :param nr_of_unsuccessful_refreshes:
+
+        :raise TreeOtherError:
+        """
+        if waiting_timeout - time.time() <= 0:
+            # response timeout so stop refreshing value and send empty message
+            # Send subscription details so that it can be reopened when will be requested again
+            raise TreeOtherError(code=4004, nr_of_unsuccessful_refreshes=nr_of_unsuccessful_refreshes)
+
+    async def _waiter(self, k_value: KnownValueProtocol or None, t_tolerance: float, waiting_timeout: float,
                       min_wait: float = 0) -> bool:
         """
         This method is used to wait for the value in the cache or time to change before the specified expiration
@@ -136,7 +168,7 @@ class TreeConditionalFreezer(TreeBaseProvider):
         """
         while True:
             current_time = time.time()
-            if k_value.get_timestamp() is None:
+            if k_value is None or k_value.get_timestamp() is None:
                 waiting_time = 0
             else:
                 waiting_time = k_value.get_timestamp() + t_tolerance - current_time
@@ -155,7 +187,8 @@ class TreeConditionalFreezer(TreeBaseProvider):
                 waiting_time = time_to_timeout
             condition = self._condition_change_data
             if condition is None:
-                raise TreeValueError(code=2002)
+                raise TreeValueError(code=2002, message="For Unknown reasons condition is None",
+                                     severity=TreeValueError.SEVERITY_CRITICAL)
             # WARNING Before this method there can be no place (await) where the task will lose focus. If it will be
             # necessary to add such a method, you should get a lock on the condition before (you will need to
             # rebuild the _condition_wait() method). The point is that condition.wait() must follow the wait
@@ -165,7 +198,18 @@ class TreeConditionalFreezer(TreeBaseProvider):
             if is_event:  # event call
                 return True  # value was changed
 
-    async def _update_value(self, request: ValueRequest) -> bool:
+    async def _delayer(self, wait_to, waiting_timeout):
+        """The method implements the query delay, taking care not to exceed the timeout"""
+        current_time = time.time()
+        if current_time > wait_to:
+            return
+        if wait_to < waiting_timeout:
+            w = wait_to
+        else:
+            w = waiting_timeout
+        await asyncio.sleep(w - current_time)
+
+    async def _update_value(self, request: ValueRequest) -> (bool, None or ResponseError):
         """
         This method call subcontractor to get response and update cache module.
 
@@ -177,9 +221,9 @@ class TreeConditionalFreezer(TreeBaseProvider):
         request.time_of_data = time.time()
         result = await self._subcontractor.get_response(request=request.copy())
         if result.status:
-            return True
+            return True, result.error
         else:
-            return False
+            return False, result.error
 
     def _get_value_from_cache(self, address: Address) -> None or KnownValueProtocol:
         """
