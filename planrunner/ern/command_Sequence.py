@@ -1,7 +1,7 @@
-import obs_pln_parser.command
+import planrunner.command
 
 
-class CommandSequence(obs_pln_parser.command.Command):
+class CommandSequence(planrunner.command.Command):
     _NAME = "SEQUENCE"
 
     def __int__(self, kw_args: dict, ln: str, commands: list = None, label: str = "", message: str = "", **kwargs):

@@ -1,8 +1,8 @@
 from typing import Dict, Any
 import logging
-from obs_pln_parser.abstract_sequence import AbstractSequence
-from obs_pln_parser.command import Command
-from obs_pln_parser.coded_error import SequenceTreeError
+from planrunner.abstract_sequence import AbstractSequence
+from planrunner.command import Command
+from planrunner.coded_error import SequenceTreeError
 
 
 log = logging.getLogger(__name__.rsplit('.')[-1])

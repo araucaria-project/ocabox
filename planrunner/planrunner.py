@@ -1,8 +1,8 @@
 import logging
 from typing import List, Any, Callable
 import asyncio
-from obs_pln_parser.observation_plan import ObservationPlan
-from obs_pln_parser.coded_error import CantOverideNightPlanError
+from planrunner.observation_plan import ObservationPlan
+from planrunner.coded_error import CantOverideNightPlanError
 from pyaraucaria.obs_plan.obs_plan_parser import ObsPlanParser
 
 

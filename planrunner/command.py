@@ -1,11 +1,11 @@
 import logging
 from typing import Dict, Any
-from obs_pln_parser.abstract_sequence import AbstractSequence
-from obs_pln_parser.subcommands.sub_mount_slew_coo import MountSlewCoo
-from obs_pln_parser.subcommands.sub_mount_slew_to_alt_az import MountSlewToAltAz
-from obs_pln_parser.subcommands.sub_dome_slave_telescope import DomeSlaveTelescope
-from obs_pln_parser.subcommands.sub_change_filter import ChangeFilter
-from obs_pln_parser.subcommands.sub_camera_exposure import CameraExposure
+from planrunner.abstract_sequence import AbstractSequence
+from planrunner.subcommands.sub_mount_slew_coo import MountSlewCoo
+from planrunner.subcommands.sub_mount_slew_to_alt_az import MountSlewToAltAz
+from planrunner.subcommands.sub_dome_slave_telescope import DomeSlaveTelescope
+from planrunner.subcommands.sub_change_filter import ChangeFilter
+from planrunner.subcommands.sub_camera_exposure import CameraExposure
 
 
 log = logging.getLogger(__name__.rsplit('.')[-1])

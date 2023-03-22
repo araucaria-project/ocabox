@@ -1,8 +1,8 @@
 import logging
 from functools import cached_property
 
-from obs_pln_parser.command_Sequence import CommandSequence
-from obs_pln_parser.command_Zero import CommandZero
+from planrunner.command_Sequence import CommandSequence
+from planrunner.command_Zero import CommandZero
 
 logger = logging.getLogger(__name__)
 

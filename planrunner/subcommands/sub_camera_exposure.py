@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from obs_pln_parser.subcommand import SubCommand
+from planrunner.subcommand import SubCommand
 
 
 log = logging.getLogger(__name__.rsplit('.')[-1])

@@ -1,4 +1,4 @@
-from obs_pln_parser.command import Command
+from planrunner.command import Command
 
 
 class CommandZero(Command):

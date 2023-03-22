@@ -1,7 +1,7 @@
 import logging
 from typing import List, Any
-from obs_pln_parser.coded_error import CantOverideNightPlanError
-from obs_pln_parser.night_plan import NightPlan
+from planrunner.coded_error import CantOverideNightPlanError
+from planrunner.night_plan import NightPlan
 
 
 log = logging.getLogger(__name__.rsplit('.')[-1])
