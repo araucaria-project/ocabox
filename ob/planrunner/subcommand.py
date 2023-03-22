@@ -11,7 +11,6 @@ class SubCommand:
         self.kwargs = kwargs
         self.subcommand_name = subcommand_name
         self.info_callback = parent.info_callback
-        logger.info(f'Subcommand {id} name: {self.subcommand_name} is written')
         super().__init__()
         self._create_command_string()
 
@@ -24,4 +23,5 @@ class SubCommand:
             kw = f'{kw} {n}'
         for n in self.kwargs.keys():
             kw = f'{kw} {n}={self.kwargs[n]}'
-        self.info_callback['stream_2'](f'{self.id} {self.subcommand_name}{kw}')
+        self.info_callback['c_subcommands'](f'{self.id} {self.subcommand_name}{kw}')
+        logger.info(f'Subcommand {id} name: {self.subcommand_name} is written')

@@ -17,22 +17,40 @@ class NightPlan(AbstractSequence):
         self.info_callback = parent.info_callback
         self.args = []
         self.kwargs = {}
-        self.parent_args = self.parent.args + self.parent.parent_args
         self.parent_kwargs = self.parent.kwargs | self.parent.parent_kwargs
         super().__init__()
+        self.info = {}
+        #self._set_callb()
         self._write_subcomponents()
 
+    def _set_callb(self) -> None:
+        self.info_callback['c_subcommands'] = self._build_nightplan_info_subcommands
+        self.info_callback['c_commands'] = self._build_nightplan_info_commands
+        self.info_callback['c_sequences'] = self._build_nightplan_info_sequences
+
+    def _build_nightplan_info_subcommands(self, value: str) -> None:
+        self._build_info_seq('subcommands', value)
+
+    def _build_nightplan_info_commands(self, value: str) -> None:
+        self._build_info_seq('commands', value)
+
+    def _build_nightplan_info_sequences(self, value: str) -> None:
+        self._build_info_seq('sequences', value)
+
+    def _build_info_seq(self, name: str, value: str):
+        if name in self.info.keys():
+            self.info[name] = self.info[name] + [value]
+        else:
+            self.info[name] = []
+            self.info[name] = self.info[name] + [value]
+
     def _write_subcomponents(self):
+        self.info_callback['stream_1'](f'Nightplan {self.id} written')
         seq_id = 0
         for se in self.sequence_dict:
-            sub = self._write_subcomponent(f'{self.numb(seq_id)}', se)
+            sub = Sequence(f'{self.numb(seq_id)}', se, self)
             self.subcomponents[f'{self.numb(seq_id)}'] = sub
             seq_id += 1
-
-    def _write_subcomponent(self, sequence_id, sequence_dict) -> 'Sequence':
-        sub = Sequence(sequence_id, sequence_dict, self)
-        logger.info(f'Sequence {sequence_id} to {self.id} is written')
-        return sub
 
     async def arun(self, step_id: str or None = None) -> None:
         self.info_callback['stream_1'](f'Nightplan {self.id} started')

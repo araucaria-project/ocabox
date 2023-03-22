@@ -20,14 +20,12 @@ class Command(AbstractSequence):
         self.parent = parent
         self.args = self.build_args(self.sequence_dict)
         self.kwargs = self.build_kwargs(self.sequence_dict)
-        self.parent_args = self.parent.args + self.parent.parent_args
         self.parent_kwargs = self.parent.kwargs | self.parent.parent_kwargs
         self.command_name = self.sequence_dict['command_name']
         self.subcomponents = {}
         self.telescope = parent.telescope
         self.info_callback = parent.info_callback
         super().__init__()
-        self._create_command_string()
         self._write_subcommands()
 
     def _create_command_string(self):
@@ -38,9 +36,11 @@ class Command(AbstractSequence):
             kw = f'{kw} {n}={self.kwargs[n]}'
         for n in self.parent_kwargs.keys():
             kw = f'{kw} {n}={self.parent_kwargs[n]}'
-        self.info_callback['stream_3'](f'{self.id} {self.command_name}{kw}')
+        self.info_callback['c_commands'](f'{self.id} {self.command_name}{kw}')
+        logger.info(f'Command {self.id} {self.command_name} is written')
 
     def _write_subcommands(self) -> None:
+        self._create_command_string()
 
         if self.command_name == 'OBJECT':
             self._write_object()
