@@ -3,7 +3,7 @@ import logging
 from ob.planrunner.subcommand import SubCommand
 from pyaraucaria.coordinates import ra_to_decimal, dec_to_decimal
 
-log = logging.getLogger(__name__.rsplit('.')[-1])
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class MountSlewCoo(SubCommand):
@@ -22,13 +22,13 @@ class MountSlewCoo(SubCommand):
             dec = self.mount.declination
             await asyncio.sleep(1)
             if (abs(ra - ra_to_decimal(self.kwargs["ra"]))<0.05) and (abs(dec - dec_to_decimal(self.kwargs["dec"]))<0.05):
-                log.debug(f'{self.id} {self.subcommand_name} is done')
+                logger.debug(f'{self.id} {self.subcommand_name} is done')
                 self.info_callback['stream_1'](f'Subcommand {self.id} {self.subcommand_name} done')
                 self.info_callback['stream_5'](f'{self.id}')
                 break
 
     async def arun(self, step_id: str or None = None) -> None:
-        log.debug(f'{self.id} {self.subcommand_name} is started')
+        logger.debug(f'{self.id} {self.subcommand_name} is started')
         self.info_callback['stream_1'](
             f'Subcommand {self.id} {self.subcommand_name} OBJ:{self.kwargs["obj_name"]}'
             f' RA:{self.kwargs["ra"]} DEC:{self.kwargs["dec"]} started')

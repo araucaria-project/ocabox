@@ -3,7 +3,7 @@ import logging
 from ob.planrunner.subcommand import SubCommand
 
 
-log = logging.getLogger(__name__.rsplit('.')[-1])
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class DomeSlaveTelescope(SubCommand):
@@ -23,13 +23,13 @@ class DomeSlaveTelescope(SubCommand):
             dome_az = self.dome.azimuth
             await asyncio.sleep(1)
             if (abs(mount_az - dome_az) < 0.05):
-                log.debug(f'{self.id} {self.subcommand_name} is done')
+                logger.debug(f'{self.id} {self.subcommand_name} is done')
                 self.info_callback['stream_1'](f'Subcommand {self.id} {self.subcommand_name} done')
                 self.info_callback['stream_5'](f'{self.id}')
                 break
 
     async def arun(self, step_id: str or None = None) -> None:
-        log.debug(f'{self.id} {self.subcommand_name} is started')
+        logger.debug(f'{self.id} {self.subcommand_name} is started')
         self.info_callback['stream_1'](f'Subcommand {self.id} {self.subcommand_name} started')
         mount_az = self.mount.azimuth
         # TODO maybe use synctoazimuth (if yes add to ocaboxapi)

@@ -8,7 +8,7 @@ from ob.planrunner.subcommands.sub_change_filter import ChangeFilter
 from ob.planrunner.subcommands.sub_camera_exposure import CameraExposure
 
 
-log = logging.getLogger(__name__.rsplit('.')[-1])
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class Command(AbstractSequence):

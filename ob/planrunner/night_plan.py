@@ -4,7 +4,7 @@ from ob.planrunner.abstract_sequence import AbstractSequence
 from ob.planrunner.sequence import Sequence
 
 
-log = logging.getLogger(__name__.rsplit('.')[-1])
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class NightPlan(AbstractSequence):
@@ -13,12 +13,12 @@ class NightPlan(AbstractSequence):
         self.parent = parent
         self.sequence_dict = sequence_dict
         self.subcomponents = {}
-        self.args = []
-        self.kwargs = {}
-        self.parent_args = []
-        self.parent_kwargs = {}
         self.telescope = parent.telescope
         self.info_callback = parent.info_callback
+        self.args = []
+        self.kwargs = {}
+        self.parent_args = self.parent.args + self.parent.parent_args
+        self.parent_kwargs = self.parent.kwargs | self.parent.parent_kwargs
         super().__init__()
         self._write_subcomponents()
 
@@ -31,7 +31,7 @@ class NightPlan(AbstractSequence):
 
     def _write_subcomponent(self, sequence_id, sequence_dict) -> 'Sequence':
         sub = Sequence(sequence_id, sequence_dict, self)
-        log.info(f'Sequence {sequence_id} to {self.id} is written')
+        logger.info(f'Sequence {sequence_id} to {self.id} is written')
         return sub
 
     async def arun(self, step_id: str or None = None) -> None:
@@ -41,4 +41,4 @@ class NightPlan(AbstractSequence):
         self.info_callback['stream_5'](f'{self.id}')
 
     def __del__(self):
-        log.info(f"Nightplan {self.id} deleted")
+        logger.info(f"Nightplan {self.id} deleted")

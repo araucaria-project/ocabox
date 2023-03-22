@@ -1,10 +1,9 @@
 import logging
-from abc import ABC
 
-log = logging.getLogger(__name__.rsplit('.')[-1])
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
-class SubCommand(ABC):
+class SubCommand:
 
     def __init__(self, id: str, parent: 'Command', subcommand_name: str or None = None, **kwargs) -> None:
         self.id = id
@@ -12,7 +11,7 @@ class SubCommand(ABC):
         self.kwargs = kwargs
         self.subcommand_name = subcommand_name
         self.info_callback = parent.info_callback
-        log.info(f'Subcommand {id} name: {self.subcommand_name} is written')
+        logger.info(f'Subcommand {id} name: {self.subcommand_name} is written')
         super().__init__()
         self._create_command_string()
 

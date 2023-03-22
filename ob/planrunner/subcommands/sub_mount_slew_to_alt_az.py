@@ -2,7 +2,7 @@ import asyncio
 import logging
 from ob.planrunner.subcommand import SubCommand
 
-log = logging.getLogger(__name__.rsplit('.')[-1])
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class MountSlewToAltAz(SubCommand):
@@ -21,13 +21,13 @@ class MountSlewToAltAz(SubCommand):
             alt = self.mount.altitude
             await asyncio.sleep(1)
             if (abs(az - self.kwargs["az"])<0.05) and (abs(alt - self.kwargs["alt"])<0.05):
-                log.info(f'{self.id} {self.subcommand_name} is done')
+                logger.info(f'{self.id} {self.subcommand_name} is done')
                 self.info_callback['stream_1'](f'Subcommand {self.id} {self.subcommand_name} done')
                 self.info_callback['stream_5'](f'{self.id}')
                 break
 
     async def arun(self, step_id: str or None = None) -> None:
-        log.info(f'{self.id} {self.subcommand_name} is started')
+        logger.info(f'{self.id} {self.subcommand_name} is started')
         self.info_callback['stream_1'](
             f'Subcommand {self.id} {self.subcommand_name} ALT:{self.kwargs["alt"]} AZ:{self.kwargs["az"]} started')
         await self.mount.aput_tracking(False)

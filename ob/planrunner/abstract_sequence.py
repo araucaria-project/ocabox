@@ -1,12 +1,11 @@
 from typing import Dict, List, Any
 import logging
 import asyncio
-from abc import ABC
 
-log = logging.getLogger(__name__.rsplit('.')[-1])
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
-class AbstractSequence(ABC):
+class AbstractSequence:
 
     def __init__(self) -> None:
         super().__init__()
@@ -31,14 +30,6 @@ class AbstractSequence(ABC):
             return f'{number}'
         else:
             return f'0{number}'
-
-    def get_loop(self) -> Any or None:
-        try:
-            loop = asyncio.get_running_loop()
-            return loop
-        except RuntimeError:
-            log.error("There is no running asyncio loop")
-            #self.exit()
 
     @staticmethod
     async def _arun(subcomponents: Any, step_id: str or None = None):

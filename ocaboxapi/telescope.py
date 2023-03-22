@@ -8,6 +8,7 @@ from ocaboxapi.camera import Camera
 from ocaboxapi.focuser import Focuser
 from ocaboxapi.filterwheel import FilterWheel
 from ocaboxapi.covercalibrator import CoverCalibrator
+from ocaboxapi.plan import ObservationPlan
 
 logger = logging.getLogger("telescope")
 
@@ -24,6 +25,7 @@ class Telescope(AbstractTelescope):
         self.cameras = {}
         self.covercalibrators = {}
         self._access_grantor = None
+        self._observation_plan = None
 
     def get_mount(self, id='mount') -> Mount:
         try:
@@ -77,3 +79,8 @@ class Telescope(AbstractTelescope):
         if self._access_grantor is None:
             self._access_grantor = AccessGrantor(id='access_grantor', telescope=self)
         return self._access_grantor
+
+    def get_observation_plan(self) -> ObservationPlan:
+        if self._observation_plan is None:
+            self._observation_plan = ObservationPlan(id='observation_plan', telescope=self)
+        return self._observation_plan

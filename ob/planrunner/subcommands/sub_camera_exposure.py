@@ -3,7 +3,7 @@ import logging
 from ob.planrunner.subcommand import SubCommand
 
 
-log = logging.getLogger(__name__.rsplit('.')[-1])
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class CameraExposure(SubCommand):
@@ -21,12 +21,12 @@ class CameraExposure(SubCommand):
             await asyncio.sleep(1)
             subexposure_done = self.camera.imageready
             if subexposure_done:
-                log.debug(f'{self.id} {self.subcommand_name} is done')
+                logger.debug(f'{self.id} {self.subcommand_name} is done')
                 self.info_callback['stream_1'](f'Subexposure {sub}/{self.kwargs["exposure_no"]} done')
                 break
 
     async def arun(self, step_id: str or None = None):
-        log.debug(f'{self.id} {self.subcommand_name} is started')
+        logger.debug(f'{self.id} {self.subcommand_name} is started')
         self.info_callback['stream_1'](
             f'Subcommand {self.id} {self.subcommand_name} '
             f'Subexposure - time:{self.kwargs["exposure_time"]} quantity:{self.kwargs["exposure_no"]} started')

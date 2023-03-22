@@ -5,7 +5,7 @@ from ob.planrunner.command import Command
 from ob.planrunner.coded_error import SequenceTreeError
 
 
-log = logging.getLogger(__name__.rsplit('.')[-1])
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class Sequence(AbstractSequence):
@@ -22,6 +22,7 @@ class Sequence(AbstractSequence):
         self.subcomponents = {}
         self.telescope = parent.telescope
         self.info_callback = parent.info_callback
+
         super().__init__()
         self._create_sequence_string()
         self.build_sequence()
@@ -53,12 +54,12 @@ class Sequence(AbstractSequence):
 
     def write_subcomponent(self, sequence_id, sequence_dict) -> 'Sequence':
         sub = Sequence(sequence_id, sequence_dict, self)
-        log.info(f'Sequence {sequence_id} to {self.id} is written')
+        logger.info(f'Sequence {sequence_id} to {self.id} is written')
         return sub
 
     def write_command(self, command_id, command_dict) -> 'Command':
         com = Command(command_id, command_dict, self)
-        log.info(f'Command {command_id} to {self.id} is written')
+        logger.info(f'Command {command_id} to {self.id} is written')
         return com
 
     async def arun(self, step_id: str or None = None) -> None:

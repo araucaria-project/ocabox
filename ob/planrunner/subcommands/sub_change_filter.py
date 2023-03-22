@@ -3,7 +3,7 @@ import logging
 from ob.planrunner.subcommand import SubCommand
 
 
-log = logging.getLogger(__name__.rsplit('.')[-1])
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class ChangeFilter(SubCommand):
@@ -21,13 +21,13 @@ class ChangeFilter(SubCommand):
             filter = self.filterwheel.position
             await asyncio.sleep(1)
             if int(filter) - int(self.kwargs['filter']) == 0:
-                log.debug(f'{self.id} {self.subcommand_name} is done')
+                logger.debug(f'{self.id} {self.subcommand_name} is done')
                 self.info_callback['stream_1'](f'Subcommand {self.id} {self.subcommand_name} done')
                 self.info_callback['stream_5'](f'{self.id}')
                 break
 
     async def arun(self, step_id: str or None = None):
-        log.debug(f'{self.id} {self.subcommand_name} is started')
+        logger.debug(f'{self.id} {self.subcommand_name} is started')
         self.info_callback['stream_1'](f'Subcommand {self.id} {self.subcommand_name} FILTER:{self.kwargs["filter"]} started')
         await self.filterwheel.aput_position(self.kwargs['filter'])
         await self._wait_to_move()
