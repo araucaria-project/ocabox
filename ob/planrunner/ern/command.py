@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-import planrunner.command_Sequence
+import ob.planrunner.ern.command_Sequence
 
 
 class Command(ABC):
@@ -24,5 +24,5 @@ class Command(ABC):
         pass
 
     MAP_COMMANDS: dict = {
-        "SEQUENCE": planrunner.command_Sequence.CommandSequence,
+        "SEQUENCE": ob.planrunner.ern.command_Sequence.CommandSequence,
     }

@@ -1,7 +1,7 @@
 import logging
 from typing import List, Any
-from planrunner.abstract_sequence import AbstractSequence
-from planrunner.sequence import Sequence
+from ob.planrunner.abstract_sequence import AbstractSequence
+from ob.planrunner.sequence import Sequence
 
 
 log = logging.getLogger(__name__.rsplit('.')[-1])

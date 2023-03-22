@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from planrunner.subcommand import SubCommand
+from ob.planrunner.subcommand import SubCommand
 from pyaraucaria.coordinates import ra_to_decimal, dec_to_decimal
 
 log = logging.getLogger(__name__.rsplit('.')[-1])
