@@ -17,6 +17,7 @@ class Telescope(AbstractTelescope):
 
     def __init__(self, id: str, observatory: "Observatory") -> None:
         super().__init__(id=id, observatory=observatory)
+        self.id = id
         self.mounts = {}
         self.domes = {}
         self.rotators = {}

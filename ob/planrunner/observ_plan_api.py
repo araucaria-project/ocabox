@@ -22,6 +22,7 @@ class ObservPlanApi:
         self.observ_plan.add_info_callback(name=name, info_callback=info_callback)
 
     def get_nightplan_info(self, nightplan_id: str) -> Dict[Any, Any]:
+        # TODO develop
         return self.observ_plan.get_nightplan_info(nightplan_id=nightplan_id)
 
     def run_nightplan(self, nightplan_id: str, step_id: str or None = None) -> None:
