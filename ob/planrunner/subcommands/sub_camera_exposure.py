@@ -15,7 +15,9 @@ class CameraExposure(SubCommand):
     def __init__(self, id: str, parent: 'Command', **kwargs) -> None:
         self.subcommand_name = 'CameraExposure'
         self.telescope = parent.telescope
-        self.camera = self.telescope.get_camera('camera')
+        self.mount = self.telescope.get_mount()
+        self.camera = self.telescope.get_camera()
+        self.cover = self.telescope.get_covercalibrator()
         self.kwargs = kwargs
         self.id = id
         self.user = pwd.getpwuid(os.getuid())[0]
@@ -54,8 +56,27 @@ class CameraExposure(SubCommand):
                 self.info_callback['stream_1'](f'Subexposure {sub}/{self.kwargs["exposure_no"]} done --> saving')
                 break
 
+    async def _wait_for_opencover(self):
+        while True:
+            await asyncio.sleep(1)
+            cover_status = self.cover.coverstate
+            if cover_status == 3:
+                logger.debug(f'Telescope cover opened')
+                self.info_callback['stream_1'](f'Telescope cover is opened')
+                break
+
+
     async def arun(self, step_id: str or None = None):
         logger.debug(f'{self.id} {self.subcommand_name} is started')
+        cover_status = self.cover.coverstate
+        if cover_status != 3:
+            self.info_callback['stream_1'](f'Cover is closed. Opening...')
+            logger.debug(f'Cover is closed. Opening...')
+            if self.telescope.id == 'dev':
+                await self.cover.aput_opencover_dev()
+            else:
+                await self.mount.aput_opencover()
+            await self._wait_for_opencover()
         self.info_callback['stream_1'](
             f'Subcommand {self.id} {self.subcommand_name} '
             f'Subexposure - time:{self.kwargs["exposure_time"]} quantity:{self.kwargs["exposure_no"]} started')
