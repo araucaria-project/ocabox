@@ -1,7 +1,9 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [1.0.0] - 2023-03-24
+### Changed
+- New methods in Camera `ocaboxapi`
 
 ## [0.2.4] - 2023-03-24
 ### Changed
