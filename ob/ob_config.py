@@ -87,14 +87,14 @@ class SingletonConfig(metaclass=SingletonMeta):
             fil += files
         config = confuse.Configuration(cls.app_name, read=False)
         for f in fil:
-            logger.info('Trying config: %s', f)
+            logger.debug('Trying config: %s', f)
             try:
                 source = confuse.YamlSource(f, optional=True)
                 config.set(source)
                 if len(source) > 0:
                     logger.info('Using config: %s', f)
                 else:
-                    logger.info('Empty config: %s', f)
+                    logger.debug('Empty config: %s', f)
             except confuse.ConfigReadError:
                 logger.warning('Corrupted config: %s', f)
         return config

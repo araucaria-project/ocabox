@@ -127,6 +127,60 @@ def parse_deg_or_dms(deg_or_dms: str) -> float:
         """
     return deg_to_decimal_deg(deg_or_dms)
 
+def parse_binning(binning: str) -> tuple[int, int]:
+    """Parse a string as a binning value.
+    Returns a tuple of two integers.
+
+    Raises:
+        ValueError: if the string is not a valid binning string.
+
+    Examples:
+        >>> parse_binning('1x1')
+        (1, 1)
+        >>> parse_binning('2x2')
+        (2, 2)
+        >>> parse_binning('2x1')
+        (2, 1)
+        >>> parse_binning('2')
+        (2, 2)
+        """
+    try:
+        xy = int(binning)
+        return xy, xy
+    except ValueError:
+        pass
+    try:
+        x, y = binning.split('x')
+        return int(x), int(y)
+    except ValueError:
+        raise ValueError(f'Invalid binning value: {binning}')
+
+def parse_subframe(subframe: str) -> tuple[int, int, int, int]:
+    """Parse a string as a subframe value.
+    Returns a tuple of four integers.
+
+    Raises:
+        ValueError: if the string is not a valid subframe string.
+
+    Examples:
+        >>> parse_subframe('[0:0,100:200]')
+        (0, 0, 100, 200)
+        >>> parse_subframe('[*, 0 : 100:200]')
+        (None, None, 100, 200)
+        """
+    try:
+        xx, yy = subframe.strip('[]').split(',')
+        # print(subframe, ' => ', xx, yy)
+        x1, x2 = (None, None) if '*' in xx else map(int, xx.split(':'))
+        # print(x1, x2)
+        y1, y2 = (None, None) if '*' in yy else map(int, yy.split(':'))
+        # print(y1, y2)
+        # print (x1, x2, y1, y2)
+        return x1, x2, y1, y2
+
+    except ValueError:
+        raise ValueError(f'Invalid subframe value: {subframe}')
+
 def is_decimal(deg_or_dms_or_hms: str) -> bool:
     """Check if a string is a decimal number"""
     try:

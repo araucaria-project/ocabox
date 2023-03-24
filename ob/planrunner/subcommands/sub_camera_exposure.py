@@ -69,7 +69,7 @@ class CameraExposure(SubCommand):
     async def arun(self, step_id: str or None = None):
         logger.debug(f'{self.id} {self.subcommand_name} is started')
         cover_status = self.cover.coverstate
-        if cover_status != 3:
+        if cover_status != 3:  # TODO: Mirek: I don't know if the covers should open autmatically, at least for bias/dark shouldnt
             self.info_callback['stream_1'](f'Cover is closed. Opening...')
             logger.debug(f'Cover is closed. Opening...')
             if self.telescope.id == 'dev':
