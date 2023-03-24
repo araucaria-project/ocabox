@@ -27,6 +27,11 @@ class Camera(TelescopeComponent):
     imagearray = OcaBoxParam(default=[0], doc="Camera image array")
     readoutmode = OcaBoxParam(default=0, doc="Camera readoutmode")
     readoutmodes = OcaBoxParam(default=[0], doc="Camera readoutmodes")
+    fastreadout = OcaBoxParam(default=False, doc="Camera fast readout")
+    numx = OcaBoxParam(default=0, doc="Camera numx")
+    numy = OcaBoxParam(default=0, doc="Camera numy")
+    startx = OcaBoxParam(default=0, doc="Camera startx")
+    starty = OcaBoxParam(default=0, doc="Camera starty")
 
 
     camerastate_to_code = {
@@ -196,6 +201,52 @@ class Camera(TelescopeComponent):
         logger.debug(f'Subscribing readoutmodes from {self.tel_addr}')
         return await self.subscribe('readoutmodes', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
+    async def aget_fastreadout(self) -> bool:
+        logger.debug(f'Getting fastreadout from {self.tel_addr}')
+        ret = await self.aget_value('fastreadout')
+        return ret
+
+    async def asubscribe_fastreadout(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
+        logger.debug(f'Subscribing fastreadout from {self.tel_addr}')
+        return await self.subscribe('fastreadout', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
+
+    async def aget_numx(self) -> int:
+        logger.debug(f'Getting numx from {self.tel_addr}')
+        ret = await self.aget_value('numx')
+        return ret
+
+    async def asubscribe_numx(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
+        logger.debug(f'Subscribing numx from {self.tel_addr}')
+        return await self.subscribe('numx', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
+
+    async def aget_numy(self) -> int:
+        logger.debug(f'Getting numy from {self.tel_addr}')
+        ret = await self.aget_value('numy')
+        return ret
+
+    async def asubscribe_numy(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
+        logger.debug(f'Subscribing numy from {self.tel_addr}')
+        return await self.subscribe('numy', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
+
+    async def aget_startx(self) -> int:
+        logger.debug(f'Getting startx from {self.tel_addr}')
+        ret = await self.aget_value('startx')
+        return ret
+
+    async def asubscribe_startx(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
+        logger.debug(f'Subscribing startx from {self.tel_addr}')
+        return await self.subscribe('startx', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
+
+    async def aget_starty(self) -> int:
+        logger.debug(f'Getting starty from {self.tel_addr}')
+        ret = await self.aget_value('starty')
+        return ret
+
+    async def asubscribe_starty(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
+        logger.debug(f'Subscribing starty from {self.tel_addr}')
+        return await self.subscribe('starty', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
+
+
     async def aput_binx(self, binx: int) -> None:
         logger.debug(f'Putting binx to {self.tel_addr}')
         await self.aput_value('binx', BinX=binx)
@@ -239,3 +290,24 @@ class Camera(TelescopeComponent):
     async def aput_readoutmode(self, romode: int) -> None:
         logger.debug(f'Putting readoutmode to {self.tel_addr}')
         await self.aput_value('readoutmode', ReadoutMode=romode)
+
+    async def aput_fastreadout(self, fastreadout: bool) -> None:
+        logger.debug(f'Putting fastreadout to {self.tel_addr}')
+        await self.aput_value('fastreadout', FastReadout=fastreadout)
+
+    async def aput_numx(self, numx: int) -> None:
+        logger.debug(f'Putting numx to {self.tel_addr}')
+        await self.aput_value('numx', NumX=numx)
+
+    async def aput_numy(self, numy: int) -> None:
+        logger.debug(f'Putting numy to {self.tel_addr}')
+        await self.aput_value('numy', NumY=numy)
+
+    async def aput_startx(self, startx: int) -> None:
+        logger.debug(f'Putting startx to {self.tel_addr}')
+        await self.aput_value('startx', StartX=startx)
+
+    async def aput_starty(self, starty: int) -> None:
+        logger.debug(f'Putting starty to {self.tel_addr}')
+        await self.aput_value('starty', StartY=starty)
+
