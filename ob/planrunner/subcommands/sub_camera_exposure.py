@@ -6,7 +6,6 @@ from pyaraucaria.date import datetime_to_julian
 from datetime import datetime
 import os
 import pwd
-from os import path
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -20,8 +19,18 @@ class CameraExposure(SubCommand):
         self.kwargs = kwargs
         self.id = id
         self.user = pwd.getpwuid(os.getuid())[0]
-        self.folder = f'/home/{self.user}/Desktop/fits_test/'
+        self.folder = f'/home/{self.user}/Desktop/fits_{self.telescope.id}/'
         super().__init__(id=id, parent=parent, subcommand_name=self.subcommand_name, **kwargs)
+        self._mk_folder()
+
+    def _mk_folder(self):
+            lst = os.listdir(f'/home/{self.user}/Desktop/')
+            if f'fits_{self.telescope.id}' not in lst:
+                try:
+                    os.mkdir(self.folder)
+                except Exception as e:
+                    logger.warning(
+                        f'Folder creation failed, please make folder /home/{self.user}/Desktop/fits_{self.telescope.id}')
 
     async def _wait_for_save_fits(self, sub: int):
         array = await self.camera.aget_imagearray()
