@@ -16,6 +16,9 @@ class Camera(TelescopeComponent):
     camerastate = OcaBoxParam(default=0, doc="Camera state")
     gain = OcaBoxParam(default=0, doc="Camera gain")
     offset = OcaBoxParam(default=0, doc="Camera offset")
+    offsets = OcaBoxParam(default=0, doc="Avaliable Camera offsets")
+    offsetmax = OcaBoxParam(default=0, doc="Maximum offset value of that this camera supports")
+    offsetmin = OcaBoxParam(default=0, doc="Minimum offset value of that this camera supports")
     subexposureduration = OcaBoxParam(default=0.0, doc="Camera subexposure duration")
     percentcompleted = OcaBoxParam(default=0.0, doc="Camera exposure percent competed")
     coolerpower = OcaBoxParam(default=0.0, doc="Camera cooler power level")
@@ -37,6 +40,7 @@ class Camera(TelescopeComponent):
 
     camerastate_code_to_status = {v: k for k, v in camerastate_to_code.items()}
 
+    # TODO: MMirrkk: Why override `aget_name` and `asubscribe_name`?
     async def aget_name(self) -> str:
         logger.debug(f'Getting camera name from {self.tel_addr}')
         ret = await self.aget_value('name')
@@ -126,6 +130,21 @@ class Camera(TelescopeComponent):
     async def asubscribe_offset(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing camera offset from {self.tel_addr}')
         return await self.subscribe('offset', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
+
+    async def aget_offsets(self) -> []:
+        logger.debug(f'Getting camera offsets from {self.tel_addr}')
+        ret = await self.aget_value('offsets')
+        return ret
+
+    async def aget_offsetmin(self) -> int:
+        logger.debug(f'Getting camera offsetmin from {self.tel_addr}')
+        ret = await self.aget_value('offsetmin')
+        return ret
+
+    async def aget_offsetmax(self) -> int:
+        logger.debug(f'Getting camera offsetmax from {self.tel_addr}')
+        ret = await self.aget_value('offsetmax')
+        return ret
 
     async def aget_subexposureduration(self) -> float:
         logger.debug(f'Getting subexposure duration from {self.tel_addr}')
