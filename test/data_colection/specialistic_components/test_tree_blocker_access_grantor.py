@@ -4,8 +4,8 @@ import unittest
 
 from ob.data_colection.base_components.tree_base_broker import TreeBaseBroker
 from ob.data_colection.base_components.tree_provider import TreeProvider
+from ob.data_colection.specialistic_components.tree_base_request_blocker import TreeBaseRequestBlocker
 from ob.data_colection.specialistic_components.tree_blocker_access_grantor import TreeBlockerAccessGrantor
-from ob.data_colection.specialistic_components.tree_request_alpaca_blocker import TreeRequestAlpacaBlocker
 from ob.data_colection.tree_user import TreeServiceUser
 from ob.data_colection.value_call import ValueRequest
 from test.data_colection.base_async_test import BaseAsyncTest
@@ -14,7 +14,7 @@ from test.data_colection.sample_test_value_provider import SampleTestValueProvid
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
-class TreeRequestAlpacaBlockerTest(unittest.TestCase, BaseAsyncTest):
+class TreeBaseRequestBlockerTest(unittest.TestCase, BaseAsyncTest):
 
     def setUp(self):
         super().setUp()
@@ -22,7 +22,7 @@ class TreeRequestAlpacaBlockerTest(unittest.TestCase, BaseAsyncTest):
         self.sample_provider_source_name = 'source_sample_name'
         self.sample_provider = SampleTestValueProvider(self.sample_provider_name, self.sample_provider_source_name, [])
         self.blocker_name = 'test_sample_blocker'  # this name is used in config file
-        self.blocker = TreeRequestAlpacaBlocker(component_name=self.blocker_name, subcontractor=self.sample_provider)
+        self.blocker = TreeBaseRequestBlocker(component_name=self.blocker_name, subcontractor=self.sample_provider)
         self.provider_name = 'provider_sample_name'
         self.provider_source_name = 'provider_source_sample_name'
         self.provider = TreeProvider(self.provider_name, self.provider_source_name, self.blocker)

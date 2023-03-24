@@ -1,7 +1,7 @@
 import logging
 import confuse
 from abc import ABC, abstractmethod
-from typing import Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable, List, Tuple
 from ob.data_colection.base_components.address_dispatcher import AddressedProtocol
 from ob.data_colection.value_call import ValueRequest, ValueResponse
 from ob.ob_config import SingletonConfig
@@ -21,10 +21,12 @@ class TreeComponent(ABC):
         ProvidesResponseProtocol
     """
     COMPONENT_DEFAULT_NAME: str = 'TreeComponent'
+    _SUFFIX = "_RESOURCE"
 
     def __init__(self, component_name: str, **kwargs):
         super().__init__(**kwargs)
         self._component_name: str = component_name  # this is name of tree component, used for debug and errors
+        self._resource_name = self._component_name + self._SUFFIX
 
     @abstractmethod
     async def get_response(self, request: ValueRequest) -> ValueResponse:
@@ -83,6 +85,17 @@ class TreeComponent(ABC):
                 value = default
         return value
 
+    def get_resources(self) -> List[Tuple[str, List[str]]]:
+        """
+        The method returns the resources of this component
+
+        :return: list of resources witch address
+        """
+        raise NotImplementedError
+
+    def get_resource_name(self) -> str:
+        return self._resource_name
+
 
 @runtime_checkable
 class ProvidesResponseProtocol(Protocol):
@@ -111,6 +124,9 @@ class ProvidesResponseProtocol(Protocol):
 
         :return:
         """
+        pass
+
+    def get_resources(self) -> List[Tuple[str, List[str]]]:
         pass
 
 

@@ -64,7 +64,7 @@ data_collection:
     address: localhost:80
     api_version: 1
     url_protocol: http
-  TreeRequestAlpacaBlocker:
+  TreeBaseRequestBlocker:
     default_control_time: 60
     max_control_time: 86400 # 24h
     white_list:
