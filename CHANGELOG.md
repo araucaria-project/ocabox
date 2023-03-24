@@ -2,14 +2,20 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+
+## [0.2.4] - 2023-03-24
 ### Changed
 - Rename class `TreeRequestAlpacaBlocker` to `TreeBaseRequestBlocker` and move it to file `tree_base_request_blocker.py`
+- Minor changes in `ocaboxapi`
+
 ### Added
 - Added mechanism for determining the resources available to blocks in the tree has been added. each value-providing 
 block is seen as a resource, and it can be modified to be seen as multiple resources. In the future, resources can be 
 used to recognize the target of the query, for example, in blocker.
 - The `TreeAlpacaObservatory` block now provides a `ResourceManagerAlpaca` class to manage access to individual alpaca 
 resources.
+- Added a temporary mechanism to run observation plans on the client side. In the future it will be rebuilt and moved 
+- to the server side.
 
 ## [0.2.3] - 2023-03-14
 ### Added
