@@ -111,8 +111,8 @@ class TreeAlpacaObservatory(TreeBaseProvider):
             raise TreeValueError(address=None, code=2002, message=e.message)
         except RequestConnectionError:
             # when can not connect to alpaca
-            logger.warning(f"Server alpaca is not responding")
-            raise TreeOtherError(address=None, code=4005, message=f"Server alpaca is not responding",
+            logger.warning(f"Server alpaca is not responding at {address}")
+            raise TreeOtherError(address=None, code=4005, message=f"Server alpaca is not responding at {address}",
                                  severity=TreeOtherError.SEVERITY_TEMPORARY)
         except (TypeError, ValueError):
             # when given arguments is wrong

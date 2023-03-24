@@ -53,3 +53,17 @@ class CoverCalibrator(TelescopeComponent):
     async def aput_calibratoron(self, brightness: int) -> None:
         logger.debug(f'Putting calibrator on to {self.tel_addr}')
         await self.aput_value('calibratoron', Brightness=brightness)
+
+    async def aput_closecover_dev(self) -> None:
+        """
+        Note: this method works only for dev telescope
+        """
+        logger.debug(f'Putting closecover on to {self.tel_addr}')
+        await self.aput_value('closecover')
+
+    async def aput_opencover_dev(self) -> None:
+        """
+        Note: this method works only for dev telescope
+        """
+        logger.debug(f'Putting opencover on to {self.tel_addr}')
+        await self.aput_value('opencover')
