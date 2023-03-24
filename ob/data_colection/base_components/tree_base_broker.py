@@ -122,3 +122,11 @@ class TreeBaseBroker(TreeComponent):
         # stop self
         for p in self._list_providers:
             await p.stop()
+
+    def get_resources(self):
+        providers = self.get_list_providers()
+        out = []
+        for p in providers:
+            r = p.get_resources()
+            out.extend(r)
+        return out

@@ -118,5 +118,14 @@ class TreeAlpacaObservatory(TreeBaseProvider):
         # TODO gdy jest PUT to zwraca cały blok odpowiedzi a przy GET tylko result.get("Value", None) to jest w api do alpaki ale tutaj można to naprawić bo narazie jest zwracany słownik MIKLÓAJ
         return Value(result, time.time())
 
+    def get_resources(self):
+        # WARNING, resources are not searched deep into the alpaca tree. Duplicates in the config leading to the same
+        # elements are not checked.
+        obs_children = self._observatory.children
+        out = []
+        for key, val in obs_children.items():
+            out.append((key+"_resource", [key]))
+        return out
+
     def __del__(self):
         self._connector.__del__()

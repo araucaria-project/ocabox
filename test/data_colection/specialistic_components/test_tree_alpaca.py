@@ -97,5 +97,11 @@ class TreeAlpacaTest(unittest.TestCase, BaseAsyncTest):
 
         self.loop.run_until_complete(coro())
 
+    def test_get_resource(self):
+        """Test method get_resources"""
+        resources = self.tao.get_resources()
+        self.assertEqual(resources, [('dibi_resource', ['dibi'])])
+
+
 if __name__ == '__main__':
     unittest.main()

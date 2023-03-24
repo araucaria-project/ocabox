@@ -61,8 +61,16 @@ class SampleTestValueProvider(TreeProvider):
             raise TreeStructureError
         elif value_name == 'value_error':
             raise TreeValueError
+        elif value_name == 'value_error_coded':
+            raise TreeValueError(None, 10, '')
         elif value_name == 'address_error':
             raise AddressError
+        elif value_name == 'address_error_coded':
+            raise AddressError(request.address, 20, '')
+        elif value_name == 'wrong_type':
+            return 34
+        if value_name == 'crash':
+            raise ValueError
         elif value_name == 'new_val':
             return Value(random.randint(0, 1000), time.time())
         elif value_name == 'static_val':
