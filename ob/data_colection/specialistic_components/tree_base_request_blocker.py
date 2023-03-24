@@ -1,3 +1,4 @@
+
 import logging
 import time
 from typing import Dict
@@ -13,13 +14,13 @@ from ob.data_colection.value_call import ValueRequest
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
-class TreeRequestAlpacaBlocker(TreeBaseProvider):
+class TreeBaseRequestBlocker(TreeBaseProvider):
     """
     This is a module for filtering and blocking some type incoming requests. In order to unlock access, access must
     be reserved by the user for a certain period of time. Reservation is done using a different module.
     """
 
-    COMPONENT_DEFAULT_NAME: str = 'TreeRequestAlpacaBlocker'
+    COMPONENT_DEFAULT_NAME: str = 'TreeBaseRequestBlocker'
 
     def __init__(self, component_name: str, subcontractor: ProvidesResponseProtocol = None, **kwargs):
         super().__init__(component_name=component_name, subcontractor=subcontractor, **kwargs)

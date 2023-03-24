@@ -41,6 +41,10 @@ class Component:
             child._setup(op)
 
     @property
+    def device_nr(self) -> int:
+        return int(self.component_options.get('device_number', 0))
+
+    @property
     def connector(self) -> Connector:
         if self._connector is not None:
             return self._connector

@@ -4,7 +4,7 @@ import time
 from ob.data_colection.address import AddressError
 from ob.data_colection.base_components.tree_provider import TreeProvider
 from ob.data_colection.coded_error import TreeOtherError
-from ob.data_colection.specialistic_components.tree_request_alpaca_blocker import TreeRequestAlpacaBlocker, \
+from ob.data_colection.specialistic_components.tree_base_request_blocker import TreeBaseRequestBlocker, \
     ReservationError
 from ob.data_colection.value import Value
 from ob.data_colection.value_call import ValueRequest
@@ -27,9 +27,9 @@ class TreeBlockerAccessGrantor(TreeProvider):
 
     COMPONENT_DEFAULT_NAME: str = 'TreeBlockerAccessGrantor'
 
-    def __init__(self, component_name: str, source_name: str, target_blocker: TreeRequestAlpacaBlocker, **kwargs):
+    def __init__(self, component_name: str, source_name: str, target_blocker: TreeBaseRequestBlocker, **kwargs):
         super().__init__(component_name=component_name, source_name=source_name, subcontractor=None, **kwargs)
-        self._target_blocker: TreeRequestAlpacaBlocker = target_blocker
+        self._target_blocker: TreeBaseRequestBlocker = target_blocker
 
     async def get_value(self, request: ValueRequest, **kwargs) -> Value or None:
         user = request.user

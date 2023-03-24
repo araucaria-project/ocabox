@@ -108,3 +108,8 @@ class TreeBaseProvider(TreeComponent, ABC):
         # stop self
         if self._subcontractor:
             await self._subcontractor.stop()
+
+    def get_resources(self):
+        if self._subcontractor is not None:
+            return self._subcontractor.get_resources()
+        return []

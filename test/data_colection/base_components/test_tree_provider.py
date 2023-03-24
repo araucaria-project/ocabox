@@ -1,22 +1,20 @@
-import asyncio
 import unittest
 
 from ob.data_colection.base_components.tree_provider import TreeProvider
 from ob.data_colection.value import Value
 from ob.data_colection.value_call import ValueRequest
 from test.data_colection.base_async_test import BaseAsyncTest
-from test.data_colection.base_components.test_tree_base_provider import TreeBaseProviderTest
+from test.data_colection.sample_test_value_provider import SampleTestValueProvider
 
 
 class TreeProviderTest(unittest.TestCase, BaseAsyncTest):
-    SampleTestValueProvider = TreeBaseProviderTest.SampleTestValueProvider
 
     def setUp(self):
         super().setUp()
         self._setUpLoop()
         self.v1 = ('val1', Value(1, 1661349399.030824))
         self.v2 = ('val2', Value(2, 1661349399.030824))
-        self.vp1 = self.SampleTestValueProvider('provider1_name', [self.v1, self.v2])
+        self.vp1 = SampleTestValueProvider('provider1_name', 'provider1_source_name', [self.v1, self.v2])
 
         self.sample_address_prefix = 'aaa.bbb'
         self.start_index = len(self.sample_address_prefix.split('.'))
@@ -33,7 +31,8 @@ class TreeProviderTest(unittest.TestCase, BaseAsyncTest):
         name = 'name'
         tp = TreeProvider('component_sample_name', name, self.vp1)
 
-        request = ValueRequest('.'.join([self.sample_address_prefix, name, self.v1[0]]), self.v1[1].ts, 20)
+        request = ValueRequest('.'.join([self.sample_address_prefix, name, self.vp1.get_source_name(), self.v1[0]]),
+                               self.v1[1].ts, 20)
         request.index = self.start_index  # set manually index
         response = self.loop.run_until_complete(tp.get_response(request))
         self.assertEqual(response.value, self.v1[1])
@@ -71,6 +70,13 @@ class TreeProviderTest(unittest.TestCase, BaseAsyncTest):
             self.assertTrue(result.error.code == 1002)
             self.assertIsNone(result.value)
         self.loop.run_until_complete(coro())
+
+    def test_get_resource(self):
+        """Test method get_resources"""
+        name = 'name'
+        tp = TreeProvider('component_sample_name', name, self.vp1)
+        resources = tp.get_resources()
+        self.assertEqual(("component_sample_name_RESOURCE", [name]), resources[0])
 
 
 if __name__ == '__main__':

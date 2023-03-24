@@ -291,7 +291,7 @@ class AlpacaConnector(Connector):
         url = '/'.join([
             component.get_option_recursive('address'),
             component.component_options['kind'],
-            str(component.component_options.get('device_number', 0)),
+            str(component.device_nr),
             variable
         ])
         return url

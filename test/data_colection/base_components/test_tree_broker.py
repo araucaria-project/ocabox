@@ -44,6 +44,13 @@ class TreeBrokerTest(unittest.TestCase):
         self.assertFalse(response.status)
         self.assertEqual(response.error.code, 1002)
 
+    def test_get_resource(self):
+        """Test method get_resources"""
+        broker_source_name = 'DefaultBroker'
+        vb = TreeBroker('DefaultBroker_name', broker_source_name, [self.vp1, self.vp2])
+        resources = vb.get_resources()
+        self.assertEqual(("DefaultBroker_name_RESOURCE", [broker_source_name]), resources[0])
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -38,3 +38,10 @@ class TreeBroker(TreeBaseBroker, AddressDispatcher):
             return ValueResponse(request.address, None, False, re)  # address is wrong
         request.index += 1
         return await super().get_response(request)
+
+    def get_resources(self):
+        names: List[str] = self.get_source_names()
+        resource_name = self.get_resource_name()
+        if names and resource_name:
+            return [(resource_name, names)]
+        return []

@@ -1,5 +1,7 @@
 import logging
 import time
+from typing import List, Tuple
+
 from ob.data_colection.address import AddressError
 from ob.data_colection.alpaca_api.connector import Connector, AlpacaConnector
 from ob.data_colection.alpaca_api.exceptions import AlpacaHttp400Error, AlpacaHttp500Error, AlpacaContentTypeError, \
@@ -7,6 +9,7 @@ from ob.data_colection.alpaca_api.exceptions import AlpacaHttp400Error, AlpacaHt
 from ob.data_colection.alpaca_api.observatory import Observatory
 from ob.data_colection.base_components.tree_base_provider import TreeBaseProvider
 from ob.data_colection.coded_error import TreeOtherError
+from ob.data_colection.resource_manager.resource_manager import ResourceManager, ResourceManagerAlpaca
 from ob.data_colection.value import Value, TreeValueError
 from ob.data_colection.value_call import ValueRequest
 
@@ -117,6 +120,27 @@ class TreeAlpacaObservatory(TreeBaseProvider):
             raise AddressError(address=address, code=1003, message=f"Wrong arguments for method")
         # TODO gdy jest PUT to zwraca cały blok odpowiedzi a przy GET tylko result.get("Value", None) to jest w api do alpaki ale tutaj można to naprawić bo narazie jest zwracany słownik MIKLÓAJ
         return Value(result, time.time())
+
+    def get_resources(self):
+        # WARNING, resources are not searched deep into the alpaca tree. Duplicates in the config leading to the same
+        # elements are not checked.
+        map_ = self._get_resources_simple_map()
+        out = []
+        for key, adr, kind, nr in map_:
+            out.append((key, [adr]))
+        return out
+
+    def _get_resources_simple_map(self) -> List[Tuple[str, str, str, int]]:
+        obs_children = self._observatory.children
+        out = []
+        for key, val in obs_children.items():
+            out.append((key + "_RESOURCE", key, val.kind, val.device_nr))
+        return out
+
+    async def get_resource_manager(self) -> ResourceManager:
+        rm = ResourceManagerAlpaca()
+        await rm.initiate_resource_manager(self._get_resources_simple_map())
+        return rm
 
     def __del__(self):
         self._connector.__del__()

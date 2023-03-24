@@ -71,3 +71,12 @@ class TreeBaseBrokerDefaultTarget(TreeBaseBroker):
         await super().stop()
         if self._default_provider:
             await self._default_provider.stop()
+
+    def get_resources(self):
+        providers = self.get_list_providers()
+        out = []
+        for p in providers:
+            r = p.get_resources()
+            out.extend(r)
+        out.extend(self._default_provider.get_resources())
+        return out
