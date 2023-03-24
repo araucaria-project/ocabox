@@ -55,6 +55,7 @@ def main(argv=None):
 
     try:
         loop = asyncio.get_running_loop()
+        logger.warning("WARNING! Async loop is run before the main method is called")
     except RuntimeError:
         loop = asyncio.new_event_loop()
 

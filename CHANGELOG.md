@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 ### Changed
 - Rename class `TreeRequestAlpacaBlocker` to `TreeBaseRequestBlocker` and move it to file `tree_base_request_blocker.py`
+### Added
+- Added mechanism for determining the resources available to blocks in the tree has been added. each value-providing 
+block is seen as a resource, and it can be modified to be seen as multiple resources. In the future, resources can be 
+used to recognize the target of the query, for example, in blocker.
+- The `TreeAlpacaObservatory` block now provides a `ResourceManagerAlpaca` class to manage access to individual alpaca 
+resources.
 
 ## [0.2.3] - 2023-03-14
 ### Added
