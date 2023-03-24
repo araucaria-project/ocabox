@@ -68,6 +68,7 @@ class CameraExposure(SubCommand):
 
     async def arun(self, step_id: str or None = None):
         logger.debug(f'{self.id} {self.subcommand_name} is started')
+        """
         cover_status = self.cover.coverstate
         if cover_status != 3:  # TODO: Mirek: I don't know if the covers should open autmatically, at least for bias/dark shouldnt
             self.info_callback['stream_1'](f'Cover is closed. Opening...')
@@ -77,6 +78,7 @@ class CameraExposure(SubCommand):
             else:
                 await self.mount.aput_opencover()
             await self._wait_for_opencover()
+        """
         self.info_callback['stream_1'](
             f'Subcommand {self.id} {self.subcommand_name} '
             f'Subexposure - time:{self.kwargs["exposure_time"]} quantity:{self.kwargs["exposure_no"]} started')
