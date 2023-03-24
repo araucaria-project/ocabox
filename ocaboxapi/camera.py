@@ -1,5 +1,6 @@
 from __future__ import annotations
 import logging
+import time
 from typing import Callable, List
 from ocaboxapi.telescopecomponent import TelescopeComponent, OcaBoxParam
 
@@ -171,7 +172,7 @@ class Camera(TelescopeComponent):
 
     async def aget_imagearray(self) -> List[int]:
         logger.debug(f'Getting imagearray from {self.tel_addr}')
-        ret = await self.aget_value('imagearray')
+        ret = await self.aget_value('imagearray', request_timeout=time.time() + 600)
         return ret
 
     async def aget_imageready(self) -> bool:
