@@ -332,7 +332,7 @@ class Telescope(Device):
                                                lambda at, **data: self._check_equatorial_coordinates_processor(at,
                                                                                                                **data))
 
-    async def reportmaxalt(self):
+    async def reportmaxalt(self, **kwargs):
         logger.warning(f"Method 'reportmaxalt'")
         await self._put("action", Action="reportmaxalt", Parameters="")
 
