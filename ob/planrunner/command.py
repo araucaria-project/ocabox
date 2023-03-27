@@ -25,7 +25,7 @@ class Command(AbstractSequence):
         self.subcomponents = {}
         self.telescope = parent.telescope
         self.info_callback = parent.info_callback
-        super().__init__()
+        super().__init__(self.id, self.command_name, self.info_callback)
         self._write_subcommands()
 
     def _create_command_string(self):
@@ -64,8 +64,8 @@ class Command(AbstractSequence):
             self._write_marker()
 
         else:
-            # TODO write some syntax error
-            pass
+            # TODO add info, that parsed plan have errors
+            self.info_callback['stream_1'](f'Command {self.command_name} not recognized, check plan syntax' )
 
 
     def _write_object(self):
@@ -92,6 +92,7 @@ class Command(AbstractSequence):
         # Camera exposure
         id_next += 1
         if 'seq' in self.kwargs:
+            # TODO move to abstract sequence
             if str(self.kwargs['seq']).find(','):
                 seq_list = list(self.kwargs['seq'].split(','))
             else:
@@ -115,16 +116,19 @@ class Command(AbstractSequence):
 
         # Slew to alt az
         # TODO get Alt Az domeflat position from some config
-        az = 90
-        alt = 10
+
+        #az = 90
+        #alt = 10
         # TODO add tracking on/off option
         sub = MountSlewToAltAz(f'{self.id}_{self.numb(id_next)}', self,
-                               alt=float(alt), az=float(az))
+                               alt=self.kwargs['alt'], az=self.kwargs['az'])
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+
 
         # Camera exposure
         id_next += 1
         if 'seq' in self.kwargs:
+
             if str(self.kwargs['seq']).find(','):
                 seq_list = list(self.kwargs['seq'].split(','))
             else:
@@ -134,6 +138,7 @@ class Command(AbstractSequence):
                 sub = ChangeFilter(f'{self.id}_{self.numb(id_next)}', self, filter=par[1])
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
+                #TODO add to header that is flat
                 sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
                                      self,
                                      exposure_no=int(par[0]),
@@ -158,12 +163,11 @@ class Command(AbstractSequence):
     def _write_marker(self):
         pass
 
-
-    async def arun(self, step_id: str or None = None) -> None:
+    async def arun(self, step_id: str or None = None) -> int:
         self.info_callback['stream_1'](f'Command {self.id} {self.command_name} started')
         await self._arun(self.subcomponents, step_id=step_id)
-        self.info_callback['stream_1'](f'Command {self.id} {self.command_name} done')
         self.info_callback['stream_5'](f'{self.id}')
+        return 0
 
     async def stop(self):
         await self.parent.stop()

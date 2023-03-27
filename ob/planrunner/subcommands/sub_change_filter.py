@@ -26,9 +26,10 @@ class ChangeFilter(SubCommand):
                 self.info_callback['stream_5'](f'{self.id}')
                 break
 
-    async def arun(self, step_id: str or None = None):
+    async def arun(self, step_id: str or None = None) -> int:
         logger.debug(f'{self.id} {self.subcommand_name} is started')
         self.info_callback['stream_1'](f'Subcommand {self.id} {self.subcommand_name} FILTER:{self.kwargs["filter"]} started')
         await self.filterwheel.aput_position(self.kwargs['filter'])
         await self._wait_to_move()
         await asyncio.sleep(5)
+        return 0

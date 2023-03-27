@@ -34,10 +34,11 @@ class MountSlewCoo(SubCommand):
                 self.info_callback['stream_5'](f'{self.id}')
                 break
 
-    async def arun(self, step_id: str or None = None) -> None:
+    async def arun(self, step_id: str or None = None) -> int:
 
         # TODO This OCA should be in settings
         # Coordinates: latitude 24°35’53″S, longitude 70°11’47″W, and elevation 2817 m
+
         OCA = {'latitude': '-24:35:53', 'longitude': '-70:11:47', 'elevation': '2817'}
 
         logger.debug(f'{self.id} {self.subcommand_name} is started')
@@ -56,3 +57,4 @@ class MountSlewCoo(SubCommand):
         await self.mount.aput_slewtocoo_async(ra_to_decimal(self.ra_now), dec_to_decimal(self.dec_now))
         await self._wait_to_slew()
         await asyncio.sleep(5)
+        return 0

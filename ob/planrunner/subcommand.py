@@ -15,7 +15,7 @@ class SubCommand:
         super().__init__()
         self._create_command_string()
 
-    async def arun(self) -> None:
+    async def arun(self) -> int:
         raise NotImplementedError
 
     async def stop_nightplan(self, message: str = '') -> None:
@@ -26,7 +26,7 @@ class SubCommand:
     async def subcommand_timeout(self, t_start: float, subc_timeout: float = 600) -> None:
         t_stamp = time.time()
         if t_stamp > t_start + subc_timeout:
-            await self.stop_nightplan(f'operation {self.id} timeout')
+            await self.stop_nightplan(f'subcommand {self.id} timeout')
 
     def _create_command_string(self):
         kw = ''

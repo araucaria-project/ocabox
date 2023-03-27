@@ -1,13 +1,15 @@
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Callable
 import logging
-import asyncio
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class AbstractSequence:
 
-    def __init__(self) -> None:
+    def __init__(self, id: str, name: str, info_callback: Dict[str, Callable]) -> None:
+        self.id = id
+        self.info_callback = info_callback
+        self.name = name
         super().__init__()
 
     @staticmethod
@@ -31,12 +33,17 @@ class AbstractSequence:
         else:
             return f'0{number}'
 
-    @staticmethod
-    async def _arun(subcomponents: Any, step_id: str or None = None):
+    async def _arun(self, subcomponents: Any, step_id: str or None = None) -> int:
         for n in subcomponents.keys():
+            skip = 0
             if step_id is None:
-                await subcomponents[n].arun(step_id=step_id)
-            elif step_id is not None:
+                skip = await subcomponents[n].arun(step_id=step_id)
+            else:
                 match = step_id[: len(subcomponents[n].id)]
                 if match <= subcomponents[n].id:
-                    await subcomponents[n].arun(step_id=step_id)
+                    skip = await subcomponents[n].arun(step_id=step_id)
+            if skip > 0:
+                self.info_callback['stream_1'](f'{self.id} skipped')
+                return 1
+        self.info_callback['stream_1'](f'{self.name} {self.id} done')
+        return 0

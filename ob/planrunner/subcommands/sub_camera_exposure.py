@@ -67,7 +67,7 @@ class CameraExposure(SubCommand):
                 break
 
 
-    async def arun(self, step_id: str or None = None):
+    async def arun(self, step_id: str or None = None) -> int:
         logger.debug(f'{self.id} {self.subcommand_name} is started')
         """
         cover_status = self.cover.coverstate
@@ -93,6 +93,7 @@ class CameraExposure(SubCommand):
         await asyncio.sleep(5)
         self.info_callback['stream_1'](f'Subcommand {self.id} {self.subcommand_name} done')
         self.info_callback['stream_5'](f'{self.id}')
+        return 0
 
 
     """
