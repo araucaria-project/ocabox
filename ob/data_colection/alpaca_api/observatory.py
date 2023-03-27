@@ -334,7 +334,7 @@ class Telescope(Device):
 
     async def reportmaxalt(self, **kwargs):
         logger.warning(f"Method 'reportmaxalt'")
-        await self._put("action", Action="telescope:reportmaxalt", Parameters="")
+        return await self._put("action", Action="telescope:reportmaxalt", Parameters="")
 
     @staticmethod
     def _hourangle_to_deg_processor(attribute, res):
