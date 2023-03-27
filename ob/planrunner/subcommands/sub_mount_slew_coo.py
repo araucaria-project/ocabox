@@ -1,6 +1,6 @@
 import asyncio
 import logging
-
+import time
 from ob.planrunner.subcommand import SubCommand
 from pyaraucaria.coordinates import ra_to_decimal, dec_to_decimal
 from pyaraucaria.coordinates import ra_dec_epoch
@@ -22,9 +22,9 @@ class MountSlewCoo(SubCommand):
         super().__init__(id=self.id, parent=parent, subcommand_name=self.subcommand_name, **kwargs)
 
     async def _wait_to_slew(self) -> None:
-        #t_start = time.time()
+        t_start = time.time()
         while True:
-            #await self.subcommand_timeout(t_start)
+            await self.subcommand_timeout(t_start)
             ra = self.mount.rightascension
             dec = self.mount.declination
             await asyncio.sleep(1)

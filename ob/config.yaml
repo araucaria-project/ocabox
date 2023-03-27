@@ -23,7 +23,7 @@ client:
     max_missed_msg: 3  # extra, not used by ocabox
   CliClient:
     port: 5558
-    url: localhost
+    url: tic.oca.lan
     protocol: tcp
     timeout: 31.7
     time_of_data_tolerance: 0.5  # extra, not used by ocabox

@@ -23,7 +23,7 @@ class SubCommand:
         logger.info(f'Nightplan stopped {message}')
         await self.parent.stop()
 
-    async def subcommand_timeout(self, t_start: float, subc_timeout: float = 600.0) -> None:
+    async def subcommand_timeout(self, t_start: float, subc_timeout: float = 600) -> None:
         t_stamp = time.time()
         if t_stamp > t_start + subc_timeout:
             await self.stop_nightplan(f'operation {self.id} timeout')
