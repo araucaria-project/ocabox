@@ -1,5 +1,5 @@
 import logging
-
+import time
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
@@ -9,6 +9,7 @@ class SubCommand:
         self.id = id
         self.args = []
         self.kwargs = kwargs
+        self.parent = parent
         self.subcommand_name = subcommand_name
         self.info_callback = parent.info_callback
         super().__init__()
@@ -16,6 +17,16 @@ class SubCommand:
 
     async def arun(self) -> None:
         raise NotImplementedError
+
+    async def stop_nightplan(self, message: str = '') -> None:
+        self.info_callback['stream_1'](f'Nightplan stopping: {message}')
+        logger.info(f'Nightplan stopped {message}')
+        await self.parent.stop()
+
+    async def subcommand_timeout(self, t_start: float, subc_timeout: float = 600.0) -> None:
+        t_stamp = time.time()
+        if t_stamp > t_start + subc_timeout:
+            await self.stop_nightplan(f'operation {self.id} timeout')
 
     def _create_command_string(self):
         kw = ''

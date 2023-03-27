@@ -1,5 +1,6 @@
 import asyncio
 import logging
+
 from ob.planrunner.subcommand import SubCommand
 from pyaraucaria.coordinates import ra_to_decimal, dec_to_decimal
 from pyaraucaria.coordinates import ra_dec_epoch
@@ -21,20 +22,24 @@ class MountSlewCoo(SubCommand):
         super().__init__(id=self.id, parent=parent, subcommand_name=self.subcommand_name, **kwargs)
 
     async def _wait_to_slew(self) -> None:
+        #t_start = time.time()
         while True:
+            #await self.subcommand_timeout(t_start)
             ra = self.mount.rightascension
             dec = self.mount.declination
             await asyncio.sleep(1)
             if (abs(ra - ra_to_decimal(self.ra_now))<0.05) and (abs(dec - dec_to_decimal(self.dec_now))<0.05):
-                logger.debug(f'{self.id} {self.subcommand_name} is done')
+                logger.debug(f'{self.id} {self.subcommand_name} done')
                 self.info_callback['stream_1'](f'Subcommand {self.id} {self.subcommand_name} done')
                 self.info_callback['stream_5'](f'{self.id}')
                 break
 
     async def arun(self, step_id: str or None = None) -> None:
+
         # TODO This OCA should be in settings
         # Coordinates: latitude 24°35’53″S, longitude 70°11’47″W, and elevation 2817 m
         OCA = {'latitude': '-24:35:53', 'longitude': '-70:11:47', 'elevation': '2817'}
+
         logger.debug(f'{self.id} {self.subcommand_name} is started')
         self.info_callback['stream_1'](
             f'Subcommand {self.id} {self.subcommand_name} OBJ:{self.kwargs["obj_name"]}'

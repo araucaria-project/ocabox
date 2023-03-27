@@ -58,5 +58,8 @@ class NightPlan(AbstractSequence):
         self.info_callback['stream_1'](f'Nightplan {self.id} done')
         self.info_callback['stream_5'](f'{self.id}')
 
+    async def stop(self):
+        await self.parent.stop()
+
     def __del__(self):
         logger.info(f"Nightplan {self.id} deleted")

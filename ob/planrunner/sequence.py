@@ -65,3 +65,6 @@ class Sequence(AbstractSequence):
         self.info_callback['stream_1'](f'Sequence {self.id} done')
         self.info_callback['stream_5'](f'{self.id}')
 
+    async def stop(self):
+        await self.parent.stop()
+

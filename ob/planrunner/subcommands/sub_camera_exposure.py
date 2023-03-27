@@ -59,6 +59,7 @@ class CameraExposure(SubCommand):
     async def _wait_for_opencover(self):
         while True:
             await asyncio.sleep(1)
+            # TODO cover state not working - maybe only time wait
             cover_status = self.cover.coverstate
             if cover_status == 3:
                 logger.debug(f'Telescope cover opened')

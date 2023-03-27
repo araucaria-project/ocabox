@@ -164,3 +164,6 @@ class Command(AbstractSequence):
         await self._arun(self.subcomponents, step_id=step_id)
         self.info_callback['stream_1'](f'Command {self.id} {self.command_name} done')
         self.info_callback['stream_5'](f'{self.id}')
+
+    async def stop(self):
+        await self.parent.stop()
