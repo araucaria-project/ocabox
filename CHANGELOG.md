@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+## [1.0.1] - 2023-03-27
+### Added
+- add new method to alpaca api `reportmaxalt`
+
 ## [1.0.0] - 2023-03-24
 ### Changed
 - New methods in Camera `ocaboxapi`
@@ -112,4 +118,4 @@ This allows you to subscribe to these values
 
 [Unreleased]: https://github.com/araucaria-project/ocabox
 
-[0.2.3]: https://github.com/araucaria-project/ocabox
+[1.0.1]: https://github.com/araucaria-project/ocabox
