@@ -34,12 +34,15 @@ def fmt_coverstate(state: int | None):
     """Format cover status for display"""
     if state is None:
         return 'n/a'
-    return [
-        'unknown',
-        'Closed',
-        'Moving',
-        'Open'
-    ][state]
+    try:
+        return [
+            'unknown',
+            'Closed',
+            'Moving',
+            'Open'
+        ][state]
+    except IndexError:
+        return f'status: {state}'
 
 def fmt_calibratorstate(state: int | None):
     """Format cover status for display"""
