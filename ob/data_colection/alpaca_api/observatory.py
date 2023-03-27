@@ -186,12 +186,12 @@ class Device(Component):
         """
         return self.connector.put(self, attribute, **data)
 
-    # def _find_attribute(self, attribute):
-    #     try:
-    #         method = getattr(self, attribute)
-    #     except AttributeError:
-    #         method = None
-    #     return method
+    def _find_attribute(self, attribute):
+        try:
+            method = getattr(self, attribute)
+        except AttributeError:
+            method = None
+        return method
 
     def add_alpaca_get_parameters_process(self, attribute: str, processor: Callable):
         self._process_data_get[attribute] = processor
@@ -235,12 +235,20 @@ class Device(Component):
 
     async def get(self, attribute: str, **data):
         params = self._process_alpaca_get_parameters(attribute, **data)
-        ret = await self._get(attribute, **params)
+        method = self._find_attribute(attribute)
+        if method and callable(method):
+            ret = await method(**params)
+        else:
+            ret = await self._get(attribute, **params)
         return self._process_alpaca_get_result(attribute, ret)
 
     async def put(self, attribute: str, **data):
         params = self._process_alpaca_put_parameters(attribute, **data)
-        ret = await self._put(attribute, **params)
+        method = self._find_attribute(attribute+'_put')
+        if method and callable(method):
+            ret = await method(**params)
+        else:
+            ret = await self._put(attribute, **params)
         return self._process_alpaca_put_result(attribute, ret)
 
     # async def get(self, attribute: str, **data):
@@ -320,6 +328,9 @@ class Telescope(Device):
         self.add_alpaca_put_parameters_process('synctocoordinates',
                                                lambda at, **data: self._check_equatorial_coordinates_processor(at,
                                                                                                                **data))
+
+    async def reportmaxalt(self):
+        await self._put("action", Action="reportmaxalt", Parameters="")
 
     @staticmethod
     def _hourangle_to_deg_processor(attribute, res):
