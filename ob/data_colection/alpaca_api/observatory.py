@@ -187,6 +187,7 @@ class Device(Component):
         return self.connector.put(self, attribute, **data)
 
     def _find_attribute(self, attribute):
+        logger.info(f"Looking method")
         try:
             method = getattr(self, attribute)
         except AttributeError:
@@ -237,8 +238,10 @@ class Device(Component):
         params = self._process_alpaca_get_parameters(attribute, **data)
         method = self._find_attribute(attribute)
         if method and callable(method):
+            logger.warning(f"Taken method successfully")
             ret = await method(**params)
         else:
+            logger.warning(f"Take default method GET")
             ret = await self._get(attribute, **params)
         return self._process_alpaca_get_result(attribute, ret)
 
@@ -330,6 +333,7 @@ class Telescope(Device):
                                                                                                                **data))
 
     async def reportmaxalt(self):
+        logger.warning(f"Method 'reportmaxalt'")
         await self._put("action", Action="reportmaxalt", Parameters="")
 
     @staticmethod
