@@ -7,15 +7,15 @@ import time
 
 class MountSlewToAltAz(SubCommand):
 
-    def __init__(self, id: str, parent: 'Command', **kwargs) -> None:
-        self.subcommand_name = 'MountSlewToAltAz'
+    def __init__(self, id: str, parent: 'Command', subcommand_name: str or None = None, **kwargs) -> None:
+        self.subcommand_name = subcommand_name
         self.telescope = parent.telescope
         self.id = id
         self.mount = self.telescope.get_mount('mount')
         self.kwargs = kwargs
         self.alt: float = 0.0
         self.az: float = 0.0
-        super().__init__(id=self.id, parent=parent, subcommand_name=self.subcommand_name, **kwargs)
+        super().__init__(id=self.id, parent=parent, subcommand_name=subcommand_name, **kwargs)
 
     async def _wait_to_slew(self) -> None:
         t_start = time.time()
@@ -26,14 +26,14 @@ class MountSlewToAltAz(SubCommand):
             await asyncio.sleep(1)
             if (abs(az - self.az)<0.05) and (abs(alt - self.alt)<0.05):
                 logger.info(f'{self.id} {self.subcommand_name} is done')
-                self.info_callback['stream_1'](f'Subcommand {self.id} {self.subcommand_name} done')
+                self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
                 self.info_callback['stream_5'](f'{self.id}')
                 break
 
     async def arun(self, step_id: str or None = None) -> int:
         logger.info(f'{self.id} {self.subcommand_name} is started')
         self.info_callback['stream_1'](
-            f'Subcommand {self.id} {self.subcommand_name} ALT:{self.kwargs["alt"]} AZ:{self.kwargs["az"]} started')
+            f'{self.id} {self.subcommand_name} ALT:{self.kwargs["alt"]} AZ:{self.kwargs["az"]} started')
         if isinstance(self.kwargs["alt"], str) and isinstance(self.kwargs["az"], str):
             self.az = deg_to_decimal_deg(self.kwargs["az"])
             self.alt = deg_to_decimal_deg(self.kwargs["alt"])

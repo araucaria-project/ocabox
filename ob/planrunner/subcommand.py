@@ -26,13 +26,16 @@ class SubCommand:
     async def subcommand_timeout(self, t_start: float, subc_timeout: float = 600) -> None:
         t_stamp = time.time()
         if t_stamp > t_start + subc_timeout:
-            await self.stop_nightplan(f'subcommand {self.id} timeout')
+            await self.stop_nightplan(f'{self.id} timeout')
 
     def _create_command_string(self):
         kw = ''
         for n in self.args:
             kw = f'{kw} {n}'
+        w=0
         for n in self.kwargs.keys():
             kw = f'{kw} {n}={self.kwargs[n]}'
+            w+=1
+            if w > 2: break
         self.info_callback['c_subcommands'](f'{self.id} {self.subcommand_name}{kw}')
         logger.info(f'Subcommand {self.id} name: {self.subcommand_name} is written')

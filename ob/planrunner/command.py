@@ -80,13 +80,19 @@ class Command(AbstractSequence):
             obj_name = self.args[0]
             ra = self.args[1]
             dec = self.args[2]
-        sub = MountSlewCoo(f'{self.id}_{self.numb(id_next)}', self,
-                           obj_name=obj_name, ra=ra, dec=dec)
+        sub = MountSlewCoo(f'{self.id}_{self.numb(id_next)}',
+                           self,
+                           subcommand_name='MountSlewCoo',
+                           obj_name=obj_name,
+                           ra=ra,
+                           dec=dec)
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
 
         # Slave dome
         id_next += 1
-        sub = DomeSlaveTelescope(f'{self.id}_{self.numb(id_next)}', self)
+        sub = DomeSlaveTelescope(f'{self.id}_{self.numb(id_next)}',
+                                 self,
+                                 subcommand_name='DomeSlaveTelescope')
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
 
         # Camera exposure
@@ -104,26 +110,28 @@ class Command(AbstractSequence):
                 id_next += 1
                 sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
                                      self,
+                                     subcommand_name='CameraExposure',
+                                     exposure_type='light',
                                      exposure_no=int(par[0]),
-                                     exposure_time=float(par[2]))
+                                     exposure_time=float(par[2]),
+                                     obj_name=obj_name)
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
 
     def _write_domeflat(self):
         id_next = 0
 
+        # Slew to altaz
         # TODO turn on domeflat lamp, set brightness (value also from some config? or kwarg?)
-
-        # Slew to alt az
         # TODO get Alt Az domeflat position from some config
-
         #az = 90
         #alt = 10
-        # TODO add tracking on/off option
-        sub = MountSlewToAltAz(f'{self.id}_{self.numb(id_next)}', self,
-                               alt=self.kwargs['alt'], az=self.kwargs['az'])
+        sub = MountSlewToAltAz(f'{self.id}_{self.numb(id_next)}',
+                               self,
+                               subcommand_name='MountSlewToAltAz',
+                               alt=self.kwargs['alt'],
+                               az=self.kwargs['az'])
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-
 
         # Camera exposure
         id_next += 1
@@ -135,14 +143,19 @@ class Command(AbstractSequence):
                 seq_list = list(self.kwargs['seq'])
             for n in seq_list:
                 par = list(n.split('/'))
-                sub = ChangeFilter(f'{self.id}_{self.numb(id_next)}', self, filter=par[1])
+                sub = ChangeFilter(f'{self.id}_{self.numb(id_next)}',
+                                   self,
+                                   subcommand_name='ChangeFilter',
+                                   filter=par[1])
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
-                #TODO add to header that is flat
                 sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
                                      self,
+                                     subcommand_name='CameraExposure',
+                                     exposure_type='flat',
                                      exposure_no=int(par[0]),
-                                     exposure_time=float(par[2]))
+                                     exposure_time=float(par[2]),
+                                     obj_name='')
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
 
@@ -152,13 +165,94 @@ class Command(AbstractSequence):
         pass
 
     def _write_dark(self):
-        pass
+        id_next = 0
+
+        # Camera exposure
+        id_next += 1
+        if 'seq' in self.kwargs:
+
+            if str(self.kwargs['seq']).find(','):
+                seq_list = list(self.kwargs['seq'].split(','))
+            else:
+                seq_list = list(self.kwargs['seq'])
+            for n in seq_list:
+                par = list(n.split('/'))
+                sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
+                                     self,
+                                     subcommand_name='CameraExposure',
+                                     exposure_type='dark',
+                                     exposure_no=int(par[0]),
+                                     exposure_time=float(par[2]),
+                                     obj_name='')
+                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+                id_next += 1
 
     def _write_zero(self):
-        pass
+        id_next = 0
+
+        # Camera exposure
+        id_next += 1
+        if 'seq' in self.kwargs:
+
+            if str(self.kwargs['seq']).find(','):
+                seq_list = list(self.kwargs['seq'].split(','))
+            else:
+                seq_list = list(self.kwargs['seq'])
+            for n in seq_list:
+                par = list(n.split('/'))
+                sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
+                                     self,
+                                     subcommand_name='CameraExposure',
+                                     exposure_type='zero',
+                                     exposure_no=int(par[0]),
+                                     exposure_time=float(par[2]),
+                                     obj_name='')
+                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+                id_next += 1
 
     def _write_skyflat(self):
-        pass
+        id_next = 0
+
+        sub = MountSlewToAltAz(f'{self.id}_{self.numb(id_next)}',
+                               self,
+                               subcommand_name='MountSlewToAltAz',
+                               alt=self.kwargs['alt'],
+                               az=self.kwargs['az'])
+        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+
+        # Slave dome
+        id_next += 1
+        sub = DomeSlaveTelescope(f'{self.id}_{self.numb(id_next)}',
+                                 self,
+                                 subcommand_name='DomeSlaveTelescope')
+        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+
+        # Camera exposure
+        id_next += 1
+        if 'seq' in self.kwargs:
+
+            if str(self.kwargs['seq']).find(','):
+                seq_list = list(self.kwargs['seq'].split(','))
+            else:
+                seq_list = list(self.kwargs['seq'])
+            for n in seq_list:
+                par = list(n.split('/'))
+                sub = ChangeFilter(f'{self.id}_{self.numb(id_next)}',
+                                   self,
+                                   subcommand_name='ChangeFilter',
+                                   filter=par[1])
+                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+                id_next += 1
+                sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
+                                     self,
+                                     subcommand_name='CameraExposure',
+                                     exposure_type='flat',
+                                     exposure_no=int(par[0]),
+                                     exposure_time=float(par[2]),
+                                     obj_name='')
+                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+                id_next += 1
+
 
     def _write_marker(self):
         pass
