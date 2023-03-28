@@ -3,6 +3,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.0.2] - 2023-03-28
+### Added
+- add formatters for subframe and gain: `fmt_subframe` and `fmt_gain`
+
+
 ## [1.0.1] - 2023-03-27
 ### Added
 - add new method to alpaca api `reportmaxalt`
