@@ -52,6 +52,7 @@ class CameraExposure(SubCommand):
             "TEL_DEC": str(self.mount.declination),
             "TEL_ALT": str(self.mount.altitude),
             "TEL_AZ": str(self.mount.azimuth),
+            "EXP_TYPE": self.kwargs['type'], # My add
             "TYPE": "",
             "OBJECT": str(self.kwargs["obj_name"]),
             "FILTER": str(self.filter.position),
@@ -69,7 +70,7 @@ class CameraExposure(SubCommand):
                              header,
                              overwrite=True)
         logger.debug(f'{self.id} {self.subcommand_name} is done')
-        self.info_callback['stream_1'](f'Subexp {sub}/{self.kwargs["exposure_no"]} done')
+        self.info_callback['stream_1'](f'Subexp {sub}/{self.kwargs["exp_no"]} done')
 
     async def _wait_for_subexposure(self, sub: int):
         while True:
@@ -77,7 +78,7 @@ class CameraExposure(SubCommand):
             subexposure_done = self.camera.imageready
             if subexposure_done:
                 logger.debug(f'{self.id} {self.subcommand_name} is done --> saving')
-                self.info_callback['stream_1'](f'Subexp {sub}/{self.kwargs["exposure_no"]} --> saving')
+                self.info_callback['stream_1'](f'Subexp {sub}/{self.kwargs["exp_no"]} --> saving')
                 break
 
     async def _wait_for_cover(self):
@@ -98,7 +99,7 @@ class CameraExposure(SubCommand):
 
     async def arun(self, step_id: str or None = None) -> int:
         logger.debug(f'{self.id} {self.subcommand_name} is started')
-        if self.kwargs["exposure_type"] in ['light', 'flat']:
+        if self.kwargs["type"] in ['light', 'flat']:
             self.info_callback['stream_1'](f'Opening cover')
             logger.debug(f'Opening cover')
             if self.telescope.id == 'dev':
@@ -106,7 +107,7 @@ class CameraExposure(SubCommand):
             else:
                 await self.mount.aput_opencover()
             await self._wait_for_cover()
-        elif self.kwargs["exposure_type"] in ['dark', 'zero']:
+        elif self.kwargs["type"] in ['dark', 'zero']:
             self.info_callback['stream_1'](f'Closing cover')
             logger.debug(f'Closing cover')
             if self.telescope.id == 'dev':
@@ -115,15 +116,15 @@ class CameraExposure(SubCommand):
                 await self.mount.aput_closecover()
             await self._wait_for_cover()
         else:
-            self.info_callback['stream_1'](f'No exposure_type, skipping')
-            logger.debug(f'No exposure_type, skipping')
+            self.info_callback['stream_1'](f'No exposure type, skipping')
+            logger.debug(f'No exposure type, skipping')
             return 1
         self.info_callback['stream_1'](
-            f'{self.id} {self.subcommand_name} {self.kwargs["exposure_type"]}'
-            f'Exposure time:{self.kwargs["exposure_time"]} frames no.:{self.kwargs["exposure_no"]} started')
-        for sub in range(1, self.kwargs["exposure_no"]+1):
-            self.info_callback['stream_1'](f'Subexp {sub}/{self.kwargs["exposure_no"]} started')
-            await self.camera.aput_startexposure(self.kwargs["exposure_time"], True)
+            f'{self.id} {self.subcommand_name} {self.kwargs["type"]}'
+            f' time:{self.kwargs["exp_time"]} number:{self.kwargs["exp_no"]} started')
+        for sub in range(1, self.kwargs["exp_no"]+1):
+            self.info_callback['stream_1'](f'Subexp {sub}/{self.kwargs["exp_no"]} started')
+            await self.camera.aput_startexposure(self.kwargs["exp_time"], self.kwargs["light"])
             await asyncio.sleep(1)
             await self._wait_for_subexposure(sub)
             await asyncio.sleep(1)

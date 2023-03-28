@@ -36,6 +36,6 @@ class SubCommand:
         for n in self.kwargs.keys():
             kw = f'{kw} {n}={self.kwargs[n]}'
             w+=1
-            if w > 2: break
-        self.info_callback['c_subcommands'](f'{self.id} {self.subcommand_name}{kw}')
+            if w > 3: break
+        self.info_callback['c_subcommands'](f'    {self.id} {self.subcommand_name}{kw}')
         logger.info(f'Subcommand {self.id} name: {self.subcommand_name} is written')

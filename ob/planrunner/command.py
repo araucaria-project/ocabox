@@ -36,7 +36,7 @@ class Command(AbstractSequence):
             kw = f'{kw} {n}={self.kwargs[n]}'
         for n in self.parent_kwargs.keys():
             kw = f'{kw} {n}={self.parent_kwargs[n]}'
-        self.info_callback['c_commands'](f'{self.id} {self.command_name}{kw}')
+        self.info_callback['c_commands'](f'  {self.id} {self.command_name}{kw}')
         logger.info(f'Command {self.id} {self.command_name} is written')
 
     def _write_subcommands(self) -> None:
@@ -105,15 +105,19 @@ class Command(AbstractSequence):
                 seq_list = list(self.kwargs['seq'])
             for n in seq_list:
                 par = list(n.split('/'))
-                sub = ChangeFilter(f'{self.id}_{self.numb(id_next)}', self, filter=par[1])
+                sub = ChangeFilter(f'{self.id}_{self.numb(id_next)}',
+                                   self,
+                                   subcommand_name='ChangeFilter',
+                                   filter=par[1])
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
                 sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
                                      self,
                                      subcommand_name='CameraExposure',
-                                     exposure_type='light',
-                                     exposure_no=int(par[0]),
-                                     exposure_time=float(par[2]),
+                                     type='light',
+                                     light=True,
+                                     exp_no=int(par[0]),
+                                     exp_time=float(par[2]),
                                      obj_name=obj_name)
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
@@ -152,9 +156,10 @@ class Command(AbstractSequence):
                 sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
                                      self,
                                      subcommand_name='CameraExposure',
-                                     exposure_type='flat',
-                                     exposure_no=int(par[0]),
-                                     exposure_time=float(par[2]),
+                                     type='flat',
+                                     light=True,
+                                     exp_no=int(par[0]),
+                                     exp_time=float(par[2]),
                                      obj_name='')
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
@@ -162,6 +167,7 @@ class Command(AbstractSequence):
         # TODO turn off domeflat lamp
 
     def _write_focus(self):
+        # faster readmode, fits not saved on Perun
         pass
 
     def _write_dark(self):
@@ -180,9 +186,10 @@ class Command(AbstractSequence):
                 sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
                                      self,
                                      subcommand_name='CameraExposure',
-                                     exposure_type='dark',
-                                     exposure_no=int(par[0]),
-                                     exposure_time=float(par[2]),
+                                     type='dark',
+                                     light=False,
+                                     exp_no=int(par[0]),
+                                     exp_time=float(par[2]),
                                      obj_name='')
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
@@ -203,9 +210,10 @@ class Command(AbstractSequence):
                 sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
                                      self,
                                      subcommand_name='CameraExposure',
-                                     exposure_type='zero',
-                                     exposure_no=int(par[0]),
-                                     exposure_time=float(par[2]),
+                                     type='zero',
+                                     light=False,
+                                     exp_no=int(par[0]),
+                                     exp_time=float(par[2]),
                                      obj_name='')
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
@@ -246,9 +254,10 @@ class Command(AbstractSequence):
                 sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
                                      self,
                                      subcommand_name='CameraExposure',
-                                     exposure_type='flat',
-                                     exposure_no=int(par[0]),
-                                     exposure_time=float(par[2]),
+                                     type='flat',
+                                     light=True,
+                                     exp_no=int(par[0]),
+                                     exp_time=float(par[2]),
                                      obj_name='')
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
