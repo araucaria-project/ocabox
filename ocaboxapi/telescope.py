@@ -8,6 +8,7 @@ from ocaboxapi.camera import Camera
 from ocaboxapi.focuser import Focuser
 from ocaboxapi.filterwheel import FilterWheel
 from ocaboxapi.covercalibrator import CoverCalibrator
+from ocaboxapi.rotator import Rotator
 from ocaboxapi.plan import ObservationPlan
 
 logger = logging.getLogger("telescope")
@@ -25,6 +26,7 @@ class Telescope(AbstractTelescope):
         self.filterwheels = {}
         self.cameras = {}
         self.covercalibrators = {}
+        self.rotators = {}
         self._access_grantor = None
         self._observation_plan = None
 
@@ -85,3 +87,11 @@ class Telescope(AbstractTelescope):
         if self._observation_plan is None:
             self._observation_plan = ObservationPlan(id='observation_plan', telescope=self)
         return self._observation_plan
+
+    def get_rotator(self, id='rotator') -> Rotator:
+        try:
+            return self.rotators[id]
+        except LookupError:
+            dev = Rotator(id=id, telescope=self)
+            self.rotators[id] = dev
+            return dev
