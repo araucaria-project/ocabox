@@ -126,15 +126,15 @@ class TreeAlpacaObservatory(TreeBaseProvider):
         # elements are not checked.
         map_ = self._get_resources_simple_map()
         out = []
-        for key, adr, kind, nr in map_:
+        for key, adr, kind, nr, prop in map_:
             out.append((key, [adr]))
         return out
 
-    def _get_resources_simple_map(self) -> List[Tuple[str, str, str, int]]:
+    def _get_resources_simple_map(self) -> List[Tuple[str, str, str, int, dict]]:
         obs_children = self._observatory.children
         out = []
         for key, val in obs_children.items():
-            out.append((key + "_RESOURCE", key, val.kind, val.device_nr))
+            out.append((key + "_RESOURCE", key, val.kind, val.device_nr, val.component_options))
         return out
 
     async def get_resource_manager(self) -> ResourceManager:
