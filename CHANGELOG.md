@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.0.3] - 2023-03-29
+### Added
+- Resources in the resource manager have been extended with the `properties` parameter
+
 ## [1.0.2] - 2023-03-28
 ### Added
 - add formatters for subframe and gain: `fmt_subframe` and `fmt_gain`
