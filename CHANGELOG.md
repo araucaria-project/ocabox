@@ -1,6 +1,21 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+## [1.0.3] - 2023-03-29
+### Added
+- Resources in the resource manager have been extended with the `properties` parameter
+
+## [1.0.2] - 2023-03-28
+### Added
+- add formatters for subframe and gain: `fmt_subframe` and `fmt_gain`
+
+
+## [1.0.1] - 2023-03-27
+### Added
+- add new method to alpaca api `reportmaxalt`
+
 ## [1.0.0] - 2023-03-24
 ### Changed
 - New methods in Camera `ocaboxapi`
@@ -112,4 +127,4 @@ This allows you to subscribe to these values
 
 [Unreleased]: https://github.com/araucaria-project/ocabox
 
-[0.2.3]: https://github.com/araucaria-project/ocabox
+[1.0.1]: https://github.com/araucaria-project/ocabox
