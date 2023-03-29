@@ -134,7 +134,8 @@ class Command(AbstractSequence):
                                self,
                                subcommand_name='MountSlewToAltAz',
                                alt=self.kwargs['alt'],
-                               az=self.kwargs['az'])
+                               az=self.kwargs['az'],
+                               tracking=False)
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
 
         # Camera exposure
@@ -225,7 +226,8 @@ class Command(AbstractSequence):
                                self,
                                subcommand_name='MountSlewToAltAz',
                                alt=self.kwargs['alt'],
-                               az=self.kwargs['az'])
+                               az=self.kwargs['az'],
+                               tracking=True)
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
 
         # Slave dome
