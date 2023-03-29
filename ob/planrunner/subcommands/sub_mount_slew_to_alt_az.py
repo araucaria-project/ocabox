@@ -24,7 +24,7 @@ class MountSlewToAltAz(SubCommand):
             az = self.mount.azimuth
             alt = self.mount.altitude
             await asyncio.sleep(1)
-            if (abs(az - self.az)<0.5) and (abs(alt - self.alt)<0.5):
+            if (abs(az - self.az)<1) and (abs(alt - self.alt)<1):
                 await self.mount.aput_tracking(False)
                 await self.mount.aput_slewtoaltaz_async(self.az, self.alt)
                 await self.mount.aput_tracking(False)
@@ -47,7 +47,7 @@ class MountSlewToAltAz(SubCommand):
             return 1
         if self.alt > 0:
             await self.mount.aput_tracking(False)
-            await self.mount.aput_unpark()
+            # await self.mount.aput_unpark()
             await self.mount.aput_slewtoaltaz_async(self.az, self.alt)
             await self.mount.aput_tracking(False)
             await self._wait_to_slew()

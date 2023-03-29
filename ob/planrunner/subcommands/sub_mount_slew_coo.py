@@ -55,7 +55,7 @@ class MountSlewCoo(SubCommand):
                                   elevation=OCA['elevation'],
                                   epoch='2000/01/01')
         if deg_str_to_deg(alt) > 0:
-            await self.mount.aput_unpark()
+            #await self.mount.aput_unpark()
             await self.mount.aput_tracking(True)
             await self.mount.aput_slewtocoo_async(ra_to_decimal(self.ra_now), dec_to_decimal(self.dec_now))
             await self._wait_to_slew()
