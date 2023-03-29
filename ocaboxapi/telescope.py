@@ -88,7 +88,7 @@ class Telescope(AbstractTelescope):
             self._observation_plan = ObservationPlan(id='observation_plan', telescope=self)
         return self._observation_plan
 
-    def get_rotator(self, id='rotator') -> Rotator:
+    def get_rotator(self, id='derotator') -> Rotator:
         try:
             return self.rotators[id]
         except LookupError:

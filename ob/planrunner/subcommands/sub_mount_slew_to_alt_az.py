@@ -47,6 +47,7 @@ class MountSlewToAltAz(SubCommand):
             return 1
         if self.alt > 0:
             await self.mount.aput_tracking(False)
+            await self.mount.aput_unpark()
             await self.mount.aput_slewtoaltaz_async(self.az, self.alt)
             await self.mount.aput_tracking(False)
             await self._wait_to_slew()

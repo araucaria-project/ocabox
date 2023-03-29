@@ -35,24 +35,19 @@ class MountSlewCoo(SubCommand):
 
     async def arun(self, step_id: str or None = None) -> int:
 
-        # TODO This OCA should be in settings
-        # Coordinates: latitude 24°35’53″S, longitude 70°11’47″W, and elevation 2817 m
-
+        # TODO This OCA should be taken from settings
         OCA = {'latitude': '-24:35:53', 'longitude': '-70:11:47', 'elevation': '2817'}
-        #, ra_dec_2_az_alt
+
         logger.debug(f'{self.id} {self.subcommand_name} is started')
         self.info_callback['stream_1'](
             f'{self.id} {self.subcommand_name} OBJ:{self.kwargs["obj_name"]}'
             f' RA:{self.kwargs["ra"]} DEC:{self.kwargs["dec"]} started')
-        await self.mount.aput_tracking(True)
-        ra_dec_now = ra_dec_epoch(ra=self.kwargs["ra"],
+        self.ra_now, self.dec_now = ra_dec_epoch(ra=self.kwargs["ra"],
                                   dec=self.kwargs["dec"],
                                   latitude=OCA['latitude'],
                                   longitude=OCA['longitude'],
                                   elevation=OCA['elevation'],
                                   epoch='2000/01/01')
-        self.ra_now = ra_dec_now[0]
-        self.dec_now = ra_dec_now[1]
         az, alt = ra_dec_2_az_alt(ra=self.ra_now,
                                   dec=self.dec_now,
                                   latitude=OCA['latitude'],
@@ -60,6 +55,8 @@ class MountSlewCoo(SubCommand):
                                   elevation=OCA['elevation'],
                                   epoch='2000/01/01')
         if deg_str_to_deg(alt) > 0:
+            await self.mount.aput_unpark()
+            await self.mount.aput_tracking(True)
             await self.mount.aput_slewtocoo_async(ra_to_decimal(self.ra_now), dec_to_decimal(self.dec_now))
             await self._wait_to_slew()
             await asyncio.sleep(5)

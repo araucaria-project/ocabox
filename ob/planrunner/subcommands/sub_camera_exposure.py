@@ -42,7 +42,10 @@ class CameraExposure(SubCommand):
         time_now = str(datetime.utcnow())
         jd = datetime_to_julian(str(datetime.utcnow()))
         jd_oca = f"{(jd - 2460000):010.5f}"
-        # TODO add more fields like exposurer type light, flat etc.
+        if self.kwargs['type'] == 'light':
+            typ = f"science"
+        else:
+            typ = self.kwargs['type']
         header = OrderedDict({
             "FITS_STD": "BETA1",
             "TEL": str(self.telescope.id),
@@ -52,8 +55,7 @@ class CameraExposure(SubCommand):
             "TEL_DEC": str(self.mount.declination),
             "TEL_ALT": str(self.mount.altitude),
             "TEL_AZ": str(self.mount.azimuth),
-            "EXP_TYPE": self.kwargs['type'], # My add
-            "TYPE": "",
+            "TYPE": f"{typ}",
             "OBJECT": str(self.kwargs["obj_name"]),
             "FILTER": str(self.filter.position),
             "DIT": "",
