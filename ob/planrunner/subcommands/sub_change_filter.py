@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class ChangeFilter(SubCommand):
 
-    def __init__(self, id: str, parent: 'Command', subcommand_name: str or None = None, **kwargs) -> None:
+    def __init__(self, id: str, parent: 'Command', subcommand_name: str = 'change filter', **kwargs) -> None:
         self.subcommand_name = subcommand_name
         self.telescope = parent.telescope
         self.filterwheel = self.telescope.get_filterwheel('filterwheel')
@@ -39,7 +39,7 @@ class ChangeFilter(SubCommand):
                 self.info_callback['stream_1'](
                     f'Filter index{self.kwargs["filter"]} is wrong, {self.parent.id} skipping')
                 return 1
-        self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} filter:{self.kwargs["filter"]} started')
+        self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} {self.kwargs["filter"]} started')
         await self.filterwheel.aput_position(self.fil_wh_pos)
         await self._wait_to_move()
         await asyncio.sleep(5)

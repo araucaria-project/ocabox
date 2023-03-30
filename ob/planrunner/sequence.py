@@ -31,7 +31,7 @@ class Sequence(AbstractSequence):
             kw = f'{kw} {n}={self.kwargs[n]}'
         for n in self.parent_kwargs.keys():
             kw = f'{kw} {n}={self.parent_kwargs[n]}'
-        self.info_callback['c_sequences'](f'{self.id} SEQUENCE {kw}')
+        self.info_callback['c_sequences'](f'{self.id};SEQUENCE;{kw}')
         logger.info(f'Sequence {self.id} is written')
 
     def build_sequence(self) -> None:

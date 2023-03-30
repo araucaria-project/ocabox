@@ -15,6 +15,18 @@ class SubCommand:
         super().__init__()
         self._create_command_string()
 
+    def _create_command_string(self):
+        kw = ''
+        for n in self.args:
+            kw = f'{kw} {n}'
+        w=0
+        for n in self.kwargs.keys():
+            kw = f'{kw} {n}={self.kwargs[n]}'
+            w+=1
+            if w > 3: break
+        self.info_callback['c_subcommands'](f'{self.id};{self.subcommand_name};{kw}')
+        logger.info(f'Subcommand {self.id} name: {self.subcommand_name} is written')
+
     async def arun(self) -> int:
         raise NotImplementedError
 
@@ -28,14 +40,3 @@ class SubCommand:
         if t_stamp > t_start + subc_timeout:
             await self.stop_nightplan(f'{self.id} timeout')
 
-    def _create_command_string(self):
-        kw = ''
-        for n in self.args:
-            kw = f'{kw} {n}'
-        w=0
-        for n in self.kwargs.keys():
-            kw = f'{kw} {n}={self.kwargs[n]}'
-            w+=1
-            if w > 3: break
-        self.info_callback['c_subcommands'](f'    {self.id} {self.subcommand_name}{kw}')
-        logger.info(f'Subcommand {self.id} name: {self.subcommand_name} is written')

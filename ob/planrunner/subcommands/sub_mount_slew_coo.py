@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class MountSlewCoo(SubCommand):
 
 
-    def __init__(self, id: str, parent: 'Command', subcommand_name: str or None = None, **kwargs) -> None:
+    def __init__(self, id: str, parent: 'Command', subcommand_name: str = 'mount slew coo', **kwargs) -> None:
         self.subcommand_name = subcommand_name
         self.telescope = parent.telescope
         self.id = id

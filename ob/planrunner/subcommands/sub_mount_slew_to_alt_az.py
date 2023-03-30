@@ -7,7 +7,7 @@ import time
 
 class MountSlewToAltAz(SubCommand):
 
-    def __init__(self, id: str, parent: 'Command', subcommand_name: str or None = None, **kwargs) -> None:
+    def __init__(self, id: str, parent: 'Command', subcommand_name: str = 'mount slew to alt az', **kwargs) -> None:
         self.subcommand_name = subcommand_name
         self.telescope = parent.telescope
         self.id = id

@@ -36,7 +36,7 @@ class Command(AbstractSequence):
             kw = f'{kw} {n}={self.kwargs[n]}'
         for n in self.parent_kwargs.keys():
             kw = f'{kw} {n}={self.parent_kwargs[n]}'
-        self.info_callback['c_commands'](f'  {self.id} {self.command_name}{kw}')
+        self.info_callback['c_commands'](f'{self.id};{self.command_name};{kw}')
         logger.info(f'Command {self.id} {self.command_name} is written')
 
     def _write_subcommands(self) -> None:
@@ -82,7 +82,6 @@ class Command(AbstractSequence):
             dec = self.args[2]
         sub = MountSlewCoo(f'{self.id}_{self.numb(id_next)}',
                            self,
-                           subcommand_name='MountSlewCoo',
                            obj_name=obj_name,
                            ra=ra,
                            dec=dec)
@@ -91,8 +90,7 @@ class Command(AbstractSequence):
         # Slave dome
         id_next += 1
         sub = DomeSlaveTelescope(f'{self.id}_{self.numb(id_next)}',
-                                 self,
-                                 subcommand_name='DomeSlaveTelescope')
+                                 self)
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
 
         # Camera exposure
@@ -107,13 +105,11 @@ class Command(AbstractSequence):
                 par = list(n.split('/'))
                 sub = ChangeFilter(f'{self.id}_{self.numb(id_next)}',
                                    self,
-                                   subcommand_name='ChangeFilter',
                                    filter=par[1])
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
                 sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
                                      self,
-                                     subcommand_name='CameraExposure',
                                      type='light',
                                      light=True,
                                      exp_no=int(par[0]),
@@ -132,7 +128,6 @@ class Command(AbstractSequence):
         #alt = 10
         sub = MountSlewToAltAz(f'{self.id}_{self.numb(id_next)}',
                                self,
-                               subcommand_name='MountSlewToAltAz',
                                alt=self.kwargs['alt'],
                                az=self.kwargs['az'],
                                tracking=False)
@@ -150,13 +145,11 @@ class Command(AbstractSequence):
                 par = list(n.split('/'))
                 sub = ChangeFilter(f'{self.id}_{self.numb(id_next)}',
                                    self,
-                                   subcommand_name='ChangeFilter',
                                    filter=par[1])
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
                 sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
                                      self,
-                                     subcommand_name='CameraExposure',
                                      type='flat',
                                      light=True,
                                      exp_no=int(par[0]),
@@ -186,7 +179,6 @@ class Command(AbstractSequence):
                 par = list(n.split('/'))
                 sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
                                      self,
-                                     subcommand_name='CameraExposure',
                                      type='dark',
                                      light=False,
                                      exp_no=int(par[0]),
@@ -210,7 +202,6 @@ class Command(AbstractSequence):
                 par = list(n.split('/'))
                 sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
                                      self,
-                                     subcommand_name='CameraExposure',
                                      type='zero',
                                      light=False,
                                      exp_no=int(par[0]),
@@ -224,7 +215,6 @@ class Command(AbstractSequence):
 
         sub = MountSlewToAltAz(f'{self.id}_{self.numb(id_next)}',
                                self,
-                               subcommand_name='MountSlewToAltAz',
                                alt=self.kwargs['alt'],
                                az=self.kwargs['az'],
                                tracking=True)
@@ -232,9 +222,7 @@ class Command(AbstractSequence):
 
         # Slave dome
         id_next += 1
-        sub = DomeSlaveTelescope(f'{self.id}_{self.numb(id_next)}',
-                                 self,
-                                 subcommand_name='DomeSlaveTelescope')
+        sub = DomeSlaveTelescope(f'{self.id}_{self.numb(id_next)}', self)
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
 
         # Camera exposure
@@ -249,13 +237,11 @@ class Command(AbstractSequence):
                 par = list(n.split('/'))
                 sub = ChangeFilter(f'{self.id}_{self.numb(id_next)}',
                                    self,
-                                   subcommand_name='ChangeFilter',
                                    filter=par[1])
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
                 sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
                                      self,
-                                     subcommand_name='CameraExposure',
                                      type='flat',
                                      light=True,
                                      exp_no=int(par[0]),
