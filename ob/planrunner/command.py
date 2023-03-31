@@ -84,7 +84,8 @@ class Command(AbstractSequence):
                            self,
                            obj_name=obj_name,
                            ra=ra,
-                           dec=dec)
+                           dec=dec,
+                           epoch='2000')
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
 
         # Slave dome
@@ -110,11 +111,14 @@ class Command(AbstractSequence):
                 id_next += 1
                 sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
                                      self,
-                                     type='light',
+                                     type='science',
                                      light=True,
                                      exp_no=int(par[0]),
                                      exp_time=float(par[2]),
-                                     obj_name=obj_name)
+                                     obj_name=obj_name,
+                                     req_ra=ra,
+                                     req_dec=dec,
+                                     epoch='2000')
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
 
@@ -130,7 +134,8 @@ class Command(AbstractSequence):
                                self,
                                alt=self.kwargs['alt'],
                                az=self.kwargs['az'],
-                               tracking=False)
+                               tracking=False,
+                               epoch='2000')
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
 
         # Camera exposure
@@ -154,7 +159,11 @@ class Command(AbstractSequence):
                                      light=True,
                                      exp_no=int(par[0]),
                                      exp_time=float(par[2]),
-                                     obj_name='')
+                                     obj_name='',
+                                     req_ra='',
+                                     req_dec='',
+                                     epoch='2000'
+                                     )
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
 
@@ -183,7 +192,11 @@ class Command(AbstractSequence):
                                      light=False,
                                      exp_no=int(par[0]),
                                      exp_time=float(par[2]),
-                                     obj_name='')
+                                     obj_name='',
+                                     req_ra='',
+                                     req_dec='',
+                                     epoch='2000'
+                                     )
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
 
@@ -206,7 +219,11 @@ class Command(AbstractSequence):
                                      light=False,
                                      exp_no=int(par[0]),
                                      exp_time=float(par[2]),
-                                     obj_name='')
+                                     obj_name='',
+                                     req_ra='',
+                                     req_dec='',
+                                     epoch='2000'
+                                     )
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
 
@@ -217,7 +234,8 @@ class Command(AbstractSequence):
                                self,
                                alt=self.kwargs['alt'],
                                az=self.kwargs['az'],
-                               tracking=True)
+                               tracking=True,
+                               epoch='2000')
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
 
         # Slave dome
@@ -246,7 +264,11 @@ class Command(AbstractSequence):
                                      light=True,
                                      exp_no=int(par[0]),
                                      exp_time=float(par[2]),
-                                     obj_name='')
+                                     obj_name='',
+                                     req_ra='',
+                                     req_dec='',
+                                     epoch='2000'
+                                     )
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
 

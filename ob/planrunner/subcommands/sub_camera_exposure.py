@@ -3,6 +3,7 @@ import logging
 from ob.planrunner.subcommand import SubCommand
 from pyaraucaria.fits import save_fits_from_array
 from pyaraucaria.date import datetime_to_julian
+from ocaboxapi.formatter import parse_deg_or_dms
 from datetime import datetime
 import os
 import pwd
@@ -21,6 +22,7 @@ class CameraExposure(SubCommand):
         self.cover = self.telescope.get_covercalibrator()
         self.filter = self.telescope.get_filterwheel()
         self.focuser = self.telescope.get_focuser()
+        self.rotator = self.telescope.get_rotator()
         self.kwargs = kwargs
         self.id = id
         self.user = pwd.getpwuid(os.getuid())[0]
@@ -37,35 +39,58 @@ class CameraExposure(SubCommand):
                     logger.warning(
                         f'Folder creation failed, please make folder /home/{self.user}/Desktop/fits_{self.telescope.id}')
 
+    def fits_header(self, julian_date: float):
+        time_now = str(datetime.utcnow())
+        # TODO This OCA should be taken from settings
+        OCA = {'latitude': '-24:35:53', 'longitude': '-70:11:47', 'elevation': '2817'}
+
+        _header = OrderedDict({
+
+            "FITS_STD": ("BETA2", "OCA FITS HDU standard version"),
+            "OBS": ("OCA", "Cerro Armazones Observatory"),
+            "OBS-LAT": (parse_deg_or_dms(OCA['latitude']), f"[deg] Observatory east longitude {OCA['latitude']}"),
+            "OBS-LONG": (parse_deg_or_dms(OCA['longitude']), f"[deg] Observatory latitude {OCA['longitude']}"),
+            "OBS-ELEV": ((OCA['longitude']), f"[m] Observatory elevation"),
+            "TEL": (str(self.telescope.id), ''),
+            "DATE-OBS": (str(time_now), "DateTime of observation start"),
+            "JD": (str(julian_date), "Julian date of observation start"),
+            "RA": (str(self.kwargs["req_ra"]), "Requested object RA"),
+            "DEC": (str(self.kwargs["req_dec"]), "Requested object DEC"),
+            "EQUINOX": (str(self.kwargs["epoch"]), "Requested RA DEC epoch"),
+            "TEL_RA": (str(self.mount.rightascension), "Telescope RA"),
+            "TEL_DEC": (str(self.mount.declination), "Telescope DEC"),
+            "TEL_ALT": (str(self.mount.altitude), "[deg] Telescope mount ALT"),
+            "TEL_AZ": (str(self.mount.azimuth), "[deg] Telescope mount AZ"),
+            "AIRMASS": ("unknown", ''),
+            "OBSMODE": ("unknown", "TRACKING, GUIDING, JITTER or ELSE"),
+            "FOCUS": (str(self.focuser.position), "Focus position"),
+            "ROTATOR": (str(self.rotator.position), "[deg] Rotator position"),
+            "OBSERVER": ("unknown", ''),
+            "OBSTYPE": (self.kwargs['type'], ''),
+            "OBJECT": (str(self.kwargs["obj_name"]), ''),
+            "FILTER": (str(self.filter.position), ''),
+            "EXPREQ": (self.kwargs["exp_time"], "[s] Requested exposure time"),
+            "EXPTIME": (self.kwargs["exp_time"], "[s] Executed exposure time"),
+            "DETSIZE": ("unknown", ''),
+            "CCDSEC": ("unknown", ''),
+            "CCD_NAME": (str(self.camera.name), ''),
+            "CCD_TEMP": (str(self.camera.ccdtemperature), ''),
+            "CCD_BINX": (str(self.camera.binx), ''),
+            "CCD_BINY": (str(self.camera.biny), ''),
+            "READ_MOD": (str(self.camera.readoutmode), ''),
+            "GAIN": ("unknown", ''),
+            "RNOISE": ("unknown", ''),
+            })
+
+        return _header
+
     async def _wait_for_save_fits(self, sub: int):
         array = await self.camera.aget_imagearray()
-        time_now = str(datetime.utcnow())
+
         jd = datetime_to_julian(str(datetime.utcnow()))
         jd_oca = f"{(jd - 2460000):010.5f}"
-        if self.kwargs['type'] == 'light':
-            typ = f"science"
-        else:
-            typ = self.kwargs['type']
-        header = OrderedDict({
-            "FITS_STD": "BETA1",
-            "TEL": str(self.telescope.id),
-            "UT": str(time_now),
-            "JD": str(jd),
-            "TEL_RA": str(self.mount.rightascension),
-            "TEL_DEC": str(self.mount.declination),
-            "TEL_ALT": str(self.mount.altitude),
-            "TEL_AZ": str(self.mount.azimuth),
-            "TYPE": f"{typ}",
-            "OBJECT": str(self.kwargs["obj_name"]),
-            "FILTER": str(self.filter.position),
-            "DIT": "",
-            "CCD_NAME": str(self.camera.name),
-            "CCD_TEMP": str(self.camera.ccdtemperature),
-            "CCD_BINX": str(self.camera.binx),
-            "CCD_BINY": str(self.camera.biny),
-            "READ_MOD": str(self.camera.readoutmode),
-            "FOCUS": str(self.focuser.position)
-        })
+
+        header = self.fits_header(jd)
         save_fits_from_array(array,
                              f'{self.folder}',
                              f'{self.telescope.id}c_{jd_oca.split(".")[0]}_{jd_oca.split(".")[1]}',
@@ -101,7 +126,7 @@ class CameraExposure(SubCommand):
 
     async def arun(self, step_id: str or None = None) -> int:
         logger.debug(f'{self.id} {self.subcommand_name} is started')
-        if self.kwargs["type"] in ['light', 'flat']:
+        if self.kwargs["type"] in ['science', 'flat']:
             self.info_callback['stream_1'](f'Opening cover')
             logger.debug(f'Opening cover')
             if self.telescope.id == 'dev':

@@ -47,13 +47,13 @@ class MountSlewCoo(SubCommand):
                                   latitude=OCA['latitude'],
                                   longitude=OCA['longitude'],
                                   elevation=OCA['elevation'],
-                                  epoch='2000/01/01')
+                                  epoch=self.kwargs['epoch'])
         az, alt = ra_dec_2_az_alt(ra=self.ra_now,
                                   dec=self.dec_now,
                                   latitude=OCA['latitude'],
                                   longitude=OCA['longitude'],
                                   elevation=OCA['elevation'],
-                                  epoch='2000/01/01')
+                                  epoch=self.kwargs['epoch'])
         if deg_str_to_deg(alt) > 0:
             #await self.mount.aput_unpark()
             await self.mount.aput_tracking(True)
