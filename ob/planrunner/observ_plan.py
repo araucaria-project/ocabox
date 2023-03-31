@@ -129,10 +129,14 @@ class ObservPlan:
         """
         if self.tsk:
             self.tsk.cancel()
-            logger.info(f'Cannot parse plan - please check the syntax')
+            logger.info(f'Night plan stopped')
+            self.info_callback['stream_1'](f'Night plan stop')
             self.tsk = None
         self.tsk = None
         self.running_nightplan = None
 
     async def arun_night(self, nightplan_id: str, step_id: str or None = None) -> None:
         await self.subcomponents[nightplan_id].arun(step_id=step_id)
+
+    async def stop(self):
+        self.stop_nightplan()

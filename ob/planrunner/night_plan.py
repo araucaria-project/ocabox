@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class NightPlan(AbstractSequence):
     def __init__(self, id: str, sequence_dict: List[Any], parent: 'ObservationPlan') -> None:
         self.id = id
+        self.name = 'Night plan'
         self.parent = parent
         self.sequence_dict = sequence_dict
         self.subcomponents = {}
@@ -18,7 +19,7 @@ class NightPlan(AbstractSequence):
         self.args = []
         self.kwargs = {}
         self.parent_kwargs = self.parent.kwargs | self.parent.parent_kwargs
-        super().__init__()
+        super().__init__(self.id, self.name, self.info_callback)
         self.info = {}
         #self._set_callb()
         self._write_subcomponents()
@@ -52,11 +53,14 @@ class NightPlan(AbstractSequence):
             self.subcomponents[f'{self.numb(seq_id)}'] = sub
             seq_id += 1
 
-    async def arun(self, step_id: str or None = None) -> None:
+    async def arun(self, step_id: str or None = None) -> int:
         self.info_callback['stream_1'](f'Nightplan {self.id} started')
         await self._arun(self.subcomponents, step_id=step_id)
-        self.info_callback['stream_1'](f'Nightplan {self.id} done')
         self.info_callback['stream_5'](f'{self.id}')
+        return 0
+
+    async def stop(self):
+        await self.parent.stop()
 
     def __del__(self):
         logger.info(f"Nightplan {self.id} deleted")

@@ -28,3 +28,6 @@ class ObservationPlan:
     def get_nightplan_info(self, nightplan_id: str) -> Dict[Any, Any]:
         return self.observ.get_nightplan_info(nightplan_id=nightplan_id)
 
+    def get_status(self, nightplan_id: str) -> Dict[Any, Any]:
+        pass
+

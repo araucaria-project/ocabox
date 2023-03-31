@@ -13,6 +13,7 @@ class Sequence(AbstractSequence):
     def __init__(self, id: str, sequence_dict: Dict[Any, Any],
                  parent: 'NightPlan' or 'Sequence') -> None:
         self.id = id
+        self.name = 'Sequence'
         self.sequence_dict = sequence_dict
         self.parent = parent
         self.args = self.build_args(self.sequence_dict)
@@ -21,7 +22,7 @@ class Sequence(AbstractSequence):
         self.subcomponents = {}
         self.telescope = parent.telescope
         self.info_callback = parent.info_callback
-        super().__init__()
+        super().__init__(self.id, self.name, self.info_callback)
         self.build_sequence()
 
     def _create_sequence_string(self):
@@ -30,7 +31,7 @@ class Sequence(AbstractSequence):
             kw = f'{kw} {n}={self.kwargs[n]}'
         for n in self.parent_kwargs.keys():
             kw = f'{kw} {n}={self.parent_kwargs[n]}'
-        self.info_callback['c_sequences'](f'{self.id} SEQUENCE {kw}')
+        self.info_callback['c_sequences'](f'{self.id};SEQUENCE;{kw}')
         logger.info(f'Sequence {self.id} is written')
 
     def build_sequence(self) -> None:
@@ -59,9 +60,12 @@ class Sequence(AbstractSequence):
         logger.info(f'Command {command_id} to {self.id} is written')
         return com
 
-    async def arun(self, step_id: str or None = None) -> None:
+    async def arun(self, step_id: str or None = None) -> int:
         self.info_callback['stream_1'](f'Sequence {self.id} started')
         await self._arun(self.subcomponents, step_id=step_id)
-        self.info_callback['stream_1'](f'Sequence {self.id} done')
         self.info_callback['stream_5'](f'{self.id}')
+        return 0
+
+    async def stop(self):
+        await self.parent.stop()
 

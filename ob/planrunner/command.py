@@ -25,7 +25,7 @@ class Command(AbstractSequence):
         self.subcomponents = {}
         self.telescope = parent.telescope
         self.info_callback = parent.info_callback
-        super().__init__()
+        super().__init__(self.id, self.command_name, self.info_callback)
         self._write_subcommands()
 
     def _create_command_string(self):
@@ -36,7 +36,7 @@ class Command(AbstractSequence):
             kw = f'{kw} {n}={self.kwargs[n]}'
         for n in self.parent_kwargs.keys():
             kw = f'{kw} {n}={self.parent_kwargs[n]}'
-        self.info_callback['c_commands'](f'{self.id} {self.command_name}{kw}')
+        self.info_callback['c_commands'](f'{self.id};{self.command_name};{kw}')
         logger.info(f'Command {self.id} {self.command_name} is written')
 
     def _write_subcommands(self) -> None:
@@ -64,8 +64,8 @@ class Command(AbstractSequence):
             self._write_marker()
 
         else:
-            # TODO write some syntax error
-            pass
+            # TODO add info, that parsed plan have errors
+            self.info_callback['stream_1'](f'Command {self.command_name} not recognized, check plan syntax' )
 
 
     def _write_object(self):
@@ -80,8 +80,162 @@ class Command(AbstractSequence):
             obj_name = self.args[0]
             ra = self.args[1]
             dec = self.args[2]
-        sub = MountSlewCoo(f'{self.id}_{self.numb(id_next)}', self,
-                           obj_name=obj_name, ra=ra, dec=dec)
+        sub = MountSlewCoo(f'{self.id}_{self.numb(id_next)}',
+                           self,
+                           obj_name=obj_name,
+                           ra=ra,
+                           dec=dec,
+                           epoch='2000')
+        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+
+        # Slave dome
+        id_next += 1
+        sub = DomeSlaveTelescope(f'{self.id}_{self.numb(id_next)}',
+                                 self)
+        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+
+        # Camera exposure
+        id_next += 1
+        if 'seq' in self.kwargs:
+            # TODO move to abstract sequence
+            if str(self.kwargs['seq']).find(','):
+                seq_list = list(self.kwargs['seq'].split(','))
+            else:
+                seq_list = list(self.kwargs['seq'])
+            for n in seq_list:
+                par = list(n.split('/'))
+                sub = ChangeFilter(f'{self.id}_{self.numb(id_next)}',
+                                   self,
+                                   filter=par[1])
+                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+                id_next += 1
+                sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
+                                     self,
+                                     type='science',
+                                     light=True,
+                                     exp_no=int(par[0]),
+                                     exp_time=float(par[2]),
+                                     obj_name=obj_name,
+                                     req_ra=ra,
+                                     req_dec=dec,
+                                     epoch='2000')
+                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+                id_next += 1
+
+    def _write_domeflat(self):
+        id_next = 0
+
+        # Slew to altaz
+        # TODO turn on domeflat lamp, set brightness (value also from some config? or kwarg?)
+        # TODO get Alt Az domeflat position from some config
+        #az = 90
+        #alt = 10
+        sub = MountSlewToAltAz(f'{self.id}_{self.numb(id_next)}',
+                               self,
+                               alt=self.kwargs['alt'],
+                               az=self.kwargs['az'],
+                               tracking=False,
+                               epoch='2000')
+        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+
+        # Camera exposure
+        id_next += 1
+        if 'seq' in self.kwargs:
+
+            if str(self.kwargs['seq']).find(','):
+                seq_list = list(self.kwargs['seq'].split(','))
+            else:
+                seq_list = list(self.kwargs['seq'])
+            for n in seq_list:
+                par = list(n.split('/'))
+                sub = ChangeFilter(f'{self.id}_{self.numb(id_next)}',
+                                   self,
+                                   filter=par[1])
+                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+                id_next += 1
+                sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
+                                     self,
+                                     type='flat',
+                                     light=True,
+                                     exp_no=int(par[0]),
+                                     exp_time=float(par[2]),
+                                     obj_name='',
+                                     req_ra='',
+                                     req_dec='',
+                                     epoch='2000'
+                                     )
+                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+                id_next += 1
+
+        # TODO turn off domeflat lamp
+
+    def _write_focus(self):
+        # faster readmode, fits not saved on Perun
+        pass
+
+    def _write_dark(self):
+        id_next = 0
+
+        # Camera exposure
+        id_next += 1
+        if 'seq' in self.kwargs:
+
+            if str(self.kwargs['seq']).find(','):
+                seq_list = list(self.kwargs['seq'].split(','))
+            else:
+                seq_list = list(self.kwargs['seq'])
+            for n in seq_list:
+                par = list(n.split('/'))
+                sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
+                                     self,
+                                     type='dark',
+                                     light=False,
+                                     exp_no=int(par[0]),
+                                     exp_time=float(par[2]),
+                                     obj_name='',
+                                     req_ra='',
+                                     req_dec='',
+                                     epoch='2000'
+                                     )
+                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+                id_next += 1
+
+    def _write_zero(self):
+        id_next = 0
+
+        # Camera exposure
+        id_next += 1
+        if 'seq' in self.kwargs:
+
+            if str(self.kwargs['seq']).find(','):
+                seq_list = list(self.kwargs['seq'].split(','))
+            else:
+                seq_list = list(self.kwargs['seq'])
+            for n in seq_list:
+                par = list(n.split('/'))
+                sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
+                                     self,
+                                     type='zero',
+                                     light=False,
+                                     exp_no=int(par[0]),
+                                     exp_time=float(par[2]),
+                                     obj_name='',
+                                     req_ra='',
+                                     req_dec='',
+                                     epoch='2000'
+                                     )
+                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+                id_next += 1
+
+    def _write_skyflat(self):
+        id_next = 0
+
+        sub = MountSlewToAltAz(f'{self.id}_{self.numb(id_next)}',
+                               self,
+                               alt=self.kwargs['alt'],
+                               az=self.kwargs['az'],
+                               tracking=True,
+                               epoch='2000')
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
 
         # Slave dome
@@ -92,75 +246,41 @@ class Command(AbstractSequence):
         # Camera exposure
         id_next += 1
         if 'seq' in self.kwargs:
+
             if str(self.kwargs['seq']).find(','):
                 seq_list = list(self.kwargs['seq'].split(','))
             else:
                 seq_list = list(self.kwargs['seq'])
             for n in seq_list:
                 par = list(n.split('/'))
-                sub = ChangeFilter(f'{self.id}_{self.numb(id_next)}', self, filter=par[1])
+                sub = ChangeFilter(f'{self.id}_{self.numb(id_next)}',
+                                   self,
+                                   filter=par[1])
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
                 sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
                                      self,
-                                     exposure_no=int(par[0]),
-                                     exposure_time=float(par[2]))
+                                     type='flat',
+                                     light=True,
+                                     exp_no=int(par[0]),
+                                     exp_time=float(par[2]),
+                                     obj_name='',
+                                     req_ra='',
+                                     req_dec='',
+                                     epoch='2000'
+                                     )
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
 
-    def _write_domeflat(self):
-        id_next = 0
-
-        # TODO turn on domeflat lamp, set brightness (value also from some config? or kwarg?)
-
-        # Slew to alt az
-        # TODO get Alt Az domeflat position from some config
-        az = 90
-        alt = 10
-        # TODO add tracking on/off option
-        sub = MountSlewToAltAz(f'{self.id}_{self.numb(id_next)}', self,
-                               alt=float(alt), az=float(az))
-        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-
-        # Camera exposure
-        id_next += 1
-        if 'seq' in self.kwargs:
-            if str(self.kwargs['seq']).find(','):
-                seq_list = list(self.kwargs['seq'].split(','))
-            else:
-                seq_list = list(self.kwargs['seq'])
-            for n in seq_list:
-                par = list(n.split('/'))
-                sub = ChangeFilter(f'{self.id}_{self.numb(id_next)}', self, filter=par[1])
-                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-                id_next += 1
-                sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
-                                     self,
-                                     exposure_no=int(par[0]),
-                                     exposure_time=float(par[2]))
-                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-                id_next += 1
-
-        # TODO turn off domeflat lamp
-
-    def _write_focus(self):
-        pass
-
-    def _write_dark(self):
-        pass
-
-    def _write_zero(self):
-        pass
-
-    def _write_skyflat(self):
-        pass
 
     def _write_marker(self):
         pass
 
-
-    async def arun(self, step_id: str or None = None) -> None:
+    async def arun(self, step_id: str or None = None) -> int:
         self.info_callback['stream_1'](f'Command {self.id} {self.command_name} started')
         await self._arun(self.subcomponents, step_id=step_id)
-        self.info_callback['stream_1'](f'Command {self.id} {self.command_name} done')
         self.info_callback['stream_5'](f'{self.id}')
+        return 0
+
+    async def stop(self):
+        await self.parent.stop()

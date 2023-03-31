@@ -3,6 +3,18 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.0.4] - 2023-03-31
+### Added
+- Added `ocaboxapi` rotator
+- Added `planrunner` skip and abort in executor
+- Added `planrunner` DARK, ZERO, FLAT, DOMEFLAT, SKYFLAT commands creation
+
+### Changed
+- Changed `planrunner` header and mount and camera executing
+
+### Fixed
+- Fixed `config_oca.yaml` longitude position
+
 ## [1.0.3] - 2023-03-29
 ### Added
 - Resources in the resource manager have been extended with the `properties` parameter

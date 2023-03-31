@@ -1,28 +1,33 @@
 import asyncio
 import logging
 from ob.planrunner.subcommand import SubCommand
-from pyaraucaria.fits import save_fits_from_array
+from pyaraucaria.fits import save_fits_from_array, fits_header
 from pyaraucaria.date import datetime_to_julian
+from ocaboxapi.formatter import parse_deg_or_dms
 from datetime import datetime
 import os
 import pwd
+from collections import OrderedDict
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class CameraExposure(SubCommand):
 
-    def __init__(self, id: str, parent: 'Command', **kwargs) -> None:
-        self.subcommand_name = 'CameraExposure'
+    def __init__(self, id: str, parent: 'Command', subcommand_name: str = 'camera exposure', **kwargs) -> None:
+        self.subcommand_name = subcommand_name
         self.telescope = parent.telescope
         self.mount = self.telescope.get_mount()
         self.camera = self.telescope.get_camera()
         self.cover = self.telescope.get_covercalibrator()
+        self.filter = self.telescope.get_filterwheel()
+        self.focuser = self.telescope.get_focuser()
+        self.rotator = self.telescope.get_rotator()
         self.kwargs = kwargs
         self.id = id
         self.user = pwd.getpwuid(os.getuid())[0]
         self.folder = f'/home/{self.user}/Desktop/fits_{self.telescope.id}/'
-        super().__init__(id=id, parent=parent, subcommand_name=self.subcommand_name, **kwargs)
+        super().__init__(id=id, parent=parent, subcommand_name=subcommand_name, **kwargs)
         self._mk_folder()
 
     def _mk_folder(self):
@@ -36,16 +41,49 @@ class CameraExposure(SubCommand):
 
     async def _wait_for_save_fits(self, sub: int):
         array = await self.camera.aget_imagearray()
-        time_now = str(datetime.utcnow())
-        jd_oca = f"{(datetime_to_julian(str(datetime.utcnow())) - 2460000):010.5f}"
-        header = {"FITS_STD": "beta_1", "TEL": f"{self.telescope.id}", "UT": f"{time_now}"}
+
+        jd = datetime_to_julian(str(datetime.utcnow()))
+        jd_oca = f"{(jd - 2460000):010.5f}"
+
+        # TODO This OCA should be taken from settings
+        OCA = {'latitude': '-24:35:53', 'longitude': '-70:11:47', 'elevation': '2817'}
+
+        header = fits_header(
+                    obs_lat=OCA['latitude'],
+                    parsed_obs_lat=str(parse_deg_or_dms(OCA['latitude'])),
+                    obs_lon=OCA['longitude'],
+                    parsed_obs_lon=str(parse_deg_or_dms(OCA['longitude'])),
+                    obs_elev=OCA['elevation'],
+                    tel_id=str(self.telescope.id),
+                    utc_now=str(datetime.utcnow()),
+                    jd=str(jd),
+                    req_ra=str(self.kwargs["req_ra"]),
+                    req_dec=str(self.kwargs["req_dec"]),
+                    epoch=str(self.kwargs["epoch"]),
+                    tel_ra=str(self.mount.rightascension),
+                    tel_dec=str(self.mount.declination),
+                    tel_alt=str(self.mount.altitude),
+                    tel_az=str(self.mount.azimuth),
+                    focus=str(self.focuser.position),
+                    rotator_pos=str(self.rotator.position),
+                    obs_type=str(self.kwargs['type']),
+                    object=str(self.kwargs["obj_name"]),
+                    filter=str(self.filter.position),
+                    req_exp=str(self.kwargs["exp_time"]),
+                    cam_exp=str(self.kwargs["exp_time"]),
+                    ccd_name=str(self.camera.name),
+                    ccd_temp=str(self.camera.ccdtemperature),
+                    ccd_binx=str(self.camera.binx),
+                    ccd_biny=str(self.camera.biny),
+                    read_mod=str(self.camera.readoutmode))
+
         save_fits_from_array(array,
                              f'{self.folder}',
                              f'{self.telescope.id}c_{jd_oca.split(".")[0]}_{jd_oca.split(".")[1]}',
                              header,
                              overwrite=True)
         logger.debug(f'{self.id} {self.subcommand_name} is done')
-        self.info_callback['stream_1'](f'Subexposure {sub}/{self.kwargs["exposure_no"]} done')
+        self.info_callback['stream_1'](f'Subexp {sub}/{self.kwargs["exp_no"]} done')
 
     async def _wait_for_subexposure(self, sub: int):
         while True:
@@ -53,68 +91,60 @@ class CameraExposure(SubCommand):
             subexposure_done = self.camera.imageready
             if subexposure_done:
                 logger.debug(f'{self.id} {self.subcommand_name} is done --> saving')
-                self.info_callback['stream_1'](f'Subexposure {sub}/{self.kwargs["exposure_no"]} done --> saving')
+                self.info_callback['stream_1'](f'Subexp {sub}/{self.kwargs["exp_no"]} --> saving')
                 break
 
-    async def _wait_for_opencover(self):
+    async def _wait_for_cover(self):
+        wait = 0
         while True:
             await asyncio.sleep(1)
+            wait += 1
+            if wait > 10:
+                break
+            """
+            # TODO cover state not working - maybe only time wait
             cover_status = self.cover.coverstate
             if cover_status == 3:
                 logger.debug(f'Telescope cover opened')
                 self.info_callback['stream_1'](f'Telescope cover is opened')
-                break
+                break"""
 
 
-    async def arun(self, step_id: str or None = None):
+    async def arun(self, step_id: str or None = None) -> int:
         logger.debug(f'{self.id} {self.subcommand_name} is started')
-        """
-        cover_status = self.cover.coverstate
-        if cover_status != 3:  # TODO: Mirek: I don't know if the covers should open autmatically, at least for bias/dark shouldnt
-            self.info_callback['stream_1'](f'Cover is closed. Opening...')
-            logger.debug(f'Cover is closed. Opening...')
+        if self.kwargs["type"] in ['science', 'flat']:
+            self.info_callback['stream_1'](f'Opening cover')
+            logger.debug(f'Opening cover')
             if self.telescope.id == 'dev':
                 await self.cover.aput_opencover_dev()
             else:
                 await self.mount.aput_opencover()
-            await self._wait_for_opencover()
-        """
+            await self._wait_for_cover()
+        elif self.kwargs["type"] in ['dark', 'zero']:
+            self.info_callback['stream_1'](f'Closing cover')
+            logger.debug(f'Closing cover')
+            if self.telescope.id == 'dev':
+                await self.cover.aput_closecover_dev()
+            else:
+                await self.mount.aput_closecover()
+            await self._wait_for_cover()
+        else:
+            self.info_callback['stream_1'](f'No exposure type, skipping')
+            logger.debug(f'No exposure type, skipping')
+            return 1
         self.info_callback['stream_1'](
-            f'Subcommand {self.id} {self.subcommand_name} '
-            f'Subexposure - time:{self.kwargs["exposure_time"]} quantity:{self.kwargs["exposure_no"]} started')
-        for sub in range(1, self.kwargs["exposure_no"]+1):
-            self.info_callback['stream_1'](f'Subexposure {sub}/{self.kwargs["exposure_no"]} started')
-            await self.camera.aput_startexposure(self.kwargs["exposure_time"], True)
+            f'{self.id} {self.subcommand_name} {self.kwargs["type"]}'
+            f' time:{self.kwargs["exp_time"]} number:{self.kwargs["exp_no"]} started')
+        for sub in range(1, self.kwargs["exp_no"]+1):
+            self.info_callback['stream_1'](f'Subexp {sub}/{self.kwargs["exp_no"]} started')
+            await self.camera.aput_startexposure(self.kwargs["exp_time"], self.kwargs["light"])
             await asyncio.sleep(1)
             await self._wait_for_subexposure(sub)
             await asyncio.sleep(1)
             await self._wait_for_save_fits(sub)
         await asyncio.sleep(5)
-        self.info_callback['stream_1'](f'Subcommand {self.id} {self.subcommand_name} done')
+        self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
         self.info_callback['stream_5'](f'{self.id}')
+        return 0
 
 
-    """
-    hdr["FITS_STD"]="BETA1"
-    hdr["TEL"]=str(self.parent.active_tel)
-    hdr["UT"]=str(self.parent.ut)
-    hdr["JD"]=str(self.parent.jd)
-
-    hdr["TEL_RA"]=str(self.parent.mount_ra )
-    hdr["TEL_DEC"]=str(self.parent.mount_dec)
-    hdr["TEL_ALT"]=str(self.parent.mount_alt)
-    hdr["TEL_AZ"]=str(self.parent.mount_az )
-
-    hdr["TYPE"]=self.parent.ob_type
-    hdr["OBJECT"]=self.parent.ob_name
-    hdr["FILTER"]=self.parent.curent_filter
-    hdr["DIT"]=self.parent.dit_exp
-
-    hdr["CCD_NAME"]=str(self.parent.ccd_name)
-    hdr["CCD_TEMP"]=str(self.parent.ccd_temp)
-    hdr["CCD_BINX"]=str(self.parent.ccd_binx)
-    hdr["CCD_BINY"]=str(self.parent.ccd_biny)
-    hdr["RAED_MOD"]=str(self.parent.ccd_readmode)
-
-
-    hdr["FOCUS"]=str(self.parent.focus_value)"""

@@ -52,7 +52,6 @@ class Dome(TelescopeComponent):
         logger.debug(f'Putting closeshutter to {self.tel_addr}')
         return await self.aput_value('closeshutter')
 
-
     async def aget_slaved(self) -> bool:
         logger.debug(f'Getting dome slaved from {self.tel_addr}')
         ret = await self.aget_value('slaved')

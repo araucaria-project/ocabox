@@ -2,7 +2,7 @@ tree:
   wk06:
     observatory:
       comment: Wojtek Krzemiński 0.6m Telescope
-      lon: 24.59806    # OCA
+      lon: -24.59806    # OCA
       lat: -70.19638
       elev: 2817  # m
       protocol: alpaca
@@ -39,7 +39,7 @@ tree:
   zb08:
     observatory:
       comment: Zbigniew Zibi Kołaczkowski 0.8m Telescope
-      lon: 24.59806    # OCA
+      lon: -24.59806    # OCA
       lat: -70.19638
       elev: 2817  # m
       protocol: alpaca
@@ -79,7 +79,7 @@ tree:
   jk15:
     observatory:
       comment: Janusz Kałużny 1.5m Telescope
-      lon: 24.59806    # OCA
+      lon: -24.59806    # OCA
       lat: -70.19638
       elev: 2817  # m
       protocol: alpaca
@@ -119,7 +119,7 @@ tree:
   wg25:
     observatory:
       comment: Wolfgang Gieren 2.5m Telescope
-      lon: 24.59806    # OCA
+      lon: -24.59806    # OCA
       lat: -70.19638
       elev: 2817  # m
       protocol: alpaca
@@ -159,7 +159,7 @@ tree:
   iris:
     observatory:
       comment: IRIS InfraRed Imaging System 0.8m Telescope
-      lon: 24.59806    # OCA
+      lon: -24.59806    # OCA
       lat: -70.19638
       elev: 2817  # m      protocol: alpaca
       address: http://iris-tcu.oca.lan:11111/api/v1
@@ -198,7 +198,7 @@ tree:
   sim:
     observatory:
       comment: ASCOM Simulator at OCA
-      lon: 24.59806    # OCA
+      lon: -24.59806    # OCA
       lat: -70.19638
       elev: 2817  # m      protocol: alpaca
       protocol: alpaca
@@ -235,7 +235,7 @@ tree:
   dev:
     observatory:
       comment: ASCOM Simulator at localhost:80
-      lon: 24.59806    # OCA
+      lon: -24.59806    # OCA
       lat: -70.19638
       elev: 2817  # m      protocol: alpaca
       protocol: alpaca
