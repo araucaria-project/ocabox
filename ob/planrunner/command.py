@@ -3,10 +3,10 @@ from typing import Dict, Any
 from ob.planrunner.abstract_sequence import AbstractSequence
 from ob.planrunner.subcommands.sub_mount_slew_coo import MountSlewCoo
 from ob.planrunner.subcommands.sub_mount_slew_to_alt_az import MountSlewToAltAz
-from ob.planrunner.subcommands.sub_dome_slave_telescope import DomeSlaveTelescope
+from ob.planrunner.subcommands.sub_dome_slew import DomeSlew
 from ob.planrunner.subcommands.sub_change_filter import ChangeFilter
 from ob.planrunner.subcommands.sub_camera_exposure import CameraExposure
-
+from pyaraucaria.coordinates import ra_dec_2_az_alt, deg_str_to_deg
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -67,35 +67,53 @@ class Command(AbstractSequence):
             # TODO add info, that parsed plan have errors
             self.info_callback['stream_1'](f'Command {self.command_name} not recognized, check plan syntax' )
 
-
     def _write_object(self):
         id_next = 0
-
+        obj_name = ''
+        req_ra = ''
+        req_dec = ''
         # Slew to coo
-        if len(self.args) == 2:
-            obj_name = ''
-            ra = self.args[0]
-            dec = self.args[1]
-        else:
-            obj_name = self.args[0]
-            ra = self.args[1]
-            dec = self.args[2]
-        sub = MountSlewCoo(f'{self.id}_{self.numb(id_next)}',
-                           self,
-                           obj_name=obj_name,
-                           ra=ra,
-                           dec=dec,
-                           epoch='2000')
-        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+        if len(self.args) > 1:
+            if len(self.args) == 2:
+                req_ra = self.args[0]
+                req_dec = self.args[1]
+                sub = MountSlewCoo(f'{self.id}_{self.numb(id_next)}',
+                                   self,
+                                   obj_name=obj_name,
+                                   ra=req_ra,
+                                   dec=req_dec,
+                                   epoch='2000')
+                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+            elif len(self.args) == 3:
+                obj_name = self.args[0]
+                req_ra = self.args[1]
+                req_dec = self.args[2]
+                sub = MountSlewCoo(f'{self.id}_{self.numb(id_next)}',
+                                   self,
+                                   obj_name=obj_name,
+                                   ra=req_ra,
+                                   dec=req_dec,
+                                   epoch='2000')
+                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
 
-        # Slave dome
-        id_next += 1
-        sub = DomeSlaveTelescope(f'{self.id}_{self.numb(id_next)}',
-                                 self)
-        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+            # Slave dome
+            id_next += 1
+            OCA = {'latitude': '-24:35:53', 'longitude': '-70:11:47', 'elevation': '2817'}
+            dome_az, _ = ra_dec_2_az_alt(ra=req_ra,
+                                       dec=req_dec,
+                                       latitude=OCA['latitude'],
+                                       longitude=OCA['longitude'],
+                                       elevation=OCA['elevation'],
+                                       epoch='2000')
+            sub = DomeSlew(f'{self.id}_{self.numb(id_next)}',
+                           self,
+                           az=deg_str_to_deg(dome_az))
+            self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+            id_next += 1
+        else:
+            pass
 
         # Camera exposure
-        id_next += 1
         if 'seq' in self.kwargs:
             # TODO move to abstract sequence
             if str(self.kwargs['seq']).find(','):
@@ -109,6 +127,7 @@ class Command(AbstractSequence):
                                    filter=par[1])
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
+
                 sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
                                      self,
                                      type='science',
@@ -116,8 +135,8 @@ class Command(AbstractSequence):
                                      exp_no=int(par[0]),
                                      exp_time=float(par[2]),
                                      obj_name=obj_name,
-                                     req_ra=ra,
-                                     req_dec=dec,
+                                     req_ra=req_ra,
+                                     req_dec=req_dec,
                                      epoch='2000')
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
@@ -128,12 +147,19 @@ class Command(AbstractSequence):
         # Slew to altaz
         # TODO turn on domeflat lamp, set brightness (value also from some config? or kwarg?)
         # TODO get Alt Az domeflat position from some config
-        #az = 90
-        #alt = 10
+        dome_az = 0.0
+        dome_flat_az = dome_az + 180.0
+        dome_flat_alt = 15.0
+        sub = DomeSlew(f'{self.id}_{self.numb(id_next)}',
+                       self,
+                       az=dome_az)
+        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+        id_next += 1
+
         sub = MountSlewToAltAz(f'{self.id}_{self.numb(id_next)}',
                                self,
-                               alt=self.kwargs['alt'],
-                               az=self.kwargs['az'],
+                               alt=dome_flat_alt,
+                               az=dome_az+180,
                                tracking=False,
                                epoch='2000')
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
@@ -240,7 +266,9 @@ class Command(AbstractSequence):
 
         # Slave dome
         id_next += 1
-        sub = DomeSlaveTelescope(f'{self.id}_{self.numb(id_next)}', self)
+        sub = DomeSlew(f'{self.id}_{self.numb(id_next)}',
+                       self,
+                       az=deg_str_to_deg(self.kwargs['az']))
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
 
         # Camera exposure

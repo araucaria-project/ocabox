@@ -43,11 +43,11 @@ class MountSlewCoo(SubCommand):
             f'{self.id} {self.subcommand_name} OBJ:{self.kwargs["obj_name"]}'
             f' RA:{self.kwargs["ra"]} DEC:{self.kwargs["dec"]} started')
         self.ra_now, self.dec_now = ra_dec_epoch(ra=self.kwargs["ra"],
-                                  dec=self.kwargs["dec"],
-                                  latitude=OCA['latitude'],
-                                  longitude=OCA['longitude'],
-                                  elevation=OCA['elevation'],
-                                  epoch=self.kwargs['epoch'])
+                                                  dec=self.kwargs["dec"],
+                                                  latitude=OCA['latitude'],
+                                                  longitude=OCA['longitude'],
+                                                  elevation=OCA['elevation'],
+                                                  epoch=self.kwargs['epoch'])
         az, alt = ra_dec_2_az_alt(ra=self.ra_now,
                                   dec=self.dec_now,
                                   latitude=OCA['latitude'],
