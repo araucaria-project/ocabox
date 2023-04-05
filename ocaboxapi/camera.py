@@ -12,6 +12,7 @@ class Camera(TelescopeComponent):
     name = OcaBoxParam(default='', doc="Camera name")
     sensorname = OcaBoxParam(default='', doc="Camera sensor name")
     ccdtemperature = OcaBoxParam(default=0.0, doc="Camera ccd temperature")
+    setccdtemperature = OcaBoxParam(default=0.0, doc="Camera set ccd temperature")
     binx = OcaBoxParam(default=0, doc="Camera binx")
     biny = OcaBoxParam(default=0, doc="Camera biny")
     camerastate = OcaBoxParam(default=0, doc="Camera state")
@@ -61,7 +62,8 @@ class Camera(TelescopeComponent):
         ret = await self.aget_value('sensorname')
         return ret
 
-    async def asubscribe_sensorname(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
+    async def asubscribe_sensorname(self, callback: Callable | None = None,
+                                    time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing camera sensor name from {self.tel_addr}')
         return await self.subscribe('sensorname', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
@@ -70,7 +72,8 @@ class Camera(TelescopeComponent):
         ret = await self.aget_value('ccdtemperature')
         return ret
 
-    async def asubscribe_ccdtemperature(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
+    async def asubscribe_ccdtemperature(self, callback: Callable | None = None,
+                                        time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing ccd temperature from {self.tel_addr}')
         return await self.subscribe('ccdtemperature', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
@@ -97,7 +100,8 @@ class Camera(TelescopeComponent):
         ret = await self.aget_value('camerastate')
         return ret
 
-    async def asubscribe_camerastate(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
+    async def asubscribe_camerastate(self, callback: Callable | None = None,
+                                     time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing camerastate from {self.tel_addr}')
         return await self.subscribe('camerastate', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
@@ -115,7 +119,8 @@ class Camera(TelescopeComponent):
         ret = await self.aget_value('coolerpower')
         return ret
 
-    async def asubscribe_coolerpower(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
+    async def asubscribe_coolerpower(self, callback: Callable | None = None,
+                                     time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing camera cooler power from {self.tel_addr}')
         return await self.subscribe('coolerpower', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
@@ -157,18 +162,24 @@ class Camera(TelescopeComponent):
         ret = await self.aget_value('subexposureduration')
         return ret
 
-    async def asubscribe_subexposureduration(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
+    async def asubscribe_subexposureduration(self, callback: Callable | None = None,
+                                             time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing subexposure duration from {self.tel_addr}')
-        return await self.subscribe('subexposureduration', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
+        return await self.subscribe('subexposureduration',
+                                    callback=callback,
+                                    time_of_data_tolerance=time_of_data_tolerance)
 
     async def aget_percentcompleted(self) -> int:
         logger.debug(f'Getting exposure percent competed from {self.tel_addr}')
         ret = await self.aget_value('percentcompleted')
         return ret
 
-    async def asubscribe_percentcompleted(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
+    async def asubscribe_percentcompleted(self, callback: Callable | None = None,
+                                          time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing exposure percent competed from {self.tel_addr}')
-        return await self.subscribe('percentcompleted', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
+        return await self.subscribe('percentcompleted',
+                                    callback=callback,
+                                    time_of_data_tolerance=time_of_data_tolerance)
 
     async def aget_imagearray(self) -> List[int]:
         logger.debug(f'Getting imagearray from {self.tel_addr}')
@@ -180,7 +191,8 @@ class Camera(TelescopeComponent):
         ret = await self.aget_value('imageready')
         return ret
 
-    async def asubscribe_imageready(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
+    async def asubscribe_imageready(self, callback: Callable | None = None,
+                                    time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing image ready from {self.tel_addr}')
         return await self.subscribe('imageready', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
@@ -189,7 +201,8 @@ class Camera(TelescopeComponent):
         ret = await self.aget_value('readoutmode')
         return ret
 
-    async def asubscribe_readoutmode(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
+    async def asubscribe_readoutmode(self, callback: Callable | None = None,
+                                     time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing readoutmode from {self.tel_addr}')
         return await self.subscribe('readoutmode', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
@@ -198,7 +211,8 @@ class Camera(TelescopeComponent):
         ret = await self.aget_value('readoutmodes')
         return ret
 
-    async def asubscribe_readoutmodes(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
+    async def asubscribe_readoutmodes(self, callback: Callable | None = None,
+                                      time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing readoutmodes from {self.tel_addr}')
         return await self.subscribe('readoutmodes', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
@@ -207,7 +221,8 @@ class Camera(TelescopeComponent):
         ret = await self.aget_value('fastreadout')
         return ret
 
-    async def asubscribe_fastreadout(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
+    async def asubscribe_fastreadout(self, callback: Callable | None = None,
+                                     time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing fastreadout from {self.tel_addr}')
         return await self.subscribe('fastreadout', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
@@ -247,6 +262,17 @@ class Camera(TelescopeComponent):
         logger.debug(f'Subscribing starty from {self.tel_addr}')
         return await self.subscribe('starty', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
+    async def aget_setccdtemperature(self) -> float:
+        logger.debug(f'Getting set ccd temperature from {self.tel_addr}')
+        ret = await self.aget_value('setccdtemperature')
+        return ret
+
+    async def asubscribe_setccdtemperature(self, callback: Callable | None = None,
+                                           time_of_data_tolerance: float | None = None):
+        logger.debug(f'Subscribing set ccd temperature from {self.tel_addr}')
+        return await self.subscribe('setccdtemperature',
+                                    callback=callback,
+                                    time_of_data_tolerance=time_of_data_tolerance)
 
     async def aput_binx(self, binx: int) -> None:
         logger.debug(f'Putting binx to {self.tel_addr}')
@@ -311,4 +337,3 @@ class Camera(TelescopeComponent):
     async def aput_starty(self, starty: int) -> None:
         logger.debug(f'Putting starty to {self.tel_addr}')
         await self.aput_value('starty', StartY=starty)
-
