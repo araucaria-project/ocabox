@@ -7,7 +7,7 @@ from ob.data_colection.alpaca_api.standard_telescope_components import StandardT
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
-
+# todo może resource_manager powinien się nazywać acces_menager
 class ResourceManager(StandardTelescopeComponents, ABC):
     """
     This is the resource manager for the telescope api support modules. The alpaca api class structure has been

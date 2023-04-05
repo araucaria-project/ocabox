@@ -1,15 +1,18 @@
 import asyncio
 import logging
-from abc import ABC, abstractmethod
-from ob.data_colection.resource_manager.resource_manager import ResourceManager
+from abc import ABC
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class Command(ABC):
     _NAME = "DEFAULT"
+    _NAME_KEY = "command_name"
+    _ARGS_KEY = "args"
+    _KWARGS_KEY = "kwargs"
 
-    def __init__(self, kw_args: dict, ln: str, previous_command=None, commands: list = None, loop: asyncio.AbstractEventLoop = None, resource_manager: ResourceManager = None,
+    def __init__(self, command_dict: dict, plan_data, id_: str = None, previous_command=None,
+                 loop: asyncio.AbstractEventLoop = None,
                  **kwargs):
         if loop is None:
             try:
@@ -18,27 +21,33 @@ class Command(ABC):
                 logger.error(f"Can not find running async loop.")
                 raise  # todo może jakiś inny błąd?
         self._loop = loop
-        # todo może resource_manager powinien się nazywać acces_menager
-        self._res_m: ResourceManager = resource_manager
+        self._plan_data = plan_data
+        if id_ is None:
+            id_ = plan_data.generate_next_id()
+        self._id = id_
+        self.previous_command = previous_command
+        self._command_dict: dict = command_dict
+
+        # --- --- --- --- --- --- --- --- --- --- ---
         self._needed_modules_list = []
         self._finish_locking: asyncio.Future = None
         self._finish: asyncio.Future = None
-        self._kwargs: dict = {}
-        self.previous_command = previous_command
-        super().__init__(**kwargs)
 
-    def get_kwargs(self) -> dict:
-        """Method returns loaded kwargs"""
-        return self._kwargs
+    def get_resource_manager(self):
+        return self._plan_data.resource_manager
 
     @classmethod
     def get_name(cls) -> str:
         """Method returning a command name"""
         return cls._NAME
 
-    @abstractmethod
-    def read_kwargs(self):
-        pass
+    def get_kwargs(self) -> dict:
+        """Method returns loaded kwargs"""
+        return self._command_dict.get(self._KWARGS_KEY, {})
+
+    def get_args(self) -> list:
+        """Method returns loaded args"""
+        return self._command_dict.get(self._ARGS_KEY, {})
 
     async def a_init(self):
         self._finish_locking = self._loop.create_future()
@@ -49,3 +58,17 @@ class Command(ABC):
         if fut is not None:
             await fut
         raise RuntimeError  # todo zrobić potem jakiś lokalny błąd
+
+    @staticmethod
+    def build_command(dic, plan_data, id_: str = None, previous_command=None,
+                      loop: asyncio.AbstractEventLoop = None, **kwargs):
+        # todo pokombinować coś z __new__() w wolnej chwili
+        command_map = plan_data.map_commands
+        command_type = dic.get(Command._NAME_KEY, None)
+        if command_type and command_type in command_map:
+            command_class = command_map.get(command_type)(command_dict=dic, plan_data=plan_data, id_=id_,
+                                                          previous_command=previous_command,
+                                                          loop=loop, **kwargs)
+        else:
+            command_class = None
+        return command_class

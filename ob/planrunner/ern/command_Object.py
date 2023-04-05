@@ -1,7 +1,6 @@
 import asyncio
 import logging
-
-from ob.data_colection.resource_manager.resource_manager import ResourceManager
+from ob.planrunner.ern.Dome import Dome
 from ob.planrunner.ern.Mount import Mount
 from ob.planrunner.ern.command import Command
 
@@ -11,28 +10,33 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class CommandObject(Command):
     _NAME = "OBJECT"
 
-    def __init__(self, kw_args: dict, ln: str, previous_command=None, commands: list = None,
-                 loop: asyncio.AbstractEventLoop = None, resource_manager: ResourceManager = None, **kwargs):
-        super().__init__(kw_args=kw_args, ln=ln, previous_command=previous_command, commands=commands, loop=loop,
-                         resource_manager=resource_manager, **kwargs)
-
+    def __init__(self, command_dict: dict, plan_data, id_: str = None, previous_command=None,
+                 loop: asyncio.AbstractEventLoop = None, **kwargs):
+        super().__init__(command_dict=command_dict, plan_data=plan_data, id_=id_, previous_command=previous_command,
+                         loop=loop, **kwargs)
+        # --- --- --- --- --- --- --- --- --- --- ---
+        self._mapped_args: dict = {"ra": None, "dec": None, "object_name": None, "filter": None, "repetitions": None}
+        self._read_args(self.get_args())
         self._needed_modules_list = []
         self._create_modules_from_args()
 
-    def _create_modules_from_args(self):  # coś w stylu _write_object() z dawnego runera
-        # todo utwożyć obiekty z kwargs
-        nr = 0
-        some_module = Mount(nr=nr, ra='12.3', dec='43.54')
-        self._needed_modules_list.append(some_module)
-        nr = 0
-        some_module = Mount(nr=nr, ra='12.3', dec='43.54')
-        self._needed_modules_list.append(some_module)
-        nr = 0
-        some_module = Mount(nr=nr, ra='12.3', dec='43.54')
-        self._needed_modules_list.append(some_module)
+    def _read_args(self, args: list):
+        if len(args) > 2:
+            self._mapped_args['ra'] = args[1]
+            self._mapped_args['dec'] = args[2]
+        # todo uzupełnić
 
-    def read_kwargs(self):
-        pass
+    def _create_modules_from_args(self):
+        # todo uzupełnić, utwożyć obiekty, coś w stylu _write_object() z dawnego runera
+        nr = 0
+        some_module = Mount(nr=nr, ra='12.3', dec='43.54')
+        self._needed_modules_list.append(some_module)
+        nr = 0
+        some_module = Dome(nr=nr, ra='12.3', dec='43.54')
+        self._needed_modules_list.append(some_module)
+        nr = 0
+        some_module = Mount(nr=nr, ra='12.3', dec='43.54')  # camera powinno być
+        self._needed_modules_list.append(some_module)
 
     def _get_res(self, name: str, nr: int):
         for m in self._needed_modules_list:

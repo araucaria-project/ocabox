@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class Mount:
-    RESOURCE_NAME = ResourceManager.DOME
+    RESOURCE_NAME = ResourceManager.MOUNT
 
     def __init__(self, nr: int, ra: str, dec: str, subcommand_name: str = 'mount slew coo', **kwargs) -> None:
         self.nr: int = nr
@@ -15,7 +15,7 @@ class Mount:
         self.kwargs = kwargs
         self.ra: str = ra
         self.dec: str = dec
-        super().__init__(subcommand_name=subcommand_name, **kwargs)
+        super().__init__(**kwargs)
 
     async def wait_to_slew(self) -> bool:
         # tu czekamy na pozycję
