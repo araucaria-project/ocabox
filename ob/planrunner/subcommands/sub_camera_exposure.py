@@ -133,7 +133,8 @@ class CameraExposure(SubCommand):
             self.info_callback['stream_1'](f'No exposure type, skipping')
             logger.debug(f'No exposure type, skipping')
             return 1"""
-
+        await self.mount.aput_opencover()
+        await asyncio.sleep(15)
         self.info_callback['stream_1'](
             f'{self.id} {self.subcommand_name} {self.kwargs["type"]}'
             f' time:{self.kwargs["exp_time"]} number:{self.kwargs["exp_no"]} started')
@@ -153,6 +154,8 @@ class CameraExposure(SubCommand):
             self.info_callback['stream_1'](f'Turning off domeflat light')
             await self.mount.aput_domelamp_off()
             await asyncio.sleep(15)
+        await self.mount.aput_closecover()
+        await asyncio.sleep(15)
         self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
         self.info_callback['stream_5'](f'{self.id}')
         return 0
