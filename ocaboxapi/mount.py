@@ -18,6 +18,7 @@ class Mount(TelescopeComponent):
     tracking = OcaBoxParam(default=False, doc="Mount is tracking")
     ispulseguiding = OcaBoxParam(default=False, doc="Mount is pulseguiding")
     motorstatus = OcaBoxParam(default='', doc="Mount motorstatus")
+    commandstring = OcaBoxParam(default='', doc="Mount motorstatus")
 
     async def aget_ra(self) -> float:
         logger.debug(f'Getting mount RA from {self.tel_addr}')
@@ -103,6 +104,9 @@ class Mount(TelescopeComponent):
                                     callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
+    # TODO Problem to get with more parameters
+
+
     async def aget_motorstatus(self) -> str:
         logger.debug(f'Getting mount motorstatus from {self.tel_addr}')
         ret = await self.aget_value('commandstring', Command='MotStat', Raw=True)
@@ -112,10 +116,11 @@ class Mount(TelescopeComponent):
                                         time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing mount motorstatus from {self.tel_addr}')
         return await self.subscribe('commandstring',
-                                    Command='MotStat',
-                                    Raw=True,
                                     callback=callback,
-                                    time_of_data_tolerance=time_of_data_tolerance)
+                                    time_of_data_tolerance=time_of_data_tolerance,
+                                    Command='MotStat',
+                                    Raw=True)
+
 
     async def aput_slewtocoo(self, ra: float, dec: float) -> None:
         logger.debug(f'Putting slew coo to {self.tel_addr}')
