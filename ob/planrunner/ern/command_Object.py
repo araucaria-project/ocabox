@@ -63,18 +63,18 @@ class CommandObject(Command):
 
         try:
             #  --------- pierwsza część ----------
-            async with self._res_m.get_resource(self._res_m.MOUNT), \
-                    self._res_m.get_resource(self._res_m.DOME):
+            async with self.res_mngr.get_resource(self.res_mngr.MOUNT), \
+                    self.res_mngr.get_resource(self.res_mngr.DOME):
 
-                await self._get_res(self._res_m.MOUNT, nr=0).go_to_position()
-                await self._get_res(self._res_m.DOME, nr=0).go_to_position()
+                await self._get_res(self.res_mngr.MOUNT, nr=0).go_to_position()
+                await self._get_res(self.res_mngr.DOME, nr=0).go_to_position()
 
-                await self._get_res(self._res_m.DOME, nr=0).wait_to_slew()
-                await self._get_res(self._res_m.MOUNT, nr=0).wait_to_slew()
+                await self._get_res(self.res_mngr.DOME, nr=0).wait_to_slew()
+                await self._get_res(self.res_mngr.MOUNT, nr=0).wait_to_slew()
 
             #  ---------  druga część ----------
-            async with self._res_m.get_resource(self._res_m.CAMERA):
-                self._get_res(self._res_m.CAMERA, nr=0).take_photo()
+            async with self.res_mngr.get_resource(self.res_mngr.CAMERA):
+                self._get_res(self.res_mngr.CAMERA, nr=0).take_photo()
 
                 self._unlock_next_command()  # unlock faster - elemęty z pierwszej części
                 # po zrobienu zdjęcia można ruszać kopułą więc zgłaszamy _unlock_next_command() i następna komęda
@@ -83,7 +83,7 @@ class CommandObject(Command):
 
                 # jeśli nieda się stwożyć takiej metody jak poniżej to cały ten algorytm będzie bezużyteczny tutaj
                 # ale może mieć zastosowanie np przy Darkach albo innych komędach
-                self._get_res(self._res_m.CAMERA, nr=0).take_photo()  # nie wiem czy jest taka metoda
+                self._get_res(self.res_mngr.CAMERA, nr=0).take_photo()  # nie wiem czy jest taka metoda
 
         finally:
             self._unlock_next_command()  # unlock in the end

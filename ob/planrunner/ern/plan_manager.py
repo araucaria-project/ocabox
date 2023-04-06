@@ -1,24 +1,23 @@
 import asyncio
 import logging
-from typing import List, Any, Optional
+from typing import Optional, Dict
 
 from pyaraucaria.obs_plan.obs_plan_parser import ObsPlanParser
 
 from ob.planrunner.ern.command import Command
-# from ob.planrunner.ern.command_Object import CommandObject
-# from ob.planrunner.ern.command_Sequence import CommandSequence
 from ob.planrunner.ern.plan_data import PlanData
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class PlanManager:
-    def __init__(self):
-        super().__init__()
-        self.parsed_plan: List[Any] = []
-        self.raw_plan: Optional[str] = None
-        self._obs_structure = None
-        self._plans = {}
+    def __init__(self, loop: asyncio.AbstractEventLoop = None, **kwargs):
+        super().__init__(**kwargs)
+        self._loop = loop
+        self._set_loop()
+        self._plans: Dict[str, Command] = {}
+        self._plan_runner_task = asyncio.Task = None
+        self._running_plan_id: str = ""
 
     @staticmethod
     def _parse_plan(raw_plan: str):
@@ -33,22 +32,22 @@ class PlanManager:
             logger.error(f"Unexpected error when parse plan: {e}")
         return None
 
-    def load_plan(self, plan_id: str, raw_plan: str, overwrite: bool = False) -> None:
-        self.raw_plan = raw_plan
+    def upload_plan(self, plan_id: str, raw_plan: str, overwrite: bool = False) -> None:
         parsed_plan = self._parse_plan(raw_plan)
-        self.parsed_plan = parsed_plan
-        if parsed_plan is not None:
-            try:
-                # np = NightPlan(nightplan_id, nightplan_dict, self)
-                np = PlanManager.from_dict(parsed_plan)
-                self._plans[plan_id] = np
-            except CantOverideNightPlanError:
-                logger.error(f'Cannot overwrite nightplan {plan_id}, please select overwrite=True')
-        else:
+        if parsed_plan is None:
             logger.error(f'Plan is wrong. Check the syntax.')
+            return
+        if not overwrite and plan_id in self._plans:
+            logger.warning(f"Plan with given id already exists.")
+            return
+        if self._running_plan_id == plan_id:
+            logger.warning(f"Can not update plan witch id: {plan_id} because is actually running")
+            return
+        np = PlanManager.from_dict(parsed_plan)
+        self._plans[plan_id] = np
 
     @classmethod
-    def from_dict(cls, dic: dict, loop):
+    def from_dict(cls, dic: dict, loop=None):
         # to jest metoda startowa każda klasa command będzie miała takąsamą u siebie w sierodku
 
         # ------------ część do usunięcia gdy parser zostanie poprawiony ------------
@@ -60,10 +59,67 @@ class PlanManager:
         plans = Command.build_command(dic, PlanData(), loop=loop)
         return plans
 
+    def get_plan_structure(self, id_: str) -> Optional[Command]:
+        try:
+            return self._plans[id_]
+        except LookupError:
+            logger.info(f'There is no plan with id: {id_}')
+        return None
 
-class CantOverideNightPlanError(Exception):
-    pass
+    def delete_plan(self, id_: str) -> None:
+        """
+        Delete loaded plan from observation plan.
 
+        :param id_: plan id (default: julian night date)
+        """
+        if self._running_plan_id == id_:
+            logger.warning(f"Can not delete plan witch id: {id_} because is actually running")
+            return
+        if id_ in self._plans.keys():
+            del self._plans[id_]
+            logger.info(f"plan witch id: {id_} was successfully removed")
 
-class SequenceTreeError(Exception):
-    pass
+    async def run_plan(self, plan_id: str, step_id: str = None) -> None:
+        if not self.is_stopped():
+            logger.info(f"Can not run plan with id: {plan_id} because some plan is already running. "
+                        f"It will have to be stopped first")
+            return
+
+        plan = self.get_plan_structure(plan_id)
+        if plan is None:
+            logger.info(f"Can not run plan with id: {plan_id}, Can not find it. it was not loaded")
+            return
+
+        self._running_plan_id = plan_id
+        self._plan_runner_task = self._loop.create_task(self._main(plan=plan, step_id=step_id))
+
+    def stop_plan(self) -> None:
+        if not self.is_stopped() and not self._plan_runner_task.done():
+            self._plan_runner_task.cancel()
+            self._running_plan_id = ""
+
+    def is_stopped(self):
+        """
+        Method return false if plan runer is actually running.
+
+        :return: False if running
+        """
+        if self._plan_runner_task and self._plan_runner_task in asyncio.all_tasks(self._loop):
+            return False
+        return True
+
+    def _set_loop(self):
+        """
+
+        :raise CommunicationRuntimeError:
+        """
+        if not self._loop:
+            try:
+                self._loop = asyncio.get_running_loop()
+            except RuntimeError:
+                logger.error(f"{self}: Can not get current async loop, something goes wrong")
+                raise  # todo dorobić błąd
+
+    async def _main(self, plan, step_id):
+
+        pass

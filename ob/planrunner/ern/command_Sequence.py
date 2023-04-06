@@ -32,3 +32,5 @@ class CommandSequence(Command):
 
     def get_subcommands(self) -> List[Command]:
         return self._subcommands
+
+    # todo ostatni z sekwencji musi ustawić flage zakończenia na sekwencji - dorobić taki pechamizm gdzieś potem

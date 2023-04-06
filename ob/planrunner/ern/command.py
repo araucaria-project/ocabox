@@ -14,12 +14,6 @@ class Command(ABC):
     def __init__(self, command_dict: dict, plan_data, id_: str = None, previous_command=None,
                  loop: asyncio.AbstractEventLoop = None,
                  **kwargs):
-        if loop is None:
-            try:
-                loop = asyncio.get_running_loop()
-            except RuntimeError:
-                logger.error(f"Can not find running async loop.")
-                raise  # todo może jakiś inny błąd?
         self._loop = loop
         self._plan_data = plan_data
         if id_ is None:
@@ -33,7 +27,8 @@ class Command(ABC):
         self._finish_locking: asyncio.Future = None
         self._finish: asyncio.Future = None
 
-    def get_resource_manager(self):
+    @property
+    def res_mngr(self):
         return self._plan_data.resource_manager
 
     @classmethod
@@ -50,6 +45,12 @@ class Command(ABC):
         return self._command_dict.get(self._ARGS_KEY, {})
 
     async def a_init(self):
+        if self._loop is None:
+            try:
+                self._loop = asyncio.get_running_loop()
+            except RuntimeError:
+                logger.error(f"Can not find running async loop.")
+                raise  # todo może jakiś inny błąd?
         self._finish_locking = self._loop.create_future()
         self._finish = self._loop.create_future()
 
