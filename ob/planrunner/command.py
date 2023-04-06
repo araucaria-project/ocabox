@@ -106,8 +106,7 @@ class Command(AbstractSequence):
                                        elevation=OCA['elevation'],
                                        epoch='2000')
             sub = DomeSlew(f'{self.id}_{self.numb(id_next)}',
-                           self,
-                           az=deg_str_to_deg(dome_az))
+                           self)
             self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
             id_next += 1
         else:
@@ -183,6 +182,7 @@ class Command(AbstractSequence):
                                      self,
                                      type='flat',
                                      light=True,
+                                     domeflatlight=True,
                                      exp_no=int(par[0]),
                                      exp_time=float(par[2]),
                                      obj_name='',

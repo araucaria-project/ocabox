@@ -112,6 +112,7 @@ class CameraExposure(SubCommand):
 
     async def arun(self, step_id: str or None = None) -> int:
         logger.debug(f'{self.id} {self.subcommand_name} is started')
+        """
         if self.kwargs["type"] in ['science', 'flat']:
             self.info_callback['stream_1'](f'Opening cover')
             logger.debug(f'Opening cover')
@@ -131,10 +132,15 @@ class CameraExposure(SubCommand):
         else:
             self.info_callback['stream_1'](f'No exposure type, skipping')
             logger.debug(f'No exposure type, skipping')
-            return 1
+            return 1"""
+
         self.info_callback['stream_1'](
             f'{self.id} {self.subcommand_name} {self.kwargs["type"]}'
             f' time:{self.kwargs["exp_time"]} number:{self.kwargs["exp_no"]} started')
+        if 'domeflatlight' in self.kwargs.keys():
+            self.info_callback['stream_1'](f'Turning on domeflat light')
+            await self.mount.aput_domelamp_on()
+            await asyncio.sleep(10)
         for sub in range(1, self.kwargs["exp_no"]+1):
             self.info_callback['stream_1'](f'Subexp {sub}/{self.kwargs["exp_no"]} started')
             await self.camera.aput_startexposure(self.kwargs["exp_time"], self.kwargs["light"])
@@ -143,6 +149,10 @@ class CameraExposure(SubCommand):
             await asyncio.sleep(1)
             await self._wait_for_save_fits(sub)
         await asyncio.sleep(5)
+        if 'domeflatlight' in self.kwargs.keys():
+            self.info_callback['stream_1'](f'Turning off domeflat light')
+            await self.mount.aput_domelamp_off()
+            await asyncio.sleep(10)
         self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
         self.info_callback['stream_5'](f'{self.id}')
         return 0
