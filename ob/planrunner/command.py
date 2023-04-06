@@ -149,12 +149,12 @@ class Command(AbstractSequence):
         dome_az = 0.0
         dome_flat_az = dome_az + 180.0
         dome_flat_alt = 15.0
-        """
+
         sub = DomeSlew(f'{self.id}_{self.numb(id_next)}',
                        self,
                        az=dome_az)
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-        id_next += 1"""
+        id_next += 1
 
         sub = MountSlewToAltAz(f'{self.id}_{self.numb(id_next)}',
                                self,

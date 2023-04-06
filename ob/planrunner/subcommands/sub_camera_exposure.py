@@ -140,7 +140,7 @@ class CameraExposure(SubCommand):
         if 'domeflatlight' in self.kwargs.keys():
             self.info_callback['stream_1'](f'Turning on domeflat light')
             await self.mount.aput_domelamp_on()
-            await asyncio.sleep(10)
+            await asyncio.sleep(15)
         for sub in range(1, self.kwargs["exp_no"]+1):
             self.info_callback['stream_1'](f'Subexp {sub}/{self.kwargs["exp_no"]} started')
             await self.camera.aput_startexposure(self.kwargs["exp_time"], self.kwargs["light"])
@@ -152,7 +152,7 @@ class CameraExposure(SubCommand):
         if 'domeflatlight' in self.kwargs.keys():
             self.info_callback['stream_1'](f'Turning off domeflat light')
             await self.mount.aput_domelamp_off()
-            await asyncio.sleep(10)
+            await asyncio.sleep(15)
         self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
         self.info_callback['stream_5'](f'{self.id}')
         return 0
