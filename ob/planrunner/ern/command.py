@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from abc import ABC
+from abc import ABC, abstractmethod
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -30,6 +30,10 @@ class Command(ABC):
     @property
     def res_mngr(self):
         return self._plan_data.resource_manager
+
+    @property
+    def tsk_mngr(self):
+        return self._plan_data.task_mngr
 
     @classmethod
     def get_name(cls) -> str:
@@ -73,3 +77,7 @@ class Command(ABC):
         else:
             command_class = None
         return command_class
+
+    @abstractmethod
+    async def run(self):
+        pass

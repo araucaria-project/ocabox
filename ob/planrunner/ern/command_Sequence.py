@@ -34,3 +34,14 @@ class CommandSequence(Command):
         return self._subcommands
 
     # todo ostatni z sekwencji musi ustawić flage zakończenia na sekwencji - dorobić taki pechamizm gdzieś potem
+
+    async def run(self):
+        await self.a_init()
+        if self._loop is None:
+            # todo  ustawić status na skończony
+            return
+        tasks = []
+        for s in self.get_subcommands():
+            t = self._loop.create_task(s.run())
+            tasks.append(t)
+            self.tsk_mngr.put_task(t)

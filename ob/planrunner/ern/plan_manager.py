@@ -1,6 +1,7 @@
 import asyncio
+import dataclasses
 import logging
-from typing import Optional, Dict
+from typing import Optional, Dict, Tuple, List
 
 from pyaraucaria.obs_plan.obs_plan_parser import ObsPlanParser
 
@@ -43,7 +44,7 @@ class PlanManager:
         if self._running_plan_id == plan_id:
             logger.warning(f"Can not update plan witch id: {plan_id} because is actually running")
             return
-        np = PlanManager.from_dict(parsed_plan)
+        np = PlanManager.from_dict(parsed_plan, loop=self._loop)
         self._plans[plan_id] = np
 
     @classmethod
@@ -56,7 +57,8 @@ class PlanManager:
         print(dic)
         # todo przerobić jakoś ten parser żeby zwracał standardowe klucze dla wszystkich poleciń. Dla SEQUENCE też:
         #  zamiast 'all_commands':[] to albo w argsach albo 'subcomands':[]
-        plans = Command.build_command(dic, PlanData(), loop=loop)
+        task_mngr = PlanTaskManager()
+        plans = Command.build_command(dic, PlanData(task_mngr=task_mngr), loop=loop)
         return plans
 
     def get_plan_structure(self, id_: str) -> Optional[Command]:
@@ -123,3 +125,39 @@ class PlanManager:
     async def _main(self, plan, step_id):
 
         pass
+
+
+@dataclasses.dataclass
+class PlanTaskManager:
+    tasks: List[Tuple[asyncio.Task, bool]] = None
+    max_tasks: int = 5  # todo wziąść potem to z configa
+    _future_full_list: Optional[asyncio.Future] = None
+
+    def __post_init__(self):
+        if self.tasks is None:
+            self.tasks = []
+
+    async def put_task(self, t):
+        if not self._has_space():
+            if self._future_full_list is not None:
+                await self._future_full_list
+            else:
+                logger.error(f"For unexplained reasons, there is no Future object")
+        self.tasks.append(t)
+        if not self._has_space() and self._future_full_list is None:
+            self._future_full_list = asyncio.get_running_loop().create_future()
+
+    async def pop_task(self, t):
+        if t in self.tasks:
+            fut = self._future_full_list
+            if fut is not None:
+                self._future_full_list = None
+                if not fut.done():
+                    fut.set_result(True)
+            self.tasks.remove(t)
+        else:
+            #  it should never show up
+            logger.error(f"an attempt to delete a task is not allowed. The specified task is not in the list.")
+
+    def _has_space(self):
+        return len(self.tasks) < self.max_tasks
