@@ -23,9 +23,9 @@ class DomeSlew(SubCommand):
         while True:
             await self.subcommand_timeout(t_start)
             dome_az = self.dome.azimuth
-            dome_slewing = self.dome.slewing
+            # dome_slewing = self.dome.slewing
             await asyncio.sleep(1)
-            if dome_az and dome_slewing==False:
+            if dome_az: # and dome_slewing==False:
                 if (abs(azimuth - dome_az))<2.0:
                     logger.debug(f'{self.id} {self.subcommand_name} is done')
                     self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
