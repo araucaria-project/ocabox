@@ -81,7 +81,8 @@ class CameraExposure(SubCommand):
                              f'{self.folder}',
                              f'{self.telescope.id}c_{jd_oca.split(".")[0]}_{jd_oca.split(".")[1]}',
                              header,
-                             overwrite=True)
+                             overwrite=True,
+                             dtyp='int16')
         logger.debug(f'{self.id} {self.subcommand_name} is done')
         self.info_callback['stream_1'](f'Subexp {sub}/{self.kwargs["exp_no"]} done')
 
