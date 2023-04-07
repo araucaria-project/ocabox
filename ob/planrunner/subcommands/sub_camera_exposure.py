@@ -76,7 +76,20 @@ class CameraExposure(SubCommand):
                     ccd_binx=str(self.camera.binx),
                     ccd_biny=str(self.camera.biny),
                     read_mod=str(self.camera.readoutmode))
-
+        #f = open(f'{self.folder}{self.telescope.id}c_{jd_oca.split(".")[0]}_{jd_oca.split(".")[1]}.txt', "a")
+        f = open(f'{self.folder}camera_log.txt', "a")
+        f.write(f'FILTER: {self.kwargs["filter"]}')
+        f.write(f' TIME: {self.kwargs["exp_time"]}')
+        f.write(' MIN: ')
+        f.write(str(min(min(array))))
+        f.write(' MAX: ')
+        f.write(str(max(max(array))))
+        f.write('\n')
+        #f.write('\nMIN')
+        #f.write(str(min(array)))
+        #f.write('\nMAX')
+        #f.write(str(max(array)))
+        #f.close()
         save_fits_from_array(array,
                              f'{self.folder}',
                              f'{self.telescope.id}c_{jd_oca.split(".")[0]}_{jd_oca.split(".")[1]}',
