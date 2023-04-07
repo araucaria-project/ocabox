@@ -6,6 +6,8 @@ from ob.planrunner.subcommands.sub_mount_slew_to_alt_az import MountSlewToAltAz
 from ob.planrunner.subcommands.sub_dome_slew import DomeSlew
 from ob.planrunner.subcommands.sub_change_filter import ChangeFilter
 from ob.planrunner.subcommands.sub_camera_exposure import CameraExposure
+from ob.planrunner.subcommands.sub_tel_opencover import TelOpencover
+from ob.planrunner.subcommands.sub_dome_screenlight import DomeScreenLight
 from pyaraucaria.coordinates import ra_dec_2_az_alt, deg_str_to_deg
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -164,6 +166,14 @@ class Command(AbstractSequence):
                                epoch='2000')
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
 
+        id_next += 1
+        sub = TelOpencover(f'{self.id}_{self.numb(id_next)}', self, open=True)
+        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+
+        id_next += 1
+        sub = DomeScreenLight(f'{self.id}_{self.numb(id_next)}', self, light=True)
+        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+
         # Camera exposure
         id_next += 1
         if 'seq' in self.kwargs:
@@ -194,7 +204,13 @@ class Command(AbstractSequence):
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
 
-        # TODO turn off domeflat lamp
+        id_next += 1
+        sub = TelOpencover(f'{self.id}_{self.numb(id_next)}', self, open=False)
+        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+
+        id_next += 1
+        sub = DomeScreenLight(f'{self.id}_{self.numb(id_next)}', self, light=False)
+        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
 
     def _write_focus(self):
         # faster readmode, fits not saved on Perun

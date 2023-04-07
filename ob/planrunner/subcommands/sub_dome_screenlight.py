@@ -1,0 +1,38 @@
+import asyncio
+import logging
+from ob.planrunner.subcommand import SubCommand
+
+logger = logging.getLogger(__name__.rsplit('.')[-1])
+
+
+class DomeScreenLight(SubCommand):
+
+
+    def __init__(self, id: str, parent: 'Command', subcommand_name: str = 'dome screenlight', **kwargs) -> None:
+        self.subcommand_name = subcommand_name
+        self.telescope = parent.telescope
+        self.id = id
+        self.mount = self.telescope.get_mount('mount')
+        self.kwargs = kwargs
+        self.ra_now: str or None = None
+        self.dec_now: str or None = None
+        super().__init__(id=self.id, parent=parent, subcommand_name=subcommand_name, **kwargs)
+
+    async  def _wait_for_turn_on_off(self):
+        await asyncio.sleep(15)
+        logger.debug(f'{self.id} {self.subcommand_name} is done')
+        self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} is done')
+
+    async def arun(self, step_id: str or None = None) -> int:
+        if 'light' in self.kwargs.keys():
+            if self.kwargs['light']==True:
+                self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} turning on dome screen light')
+                logger.debug(f'{self.id} {self.subcommand_name} turning on dome screen light')
+                await self.mount.aput_domelamp_on()
+            if self.kwargs['light']==False:
+                self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} turning off dome screen light')
+                logger.debug(f'{self.id} {self.subcommand_name} turning off dome screen light')
+                await self.mount.aput_domelamp_off()
+                self._wait_for_turn_on_off()
+        await asyncio.sleep(5)
+        return 0
