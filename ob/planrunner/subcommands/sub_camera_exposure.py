@@ -49,15 +49,13 @@ class CameraExposure(SubCommand):
         OCA = {'latitude': '-24:35:53', 'longitude': '-70:11:47', 'elevation': '2817'}
 
         ZB08_FILT = {'u': 11, 'g': 12, 'r': 13, 'i': 14, 'z': 15, 'B': 16, 'V': 17, 'Ic': 18}
-        try:
-            fil_wh_pos = int(self.kwargs["filter"])
-        except ValueError:
-            if self.kwargs["filter"] in ZB08_FILT.keys():
-                fil_wh_pos = ZB08_FILT[self.kwargs["filter"]]
-            elif self.kwargs["filter"]=='':
-                fil_wh_pos = ''
-            else:
-                fil_wh_pos = self.filter.position
+
+        if self.kwargs["filter"] in ZB08_FILT.keys():
+            fil_wh_pos = ZB08_FILT[self.kwargs["filter"]]
+        elif self.kwargs["filter"] == '':
+            fil_wh_pos = ''
+        else:
+            fil_wh_pos = self.kwargs["filter"]
 
         header = fits_header(
                     obs_lat=OCA['latitude'],

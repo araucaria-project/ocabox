@@ -120,11 +120,7 @@ class Command(AbstractSequence):
         id_next += 1
         # Camera exposure
         if 'seq' in self.kwargs:
-            # TODO move to abstract sequence
-            if str(self.kwargs['seq']).find(','):
-                seq_list = list(self.kwargs['seq'].split(','))
-            else:
-                seq_list = list(self.kwargs['seq'])
+            seq_list = self._split_seq(self.kwargs['seq'])
             for n in seq_list:
                 par = list(n.split('/'))
                 sub = ChangeFilter(f'{self.id}_{self.numb(id_next)}',
@@ -185,11 +181,7 @@ class Command(AbstractSequence):
         # Camera exposure
         id_next += 1
         if 'seq' in self.kwargs:
-
-            if str(self.kwargs['seq']).find(','):
-                seq_list = list(self.kwargs['seq'].split(','))
-            else:
-                seq_list = list(self.kwargs['seq'])
+            seq_list = self._split_seq(self.kwargs['seq'])
             for n in seq_list:
                 par = list(n.split('/'))
                 sub = ChangeFilter(f'{self.id}_{self.numb(id_next)}',
@@ -234,11 +226,7 @@ class Command(AbstractSequence):
         # Camera exposure
         id_next += 1
         if 'seq' in self.kwargs:
-
-            if str(self.kwargs['seq']).find(','):
-                seq_list = list(self.kwargs['seq'].split(','))
-            else:
-                seq_list = list(self.kwargs['seq'])
+            seq_list = self._split_seq(self.kwargs['seq'])
             for n in seq_list:
                 par = list(n.split('/'))
                 sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
@@ -265,11 +253,7 @@ class Command(AbstractSequence):
         # Camera exposure
         id_next += 1
         if 'seq' in self.kwargs:
-
-            if str(self.kwargs['seq']).find(','):
-                seq_list = list(self.kwargs['seq'].split(','))
-            else:
-                seq_list = list(self.kwargs['seq'])
+            seq_list = self._split_seq(self.kwargs['seq'])
             for n in seq_list:
                 par = list(n.split('/'))
                 sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
@@ -312,11 +296,7 @@ class Command(AbstractSequence):
         # Camera exposure
         id_next += 1
         if 'seq' in self.kwargs:
-
-            if str(self.kwargs['seq']).find(','):
-                seq_list = list(self.kwargs['seq'].split(','))
-            else:
-                seq_list = list(self.kwargs['seq'])
+            seq_list = self._split_seq(self.kwargs['seq'])
             for n in seq_list:
                 par = list(n.split('/'))
                 sub = ChangeFilter(f'{self.id}_{self.numb(id_next)}',
@@ -344,6 +324,16 @@ class Command(AbstractSequence):
 
     def _write_marker(self):
         pass
+
+    @staticmethod
+    def _split_seq(seq):
+        if str(seq).find(','):
+            seq_list = list(seq.split(','))
+        # elif str(seq).find('%'):
+        #    seq_list = list(seq.split('%'))
+        else:
+            seq_list = list(seq)
+        return seq_list
 
     async def arun(self, step_id: str or None = None) -> int:
         self.info_callback['stream_1'](f'Command {self.id} {self.command_name} started')
