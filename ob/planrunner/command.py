@@ -6,7 +6,7 @@ from ob.planrunner.subcommands.sub_mount_slew_to_alt_az import MountSlewToAltAz
 from ob.planrunner.subcommands.sub_dome_slew import DomeSlew
 from ob.planrunner.subcommands.sub_change_filter import ChangeFilter
 from ob.planrunner.subcommands.sub_camera_exposure import CameraExposure
-from ob.planrunner.subcommands.sub_tel_opencover import TelOpencover
+from ob.planrunner.subcommands.sub_mirror_cover import MirrorCover
 from ob.planrunner.subcommands.sub_dome_screenlight import DomeScreenLight
 from pyaraucaria.coordinates import ra_dec_2_az_alt, deg_str_to_deg
 
@@ -114,6 +114,10 @@ class Command(AbstractSequence):
         else:
             pass
 
+        sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=True)
+        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+
+        id_next += 1
         # Camera exposure
         if 'seq' in self.kwargs:
             # TODO move to abstract sequence
@@ -138,9 +142,14 @@ class Command(AbstractSequence):
                                      obj_name=obj_name,
                                      req_ra=req_ra,
                                      req_dec=req_dec,
-                                     epoch='2000')
+                                     epoch='2000',
+                                     filter=par[1]
+                                     )
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
+
+        sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=False)
+        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
 
     def _write_domeflat(self):
         id_next = 0
@@ -149,7 +158,6 @@ class Command(AbstractSequence):
         # TODO turn on domeflat lamp, set brightness (value also from some config? or kwarg?)
         # TODO get Alt Az domeflat position from some config
         dome_az = 0.0
-        dome_flat_az = dome_az + 180.0
         dome_flat_alt = 15.0
 
         sub = DomeSlew(f'{self.id}_{self.numb(id_next)}',
@@ -167,11 +175,11 @@ class Command(AbstractSequence):
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
 
         id_next += 1
-        sub = TelOpencover(f'{self.id}_{self.numb(id_next)}', self, open=True)
+        sub = DomeScreenLight(f'{self.id}_{self.numb(id_next)}', self, light=True)
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
 
         id_next += 1
-        sub = DomeScreenLight(f'{self.id}_{self.numb(id_next)}', self, light=True)
+        sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=True)
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
 
         # Camera exposure
@@ -199,18 +207,19 @@ class Command(AbstractSequence):
                                      obj_name='',
                                      req_ra='',
                                      req_dec='',
-                                     epoch='2000'
+                                     epoch='2000',
+                                     filter=par[1]
                                      )
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
 
-        id_next += 1
-        sub = TelOpencover(f'{self.id}_{self.numb(id_next)}', self, open=False)
+        sub = DomeScreenLight(f'{self.id}_{self.numb(id_next)}', self, light=False)
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
 
         id_next += 1
-        sub = DomeScreenLight(f'{self.id}_{self.numb(id_next)}', self, light=False)
+        sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=False)
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+
 
     def _write_focus(self):
         # faster readmode, fits not saved on Perun
@@ -218,6 +227,9 @@ class Command(AbstractSequence):
 
     def _write_dark(self):
         id_next = 0
+
+        sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=False)
+        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
 
         # Camera exposure
         id_next += 1
@@ -238,13 +250,17 @@ class Command(AbstractSequence):
                                      obj_name='',
                                      req_ra='',
                                      req_dec='',
-                                     epoch='2000'
+                                     epoch='2000',
+                                     filter=''
                                      )
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
 
     def _write_zero(self):
         id_next = 0
+
+        sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=False)
+        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
 
         # Camera exposure
         id_next += 1
@@ -265,7 +281,8 @@ class Command(AbstractSequence):
                                      obj_name='',
                                      req_ra='',
                                      req_dec='',
-                                     epoch='2000'
+                                     epoch='2000',
+                                     filter=''
                                      )
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
@@ -286,6 +303,10 @@ class Command(AbstractSequence):
         sub = DomeSlew(f'{self.id}_{self.numb(id_next)}',
                        self,
                        az=deg_str_to_deg(self.kwargs['az']))
+        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+
+        id_next += 1
+        sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=True)
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
 
         # Camera exposure
@@ -312,11 +333,14 @@ class Command(AbstractSequence):
                                      obj_name='',
                                      req_ra='',
                                      req_dec='',
-                                     epoch='2000'
+                                     epoch='2000',
+                                     filter=par[1]
                                      )
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
 
+        sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=False)
+        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
 
     def _write_marker(self):
         pass

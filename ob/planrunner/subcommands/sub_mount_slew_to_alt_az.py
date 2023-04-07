@@ -7,7 +7,7 @@ import time
 
 class MountSlewToAltAz(SubCommand):
 
-    def __init__(self, id: str, parent: 'Command', subcommand_name: str = 'mount slew to alt az', **kwargs) -> None:
+    def __init__(self, id: str, parent: 'Command', subcommand_name: str = 'mount slew altaz', **kwargs) -> None:
         self.subcommand_name = subcommand_name
         self.telescope = parent.telescope
         self.id = id
@@ -47,12 +47,13 @@ class MountSlewToAltAz(SubCommand):
             return 1
         if self.alt > 0:
             await self.mount.aput_tracking(False)
-            # await self.mount.aput_unpark()
             await self.mount.aput_slewtoaltaz_async(self.az, self.alt)
             await self.mount.aput_tracking(False)
             await self._wait_to_slew()
-            await self.mount.aput_tracking(self.kwargs["tracking"])
             await asyncio.sleep(5)
+            if "tracking" in self.kwargs.keys():
+                await self.mount.aput_tracking(self.kwargs["tracking"])
+                self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} tracking={self.kwargs["tracking"]}')
             return 0
         else:
             return 1

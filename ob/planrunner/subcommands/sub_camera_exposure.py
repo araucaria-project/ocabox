@@ -48,6 +48,17 @@ class CameraExposure(SubCommand):
         # TODO This OCA should be taken from settings
         OCA = {'latitude': '-24:35:53', 'longitude': '-70:11:47', 'elevation': '2817'}
 
+        ZB08_FILT = {'u': 11, 'g': 12, 'r': 13, 'i': 14, 'z': 15, 'B': 16, 'V': 17, 'Ic': 18}
+        try:
+            fil_wh_pos = int(self.kwargs["filter"])
+        except ValueError:
+            if self.kwargs["filter"] in ZB08_FILT.keys():
+                fil_wh_pos = ZB08_FILT[self.kwargs["filter"]]
+            elif self.kwargs["filter"]=='':
+                fil_wh_pos = ''
+            else:
+                fil_wh_pos = self.filter.position
+
         header = fits_header(
                     obs_lat=OCA['latitude'],
                     parsed_obs_lat=str(parse_deg_or_dms(OCA['latitude'])),
@@ -68,7 +79,7 @@ class CameraExposure(SubCommand):
                     rotator_pos=str(self.rotator.position),
                     obs_type=str(self.kwargs['type']),
                     object=str(self.kwargs["obj_name"]),
-                    filter=str(self.filter.position),
+                    filter=str(fil_wh_pos),
                     req_exp=str(self.kwargs["exp_time"]),
                     cam_exp=str(self.kwargs["exp_time"]),
                     ccd_name=str(self.camera.name),
