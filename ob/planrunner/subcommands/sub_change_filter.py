@@ -38,7 +38,12 @@ class ChangeFilter(SubCommand):
             else:
                 self.info_callback['stream_1'](
                     f'Filter index{self.kwargs["filter"]} is wrong, {self.parent.id} skipping')
+                self.info_callback['stream_5'](f'{self.id}')
                 return 1
+        if self.fil_wh_pos==self.filterwheel.position:
+            self.info_callback['stream_1'](f'No need to change filter - skipping')
+            self.info_callback['stream_5'](f'{self.id}')
+            return 0
         self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} {self.kwargs["filter"]} started')
         await self.filterwheel.aput_position(self.fil_wh_pos)
         await self._wait_to_move()
