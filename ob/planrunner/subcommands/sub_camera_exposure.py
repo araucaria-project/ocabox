@@ -76,26 +76,32 @@ class CameraExposure(SubCommand):
                     ccd_binx=str(self.camera.binx),
                     ccd_biny=str(self.camera.biny),
                     read_mod=str(self.camera.readoutmode))
-        #f = open(f'{self.folder}{self.telescope.id}c_{jd_oca.split(".")[0]}_{jd_oca.split(".")[1]}.txt', "a")
+
+        file_name = f'{self.telescope.id}c_{jd_oca.split(".")[0]}_{jd_oca.split(".")[1]}'
+
+        # Camra Log
         f = open(f'{self.folder}camera_log.txt', "a")
         f.write(f'Date:{datetime.utcnow()}')
         f.write(f' Type:{self.kwargs["type"]}')
         f.write(f' Object:{self.kwargs["obj_name"]}')
         f.write(f' Filter:{self.kwargs["filter"]}')
         f.write(f' Exp-time:{self.kwargs["exp_time"]}')
+        mi = []
+        ma = []
+        for n in array:
+            mi.append(min(n))
+            ma.append(max(n))
         f.write(' Min:')
-        f.write(str(min(min(array))))
+        f.write(str(min(mi)))
         f.write(' Max:')
-        f.write(str(max(max(array))))
+        f.write(str(max(ma)))
+        f.write(f' File-name:{file_name}')
         f.write('\n')
-        #f.write('\nMIN')
-        #f.write(str(min(array)))
-        #f.write('\nMAX')
-        #f.write(str(max(array)))
-        #f.close()
+        f.close()
+
         save_fits_from_array(array,
                              f'{self.folder}',
-                             f'{self.telescope.id}c_{jd_oca.split(".")[0]}_{jd_oca.split(".")[1]}',
+                             file_name,
                              header,
                              overwrite=True,
                              dtyp='sideint16')
