@@ -34,6 +34,7 @@ class Camera(TelescopeComponent):
     numy = OcaBoxParam(default=0, doc="Camera numy")
     startx = OcaBoxParam(default=0, doc="Camera startx")
     starty = OcaBoxParam(default=0, doc="Camera starty")
+    imagearrayvariant = OcaBoxParam(default=[0], doc="Camera image array variant")
 
 
     camerastate_to_code = {
@@ -181,7 +182,12 @@ class Camera(TelescopeComponent):
                                     callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_imagearray(self) -> List[int]:
+    async def aget_imagearrayvariant(self) -> List[List[int]]:
+        logger.debug(f'Getting imagearray variant from {self.tel_addr}')
+        ret = await self.aget_value('imagearrayvariant', request_timeout=time.time() + 600)
+        return ret
+
+    async def aget_imagearray(self) -> List[List[int]]:
         logger.debug(f'Getting imagearray from {self.tel_addr}')
         ret = await self.aget_value('imagearray', request_timeout=time.time() + 600)
         return ret

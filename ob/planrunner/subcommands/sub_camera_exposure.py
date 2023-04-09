@@ -40,7 +40,8 @@ class CameraExposure(SubCommand):
                         f'Folder creation failed, please make folder /home/{self.user}/Desktop/fits_{self.telescope.id}')
 
     async def _wait_for_save_fits(self, sub: int):
-        array = await self.camera.aget_imagearray()
+        #array = await self.camera.aget_imagearray()
+        array = await self.camera.aget_imagearrayvariant()
 
         jd = datetime_to_julian(str(datetime.utcnow()))
         jd_oca = f"{(jd - 2460000):010.5f}"
