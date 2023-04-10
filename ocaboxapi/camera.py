@@ -18,7 +18,7 @@ class Camera(TelescopeComponent):
     camerastate = OcaBoxParam(default=0, doc="Camera state")
     gain = OcaBoxParam(default=0, doc="Camera gain")
     offset = OcaBoxParam(default=0, doc="Camera offset")
-    offsets = OcaBoxParam(default=0, doc="Avaliable Camera offsets")
+    offsets = OcaBoxParam(default=[0], doc="Avaliable Camera offsets")
     offsetmax = OcaBoxParam(default=0, doc="Maximum offset value of that this camera supports")
     offsetmin = OcaBoxParam(default=0, doc="Minimum offset value of that this camera supports")
     subexposureduration = OcaBoxParam(default=0.0, doc="Camera subexposure duration")
@@ -28,13 +28,14 @@ class Camera(TelescopeComponent):
     imageready = OcaBoxParam(default=False, doc="Camera is image ready")
     imagearray = OcaBoxParam(default=[0], doc="Camera image array")
     readoutmode = OcaBoxParam(default=0, doc="Camera readoutmode")
-    readoutmodes = OcaBoxParam(default=[0], doc="Camera readoutmodes")
+    readoutmodes = OcaBoxParam(default=[0], doc="Avaliable Camera readoutmodes")
     fastreadout = OcaBoxParam(default=False, doc="Camera fast readout")
     numx = OcaBoxParam(default=0, doc="Camera numx")
     numy = OcaBoxParam(default=0, doc="Camera numy")
     startx = OcaBoxParam(default=0, doc="Camera startx")
     starty = OcaBoxParam(default=0, doc="Camera starty")
     imagearrayvariant = OcaBoxParam(default=[0], doc="Camera image array variant")
+    gains = OcaBoxParam(default=[0], doc="Avaliable Camera gains")
 
 
     camerastate_to_code = {
@@ -49,6 +50,7 @@ class Camera(TelescopeComponent):
     camerastate_code_to_status = {v: k for k, v in camerastate_to_code.items()}
 
     # TODO: MMirrkk: Why override `aget_name` and `asubscribe_name`?
+    """
     async def aget_name(self) -> str:
         logger.debug(f'Getting camera name from {self.tel_addr}')
         ret = await self.aget_value('name')
@@ -57,6 +59,7 @@ class Camera(TelescopeComponent):
     async def asubscribe_name(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing camera name from {self.tel_addr}')
         return await self.subscribe('name', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
+    """
 
     async def aget_sensorname(self) -> str:
         logger.debug(f'Getting camera sensor name from {self.tel_addr}')
@@ -133,6 +136,11 @@ class Camera(TelescopeComponent):
     async def asubscribe_gain(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing camera gain from {self.tel_addr}')
         return await self.subscribe('gain', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
+
+    async def aget_gains(self) -> []:
+        logger.debug(f'Getting camera gains from {self.tel_addr}')
+        ret = await self.aget_value('gains')
+        return ret
 
     async def aget_offset(self) -> int:
         logger.debug(f'Getting camera offset from {self.tel_addr}')
