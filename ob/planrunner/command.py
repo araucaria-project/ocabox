@@ -8,6 +8,7 @@ from ob.planrunner.subcommands.sub_change_filter import ChangeFilter
 from ob.planrunner.subcommands.sub_camera_exposure import CameraExposure
 from ob.planrunner.subcommands.sub_mirror_cover import MirrorCover
 from ob.planrunner.subcommands.sub_dome_screenlight import DomeScreenLight
+from ob.planrunner.subcommands.sub_focusing import Focusing
 from pyaraucaria.coordinates import ra_dec_2_az_alt, deg_str_to_deg
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -195,7 +196,6 @@ class Command(AbstractSequence):
                                      exp_no=int(par[0]),
                                      type='flat',
                                      light=True,
-                                     domeflatlight=True,
                                      obj_name='',
                                      req_ra='',
                                      req_dec='',
@@ -215,7 +215,36 @@ class Command(AbstractSequence):
 
     def _write_focus(self):
         # faster readmode, fits not saved on Perun
-        pass
+        id_next = 0
+        if 'pos' in self.kwargs:
+            sub = Focusing(f'{self.id}_{self.numb(id_next)}', self, pos=self.kwargs['pos'])
+            self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+            id_next += 1
+
+        # Camera exposure
+        if 'seq' in self.kwargs:
+            seq_list = self._split_seq(self.kwargs['seq'])
+            for n in seq_list:
+                par = list(n.split('/'))
+                sub = ChangeFilter(f'{self.id}_{self.numb(id_next)}',
+                                   self,
+                                   filter=par[1])
+                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+                id_next += 1
+                sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
+                                     self,
+                                     exp_time=float(par[2]),
+                                     exp_no=int(par[0]),
+                                     type='focusing',
+                                     light=True,
+                                     obj_name='',
+                                     req_ra='',
+                                     req_dec='',
+                                     epoch='2000',
+                                     filter=par[1]
+                                     )
+                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+                id_next += 1
 
     def _write_dark(self):
         id_next = 0
