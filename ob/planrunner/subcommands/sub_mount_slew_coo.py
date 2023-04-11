@@ -59,7 +59,7 @@ class MountSlewCoo(SubCommand):
             await self.mount.aput_tracking(True)
             await self.mount.aput_slewtocoo_async(ra_to_decimal(self.ra_now), dec_to_decimal(self.dec_now))
             await self._wait_to_slew()
-            await asyncio.sleep(5)
+            await asyncio.sleep(1)
             return 0
         else:
             self.info_callback['stream_1'](f'{self.id} Target is below horizon alt:{alt}, intend to skip')

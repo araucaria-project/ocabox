@@ -108,8 +108,7 @@ class Command(AbstractSequence):
                                        longitude=OCA['longitude'],
                                        elevation=OCA['elevation'],
                                        epoch='2000')
-            sub = DomeSlew(f'{self.id}_{self.numb(id_next)}',
-                           self)
+            sub = DomeSlew(f'{self.id}_{self.numb(id_next)}', self)
             self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
             id_next += 1
         else:
@@ -127,6 +126,10 @@ class Command(AbstractSequence):
                 sub = ChangeFilter(f'{self.id}_{self.numb(id_next)}',
                                    self,
                                    filter=par[1])
+                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+                id_next += 1
+
+                sub = DomeSlew(f'{self.id}_{self.numb(id_next)}', self, follow_tol=3.0)
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
 
@@ -231,6 +234,11 @@ class Command(AbstractSequence):
                                    filter=par[1])
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
+
+                sub = DomeSlew(f'{self.id}_{self.numb(id_next)}', self, follow_tol=3.0)
+                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+                id_next += 1
+
                 sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
                                      self,
                                      exp_time=float(par[2]),
@@ -333,6 +341,11 @@ class Command(AbstractSequence):
                                    filter=par[1])
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
+
+                sub = DomeSlew(f'{self.id}_{self.numb(id_next)}', self, follow_tol=3.0)
+                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+                id_next += 1
+
                 sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
                                      self,
                                      exp_time=float(par[2]),

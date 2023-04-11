@@ -51,32 +51,32 @@ class CameraExposure(SubCommand):
 
         header = fits_header(
                     obs_lat=OCA['latitude'],
-                    parsed_obs_lat=str(parse_deg_or_dms(OCA['latitude'])),
+                    parsed_obs_lat=parse_deg_or_dms(OCA['latitude']),
                     obs_lon=OCA['longitude'],
-                    parsed_obs_lon=str(parse_deg_or_dms(OCA['longitude'])),
+                    parsed_obs_lon=parse_deg_or_dms(OCA['longitude']),
                     obs_elev=OCA['elevation'],
                     tel_id=str(self.telescope.id),
                     utc_now=str(datetime.utcnow()),
-                    jd=str(jd),
-                    req_ra=str(self.kwargs["req_ra"]),
-                    req_dec=str(self.kwargs["req_dec"]),
-                    epoch=str(self.kwargs["epoch"]),
-                    tel_ra=str(self.mount.rightascension),
-                    tel_dec=str(self.mount.declination),
-                    tel_alt=str(self.mount.altitude),
-                    tel_az=str(self.mount.azimuth),
-                    focus=str(self.focuser.position),
-                    rotator_pos=str(self.rotator.position),
-                    obs_type=str(self.kwargs['type']),
-                    object=str(self.kwargs["obj_name"]),
-                    filter=str(self.kwargs["filter"]),
-                    req_exp=str(self.kwargs["exp_time"]),
-                    cam_exp=str(self.kwargs["exp_time"]),
-                    ccd_name=str(self.camera.name),
-                    ccd_temp=str(self.camera.ccdtemperature),
-                    ccd_binx=str(self.camera.binx),
-                    ccd_biny=str(self.camera.biny),
-                    read_mod=str(self.camera.readoutmode))
+                    jd=jd,
+                    req_ra=self.kwargs["req_ra"],
+                    req_dec=self.kwargs["req_dec"],
+                    epoch=self.kwargs["epoch"],
+                    tel_ra=self.mount.rightascension,
+                    tel_dec=self.mount.declination,
+                    tel_alt=self.mount.altitude,
+                    tel_az=self.mount.azimuth,
+                    focus=self.focuser.position,
+                    rotator_pos=self.rotator.position,
+                    obs_type=self.kwargs['type'],
+                    object=self.kwargs["obj_name"],
+                    filter=self.kwargs["filter"],
+                    req_exp=self.kwargs["exp_time"],
+                    cam_exp=self.kwargs["exp_time"],
+                    ccd_name=self.camera.sensorname,
+                    ccd_temp=self.camera.ccdtemperature,
+                    ccd_binx=self.camera.binx,
+                    ccd_biny=self.camera.biny,
+                    read_mod=self.camera.readoutmode)
 
         file_name = f'{self.telescope.id}c_{jd_oca.split(".")[0]}_{jd_oca.split(".")[1]}'
 
@@ -107,7 +107,7 @@ class CameraExposure(SubCommand):
                              overwrite=True,
                              dtyp='sideint16')
         logger.debug(f'{self.id} {self.subcommand_name} is done')
-        self.info_callback['stream_1'](f'Subexp {sub}/{self.kwargs["exp_no"]} done')
+        self.info_callback['stream_1'](f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} done')
 
     async def _wait_for_subexposure(self, sub: int):
         while True:
@@ -115,14 +115,14 @@ class CameraExposure(SubCommand):
             subexposure_done = self.camera.imageready
             if subexposure_done:
                 logger.debug(f'{self.id} {self.subcommand_name} is done --> saving')
-                self.info_callback['stream_1'](f'Subexp {sub}/{self.kwargs["exp_no"]} --> saving')
+                self.info_callback['stream_1'](f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} --> saving')
                 break
 
     async def arun(self, step_id: str or None = None) -> int:
         logger.debug(f'{self.id} {self.subcommand_name} is started')
 
         for sub in range(1, self.kwargs["exp_no"]+1):
-            self.info_callback['stream_1'](f'Subexp {sub}/{self.kwargs["exp_no"]} started')
+            self.info_callback['stream_1'](f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} started')
             await self.camera.aput_startexposure(self.kwargs["exp_time"], self.kwargs["light"])
             await asyncio.sleep(1)
             await self._wait_for_subexposure(sub)

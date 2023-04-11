@@ -38,9 +38,16 @@ class DomeSlew(SubCommand):
         # TODO maybe use synctoazimuth (if yes add to ocaboxapi)
         if 'az' in self.kwargs.keys():
             az = self.kwargs['az']
+        elif 'follow_tol' in self.kwargs.keys():
+            if self.kwargs['follow_tol']<abs(self.mount.azimuth - self.dome.azimuth):
+                az = self.mount.azimuth
+            else:
+                self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} no need')
+                self.info_callback['stream_5'](f'{self.id}')
+                return 0
         else:
             az = self.mount.azimuth
         await self.dome.aput_slewtoazimuth(az)
         await self._wait_to_slew(az)
-        await asyncio.sleep(5)
+        await asyncio.sleep(1)
         return 0
