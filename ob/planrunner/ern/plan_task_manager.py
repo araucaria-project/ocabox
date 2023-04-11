@@ -16,14 +16,18 @@ class PlanTaskManager:
         if self.tasks is None:
             self.tasks = []
 
-    async def _pop_task(self, t):
-        if t in self.tasks:
+    def _pop_task(self, t):
+        t_ob = None
+        for x in self.tasks:
+            if x[0] == t:
+                t_ob = x
+        if t_ob:
             fut = self._future_full_list
             if fut is not None:
                 self._future_full_list = None
                 if not fut.done():
                     fut.set_result(True)
-            self.tasks.remove(t)
+            self.tasks.remove(t_ob)
         else:
             #  it should never show up
             logger.error(f"an attempt to delete a task is not allowed. The specified task is not in the list.")
@@ -40,8 +44,8 @@ class PlanTaskManager:
                 logger.error(f"For unexplained reasons, there is no Future object")
         t = asyncio.get_running_loop().create_task(coro)
 
-        async def callback():
-            await self._pop_task(t)
+        def callback(context):
+            self._pop_task(t)
 
         t.add_done_callback(callback)
         self.tasks.append((t, is_independent))

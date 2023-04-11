@@ -123,4 +123,3 @@ class PlanManager:
 
     async def _main(self, plan, step_id):
         await plan.run()
-        pass
