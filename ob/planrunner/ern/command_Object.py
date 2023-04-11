@@ -88,3 +88,10 @@ class CommandObject(Command):
         finally:
             self._unlock_next_command()  # unlock in the end
             self._set_self_finish()  # command finished - this should be last code line
+
+    async def run(self):
+        await self.a_init()
+        if self._loop is None:
+            # todo  ustawić status na skończony
+            return
+        await self.a_run()

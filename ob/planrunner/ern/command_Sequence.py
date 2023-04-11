@@ -42,6 +42,10 @@ class CommandSequence(Command):
             return
         tasks = []
         for s in self.get_subcommands():
-            t = self._loop.create_task(s.run())
+            t = self.tsk_mngr.run_task_when_can(s.run(), is_independent=True)
             tasks.append(t)
-            self.tsk_mngr.put_task(t)
+
+        await asyncio.gather(*tasks)
+        self._finish_locking.set_result(True)
+        self._finish.set_result(True)
+
