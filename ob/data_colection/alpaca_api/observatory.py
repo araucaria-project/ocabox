@@ -332,6 +332,21 @@ class Telescope(Device):
     async def reportmaxalt(self, **kwargs):
         return await self._put("action", Action="telescope:reportmaxalt", Parameters="")
 
+    async def motoron_put(self, **kwargs):
+        return await self._put("action", Action="telescope:motoron", Parameters="")
+
+    async def motoroff_put(self, **kwargs):
+        return await self._put("action", Action="telescope:motoroff", Parameters="")
+
+    async def domeflatlampon_put(self, **kwargs):
+        return await self._put("action", Action="telescope:startfans", Parameters="5")  # lamp is connected under fans
+
+    async def domeflatlampoff_put(self, **kwargs):
+        return await self._put("action", Action="telescope:stopfans", Parameters="")  # lamp is connected under fans
+
+    async def motorstatus(self, **kwargs):
+        return await self._put("commandstring", Command="MotStat", Raw="True")
+
     @staticmethod
     def _hourangle_to_deg_processor(attribute, res):
         return res / 24 * 360
@@ -372,6 +387,15 @@ class Telescope(Device):
 
 class Focuser(Device):
     """Focuser specific methods."""
+
+    async def fansturnon_put(self, **kwargs):
+        return await self._put("action", Action="fansturnon", Parameters="")
+
+    async def fansturnoff_put(self, **kwargs):
+        return await self._put("action", Action="fansturnoff", Parameters="")
+
+    async def fansstatus(self, **kwargs):
+        return await self._put("action", Action="fansstatus", Parameters="")
 
 
 class Rotator(Device):
