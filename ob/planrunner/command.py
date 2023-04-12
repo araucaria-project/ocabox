@@ -169,7 +169,7 @@ class Command(AbstractSequence):
         sub = MountSlewToAltAz(f'{self.id}_{self.numb(id_next)}',
                                self,
                                alt=dome_flat_alt,
-                               az=dome_az+182,
+                               az=dome_az+180,
                                tracking=False,
                                epoch='2000')
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
