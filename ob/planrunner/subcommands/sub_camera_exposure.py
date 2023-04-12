@@ -8,13 +8,14 @@ from datetime import datetime
 import os
 import pwd
 from collections import OrderedDict
+from typing import Dict, Any
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class CameraExposure(SubCommand):
 
-    def __init__(self, id: str, parent: 'Command', subcommand_name: str = 'camera exposure', **kwargs) -> None:
+    def __init__(self, id: str, parent: 'Command', subcommand_name: str = 'camera-exposure', **kwargs) -> None:
         self.subcommand_name = subcommand_name
         self.telescope = parent.telescope
         self.mount = self.telescope.get_mount()
@@ -27,7 +28,11 @@ class CameraExposure(SubCommand):
         self.id = id
         self.user = pwd.getpwuid(os.getuid())[0]
         self.folder = f'/home/{self.user}/Desktop/fits_{self.telescope.id}/'
-        super().__init__(id=id, parent=parent, subcommand_name=subcommand_name, **kwargs)
+        self.started: bool = False
+        self.done: bool = False
+        self.skipped: bool = False
+        super().__init__(id=id, parent=parent, subcommand_name=subcommand_name,
+                         started=self.started, done=self.done, skipped=self.skipped, **kwargs)
         self._mk_folder()
 
     def _mk_folder(self):
@@ -108,6 +113,10 @@ class CameraExposure(SubCommand):
                              dtyp='sideint16')
         logger.debug(f'{self.id} {self.subcommand_name} is done')
         self.info_callback['stream_1'](f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} done')
+        self.info_callback['exec_json'](self.exec_json(exp_started=True,
+                                                       exp_done=True,
+                                                       exp_saved=True,
+                                                       n_exp=sub))
 
     async def _wait_for_subexposure(self, sub: int):
         while True:
@@ -116,13 +125,22 @@ class CameraExposure(SubCommand):
             if subexposure_done:
                 logger.debug(f'{self.id} {self.subcommand_name} is done --> saving')
                 self.info_callback['stream_1'](f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} --> saving')
+                self.info_callback['exec_json'](self.exec_json(exp_started=True,
+                                                               exp_done=True,
+                                                               exp_saved=False,
+                                                               n_exp=sub))
                 break
 
     async def arun(self, step_id: str or None = None) -> int:
         logger.debug(f'{self.id} {self.subcommand_name} is started')
-
+        self.started = True
+        self.info_callback['exec_json'](self.exec_json())
         for sub in range(1, self.kwargs["exp_no"]+1):
             self.info_callback['stream_1'](f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} started')
+            self.info_callback['exec_json'](self.exec_json(sub_started=True,
+                                                           sub_done=False,
+                                                           sub_saved=False,
+                                                           n_exp=sub))
             await self.camera.aput_startexposure(self.kwargs["exp_time"], self.kwargs["light"])
             await asyncio.sleep(1)
             await self._wait_for_subexposure(sub)
@@ -131,6 +149,8 @@ class CameraExposure(SubCommand):
         await asyncio.sleep(1)
         self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
         self.info_callback['stream_5'](f'{self.id}')
+        self.done = True
+        self.info_callback['exec_json'](self.exec_json())
         return 0
 
 

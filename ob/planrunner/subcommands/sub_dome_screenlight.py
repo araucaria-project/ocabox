@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class DomeScreenLight(SubCommand):
 
 
-    def __init__(self, id: str, parent: 'Command', subcommand_name: str = 'dome screenlight', **kwargs) -> None:
+    def __init__(self, id: str, parent: 'Command', subcommand_name: str = 'dome-screenlight', **kwargs) -> None:
         self.subcommand_name = subcommand_name
         self.telescope = parent.telescope
         self.id = id
@@ -16,7 +16,11 @@ class DomeScreenLight(SubCommand):
         self.kwargs = kwargs
         self.ra_now: str or None = None
         self.dec_now: str or None = None
-        super().__init__(id=self.id, parent=parent, subcommand_name=subcommand_name, **kwargs)
+        self.started: bool = False
+        self.done: bool = False
+        self.skipped: bool = False
+        super().__init__(id=id, parent=parent, subcommand_name=subcommand_name,
+                         started=self.started, done=self.done, skipped=self.skipped, **kwargs)
 
     async def _wait_for_turn_on_off(self):
         await asyncio.sleep(15)
@@ -25,6 +29,8 @@ class DomeScreenLight(SubCommand):
         self.info_callback['stream_5'](f'{self.id}')
 
     async def arun(self, step_id: str or None = None) -> int:
+        self.started = True
+        self.info_callback['exec_json'](self.exec_json())
         if 'light' in self.kwargs.keys():
             if self.kwargs['light']==True:
                 self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} turning on')
@@ -33,8 +39,6 @@ class DomeScreenLight(SubCommand):
                     pass
                 else:
                     await self.mount.aput_domelamp_on()
-                self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
-                logger.debug(f'{self.id} {self.subcommand_name} done')
             if self.kwargs['light']==False:
                 self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} turning off')
                 logger.debug(f'{self.id} {self.subcommand_name} turning off')
@@ -43,5 +47,8 @@ class DomeScreenLight(SubCommand):
                 else:
                     await self.mount.aput_domelamp_off()
                 await self._wait_for_turn_on_off()
-        await asyncio.sleep(5)
+        self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
+        logger.debug(f'{self.id} {self.subcommand_name} done')
+        self.done = True
+        self.info_callback['exec_json'](self.exec_json())
         return 0

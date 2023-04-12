@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class MountSlewCoo(SubCommand):
 
 
-    def __init__(self, id: str, parent: 'Command', subcommand_name: str = 'mount slew coo', **kwargs) -> None:
+    def __init__(self, id: str, parent: 'Command', subcommand_name: str = 'mount-slew-coo', **kwargs) -> None:
         self.subcommand_name = subcommand_name
         self.telescope = parent.telescope
         self.id = id
@@ -18,7 +18,11 @@ class MountSlewCoo(SubCommand):
         self.kwargs = kwargs
         self.ra_now: str or None = None
         self.dec_now: str or None = None
-        super().__init__(id=self.id, parent=parent, subcommand_name=subcommand_name, **kwargs)
+        self.started: bool = False
+        self.done: bool = False
+        self.skipped: bool = False
+        super().__init__(id=id, parent=parent, subcommand_name=subcommand_name,
+                         started=self.started, done=self.done, skipped=self.skipped, **kwargs)
 
     async def _wait_to_slew(self) -> None:
         t_start = time.time()
@@ -34,7 +38,8 @@ class MountSlewCoo(SubCommand):
                 break
 
     async def arun(self, step_id: str or None = None) -> int:
-
+        self.started = True
+        self.info_callback['exec_json'](self.exec_json())
         # TODO This OCA should be taken from settings
         OCA = {'latitude': '-24:35:53', 'longitude': '-70:11:47', 'elevation': '2817'}
 
@@ -59,8 +64,11 @@ class MountSlewCoo(SubCommand):
             await self.mount.aput_tracking(True)
             await self.mount.aput_slewtocoo_async(ra_to_decimal(self.ra_now), dec_to_decimal(self.dec_now))
             await self._wait_to_slew()
-            await asyncio.sleep(1)
+            self.done = True
+            self.info_callback['exec_json'](self.exec_json())
             return 0
         else:
             self.info_callback['stream_1'](f'{self.id} Target is below horizon alt:{alt}, intend to skip')
+            self.skipped = True
+            self.info_callback['exec_json'](self.exec_json())
             return 1

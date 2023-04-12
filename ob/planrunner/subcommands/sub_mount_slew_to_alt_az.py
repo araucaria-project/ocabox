@@ -7,7 +7,7 @@ import time
 
 class MountSlewToAltAz(SubCommand):
 
-    def __init__(self, id: str, parent: 'Command', subcommand_name: str = 'mount slew altaz', **kwargs) -> None:
+    def __init__(self, id: str, parent: 'Command', subcommand_name: str = 'mount-slew-altaz', **kwargs) -> None:
         self.subcommand_name = subcommand_name
         self.telescope = parent.telescope
         self.id = id
@@ -15,7 +15,11 @@ class MountSlewToAltAz(SubCommand):
         self.kwargs = kwargs
         self.alt: float = 0.0
         self.az: float = 0.0
-        super().__init__(id=self.id, parent=parent, subcommand_name=subcommand_name, **kwargs)
+        self.started: bool = False
+        self.done: bool = False
+        self.skipped: bool = False
+        super().__init__(id=id, parent=parent, subcommand_name=subcommand_name,
+                         started=self.started, done=self.done, skipped=self.skipped, **kwargs)
 
     async def _wait_to_slew(self) -> None:
         t_start = time.time()
@@ -34,6 +38,8 @@ class MountSlewToAltAz(SubCommand):
                 break
 
     async def arun(self, step_id: str or None = None) -> int:
+        self.started = True
+        self.info_callback['exec_json'](self.exec_json())
         logger.info(f'{self.id} {self.subcommand_name} is started')
         self.info_callback['stream_1'](
             f'{self.id} {self.subcommand_name} ALT:{self.kwargs["alt"]} AZ:{self.kwargs["az"]} started')
@@ -44,16 +50,21 @@ class MountSlewToAltAz(SubCommand):
             self.az = self.kwargs["az"]
             self.alt = self.kwargs["alt"]
         else:
+            self.skipped = True
+            self.info_callback['exec_json'](self.exec_json())
             return 1
         if self.alt > 0:
             await self.mount.aput_tracking(False)
             await self.mount.aput_slewtoaltaz_async(self.az, self.alt)
             await self.mount.aput_tracking(False)
             await self._wait_to_slew()
-            await asyncio.sleep(1)
             if "tracking" in self.kwargs.keys():
                 await self.mount.aput_tracking(self.kwargs["tracking"])
                 self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} tracking={self.kwargs["tracking"]}')
+            self.done = True
+            self.info_callback['exec_json'](self.exec_json())
             return 0
         else:
+            self.skipped = True
+            self.info_callback['exec_json'](self.exec_json())
             return 1

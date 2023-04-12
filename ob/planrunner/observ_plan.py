@@ -33,10 +33,13 @@ class ObservPlan:
         self.add_info_callback('c_subcommands', logger.debug)
         self.add_info_callback('c_commands', logger.debug)
         self.add_info_callback('c_sequences', logger.debug)
+        self.add_info_callback('exec_json', self.current_executing_json)
 
     def get_nightplan_info(self, nightplan_id: str) -> Dict[Any, Any]:
         return self.get_nightplan(nightplan_id).info
 
+    def current_executing_json(self, value: Dict[str, Any]) -> None:
+        pass
 
     def add_info_callback(self, name: str, info_callback: Callable) -> None:
         """
@@ -47,6 +50,7 @@ class ObservPlan:
             c_commands - commands written
             c_sequences - sequences written
             stream_5 - finished id
+            exec_json - current executing json format
         :param info_callback: set callback method
         :return: None
         """

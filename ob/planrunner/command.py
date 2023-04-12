@@ -114,10 +114,10 @@ class Command(AbstractSequence):
         else:
             pass
 
-        sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=True)
-        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+        #sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=True)
+        #self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+        #id_next += 1
 
-        id_next += 1
         # Camera exposure
         if 'seq' in self.kwargs:
             seq_list = self._split_seq(self.kwargs['seq'])
@@ -148,8 +148,8 @@ class Command(AbstractSequence):
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
 
-        sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=False)
-        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+        #sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=False)
+        #self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
 
     def _write_domeflat(self):
         id_next = 0
