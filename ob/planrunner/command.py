@@ -178,9 +178,9 @@ class Command(AbstractSequence):
         sub = DomeScreenLight(f'{self.id}_{self.numb(id_next)}', self, light=True)
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
 
-        id_next += 1
-        sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=True)
-        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+        # id_next += 1
+        # sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=True)
+        # self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
 
         # Camera exposure
         id_next += 1
@@ -211,9 +211,9 @@ class Command(AbstractSequence):
         sub = DomeScreenLight(f'{self.id}_{self.numb(id_next)}', self, light=False)
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
 
-        id_next += 1
-        sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=False)
-        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+        # id_next += 1
+        # sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=False)
+        # self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
 
 
     def _write_focus(self):
@@ -257,11 +257,11 @@ class Command(AbstractSequence):
     def _write_dark(self):
         id_next = 0
 
-        sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=False)
-        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+        # sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=False)
+        # self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+        # id_next += 1
 
         # Camera exposure
-        id_next += 1
         if 'seq' in self.kwargs:
             seq_list = self._split_seq(self.kwargs['seq'])
             for n in seq_list:
@@ -284,11 +284,11 @@ class Command(AbstractSequence):
     def _write_zero(self):
         id_next = 0
 
-        sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=False)
-        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+        # sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=False)
+        # self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+        # id_next += 1
 
         # Camera exposure
-        id_next += 1
         if 'seq' in self.kwargs:
             seq_list = self._split_seq(self.kwargs['seq'])
             for n in seq_list:
@@ -326,9 +326,9 @@ class Command(AbstractSequence):
                        az=deg_str_to_deg(self.kwargs['az']))
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
 
-        id_next += 1
-        sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=True)
-        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+        # id_next += 1
+        # sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=True)
+        # self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
 
         # Camera exposure
         id_next += 1
@@ -361,8 +361,8 @@ class Command(AbstractSequence):
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
 
-        sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=False)
-        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+        # sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=False)
+        # self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
 
     def _write_marker(self):
         pass
