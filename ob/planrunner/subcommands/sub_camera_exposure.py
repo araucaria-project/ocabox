@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from ob.planrunner.subcommand import SubCommand
-from pyaraucaria.fits import save_fits_from_array, fits_header
+from pyaraucaria.fits import save_fits_from_array, fits_header, fits_stat
 from pyaraucaria.date import datetime_to_julian
 from ocaboxapi.formatter import parse_deg_or_dms
 from datetime import datetime
@@ -92,15 +92,13 @@ class CameraExposure(SubCommand):
         f.write(f' Object:{self.kwargs["obj_name"]}')
         f.write(f' Filter:{self.kwargs["filter"]}')
         f.write(f' Exp-time:{self.kwargs["exp_time"]}')
-        mi = []
-        ma = []
-        for n in array:
-            mi.append(min(n))
-            ma.append(max(n))
+        stat = fits_stat(array, median=False, std=False)
         f.write(' Min:')
-        f.write(str(min(mi)))
+        f.write(stat['min'])
         f.write(' Max:')
-        f.write(str(max(ma)))
+        f.write(stat['max'])
+        f.write(' Mean:')
+        f.write(stat['mean'])
         f.write(f' File-name:{file_name}')
         f.write('\n')
         f.close()
