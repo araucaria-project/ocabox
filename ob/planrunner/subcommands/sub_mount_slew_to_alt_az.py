@@ -59,6 +59,7 @@ class MountSlewToAltAz(SubCommand):
             await self.mount.aput_tracking(False)
             await self._wait_to_slew()
             if "tracking" in self.kwargs.keys():
+                await asyncio.sleep(5)
                 await self.mount.aput_tracking(self.kwargs["tracking"])
                 self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} tracking={self.kwargs["tracking"]}')
             self.done = True

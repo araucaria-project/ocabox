@@ -71,6 +71,7 @@ class Command(AbstractSequence):
             self.info_callback['stream_1'](f'Command {self.command_name} not recognized, check plan syntax' )
 
     def _write_object(self):
+
         id_next = 0
         obj_name = ''
         req_ra = ''
@@ -111,7 +112,10 @@ class Command(AbstractSequence):
             sub = DomeSlew(f'{self.id}_{self.numb(id_next)}', self)
             self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
             id_next += 1
+        elif len(self.args) == 1:
+            obj_name = self.args[0]
         else:
+            # TODO prompt syntax error
             pass
 
         #sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=True)

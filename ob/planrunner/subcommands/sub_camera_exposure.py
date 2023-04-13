@@ -98,7 +98,7 @@ class CameraExposure(SubCommand):
         f.write(' Max:')
         f.write(str(stat['max']))
         f.write(' Mean:')
-        f.write(str(stat['mean']))
+        f.write(str(round(stat['mean'])))
         f.write(f' File-name:{file_name}')
         f.write('\n')
         f.close()
@@ -135,9 +135,9 @@ class CameraExposure(SubCommand):
         self.info_callback['exec_json'](self.exec_json())
         for sub in range(1, self.kwargs["exp_no"]+1):
             self.info_callback['stream_1'](f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} started')
-            self.info_callback['exec_json'](self.exec_json(sub_started=True,
-                                                           sub_done=False,
-                                                           sub_saved=False,
+            self.info_callback['exec_json'](self.exec_json(exp_started=True,
+                                                           exp_done=False,
+                                                           exp_saved=False,
                                                            n_exp=sub))
             await self.camera.aput_startexposure(self.kwargs["exp_time"], self.kwargs["light"])
             await asyncio.sleep(1)

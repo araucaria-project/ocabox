@@ -35,7 +35,7 @@ class ChangeFilter(SubCommand):
         logger.debug(f'{self.id} {self.subcommand_name} is started')
         self.started = True
         self.info_callback['exec_json'](self.exec_json())
-        ZB08_FILT = {'u': 11, 'g': 12, 'r': 13, 'i': 14, 'z': 15, 'B': 16, 'V': 17, 'Ic': 18}
+        ZB08_FILT = {'u': 0, 'g': 1, 'r': 2, 'i': 3, 'z': 4, 'B': 5, 'V': 6, 'Ic': 7}
         try:
             self.fil_wh_pos = int(self.kwargs["filter"])
         except ValueError:
