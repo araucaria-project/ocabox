@@ -61,11 +61,11 @@ class CameraExposure(SubCommand):
             gain = 'unknown'
             readoutmode = 'unknown'
         else:
-            gains = await self.camera.aget_gains()
-            readoutmodes = await self.camera.aget_readoutmodes()
+            gains = self.camera.gains
+            readoutmodes = self.camera.readoutmodes
             # offsets = await self.camera.aget_offsets()
-            gain = await self.camera.aget_gain()
-            readoutmode = await self.camera.aget_readoutmode()
+            gain = self.camera.gain
+            readoutmode = self.camera.readoutmode
             # offset = await self.camera.aget_offset()
 
             gain = indexing_value(gain, gains)
