@@ -8,7 +8,7 @@ from datetime import datetime
 import os
 import pwd
 from collections import OrderedDict
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -44,15 +44,36 @@ class CameraExposure(SubCommand):
                     logger.warning(
                         f'Folder creation failed, please make folder /home/{self.user}/Desktop/fits_{self.telescope.id}')
 
+    def indexing_value(self, value: int, values: List[str]) -> int or str:
+        try:
+            data = values[value]
+        except IndexError:
+            data = str(value)
+        return data
+
     async def _wait_for_save_fits(self, sub: int) -> None:
 
         array = await self.camera.aget_imagearray()
         jd = datetime_to_julian(str(datetime.utcnow()))
         jd_oca = f"{(jd - 2460000):010.5f}"
 
+        if self.telescope.id=='dev':
+            gain = 'unknown'
+            readoutmode = 'unknown'
+        else:
+            gains = await self.camera.aget_gains()
+            readoutmodes = await self.camera.aget_readoutmodes()
+            # offsets = await self.camera.aget_offsets()
+            gain = await self.camera.aget_gain()
+            readoutmode = await self.camera.aget_readoutmode()
+            # offset = await self.camera.aget_offset()
+
+            gain = indexing_value(gain, gains)
+            readoutmode = indexing_value(readoutmode, readoutmodes)
+            # offset = indexing_value(offset, offsets)
+
         # TODO This OCA should be taken from settings
         OCA = {'latitude': '-24:35:53', 'longitude': '-70:11:47', 'elevation': '2817'}
-
         header = fits_header(
                     obs_lat=OCA['latitude'],
                     parsed_obs_lat=parse_deg_or_dms(OCA['latitude']),
@@ -80,8 +101,9 @@ class CameraExposure(SubCommand):
                     ccd_temp=self.camera.ccdtemperature,
                     ccd_binx=self.camera.binx,
                     ccd_biny=self.camera.biny,
-                    read_mod=self.camera.readoutmode,
-                    gain=self.camera.gain)
+                    read_mod=readoutmode,
+                    gain=gain,
+                    )
 
         file_name = f'{self.telescope.id}c_{jd_oca.split(".")[0]}_{jd_oca.split(".")[1]}'
 
@@ -90,9 +112,9 @@ class CameraExposure(SubCommand):
         f.write(f'Date:{datetime.utcnow()}')
         f.write(f' Type:{self.kwargs["type"]}')
         f.write(f' n_exp/n_exp_req:{sub}/{self.kwargs["exp_no"]}')
+        f.write(f' Exp-time:{self.kwargs["exp_time"]}')
         f.write(f' Object:{self.kwargs["obj_name"]}')
         f.write(f' Filter:{self.kwargs["filter"]}')
-        f.write(f' Exp-time:{self.kwargs["exp_time"]}')
         stat = fits_stat(array, size=100, median=False, std=False)
         f.write(' Min:')
         f.write(str(stat['min']))
