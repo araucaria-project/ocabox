@@ -102,7 +102,7 @@ class CameraExposure(SubCommand):
                     ccd_binx=self.camera.binx,
                     ccd_biny=self.camera.biny,
                     read_mod=readoutmode,
-                    gain=gain,
+                    gain=gain
                     )
 
         file_name = f'{self.telescope.id}c_{jd_oca.split(".")[0]}_{jd_oca.split(".")[1]}'
@@ -115,13 +115,13 @@ class CameraExposure(SubCommand):
         f.write(f' Exp-time:{self.kwargs["exp_time"]}')
         f.write(f' Object:{self.kwargs["obj_name"]}')
         f.write(f' Filter:{self.kwargs["filter"]}')
-        stat = fits_stat(array, size=100, median=False, std=False)
-        f.write(' Min:')
-        f.write(str(stat['min']))
-        f.write(' Max:')
-        f.write(str(stat['max']))
-        f.write(' Mean:')
-        f.write(str(round(stat['mean'])))
+        #stat = fits_stat(array, size=100, median=False, std=False)
+        #f.write(' Min:')
+        #f.write(str(stat['min']))
+        #f.write(' Max:')
+        #f.write(str(stat['max']))
+        #f.write(' Mean:')
+        #f.write(str(round(stat['mean'])))
         f.write(f' File-name:{file_name}')
         f.write('\n')
         f.close()
@@ -138,7 +138,9 @@ class CameraExposure(SubCommand):
                                                        exp_done=True,
                                                        exp_saved=True,
                                                        n_exp=sub,
-                                                       mean=round(stat['mean'])))
+                                                       #mean=round(stat['mean'])
+                                                       )
+                                                        )
 
     async def _wait_for_subexposure(self, sub: int) -> None:
         while True:
