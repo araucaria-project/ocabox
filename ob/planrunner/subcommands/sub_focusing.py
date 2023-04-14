@@ -25,7 +25,7 @@ class Focusing(SubCommand):
     async def _wait_for_move(self, position) -> None:
         while True:
             foc_position = self.focuser.position
-            await asyncio.sleep(1)
+            await asyncio.sleep(0.5)
             if foc_position is not None:
                 if (abs(int(foc_position) - int(position))) < 5:
                     logger.debug(f'{self.id} {self.subcommand_name} is done')

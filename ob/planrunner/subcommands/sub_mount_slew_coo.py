@@ -30,7 +30,7 @@ class MountSlewCoo(SubCommand):
             await self.subcommand_timeout(t_start)
             ra = self.mount.rightascension
             dec = self.mount.declination
-            await asyncio.sleep(1)
+            await asyncio.sleep(0.5)
             if (abs(ra - ra_to_decimal(self.ra_now))<0.05) and (abs(dec - dec_to_decimal(self.dec_now))<0.05):
                 logger.debug(f'{self.id} {self.subcommand_name} done')
                 self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
@@ -60,7 +60,6 @@ class MountSlewCoo(SubCommand):
                                   elevation=OCA['elevation'],
                                   epoch=self.kwargs['epoch'])
         if deg_str_to_deg(alt) > 0:
-            #await self.mount.aput_unpark()
             await self.mount.aput_tracking(True)
             await self.mount.aput_slewtocoo_async(ra_to_decimal(self.ra_now), dec_to_decimal(self.dec_now))
             await self._wait_to_slew()

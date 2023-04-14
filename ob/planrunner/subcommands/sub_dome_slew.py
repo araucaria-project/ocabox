@@ -28,7 +28,7 @@ class DomeSlew(SubCommand):
             await self.subcommand_timeout(t_start)
             dome_az = self.dome.azimuth
             dome_slewing = self.dome.slewing
-            await asyncio.sleep(1)
+            await asyncio.sleep(0.5)
             if dome_az is not None and dome_slewing==False:
                 if (abs(azimuth - float(dome_az)))<2.0 or (abs(azimuth - float(dome_az)))>358.0:
                     logger.debug(f'{self.id} {self.subcommand_name} is done')

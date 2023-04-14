@@ -44,10 +44,9 @@ class CameraExposure(SubCommand):
                     logger.warning(
                         f'Folder creation failed, please make folder /home/{self.user}/Desktop/fits_{self.telescope.id}')
 
-    async def _wait_for_save_fits(self, sub: int):
-        array = await self.camera.aget_imagearray()
-        # array = await self.camera.aget_imagearrayvariant()
+    async def _wait_for_save_fits(self, sub: int) -> None:
 
+        array = await self.camera.aget_imagearray()
         jd = datetime_to_julian(str(datetime.utcnow()))
         jd_oca = f"{(jd - 2460000):010.5f}"
 
@@ -81,7 +80,8 @@ class CameraExposure(SubCommand):
                     ccd_temp=self.camera.ccdtemperature,
                     ccd_binx=self.camera.binx,
                     ccd_biny=self.camera.biny,
-                    read_mod=self.camera.readoutmode)
+                    read_mod=self.camera.readoutmode,
+                    gain=self.camera.gain)
 
         file_name = f'{self.telescope.id}c_{jd_oca.split(".")[0]}_{jd_oca.split(".")[1]}'
 
@@ -89,10 +89,11 @@ class CameraExposure(SubCommand):
         f = open(f'{self.folder}camera_log.txt', "a")
         f.write(f'Date:{datetime.utcnow()}')
         f.write(f' Type:{self.kwargs["type"]}')
+        f.write(f' n_exp/n_exp_req:{sub}/{self.kwargs["exp_no"]}')
         f.write(f' Object:{self.kwargs["obj_name"]}')
         f.write(f' Filter:{self.kwargs["filter"]}')
         f.write(f' Exp-time:{self.kwargs["exp_time"]}')
-        stat = fits_stat(array, median=False, std=False)
+        stat = fits_stat(array, size=100, median=False, std=False)
         f.write(' Min:')
         f.write(str(stat['min']))
         f.write(' Max:')
@@ -116,9 +117,9 @@ class CameraExposure(SubCommand):
                                                        exp_saved=True,
                                                        n_exp=sub))
 
-    async def _wait_for_subexposure(self, sub: int):
+    async def _wait_for_subexposure(self, sub: int) -> None:
         while True:
-            await asyncio.sleep(1)
+            await asyncio.sleep(0.5)
             subexposure_done = self.camera.imageready
             if subexposure_done:
                 logger.debug(f'{self.id} {self.subcommand_name} is done --> saving')
@@ -140,11 +141,8 @@ class CameraExposure(SubCommand):
                                                            exp_saved=False,
                                                            n_exp=sub))
             await self.camera.aput_startexposure(self.kwargs["exp_time"], self.kwargs["light"])
-            await asyncio.sleep(1)
             await self._wait_for_subexposure(sub)
-            await asyncio.sleep(1)
             await self._wait_for_save_fits(sub)
-        await asyncio.sleep(1)
         self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
         self.info_callback['stream_5'](f'{self.id}')
         self.done = True

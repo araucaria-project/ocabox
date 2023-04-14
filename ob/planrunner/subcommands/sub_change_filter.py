@@ -24,7 +24,7 @@ class ChangeFilter(SubCommand):
     async def _wait_to_move(self):
         while True:
             filter = self.filterwheel.position
-            await asyncio.sleep(1)
+            await asyncio.sleep(0.5)
             if int(filter) - self.fil_wh_pos == 0:
                 logger.debug(f'{self.id} {self.subcommand_name} is done')
                 self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
