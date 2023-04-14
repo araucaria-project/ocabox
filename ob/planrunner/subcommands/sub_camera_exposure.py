@@ -137,7 +137,8 @@ class CameraExposure(SubCommand):
         self.info_callback['exec_json'](self.exec_json(exp_started=True,
                                                        exp_done=True,
                                                        exp_saved=True,
-                                                       n_exp=sub))
+                                                       n_exp=sub,
+                                                       mean=round(stat['mean'])))
 
     async def _wait_for_subexposure(self, sub: int) -> None:
         while True:

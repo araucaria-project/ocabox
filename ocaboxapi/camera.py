@@ -49,17 +49,6 @@ class Camera(TelescopeComponent):
 
     camerastate_code_to_status = {v: k for k, v in camerastate_to_code.items()}
 
-    # TODO: MMirrkk: Why override `aget_name` and `asubscribe_name`?
-    """
-    async def aget_name(self) -> str:
-        logger.debug(f'Getting camera name from {self.tel_addr}')
-        ret = await self.aget_value('name')
-        return ret
-
-    async def asubscribe_name(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
-        logger.debug(f'Subscribing camera name from {self.tel_addr}')
-        return await self.subscribe('name', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
-    """
 
     async def aget_sensorname(self) -> str:
         logger.debug(f'Getting camera sensor name from {self.tel_addr}')

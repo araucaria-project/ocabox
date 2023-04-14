@@ -22,26 +22,54 @@ class ObservPlan:
         self.plan_string: str or None = None
         self.tsk: asyncio.Task or None = None
         self.info_callback = {}
+        self.callbacks_dict = {}
         self.running_nightplan: str or None = None
-        self._set_defaut_info_callback()
+        self.add_callbacks()
+        self.create_callb_dict()
         super().__init__()
 
-    def _set_defaut_info_callback(self):
+    def create_callb_dict(self):
+        self.callbacks_dict['stream_1'] = [self.empty_callback]
+        self.callbacks_dict['stream_5'] = [self.empty_callback]
+        self.callbacks_dict['c_subcommands'] = [self.empty_callback]
+        self.callbacks_dict['c_commands'] = [self.empty_callback]
+        self.callbacks_dict['c_sequences'] = [self.empty_callback]
+        self.callbacks_dict['exec_json'] = [self.empty_callback]
 
-        self.add_info_callback('stream_1', logger.debug)
-        self.add_info_callback('stream_5', logger.debug)
-        self.add_info_callback('c_subcommands', logger.debug)
-        self.add_info_callback('c_commands', logger.debug)
-        self.add_info_callback('c_sequences', logger.debug)
-        self.add_info_callback('exec_json', self.current_executing_json)
+    def empty_callback(self, value):
+        pass
 
     def get_nightplan_info(self, nightplan_id: str) -> Dict[Any, Any]:
         return self.get_nightplan(nightplan_id).info
 
-    def current_executing_json(self, value: Dict[str, Any]) -> None:
-        pass
+    def add_info_callback(self, name: str, info_callback: Callable):
+        self.callbacks_dict[name] = [info_callback]
 
-    def add_info_callback(self, name: str, info_callback: Callable) -> None:
+    def stream_5_callback(self, value):
+        for calb in self.callbacks_dict['stream_5']:
+            calb(value)
+
+    def stream_1_callback(self, value):
+        for calb in self.callbacks_dict['stream_1']:
+            calb(value)
+
+    def c_subcommands_callback(self, value):
+        for calb in self.callbacks_dict['c_subcommands']:
+            calb(value)
+
+    def c_commands_callback(self, value):
+        for calb in self.callbacks_dict['c_commands']:
+            calb(value)
+
+    def c_sequences_callback(self, value):
+        for calb in self.callbacks_dict['c_sequences']:
+            calb(value)
+
+    def exec_json_callback(self, value):
+        for calb in self.callbacks_dict['exec_json']:
+            calb(value)
+
+    def add_callbacks(self) -> None:
         """
         Method set callback for plan runner information stream.
         :param name:
@@ -54,7 +82,12 @@ class ObservPlan:
         :param info_callback: set callback method
         :return: None
         """
-        self.info_callback[name] = info_callback
+        self.info_callback['stream_5'] = self.stream_5_callback
+        self.info_callback['stream_1'] = self.stream_1_callback
+        self.info_callback['c_subcommands'] = self.c_subcommands_callback
+        self.info_callback['c_commands'] = self.c_commands_callback
+        self.info_callback['c_sequences'] = self.c_sequences_callback
+        self.info_callback['exec_json'] = self.exec_json_callback
 
     def delete_nightplan(self, nightplan_id: str) -> None:
         """
