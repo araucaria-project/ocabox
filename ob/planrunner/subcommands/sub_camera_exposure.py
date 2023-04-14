@@ -61,6 +61,7 @@ class CameraExposure(SubCommand):
             gain = 'unknown'
             readoutmode = 'unknown'
         else:
+            pass
             #gains = self.camera.gains
             #readoutmodes = self.camera.readoutmodes
             # offsets = await self.camera.aget_offsets()
