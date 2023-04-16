@@ -23,13 +23,14 @@ class ChangeFilter(SubCommand):
 
     async def _wait_to_move(self):
         while True:
-            filter = self.filterwheel.position
+            filter = self.proof_val(self.filterwheel.position)
             await asyncio.sleep(0.5)
-            if int(filter) - self.fil_wh_pos == 0:
-                logger.debug(f'{self.id} {self.subcommand_name} is done')
-                self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
-                self.info_callback['stream_5'](f'{self.id}')
-                break
+            if isinstance(filter, int):
+                if int(filter) - self.fil_wh_pos == 0:
+                    logger.debug(f'{self.id} {self.subcommand_name} is done')
+                    self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
+                    self.info_callback['stream_5'](f'{self.id}')
+                    break
 
     async def arun(self, step_id: str or None = None) -> int:
         logger.debug(f'{self.id} {self.subcommand_name} is started')

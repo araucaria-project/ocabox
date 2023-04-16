@@ -7,7 +7,6 @@ from ocaboxapi.formatter import parse_deg_or_dms
 from datetime import datetime
 import os
 import pwd
-from collections import OrderedDict
 from typing import Dict, Any, List
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
