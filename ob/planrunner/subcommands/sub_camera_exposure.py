@@ -173,6 +173,7 @@ class CameraExposure(SubCommand):
         self.info_callback['stream_5'](f'{self.id}')
         self.done = True
         self.info_callback['exec_json'](self.exec_json())
+        await asyncio.sleep(1)
         return 0
 
 

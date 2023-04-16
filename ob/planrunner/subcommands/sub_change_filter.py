@@ -56,6 +56,7 @@ class ChangeFilter(SubCommand):
             self.info_callback['exec_json'](self.exec_json())
             return 1
         fit_pos = self.proof_val(await self.filterwheel.aget_position())
+        fit_pos = self.proof_val(await self.filterwheel.aget_position())
         if pos==fit_pos:
             self.info_callback['stream_1'](f'No need to change filter - skipping')
             self.info_callback['stream_5'](f'{self.id}')
@@ -63,8 +64,10 @@ class ChangeFilter(SubCommand):
             self.info_callback['exec_json'](self.exec_json())
             return 0
         self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} {self.kwargs["filter"]} started')
-        await self.filterwheel.aput_position(pos)
-        await self._wait_to_move(pos)
+        await self.filterwheel.aput_position(int(pos))
+        await self.filterwheel.aput_position(int(pos))
+        await self._wait_to_move(int(pos))
         self.done = True
         self.info_callback['exec_json'](self.exec_json())
+        await asyncio.sleep(0.5)
         return 0
