@@ -44,9 +44,9 @@ class CameraExposure(SubCommand):
                         f'Folder creation failed, please make folder /home/{self.user}/Desktop/fits_{self.telescope.id}')
 
     def indexing_value(self, value: int, values: List[str]) -> int or str:
-        try:
+        if isinstance(value, int) and isinstance(values, list):
             data = values[value]
-        except IndexError:
+        else:
             data = str(value)
         return data
 
@@ -61,11 +61,11 @@ class CameraExposure(SubCommand):
             readoutmode = 'unknown'
         else:
 
-            gains = self.proof_val(self.camera.gains)
-            readoutmodes = self.proof_val(self.camera.readoutmodes)
+            gains = self.proof_val(await self.camera.aget_gains())
+            readoutmodes = self.proof_val(await self.camera.aget_readoutmodes())
             # offsets = await self.camera.aget_offsets()
-            gain = self.proof_val(self.camera.gain)
-            readoutmode = self.proof_val(self.camera.readoutmode)
+            gain = self.proof_val(self.camera.aget_gain())
+            readoutmode = self.proof_val(await self.camera.aget_readoutmodes())
             # offset = await self.camera.aget_offset()
 
             gain = self.proof_val(self.indexing_value(gain, gains))
@@ -94,7 +94,7 @@ class CameraExposure(SubCommand):
                     rotator_pos=self.proof_val(self.rotator.position),
                     obs_type=self.kwargs['type'],
                     object=self.kwargs["obj_name"],
-                    filter=self.kwargs["filter"],
+                    filter=str(self.kwargs["filter"]),
                     req_exp=self.kwargs["exp_time"],
                     cam_exp=self.kwargs["exp_time"],
                     ccd_name=self.proof_val(self.camera.sensorname),
@@ -106,7 +106,8 @@ class CameraExposure(SubCommand):
                     )
 
         file_name = f'{self.telescope.id}c_{jd_oca.split(".")[0]}_{jd_oca.split(".")[1]}'
-
+        stat = self.proof_val(fits_stat(array, size=100, median=False, std=False))
+        """
         # Camra Log
         f = open(f'{self.folder}camera_log.txt', "a")
         f.write(f'Date:{datetime.utcnow()}')
@@ -115,7 +116,7 @@ class CameraExposure(SubCommand):
         f.write(f' Exp-time:{self.kwargs["exp_time"]}')
         f.write(f' Object:{self.kwargs["obj_name"]}')
         f.write(f' Filter:{self.kwargs["filter"]}')
-        stat = self.proof_val(fits_stat(array, size=100, median=False, std=False))
+        
         f.write(' Min:')
         f.write(self.proof_val(str(stat['min'])))
         f.write(' Max:')
@@ -124,7 +125,7 @@ class CameraExposure(SubCommand):
         f.write(self.proof_val(str(round(stat['mean']))))
         f.write(f' File-name:{file_name}')
         f.write('\n')
-        f.close()
+        f.close()"""
 
         save_fits_from_array(array,
                              f'{self.folder}',
@@ -140,8 +141,6 @@ class CameraExposure(SubCommand):
                                                        n_exp=sub,
                                                        mean=self.proof_val(round(stat['mean']))
                                                        ))
-
-
 
     async def _wait_for_subexposure(self, sub: int) -> None:
         while True:
