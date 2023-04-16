@@ -14,7 +14,7 @@ class ChangeFilter(SubCommand):
         self.filterwheel = self.telescope.get_filterwheel('filterwheel')
         self.kwargs = kwargs
         self.id = id
-        self.fil_wh_pos: int = 0
+        self.fil_wh_pos: int or None = None
         self.started: bool = False
         self.done: bool = False
         self.skipped: bool = False
@@ -24,8 +24,8 @@ class ChangeFilter(SubCommand):
     async def _wait_to_move(self):
         while True:
             filter = self.proof_val(self.filterwheel.position)
-            if isinstance(filter, int) and filter is not None:
-                if filter - self.fil_wh_pos==0:
+            if isinstance(filter, int) and filter>-1:
+                if filter-self.fil_wh_pos==0:
                     logger.debug(f'{self.id} {self.subcommand_name} is done')
                     self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
                     self.info_callback['stream_5'](f'{self.id}')
@@ -66,7 +66,6 @@ class ChangeFilter(SubCommand):
         self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} {self.kwargs["filter"]} started')
         await self.filterwheel.aput_position(int(self.fil_wh_pos))
         await self._wait_to_move()
-        await asyncio.sleep(1)
         self.done = True
         self.info_callback['exec_json'](self.exec_json())
         return 0

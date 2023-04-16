@@ -42,7 +42,7 @@ class Focusing(SubCommand):
             position = self.kwargs['pos']
             self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} moving to {position}')
             logger.debug(f'{self.id} {self.subcommand_name} moving to {position}')
-            await self.focuser.aput_move(pos=float(position))
+            await self.focuser.aput_move(float(position))
             await self._wait_for_move(position)
             self.done = True
             self.info_callback['exec_json'](self.exec_json())
