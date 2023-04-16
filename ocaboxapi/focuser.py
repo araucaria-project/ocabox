@@ -55,7 +55,7 @@ class Focuser(TelescopeComponent):
         logger.debug(f'Subscribing focuser is moving from {self.tel_addr}')
         return await self.subscribe('ismoving', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aput_move(self, pos: float) -> None:
+    async def aput_move(self, pos: int) -> None:
         logger.debug(f'Putting focuser move to {self.tel_addr}')
         await self.aput_value('move', Position=pos)
 
