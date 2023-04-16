@@ -33,6 +33,7 @@ class ChangeFilter(SubCommand):
 
     async def arun(self, step_id: str or None = None) -> int:
         logger.debug(f'{self.id} {self.subcommand_name} is started')
+        self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} {self.kwargs["filter"]} started')
         self.started = True
         self.info_callback['exec_json'](self.exec_json())
         ZB08_FILT = {'u': 0, 'g': 1, 'r': 2, 'i': 3, 'z': 4, 'B': 5, 'V': 6, 'Ic': 7}
@@ -56,6 +57,7 @@ class ChangeFilter(SubCommand):
             self.info_callback['exec_json'](self.exec_json())
             return 1
         fit_pos = self.proof_val(await self.filterwheel.aget_position())
+        await asyncio.sleep(0.5)
         fit_pos = self.proof_val(await self.filterwheel.aget_position())
         if pos==fit_pos:
             self.info_callback['stream_1'](f'No need to change filter - skipping')
@@ -63,7 +65,6 @@ class ChangeFilter(SubCommand):
             self.skipped = True
             self.info_callback['exec_json'](self.exec_json())
             return 0
-        self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} {self.kwargs["filter"]} started')
         await self.filterwheel.aput_position(int(pos))
         await self.filterwheel.aput_position(int(pos))
         await self._wait_to_move(int(pos))
