@@ -61,16 +61,16 @@ class CameraExposure(SubCommand):
             gain = 'unknown'
             readoutmode = 'unknown'
         else:
-            pass
-            #gains = self.camera.gains
-            #readoutmodes = self.camera.readoutmodes
+
+            gains = self.proof_val(self.camera.gains)
+            readoutmodes = self.proof_val(self.camera.readoutmodes)
             # offsets = await self.camera.aget_offsets()
-            #gain = self.camera.gain
-            #readoutmode = self.camera.readoutmode
+            gain = self.proof_val(self.camera.gain)
+            readoutmode = self.proof_val(self.camera.readoutmode)
             # offset = await self.camera.aget_offset()
 
-            #gain = indexing_value(gain, gains)
-            #readoutmode = indexing_value(readoutmode, readoutmodes)
+            gain = self.proof_val(self.indexing_value(gain, gains))
+            readoutmode = self.proof_val(self.indexing_value(readoutmode, readoutmodes))
             # offset = indexing_value(offset, offsets)
 
         # TODO This OCA should be taken from settings
@@ -83,27 +83,27 @@ class CameraExposure(SubCommand):
                     obs_elev=OCA['elevation'],
                     tel_id=str(self.telescope.id),
                     utc_now=str(datetime.utcnow()),
-                    jd=jd,
+                    jd=self.proof_val(jd),
                     req_ra=self.kwargs["req_ra"],
                     req_dec=self.kwargs["req_dec"],
                     epoch=self.kwargs["epoch"],
-                    tel_ra=self.mount.rightascension,
-                    tel_dec=self.mount.declination,
-                    tel_alt=self.mount.altitude,
-                    tel_az=self.mount.azimuth,
-                    focus=self.focuser.position,
-                    rotator_pos=self.rotator.position,
+                    tel_ra=self.proof_val(self.mount.rightascension),
+                    tel_dec=self.proof_val(self.mount.declination),
+                    tel_alt=self.proof_val(self.mount.altitude),
+                    tel_az=self.proof_val(self.mount.azimuth),
+                    focus=self.proof_val(self.focuser.position),
+                    rotator_pos=self.proof_val(self.rotator.position),
                     obs_type=self.kwargs['type'],
                     object=self.kwargs["obj_name"],
                     filter=self.kwargs["filter"],
                     req_exp=self.kwargs["exp_time"],
                     cam_exp=self.kwargs["exp_time"],
-                    ccd_name=self.camera.sensorname,
-                    ccd_temp=self.camera.ccdtemperature,
-                    ccd_binx=self.camera.binx,
-                    ccd_biny=self.camera.biny,
-                    read_mod=str(self.camera.readoutmode),
-                    #gain=gain
+                    ccd_name=self.proof_val(self.camera.sensorname),
+                    ccd_temp=self.proof_val(self.camera.ccdtemperature),
+                    ccd_binx=self.proof_val(self.camera.binx),
+                    ccd_biny=self.proof_val(self.camera.biny),
+                    read_mod=self.proof_val(str(readoutmode)),
+                    gain=self.proof_val(gain)
                     )
 
         file_name = f'{self.telescope.id}c_{jd_oca.split(".")[0]}_{jd_oca.split(".")[1]}'
@@ -116,13 +116,13 @@ class CameraExposure(SubCommand):
         f.write(f' Exp-time:{self.kwargs["exp_time"]}')
         f.write(f' Object:{self.kwargs["obj_name"]}')
         f.write(f' Filter:{self.kwargs["filter"]}')
-        stat = fits_stat(array, size=100, median=False, std=False)
+        stat = self.proof_val(fits_stat(array, size=100, median=False, std=False))
         f.write(' Min:')
-        f.write(str(stat['min']))
+        f.write(self.proof_val(str(stat['min'])))
         f.write(' Max:')
-        f.write(str(stat['max']))
+        f.write(self.proof_val(str(stat['max'])))
         f.write(' Mean:')
-        f.write(str(round(stat['mean'])))
+        f.write(self.proof_val(str(round(stat['mean']))))
         f.write(f' File-name:{file_name}')
         f.write('\n')
         f.close()
@@ -139,8 +139,10 @@ class CameraExposure(SubCommand):
                                                        exp_done=True,
                                                        exp_saved=True,
                                                        n_exp=sub,
-                                                       mean=round(stat['mean'])
+                                                       mean=self.proof_val(round(stat['mean']))
                                                        ))
+
+
 
     async def _wait_for_subexposure(self, sub: int) -> None:
         while True:

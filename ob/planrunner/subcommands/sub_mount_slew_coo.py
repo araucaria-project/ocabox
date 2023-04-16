@@ -59,7 +59,9 @@ class MountSlewCoo(SubCommand):
                                   longitude=OCA['longitude'],
                                   elevation=OCA['elevation'],
                                   epoch=self.kwargs['epoch'])
-        if deg_str_to_deg(alt) > 0:
+        # TODO mount_min_alt should be taken from settings
+        mount_min_alt=14.9
+        if deg_str_to_deg(alt)>mount_min_alt:
             await self.mount.aput_tracking(True)
             await self.mount.aput_slewtocoo_async(ra_to_decimal(self.ra_now), dec_to_decimal(self.dec_now))
             await self._wait_to_slew()

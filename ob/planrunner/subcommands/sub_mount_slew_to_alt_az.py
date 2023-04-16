@@ -53,7 +53,9 @@ class MountSlewToAltAz(SubCommand):
             self.skipped = True
             self.info_callback['exec_json'](self.exec_json())
             return 1
-        if self.alt > 0:
+        # TODO mount_min_alt should be taken from settings
+        mount_min_alt = 14.9
+        if self.alt>mount_min_alt:
             await self.mount.aput_tracking(False)
             await self.mount.aput_slewtoaltaz_async(self.az, self.alt)
             await self.mount.aput_tracking(False)

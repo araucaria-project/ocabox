@@ -61,3 +61,12 @@ class SubCommand:
         ex_js['timestamp_utc'] = str(datetime.utcnow())
         return ex_js
 
+    @staticmethod
+    def proof_val(value: Any) -> Any:
+        try:
+            return value
+        except:
+            try:
+                return value
+            except:
+                return ''
