@@ -22,9 +22,7 @@ class MountSlewToAltAz(SubCommand):
                          started=self.started, done=self.done, skipped=self.skipped, **kwargs)
 
     async def _wait_to_slew(self) -> None:
-        t_start = time.time()
         while True:
-            await self.subcommand_timeout(t_start)
             az = self.mount.azimuth
             alt = self.mount.altitude
             await asyncio.sleep(0.5)

@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from ob.planrunner.subcommand import SubCommand
-
+import time
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -22,15 +22,25 @@ class ChangeFilter(SubCommand):
                          started=self.started, done=self.done, skipped=self.skipped, **kwargs)
 
     async def _wait_to_move(self):
+        #t_start = time.time()
+        z=0
+        self.info_callback['stream_1'](f'{z}')
         while True:
+            z+=1
+            self.info_callback['stream_1'](f'{z}')
             filter = self.proof_val(self.filterwheel.position)
-            await asyncio.sleep(0.5)
-            if isinstance(filter, int):
-                if int(filter) - self.fil_wh_pos == 0:
+            if isinstance(filter, int) and filter is not None:
+                self.info_callback['stream_1'](f'AAA')
+                if filter - self.fil_wh_pos==0:
+                    self.info_callback['stream_1'](f'BBB')
                     logger.debug(f'{self.id} {self.subcommand_name} is done')
                     self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
                     self.info_callback['stream_5'](f'{self.id}')
                     break
+            await asyncio.sleep(0.5)
+            #ret = await self.subcommand_timeout(t_start, subc_timeout=15)
+            #if ret>0:
+            #    return ret
 
     async def arun(self, step_id: str or None = None) -> int:
         logger.debug(f'{self.id} {self.subcommand_name} is started')
@@ -57,8 +67,10 @@ class ChangeFilter(SubCommand):
             self.info_callback['exec_json'](self.exec_json())
             return 0
         self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} {self.kwargs["filter"]} started')
-        await self.filterwheel.aput_position(self.fil_wh_pos)
+        await self.filterwheel.aput_position(int(self.fil_wh_pos))
         await self._wait_to_move()
+        self.info_callback['stream_1'](f'CCC')
+        await asyncio.sleep(2)
         self.done = True
         self.info_callback['exec_json'](self.exec_json())
         return 0
