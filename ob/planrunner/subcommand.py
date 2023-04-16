@@ -40,11 +40,6 @@ class SubCommand:
         logger.info(f'Nightplan stopped {message}')
         await self.parent.stop()
 
-    async def subcommand_timeout(self, t_start: float, subc_timeout: float = 600) -> int:
-        t_stamp = time.time()
-        if t_stamp > t_start + subc_timeout:
-            return 1
-
     def exec_json(self, **kw) -> Dict[str, Any]:
         ex_js = {}
         if kw:

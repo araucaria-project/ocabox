@@ -22,34 +22,24 @@ class ChangeFilter(SubCommand):
                          started=self.started, done=self.done, skipped=self.skipped, **kwargs)
 
     async def _wait_to_move(self):
-        #t_start = time.time()
-        z=0
-        self.info_callback['stream_1'](f'{z}')
         while True:
-            z+=1
-            self.info_callback['stream_1'](f'{z}')
             filter = self.proof_val(self.filterwheel.position)
             if isinstance(filter, int) and filter is not None:
-                self.info_callback['stream_1'](f'AAA')
                 if filter - self.fil_wh_pos==0:
-                    self.info_callback['stream_1'](f'BBB')
                     logger.debug(f'{self.id} {self.subcommand_name} is done')
                     self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
                     self.info_callback['stream_5'](f'{self.id}')
                     break
             await asyncio.sleep(0.5)
-            #ret = await self.subcommand_timeout(t_start, subc_timeout=15)
-            #if ret>0:
-            #    return ret
 
     async def arun(self, step_id: str or None = None) -> int:
         logger.debug(f'{self.id} {self.subcommand_name} is started')
         self.started = True
         self.info_callback['exec_json'](self.exec_json())
         ZB08_FILT = {'u': 0, 'g': 1, 'r': 2, 'i': 3, 'z': 4, 'B': 5, 'V': 6, 'Ic': 7}
-        try:
+        if isinstance(self.kwargs["filter"], int):
             self.fil_wh_pos = int(self.kwargs["filter"])
-        except ValueError:
+        elif isinstance(self.kwargs["filter"], str):
             if self.kwargs["filter"] in ZB08_FILT.keys():
                 self.fil_wh_pos = ZB08_FILT[self.kwargs["filter"]]
             else:
@@ -59,6 +49,13 @@ class ChangeFilter(SubCommand):
                 self.skipped = True
                 self.info_callback['exec_json'](self.exec_json())
                 return 1
+        else:
+            self.info_callback['stream_1'](
+                f'Filter index{self.kwargs["filter"]} is wrong, {self.parent.id} skipping')
+            self.info_callback['stream_5'](f'{self.id}')
+            self.skipped = True
+            self.info_callback['exec_json'](self.exec_json())
+            return 1
         fit_pos = self.proof_val(self.filterwheel.position)
         if self.fil_wh_pos==fit_pos:
             self.info_callback['stream_1'](f'No need to change filter - skipping')
@@ -69,8 +66,7 @@ class ChangeFilter(SubCommand):
         self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} {self.kwargs["filter"]} started')
         await self.filterwheel.aput_position(int(self.fil_wh_pos))
         await self._wait_to_move()
-        self.info_callback['stream_1'](f'CCC')
-        await asyncio.sleep(2)
+        await asyncio.sleep(1)
         self.done = True
         self.info_callback['exec_json'](self.exec_json())
         return 0
