@@ -9,7 +9,7 @@ from ob.data_colection.alpaca_api.exceptions import AlpacaHttp400Error, AlpacaHt
 from ob.data_colection.alpaca_api.observatory import Observatory
 from ob.data_colection.base_components.tree_base_provider import TreeBaseProvider
 from ob.data_colection.coded_error import TreeOtherError
-from ob.data_colection.resource_manager.resource_manager import ResourceManager, ResourceManagerAlpaca
+from ob.data_colection.resource_manager.resource_manager import AccessResourceManager, AccessResourceManagerAlpaca
 from ob.data_colection.value import Value, TreeValueError
 from ob.data_colection.value_call import ValueRequest
 
@@ -137,8 +137,8 @@ class TreeAlpacaObservatory(TreeBaseProvider):
             out.append((key + "_RESOURCE", key, val.kind, val.device_nr, val.component_options))
         return out
 
-    async def get_resource_manager(self) -> ResourceManager:
-        rm = ResourceManagerAlpaca()
+    async def get_acs_res_manager(self) -> AccessResourceManager:
+        rm = AccessResourceManagerAlpaca()
         await rm.initiate_resource_manager(self._get_resources_simple_map())
         return rm
 

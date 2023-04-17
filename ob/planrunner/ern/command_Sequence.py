@@ -2,15 +2,17 @@ import asyncio
 import logging
 from typing import List
 from ob.planrunner.ern.command import Command
+from ob.planrunner.ern.command_error import CriticalCommandError, NormalCommandError
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class CommandSequence(Command):
     _NAME = "SEQUENCE"
+    # --- arg keys ---
     _SUBCOMMANDS_KEY = "subcommands"
 
-    def __init__(self, command_dict: dict, plan_data, id_: str = None, previous_command=None,
+    def __init__(self, command_dict: dict, plan_data, previous_command, id_: str = None,
                  loop: asyncio.AbstractEventLoop = None, **kwargs):
         super().__init__(command_dict=command_dict, plan_data=plan_data, id_=id_, previous_command=previous_command,
                          loop=loop, **kwargs)
@@ -33,19 +35,40 @@ class CommandSequence(Command):
     def get_subcommands(self) -> List[Command]:
         return self._subcommands
 
-    # todo ostatni z sekwencji musi ustawić flage zakończenia na sekwencji - dorobić taki pechamizm gdzieś potem
-
-    async def run(self):
-        await self.a_init()
-        if self._loop is None:
-            # todo  ustawić status na skończony
-            return
+    async def _run_body(self):
+        await self._wait_for_previous_command_finish()
+        self.log("Start doing")
         tasks = []
         for s in self.get_subcommands():
+            self.log(f"Waiting for free task slot")
             t = await self.tsk_mngr.run_task_when_can(s.run(), is_independent=True)
+            self.log(f"Created task for {s.get_name()} Id: {s.get_id()}")
             tasks.append(t)
+        
+        # result = await asyncio.gather(*tasks)
+        for t in tasks:
+            try:
+                await t
+            except asyncio.CancelledError:
+                self.log("Task was canceled - Stop the rest of the tasks in this sequence", lvl=logging.ERROR)
+                await self._cancel_tasks(tasks)
+                break
+            except CriticalCommandError:
+                self.log("Task has CRITICAL error - Stop the rest of the tasks in this sequence", lvl=logging.ERROR)
+                await self._cancel_tasks(tasks)
+                break
+            except NormalCommandError:
+                self.log("Task has normal error - ignore and continue with the rest of the commands",
+                         lvl=logging.WARNING)
+            except Exception as e:
+                self.log(f"Task has unexpected error: {e} - Stop the rest of the tasks in this sequence",
+                         lvl=logging.ERROR)
+                await self._cancel_tasks(tasks)
+                break
+        self.log("All subcommand finished")
 
-        await asyncio.gather(*tasks)
-        self._finish_locking.set_result(True)
-        self._finish.set_result(True)
-
+    @staticmethod
+    async def _cancel_tasks(tasks):
+        for t in tasks:
+            t.cancel()
+            # await asyncio.gather(*tasks, return_exceptions=True)

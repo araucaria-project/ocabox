@@ -4,6 +4,7 @@ from typing import Optional, Dict
 
 from pyaraucaria.obs_plan.obs_plan_parser import ObsPlanParser
 
+from ob.data_colection.resource_manager.resource_manager import AccessResourceManager
 from ob.planrunner.ern.command import Command
 from ob.planrunner.ern.plan_data import PlanData
 from ob.planrunner.ern.plan_task_manager import PlanTaskManager
@@ -12,10 +13,13 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class PlanManager:
-    def __init__(self, loop: asyncio.AbstractEventLoop = None, **kwargs):
+    def __init__(self, acs_res_mngr: AccessResourceManager, loop: asyncio.AbstractEventLoop = None, **kwargs):
         super().__init__(**kwargs)
         self._loop = loop
         self._set_loop()
+        self._acs_res_mngr = acs_res_mngr
+        if not isinstance(self._acs_res_mngr, AccessResourceManager):
+            raise RuntimeError
         self._plans: Dict[str, Command] = {}
         self._plan_runner_task = asyncio.Task = None
         self._running_plan_id: str = ""
@@ -44,11 +48,11 @@ class PlanManager:
         if self._running_plan_id == plan_id:
             logger.warning(f"Can not update plan witch id: {plan_id} because is actually running")
             return
-        np = PlanManager.from_dict(parsed_plan, loop=self._loop)
+        np = PlanManager.from_dict(parsed_plan, access_resource_manager=self._acs_res_mngr, loop=self._loop)
         self._plans[plan_id] = np
 
     @classmethod
-    def from_dict(cls, dic: dict, loop=None):
+    def from_dict(cls, dic: dict, access_resource_manager, loop=None):
         # to jest metoda startowa każda klasa command będzie miała takąsamą u siebie w sierodku
 
         # ------------ część do usunięcia gdy parser zostanie poprawiony ------------
@@ -56,8 +60,8 @@ class PlanManager:
         # ---------------------------------------------------------------------------
         # todo przerobić jakoś ten parser żeby zwracał standardowe klucze dla wszystkich poleciń. Dla SEQUENCE też:
         #  zamiast 'all_commands':[] to albo w argsach albo 'subcomands':[]
-        task_mngr = PlanTaskManager()
-        plans = Command.build_command(dic, PlanData(task_mngr=task_mngr), loop=loop)
+        plans = Command.build_command(dic=dic, plan_data=PlanData(access_resource_manager=access_resource_manager),
+                                      id_=None, previous_command=None, loop=loop)
         return plans
 
     def get_plan_structure(self, id_: str) -> Optional[Command]:
@@ -121,5 +125,6 @@ class PlanManager:
                 logger.error(f"{self}: Can not get current async loop, something goes wrong")
                 raise  # todo dorobić błąd
 
-    async def _main(self, plan, step_id):
+    async def _main(self, plan: Command, step_id):
+        # todo dorobić mechanizm uruchamiania od konkretnego kroku
         await plan.run()

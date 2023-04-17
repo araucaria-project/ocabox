@@ -1,13 +1,13 @@
 import asyncio
 import logging
 
-from ob.data_colection.resource_manager.resource_manager import ResourceManager
+from ob.data_colection.resource_manager.resource_manager import AccessResourceManager
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class Dome:
-    RESOURCE_NAME = ResourceManager.DOME
+    RESOURCE_NAME = AccessResourceManager.DOME
 
     def __init__(self, nr: int, ra: str, dec: str, subcommand_name: str = 'dome slew coo', **kwargs) -> None:
         self.nr: int = nr
@@ -19,7 +19,7 @@ class Dome:
 
     async def wait_to_slew(self) -> bool:
         # tu czekamy na pozycję
-        await asyncio.sleep(2)
+        await asyncio.sleep(1)
         return True
 
     async def go_to_position(self):

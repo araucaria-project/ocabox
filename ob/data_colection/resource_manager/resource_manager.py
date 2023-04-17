@@ -8,14 +8,14 @@ from ob.data_colection.alpaca_api.standard_telescope_components import StandardT
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 # todo może resource_manager powinien się nazywać acces_menager
-class ResourceManager(StandardTelescopeComponents, ABC):
+class AccessResourceManager(StandardTelescopeComponents, ABC):
     """
     This is the resource manager for the telescope api support modules. The alpaca api class structure has been
     adopted as the resource standard.
     """
 
     def __init__(self):
-        self._resources: List[ResourceManager.Resource] = []
+        self._resources: List[AccessResourceManager.Resource] = []
 
     class Resource(asyncio.Lock):
 
@@ -46,7 +46,7 @@ class ResourceManager(StandardTelescopeComponents, ABC):
         return out
 
 
-class ResourceManagerAlpaca(ResourceManager):
+class AccessResourceManagerAlpaca(AccessResourceManager):
     """
     This is the resource manager for the alpaca module.
     """

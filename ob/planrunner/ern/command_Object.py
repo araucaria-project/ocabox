@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class CommandObject(Command):
     _NAME = "OBJECT"
 
-    def __init__(self, command_dict: dict, plan_data, id_: str = None, previous_command=None,
+    def __init__(self, command_dict: dict, plan_data, previous_command, id_: str = None,
                  loop: asyncio.AbstractEventLoop = None, **kwargs):
         super().__init__(command_dict=command_dict, plan_data=plan_data, id_=id_, previous_command=previous_command,
                          loop=loop, **kwargs)
@@ -50,33 +50,32 @@ class CommandObject(Command):
                 return True
         return False
 
-    def _unlock_next_command(self):
-        if self._finish_locking is not None:
-            self._finish_locking.done()  # all locks were used
-
-    def _set_self_finish(self):
-        if self._finish is not None:
-            self._finish.done()  # all locks were used
-
-    async def a_run(self):
-        await self.previous_command.lock_all_resources()  # jeśli zabrało wszystko co potrzebne to można zaczynać zbierać u siebie i lokować
-
+    async def _run_body(self):
+        await self._wait_for_permission_to_locking()  # jeśli zabrało wszystko co potrzebne to można zaczynać zbierać u siebie i lokować
+        print('start')
         try:
             #  --------- pierwsza część ----------
+            if self.res_mngr.get_resource(self.res_mngr.MOUNT) is None or \
+                    self.res_mngr.get_resource(self.res_mngr.DOME) is None:
+                return
+
             async with self.res_mngr.get_resource(self.res_mngr.MOUNT), \
                     self.res_mngr.get_resource(self.res_mngr.DOME):
-
+                print('start2')
                 await self._get_res(self.res_mngr.MOUNT, nr=0).go_to_position()
                 await self._get_res(self.res_mngr.DOME, nr=0).go_to_position()
 
                 await self._get_res(self.res_mngr.DOME, nr=0).wait_to_slew()
                 await self._get_res(self.res_mngr.MOUNT, nr=0).wait_to_slew()
+                print('a')
 
             #  ---------  druga część ----------
             async with self.res_mngr.get_resource(self.res_mngr.CAMERA):
+                print('b')
                 self._get_res(self.res_mngr.CAMERA, nr=0).take_photo()
 
                 self._unlock_next_command()  # unlock faster - elemęty z pierwszej części
+                print('c--')
                 # po zrobienu zdjęcia można ruszać kopułą więc zgłaszamy _unlock_next_command() i następna komęda
                 # OBJECT wie że jeśli loki są wolne to może zaczynać a jadyny zajęty Lock w tym miejscy to Camera więc
                 # Dome i Mount będą się ruszać
@@ -84,14 +83,10 @@ class CommandObject(Command):
                 # jeśli nieda się stwożyć takiej metody jak poniżej to cały ten algorytm będzie bezużyteczny tutaj
                 # ale może mieć zastosowanie np przy Darkach albo innych komędach
                 self._get_res(self.res_mngr.CAMERA, nr=0).take_photo()  # nie wiem czy jest taka metoda
-
+                print('d')
         finally:
-            self._unlock_next_command()  # unlock in the end
-            self._set_self_finish()  # command finished - this should be last code line
+            # good practices to have this here, but it is not necessary
+            self._unlock_next_command()  # unlock in the end. This is set again in run() method
+            self._set_self_finish()  # command finished - this should be last code line. This is set again in run()
+            print('e')
 
-    async def run(self):
-        await self.a_init()
-        if self._loop is None:
-            # todo  ustawić status na skończony
-            return
-        await self.a_run()

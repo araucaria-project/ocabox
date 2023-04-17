@@ -111,3 +111,6 @@ tree:
             derotator:
               kind: rotator
               device_number: 0
+        dome:
+          kind: dome
+          device_number: 0
