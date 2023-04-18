@@ -1,4 +1,5 @@
 import asyncio
+import re
 from dataclasses import dataclass
 import logging
 from asyncio import Task
@@ -35,6 +36,9 @@ class TreeCache(TreeBaseProvider):
             logger.warning(f"The _max_recall value is lover than one. It is unacceptable so will be set to 1 !")
             self._max_recall = 1
         self._conditional_freezer: TreeConditionalFreezerProtocol or None = None
+        # self._no_cachable_address = []
+        self._no_cachable_regex = []
+        self._load_no_cachable_address()
 
     @dataclass
     class _KnownValue:
@@ -53,6 +57,10 @@ class TreeCache(TreeBaseProvider):
 
         def get_value(self) -> Value:
             return self.value
+
+    def _load_no_cachable_address(self):
+        # self._no_cachable_address = self._get_cfg("no_cachable_address", [])
+        self._no_cachable_regex = self._get_cfg("no_cachable_regex", [])
 
     async def get_value(self, request: ValueRequest, **kwargs) -> Value or None:
         # docstring is imported from parent
@@ -93,6 +101,11 @@ class TreeCache(TreeBaseProvider):
     def is_cachable_request(self, request: ValueRequest) -> bool:
         if request.request_type != 'GET':
             return False
+        # if request.address.__str__() == self._no_cachable_address:
+        #     return False
+        for r in self._no_cachable_regex:
+            if re.match(r, request.address.__str__()):
+                return False
         return True
 
     async def _on_subcontractor_return(self, result: ValueResponse, request: ValueRequest):
