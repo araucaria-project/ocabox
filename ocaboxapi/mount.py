@@ -112,7 +112,9 @@ class Mount(TelescopeComponent):
     async def asubscribe_motorstatus(self, callback: Callable | None = None,
                                         time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing mount motorstatus from {self.tel_addr}')
-        return await self.subscribe('motorstatus')
+        return await self.subscribe('motorstatus',
+                                    callback=callback,
+                                    time_of_data_tolerance=time_of_data_tolerance)
 
     async def aput_slewtocoo(self, ra: float, dec: float) -> None:
         logger.debug(f'Putting slew coo to {self.tel_addr}')
