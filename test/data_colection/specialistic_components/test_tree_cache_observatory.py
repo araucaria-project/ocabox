@@ -243,6 +243,25 @@ class TreeCacheTest(unittest.TestCase):
 
         asyncio.run(coro())
 
+    def test_address_regex_list(self):
+        """Test list of no-cachable address witch specifics regex"""
+        # excluded address
+        address = Address('.'.join([self.tree_provider1.get_source_name(), self.tree_provider2.get_source_name(),
+                                    "is_access"]))
+        request = ValueRequest(address, self.v1[1].ts)
+        self.assertFalse(self.tree_cache.is_cachable_request(request=request))
+
+        # normal cachable address
+        address = Address('.'.join([self.tree_provider1.get_source_name(), self.tree_provider2.get_source_name(),
+                                    "is_access2"]))
+        request = ValueRequest(address, self.v1[1].ts)
+        self.assertTrue(self.tree_cache.is_cachable_request(request=request))
+        # normal cachable address 2
+        address = Address('.'.join([self.tree_provider1.get_source_name(), self.tree_provider2.get_source_name(),
+                                    "_is_access"]))
+        request = ValueRequest(address, self.v1[1].ts)
+        self.assertTrue(self.tree_cache.is_cachable_request(request=request))
+
 
 if __name__ == '__main__':
     unittest.main()
