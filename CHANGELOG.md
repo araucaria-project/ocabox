@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.0.5] - 2023-04-11
+### Added
+- New custom command to alpaca driver
+
 ## [1.0.4] - 2023-03-31
 ### Added
 - Added `ocaboxapi` rotator
@@ -139,4 +143,4 @@ This allows you to subscribe to these values
 
 [Unreleased]: https://github.com/araucaria-project/ocabox
 
-[1.0.1]: https://github.com/araucaria-project/ocabox
+[1.0.5]: https://github.com/araucaria-project/ocabox
