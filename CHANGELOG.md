@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.0.7] - 2023-04-18
+### Changed
+- From now put response from alpaca wil be returned as single value, not dict witch all data response
+
 ## [1.0.6] - 2023-04-18
 ### Changed
 - Upgrade version of `pyzmq` library

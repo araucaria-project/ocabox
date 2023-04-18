@@ -118,7 +118,6 @@ class TreeAlpacaObservatory(TreeBaseProvider):
             # when given arguments is wrong
             logger.warning(f"Alpaca driver get wrong arguments to run function")
             raise AddressError(address=address, code=1003, message=f"Wrong arguments for method")
-        # TODO gdy jest PUT to zwraca cały blok odpowiedzi a przy GET tylko result.get("Value", None) to jest w api do alpaki ale tutaj można to naprawić bo narazie jest zwracany słownik MIKLÓAJ
         return Value(result, time.time())
 
     def get_resources(self):

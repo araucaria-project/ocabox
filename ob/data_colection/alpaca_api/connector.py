@@ -271,7 +271,7 @@ class AlpacaConnector(Connector):
         except IOError as exc:
             logger.error(f'Connection to {url} failed')
             raise RequestConnectionError from exc
-        return resp
+        return resp.get("Value", None)
 
     async def call(self, component: 'Component', function: str, **data):
         raise NotImplementedError
