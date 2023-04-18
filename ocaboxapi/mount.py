@@ -104,7 +104,7 @@ class Mount(TelescopeComponent):
                                     callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_motorstatus(self) -> str:
+    async def aget_motorstatus(self) -> bool:
         logger.debug(f'Getting mount motorstatus from {self.tel_addr}')
         ret = await self.aget_value('motorstatus')
         return ret
