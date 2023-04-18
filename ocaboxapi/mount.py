@@ -104,23 +104,15 @@ class Mount(TelescopeComponent):
                                     callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    # TODO Problem to get with more parameters
-
-
     async def aget_motorstatus(self) -> str:
         logger.debug(f'Getting mount motorstatus from {self.tel_addr}')
-        ret = await self.aget_value('commandstring', Command='MotStat', Raw=True)
+        ret = await self.aget_value('motorstatus')
         return ret
 
     async def asubscribe_motorstatus(self, callback: Callable | None = None,
                                         time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing mount motorstatus from {self.tel_addr}')
-        return await self.subscribe('commandstring',
-                                    callback=callback,
-                                    time_of_data_tolerance=time_of_data_tolerance,
-                                    Command='MotStat',
-                                    Raw=True)
-
+        return await self.subscribe('motorstatus')
 
     async def aput_slewtocoo(self, ra: float, dec: float) -> None:
         logger.debug(f'Putting slew coo to {self.tel_addr}')
