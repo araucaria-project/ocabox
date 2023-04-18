@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ocabox"
-version = "1.0.4"
+version = "1.0.6"
 license = "MIT"
 description = ""
 authors = ["Ernest Lasek <elasek@akond.com>, Mikołaj Kałuszyński <mkalusz@camk.edu.pl>"]
@@ -16,7 +16,7 @@ packages = [
 
 [tool.poetry.dependencies]
 python = "^3.8"
-pyzmq = ">=22.3.0,<22.4.0"
+pyzmq = "^25.0.2"
 msgpack = ">=1.0.3,<1.1.0"
 confuse = ">=1.7.0,<1.8.0"
 astropy = "^5.0.4"

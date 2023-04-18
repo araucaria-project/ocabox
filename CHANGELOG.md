@@ -3,6 +3,19 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.0.6] - 2023-04-18
+### Changed
+- Upgrade version of `pyzmq` library
+- method `is_access` from `access_grantor` from now will not be cachable
+
+### Added
+- added parameter in the configuration file that allows you to exclude addresses with the given regex from the 
+cache memory
+
+## [1.0.5] - 2023-04-11
+### Added
+- New custom command to alpaca driver
+
 ## [1.0.4] - 2023-03-31
 ### Added
 - Added `ocaboxapi` rotator
@@ -139,4 +152,4 @@ This allows you to subscribe to these values
 
 [Unreleased]: https://github.com/araucaria-project/ocabox
 
-[1.0.1]: https://github.com/araucaria-project/ocabox
+[1.0.6]: https://github.com/araucaria-project/ocabox
