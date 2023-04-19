@@ -6,7 +6,6 @@ from contextlib import suppress
 import zmq
 from typing import List
 
-from ob.comunication.base_client import BaseClient
 from ob.comunication.base_zmq_communication_object import BaseZmqCommunicationObject
 from ob.comunication.comunication_error import CommunicationRuntimeError, CommunicationTimeoutError
 from ob.comunication.message_serializer import MessageSerializer
@@ -16,8 +15,9 @@ from ob.util_functions.asyncio_util_functions import wait_for_psce
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
-class Client(BaseClient, BaseZmqCommunicationObject):
+class Client(BaseZmqCommunicationObject):
     DEFAULT_NAME = 'DefaultClient'
+    TYPE = 'client'
 
     def __init__(self, name: str = None, port: int = None, **kwargs):
         super().__init__(name=name, port=port, **kwargs)
