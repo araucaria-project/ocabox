@@ -166,16 +166,16 @@ class Mount(TelescopeComponent):
 
     async def aput_motoron(self) -> None:
         logger.debug(f'Putting telescope motoron to {self.tel_addr}')
-        await self.aput_value('motoron_put')
+        await self.aput_value('action', Action='telescope:motoron', Parameters='')
 
     async def aput_motoroff(self) -> None:
         logger.debug(f'Putting telescope motoroff to {self.tel_addr}')
-        await self.aput_value('motoroff_put')
+        await self.aput_value('action', Action='telescope:motoroff', Parameters='')
 
     async def aput_domelamp_on(self) -> None:
         logger.debug(f'Putting dome lamp on to {self.tel_addr}')
-        await self.aput_value('domeflatlampon_put')
+        await self.aput_value('action', Action='telescope:startfans', Parameters='5')
 
     async def aput_domelamp_off(self) -> None:
         logger.debug(f'Putting dome lamp off to {self.tel_addr}')
-        await self.aput_value('domeflatlampoff_put')
+        await self.aput_value('action', Action='telescope:stopfans', Parameters='')

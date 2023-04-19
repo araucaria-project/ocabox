@@ -107,7 +107,7 @@ class CameraExposure(SubCommand):
 
         file_name = f'{self.telescope.id}c_{jd_oca.split(".")[0]}_{jd_oca.split(".")[1]}'
         stat = self.proof_val(fits_stat(array, size=100, median=False, std=False))
-        
+
         # Camra Log
         f = open(f'{self.folder}camera_log.txt', "a")
         f.write(f'Date:{datetime.utcnow()}')
