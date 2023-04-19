@@ -102,12 +102,12 @@ class CameraExposure(SubCommand):
                     ccd_binx=self.proof_val(self.camera.binx),
                     ccd_biny=self.proof_val(self.camera.biny),
                     read_mod=self.proof_val(str(readoutmode)),
-                    gain=self.proof_val(gain)
+                    gain=self.proof_val(str(gain))
                     )
 
         file_name = f'{self.telescope.id}c_{jd_oca.split(".")[0]}_{jd_oca.split(".")[1]}'
         stat = self.proof_val(fits_stat(array, size=100, median=False, std=False))
-        """
+        
         # Camra Log
         f = open(f'{self.folder}camera_log.txt', "a")
         f.write(f'Date:{datetime.utcnow()}')
@@ -125,7 +125,7 @@ class CameraExposure(SubCommand):
         f.write(self.proof_val(str(round(stat['mean']))))
         f.write(f' File-name:{file_name}')
         f.write('\n')
-        f.close()"""
+        f.close()
 
         save_fits_from_array(array,
                              f'{self.folder}',

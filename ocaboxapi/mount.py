@@ -104,7 +104,7 @@ class Mount(TelescopeComponent):
                                     callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_motorstatus(self) -> bool:
+    async def aget_motorstatus(self) -> str:
         logger.debug(f'Getting mount motorstatus from {self.tel_addr}')
         ret = await self.aget_value('motorstatus')
         return ret
@@ -166,16 +166,16 @@ class Mount(TelescopeComponent):
 
     async def aput_motoron(self) -> None:
         logger.debug(f'Putting telescope motoron to {self.tel_addr}')
-        await self.aput_value('action', Action='telescope:motoron', Parameters='')
+        await self.aput_value('motoron_put')
 
     async def aput_motoroff(self) -> None:
         logger.debug(f'Putting telescope motoroff to {self.tel_addr}')
-        await self.aput_value('action', Action='telescope:motoroff', Parameters='')
+        await self.aput_value('motoroff_put')
 
     async def aput_domelamp_on(self) -> None:
         logger.debug(f'Putting dome lamp on to {self.tel_addr}')
-        await self.aput_value('action', Action='telescope:startfans', Parameters='5')
+        await self.aput_value('domeflatlampon_put')
 
     async def aput_domelamp_off(self) -> None:
         logger.debug(f'Putting dome lamp off to {self.tel_addr}')
-        await self.aput_value('action', Action='telescope:stopfans', Parameters='')
+        await self.aput_value('domeflatlampoff_put')

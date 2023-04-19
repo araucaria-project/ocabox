@@ -33,16 +33,12 @@ class Focuser(TelescopeComponent):
 
     async def aget_fansstatus(self):
         logger.debug(f'Getting dome fans status from {self.tel_addr}')
-        ret = await self.aget_value('action',
-                                    Action='fansstatus',
-                                    Parameters='')
+        ret = await self.aget_value('fansstatus')
         return ret
 
     async def asubscribe_fansstatus(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing dome fans status from {self.tel_addr}')
-        return await self.subscribe('action',
-                                    Action='fansstatus',
-                                    Parameters='',
+        return await self.subscribe('fansstatus',
                                     callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
@@ -69,8 +65,8 @@ class Focuser(TelescopeComponent):
 
     async def aput_fansturnon(self) -> None:
         logger.debug(f'Putting dome fans turn on {self.tel_addr}')
-        await self.aput_value('action', Action='fansturnon', Parameters='')
+        await self.aput_value('fansturnon_put')
 
     async def aput_fansturnoff(self) -> None:
         logger.debug(f'Putting dome fans turn off to {self.tel_addr}')
-        await self.aput_value('action', Action='fansturnoff', Parameters='')
+        await self.aput_value('fansturnoff_put')
