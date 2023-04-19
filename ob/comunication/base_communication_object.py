@@ -1,11 +1,9 @@
 import logging
 import confuse
 from abc import ABC
-from typing import List
 from ob.comunication.comunication_error import CommunicationTimeoutError
 from ob.comunication.multipart_structure import MultipartStructure
 from ob.ob_config import SingletonConfig
-from zmq.asyncio import Context
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -14,16 +12,8 @@ class BaseCommunicationObject(ABC):
     DEFAULT_NAME = 'BaseCommunicationObject'
     TYPE = 'default_communication_object'
 
-    def __init__(self, name: str = None, port: int = None, **kwargs):
+    def __init__(self, name: str = None, **kwargs):
         self.name = name if name else self.DEFAULT_NAME
-        self._port = port if port else self._get_cfg('port')
-        if not self._port or not isinstance(self._port, int):
-            logger.error(f"Can not get correct port ({self._port}) for {self.TYPE}")
-            raise RuntimeError
-        # OMQ
-        self.context = Context()
-        self._front_socket = None
-        # message service
         self.default_timeout = self._get_cfg('timeout')
         if self.default_timeout is None:
             logger.error(f"Can not find timeout value in settings")
@@ -53,23 +43,6 @@ class BaseCommunicationObject(ABC):
                 value = default
         return value
 
-    @staticmethod
-    def _open_envelope(multipart: List[bytes]) -> MultipartStructure:
-        raise NotImplemented
-
-    @staticmethod
-    def _pack_to_envelope(target: List[bytes], create_time: bytes, msg_id: bytes, request_timeout: bytes,
-                          service_msg: bytes, data_b: list) -> MultipartStructure:
-        """
-
-        :param target: address of clients should be one address or many witch empty byte separate.
-        :param create_time: request create time
-        :param msg_id: request id
-        :param data_b: list sub-requests
-        :return: multipart
-        """
-        raise NotImplemented
-
     def _get_time_to_expire(self, ms: MultipartStructure, use_default=False):
         """
         This method looks for the timeout value in multipart and returns it if it is not obsolete, otherwise it throws
@@ -95,5 +68,3 @@ class BaseCommunicationObject(ABC):
                 message=f'The received message is already outdated. expiretime: {time_to_expire}')
         return time_to_expire
 
-    def __del__(self):
-        self.context.destroy()  # without this zmq not close socket when BaseCommunicationObject is destroyed

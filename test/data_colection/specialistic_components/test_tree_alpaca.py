@@ -104,7 +104,7 @@ class TreeAlpacaTest(unittest.TestCase, BaseAsyncTest):
     def test_get_resource(self):
         """Test method get_resources"""
         resources = self.tao.get_resources()
-        self.assertEqual(resources, [('dibi_RESOURCE', ['dibi'])])
+        self.assertEqual(resources, [('dibi_RESOURCE', ['dibi']), ('dome_RESOURCE', ['dome'])])
 
     def test_get_acs_res_manager(self):
         """Test method get_resource_manager()"""
@@ -112,7 +112,7 @@ class TreeAlpacaTest(unittest.TestCase, BaseAsyncTest):
 
         manager : AccessResourceManager = asyncio.run(self.tao.get_acs_res_manager())
         self.assertTrue(isinstance(manager, AccessResourceManager))
-        self.assertEqual(len(manager._resources), 1)
+        self.assertEqual(len(manager._resources), 2)
 
 
 if __name__ == '__main__':

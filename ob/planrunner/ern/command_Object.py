@@ -56,7 +56,9 @@ class CommandObject(Command):
         try:
             #  --------- pierwsza część ----------
             if self.res_mngr.get_resource(self.res_mngr.MOUNT) is None or \
-                    self.res_mngr.get_resource(self.res_mngr.DOME) is None:
+                    self.res_mngr.get_resource(self.res_mngr.DOME) is None or \
+                    self.res_mngr.get_resource(self.res_mngr.CAMERA) is None:
+                self.log("Some of the required resource is not available")
                 return
 
             async with self.res_mngr.get_resource(self.res_mngr.MOUNT), \
