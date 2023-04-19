@@ -1,7 +1,13 @@
-from abc import ABC, abstractmethod
+import asyncio
+import logging
 from typing import List
-
+from abc import ABC, abstractmethod
+from ob.data_colection.response_error import ResponseError
+from ob.data_colection.tree_user import TreeUser, TreeServiceUser
+from ob.data_colection.value_call import ValueRequest, ValueResponse
 from ob.data_colection.base_components.tree_component import ProvidesResponseProtocol
+
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class BaseRequestSolver(ABC):
@@ -24,6 +30,7 @@ class BaseRequestSolver(ABC):
         """
         pass
 
+    @abstractmethod
     async def get_single_answer(self, request: bytes, user_id: bytes, timeout=None) -> bytes:
         """
         The method reads the query details and calls the provider for an answer for a single query.
@@ -50,3 +57,32 @@ class BaseRequestSolver(ABC):
         :return:
         """
         await self.data_provider.stop()
+
+    async def get_single_answer_internal(self, v_request: ValueRequest, timeout=None) -> ValueResponse:
+        if isinstance(v_request.user, TreeUser):
+            logger.warning(f'Internal request has normal ({TreeUser.__name__}) user instance, should be '
+                           f'{TreeServiceUser.__name__} instead. Will be created new correct user and will be change')
+            v_request.user = TreeServiceUser(**v_request.user.to_dict())
+        if v_request.request_timeout != timeout and timeout:
+            v_request.request_timeout = timeout
+        v_response = await self._get_single_answer(v_request=v_request)
+        return v_response
+
+    async def _get_single_answer(self, v_request: ValueRequest):
+        # Can not find value provider application
+        if not self.data_provider or not isinstance(self.data_provider, ProvidesResponseProtocol):
+            logger.error('Can not find value provider application.')
+            re = ResponseError(4002, '', repr(self), ResponseError.SEVERITY_CRITICAL)
+            v_response = ValueResponse(v_request.address, None, False, re)
+            return v_response
+        # try to get response
+        # get_response method shouldn't raise any errors !!!
+        try:
+            v_response = await self.data_provider.get_response(v_request)
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            logger.error(f'{str(e)}')
+            re = ResponseError(4002, '', repr(self), ResponseError.SEVERITY_CRITICAL)
+            v_response = ValueResponse(v_request.address, None, False, re)
+        return v_response
