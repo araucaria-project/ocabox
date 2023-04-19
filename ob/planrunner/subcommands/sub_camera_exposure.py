@@ -61,15 +61,15 @@ class CameraExposure(SubCommand):
             readoutmode = 'unknown'
         else:
 
-            gains = self.proof_val(await self.camera.aget_gains())
-            readoutmodes = self.proof_val(await self.camera.aget_readoutmodes())
+            gains = self.camera.gains
+            readoutmodes = self.camera.readoutmodes
             # offsets = await self.camera.aget_offsets()
-            gain = self.proof_val(self.camera.aget_gain())
-            readoutmode = self.proof_val(await self.camera.aget_readoutmodes())
+            gain = self.camera.gain
+            readoutmode = self.camera.readoutmode
             # offset = await self.camera.aget_offset()
 
-            gain = self.proof_val(self.indexing_value(gain, gains))
-            readoutmode = self.proof_val(self.indexing_value(readoutmode, readoutmodes))
+            gain = self.indexing_value(gain, gains)
+            readoutmode = self.indexing_value(readoutmode, readoutmodes)
             # offset = indexing_value(offset, offsets)
 
         # TODO This OCA should be taken from settings
@@ -101,8 +101,8 @@ class CameraExposure(SubCommand):
                     ccd_temp=self.proof_val(self.camera.ccdtemperature),
                     ccd_binx=self.proof_val(self.camera.binx),
                     ccd_biny=self.proof_val(self.camera.biny),
-                    read_mod=self.proof_val(str(readoutmode)),
-                    gain=self.proof_val(str(gain))
+                    read_mod=str(readoutmode),
+                    gain=str(gain)
                     )
 
         file_name = f'{self.telescope.id}c_{jd_oca.split(".")[0]}_{jd_oca.split(".")[1]}'
