@@ -50,6 +50,14 @@ class CameraExposure(SubCommand):
             data = str(value)
         return data
 
+    """async def get_value_array(self):
+        # Not implemented yet
+        while True:
+            array = await self.camera.aget_imagearray()
+            if isinstance(array, list):
+                return array
+            await asyncio.sleep(0.1)"""
+
     async def _wait_for_save_fits(self, sub: int) -> None:
 
         array = await self.camera.aget_imagearray()

@@ -65,8 +65,8 @@ class Focuser(TelescopeComponent):
 
     async def aput_fansturnon(self) -> None:
         logger.debug(f'Putting dome fans turn on {self.tel_addr}')
-        await self.aput_value('action', Action='fansturnon', Parameters='')
+        await self.aput_value('fansturnon')
 
     async def aput_fansturnoff(self) -> None:
         logger.debug(f'Putting dome fans turn off to {self.tel_addr}')
-        await self.aput_value('action', Action='fansturnoff', Parameters='')
+        await self.aput_value('fansturnoff')
