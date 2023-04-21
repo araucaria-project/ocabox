@@ -3,6 +3,20 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.0.8] - 2023-04-21
+## Added
+- Add to planrunner commands `DOMEFLAT`, `FOCUS`.
+- Parameters dict info_callback.
+- Add camera log.
+- Add fits statistics.
+- Add new methods to `ocaboxapi`
+
+## Changed
+- Add gain and readoutmode to fits header.
+- Dome move subcommand changed.
+- Saving int16 fits to side int16.
+- Filter mapping.
+
 ## [1.0.7] - 2023-04-18
 ### Changed
 - From now put response from alpaca wil be returned as single value, not dict witch all data response
@@ -156,4 +170,4 @@ This allows you to subscribe to these values
 
 [Unreleased]: https://github.com/araucaria-project/ocabox
 
-[1.0.6]: https://github.com/araucaria-project/ocabox
+[1.0.8]: https://github.com/araucaria-project/ocabox

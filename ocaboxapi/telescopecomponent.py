@@ -71,11 +71,13 @@ class TelescopeComponent(param.Parameterized):
     def tel_addr(self) -> str:
         return self.telescope.tel_addr
 
-    async def aget_value(self, param_name, request_timeout: float = None):
+    async def aget_value(self, param_name, request_timeout: float = None, **parameters_dict):
         """Asynchronously get value, value will be pulled form OCABOX only if needed"""
         if self._needs_refresh(param_name):
             try:
-                new_val = await self._apull_value(param_name, request_timeout=request_timeout)
+                new_val = await self._apull_value(param_name,
+                                                  request_timeout=request_timeout,
+                                                  parameters_dict=parameters_dict)
             except OcaboxServerError as e:
                 logger.info(f'Error while pulling value for {param_name}: {e}')
                 new_val = None
@@ -106,7 +108,7 @@ class TelescopeComponent(param.Parameterized):
         `watcher` is returned by `watch` method."""
         self.param.unwatch(watcher)
 
-    async def subscribe(self, param_name, callback=None, time_of_data_tolerance: float | None = None):
+    async def subscribe(self, param_name, callback=None, time_of_data_tolerance: float | None = None, **parameters_dict):
         """ Add watcher for value change, callback will be called with Event as argument
 
         Callback can be cooroutine, in that case it will be executed in asyncio loop.
@@ -127,7 +129,8 @@ class TelescopeComponent(param.Parameterized):
 
         cq = await self.telescope.observatory.subscribe_async(address,
                                                               callback_method=sub_callback,
-                                                              time_of_data_tolerance=time_of_data_tolerance
+                                                              time_of_data_tolerance=time_of_data_tolerance,
+                                                              parameters_dict=parameters_dict
                                                               )
 
         self.subscribed.append(cq)
@@ -182,8 +185,8 @@ class TelescopeComponent(param.Parameterized):
             setattr(self, f'_{param_name}_value', self._pull_value(param_name))
         return getattr(self, f'_{param_name}_value')
 
-    async def _apull_value(self, param_name, request_timeout: float | None = None):
-        return await self._get_async(param_name, request_timeout=request_timeout)
+    async def _apull_value(self, param_name, request_timeout: float | None = None, parameters_dict: dict | None = None):
+        return await self._get_async(param_name, request_timeout=request_timeout, parameters_dict=parameters_dict)
 
     def _pull_value(self, param_name):
         return self._get(param_name)

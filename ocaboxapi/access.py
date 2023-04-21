@@ -35,13 +35,13 @@ class AccessGrantor(TelescopeComponent):
                                     time_of_data_tolerance=time_of_data_tolerance)
 
     async def aget_is_access(self) -> bool:
-        logger.debug(f'Getting telescope timeout current control from {self.tel_addr}')
+        logger.debug(f'Getting telescope is access from {self.tel_addr}')
         ret = await self.aget_value('is_access')
         return ret
 
     async def asubscribe_is_access(self, callback: Callable | None = None,
                                       time_of_data_tolerance: float | None = None):
-        logger.debug(f'Subscribing telescope timeout current control from {self.tel_addr}')
+        logger.debug(f'Subscribing telescope is access from {self.tel_addr}')
         return await self.subscribe('is_access', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
     async def aput_take_control(self, for_how_long: float | None = None):
