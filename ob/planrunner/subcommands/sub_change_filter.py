@@ -21,15 +21,11 @@ class ChangeFilter(SubCommand):
                          started=self.started, done=self.done, skipped=self.skipped, **kwargs)
 
     async def _wait_to_move(self, pos: int) -> None:
-        self.info_callback['stream_1']('M1')
         while True:
-            self.info_callback['stream_1'](f'M2 Pos:{pos}, type{type(pos)}')
             await asyncio.sleep(0.5)
             fit_pos = await self.get_value_position()
-            self.info_callback['stream_1'](f'M0A fit_pos:{fit_pos}, type{type(fit_pos)}')
             if isinstance(fit_pos, int) and fit_pos>-1:
                 if fit_pos==pos:
-                    self.info_callback['stream_1'](f'M0B fit_pos:{fit_pos}, type{type(fit_pos)}')
                     logger.debug(f'{self.id} {self.subcommand_name} is done')
                     self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
                     self.info_callback['stream_5'](f'{self.id}')
@@ -38,10 +34,22 @@ class ChangeFilter(SubCommand):
     async def get_value_position(self):
         while True:
             val = self.filterwheel.position
-            self.info_callback['stream_1'](f'M0A fit_pos:{val}, type{type(val)}')
             if isinstance(val, int):
                 return val
             await asyncio.sleep(0.1)
+
+    async def change_filter_pos_proof(self, pos: int) -> None or int:
+        try:
+            await self.filterwheel.aput_position(pos)
+        except:
+            try:
+                await self.filterwheel.aput_position(pos)
+            except:
+                try:
+                    await self.filterwheel.aput_position(pos)
+                except:
+                    logger.error(f'{self.id} {self.subcommand_name} filter aput_position error')
+                    return 1
 
     async def arun(self, step_id: str or None = None) -> int:
         logger.debug(f'{self.id} {self.subcommand_name} is started')
@@ -68,9 +76,7 @@ class ChangeFilter(SubCommand):
             self.skipped = True
             self.info_callback['exec_json'](self.exec_json())
             return 1
-        self.info_callback['stream_1'](f'M0 fit_pos:{pos}, type{type(pos)}')
         fit_pos = await self.get_value_position()
-        self.info_callback['stream_1'](f'M0B fit_pos:{fit_pos}, type{type(fit_pos)}')
         if pos==fit_pos:
             self.info_callback['stream_1'](f'No need to change filter - skipping')
             self.info_callback['stream_5'](f'{self.id}')
@@ -78,23 +84,15 @@ class ChangeFilter(SubCommand):
             self.info_callback['exec_json'](self.exec_json())
             return 0
 
-        # TODO it's freeze on aput_position
-        try:
-            self.info_callback['stream_1'](f'Z1')
-            await self.filterwheel.aput_position(pos)
-            self.info_callback['stream_1'](f'Z2')
-        except:
-            try:
-                self.info_callback['stream_1'](f'Z3')
-                await self.filterwheel.aput_position(pos)
-                self.info_callback['stream_1'](f'Z4')
-            except:
-                pass
-
+        # TODO this subcommand is freeze on aput_position
+        res = await self.change_filter_pos_proof(pos)
+        if res==1:
+            self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} filter aput_position error, skipping')
+            self.info_callback['stream_5'](f'{self.id}')
+            self.skipped = True
+            self.info_callback['exec_json'](self.exec_json())
+            return 1
         await self._wait_to_move(pos)
-        self.info_callback['stream_1']('M4')
         self.done = True
         self.info_callback['exec_json'](self.exec_json())
-        self.info_callback['stream_1']('M5')
-        await asyncio.sleep(0.5)
         return 0
