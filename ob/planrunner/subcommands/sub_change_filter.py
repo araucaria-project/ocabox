@@ -26,9 +26,10 @@ class ChangeFilter(SubCommand):
             self.info_callback['stream_1'](f'M2 Pos:{pos}, type{type(pos)}')
             await asyncio.sleep(0.5)
             fit_pos = await self.get_value_position()
+            self.info_callback['stream_1'](f'M0A fit_pos:{fit_pos}, type{type(fit_pos)}')
             if isinstance(fit_pos, int) and fit_pos>-1:
-                self.info_callback['stream_1'](f'M3{fit_pos}, type{type(fit_pos)}')
                 if fit_pos==pos:
+                    self.info_callback['stream_1'](f'M0B fit_pos:{fit_pos}, type{type(fit_pos)}')
                     logger.debug(f'{self.id} {self.subcommand_name} is done')
                     self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
                     self.info_callback['stream_5'](f'{self.id}')
@@ -37,6 +38,7 @@ class ChangeFilter(SubCommand):
     async def get_value_position(self):
         while True:
             val = self.filterwheel.position
+            self.info_callback['stream_1'](f'M0A fit_pos:{val}, type{type(val)}')
             if isinstance(val, int):
                 return val
             await asyncio.sleep(0.1)
@@ -66,8 +68,9 @@ class ChangeFilter(SubCommand):
             self.skipped = True
             self.info_callback['exec_json'](self.exec_json())
             return 1
-        self.info_callback['stream_1']('M0')
+        self.info_callback['stream_1'](f'M0 fit_pos:{pos}, type{type(pos)}')
         fit_pos = await self.get_value_position()
+        self.info_callback['stream_1'](f'M0B fit_pos:{fit_pos}, type{type(fit_pos)}')
         if pos==fit_pos:
             self.info_callback['stream_1'](f'No need to change filter - skipping')
             self.info_callback['stream_5'](f'{self.id}')
