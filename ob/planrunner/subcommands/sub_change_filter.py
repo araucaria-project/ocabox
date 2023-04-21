@@ -23,11 +23,11 @@ class ChangeFilter(SubCommand):
     async def _wait_to_move(self, pos: int) -> None:
         self.info_callback['stream_1']('M1')
         while True:
-            self.info_callback['stream_1']('M2')
+            self.info_callback['stream_1'](f'M2 Pos:{pos}, type{type(pos)}')
             await asyncio.sleep(0.5)
             fit_pos = await self.get_value_position()
             if isinstance(fit_pos, int) and fit_pos>-1:
-                self.info_callback['stream_1']('M3')
+                self.info_callback['stream_1'](f'M3{fit_pos}, type{type(fit_pos)}')
                 if fit_pos==pos:
                     logger.debug(f'{self.id} {self.subcommand_name} is done')
                     self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
