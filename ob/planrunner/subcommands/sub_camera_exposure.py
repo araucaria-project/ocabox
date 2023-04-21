@@ -1,20 +1,20 @@
 import asyncio
 import logging
 from ob.planrunner.subcommand import SubCommand
-from pyaraucaria.fits import save_fits_from_array, fits_header
+from pyaraucaria.fits import save_fits_from_array, fits_header, fits_stat
 from pyaraucaria.date import datetime_to_julian
 from ocaboxapi.formatter import parse_deg_or_dms
 from datetime import datetime
 import os
 import pwd
-from collections import OrderedDict
+from typing import Dict, Any, List
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class CameraExposure(SubCommand):
 
-    def __init__(self, id: str, parent: 'Command', subcommand_name: str = 'camera exposure', **kwargs) -> None:
+    def __init__(self, id: str, parent: 'Command', subcommand_name: str = 'camera-exposure', **kwargs) -> None:
         self.subcommand_name = subcommand_name
         self.telescope = parent.telescope
         self.mount = self.telescope.get_mount()
@@ -27,7 +27,11 @@ class CameraExposure(SubCommand):
         self.id = id
         self.user = pwd.getpwuid(os.getuid())[0]
         self.folder = f'/home/{self.user}/Desktop/fits_{self.telescope.id}/'
-        super().__init__(id=id, parent=parent, subcommand_name=subcommand_name, **kwargs)
+        self.started: bool = False
+        self.done: bool = False
+        self.skipped: bool = False
+        super().__init__(id=id, parent=parent, subcommand_name=subcommand_name,
+                         started=self.started, done=self.done, skipped=self.skipped, **kwargs)
         self._mk_folder()
 
     def _mk_folder(self):
@@ -39,112 +43,144 @@ class CameraExposure(SubCommand):
                     logger.warning(
                         f'Folder creation failed, please make folder /home/{self.user}/Desktop/fits_{self.telescope.id}')
 
-    async def _wait_for_save_fits(self, sub: int):
-        array = await self.camera.aget_imagearray()
+    def indexing_value(self, value: int, values: List[str]) -> int or str:
+        if isinstance(value, int) and isinstance(values, list):
+            data = values[value]
+        else:
+            data = str(value)
+        return data
 
+    """async def get_value_array(self):
+        # Not implemented yet
+        while True:
+            array = await self.camera.aget_imagearray()
+            if isinstance(array, list):
+                return array
+            await asyncio.sleep(0.1)"""
+
+    async def _wait_for_save_fits(self, sub: int) -> None:
+
+        array = await self.camera.aget_imagearray()
         jd = datetime_to_julian(str(datetime.utcnow()))
         jd_oca = f"{(jd - 2460000):010.5f}"
 
+        if self.telescope.id=='dev':
+            gain = 'unknown'
+            readoutmode = 'unknown'
+        else:
+
+            gains = self.camera.gains
+            readoutmodes = self.camera.readoutmodes
+            # offsets = await self.camera.aget_offsets()
+            gain = self.camera.gain
+            readoutmode = self.camera.readoutmode
+            # offset = await self.camera.aget_offset()
+
+            gain = self.indexing_value(gain, gains)
+            readoutmode = self.indexing_value(readoutmode, readoutmodes)
+            # offset = indexing_value(offset, offsets)
+
         # TODO This OCA should be taken from settings
         OCA = {'latitude': '-24:35:53', 'longitude': '-70:11:47', 'elevation': '2817'}
-
         header = fits_header(
                     obs_lat=OCA['latitude'],
-                    parsed_obs_lat=str(parse_deg_or_dms(OCA['latitude'])),
+                    parsed_obs_lat=parse_deg_or_dms(OCA['latitude']),
                     obs_lon=OCA['longitude'],
-                    parsed_obs_lon=str(parse_deg_or_dms(OCA['longitude'])),
+                    parsed_obs_lon=parse_deg_or_dms(OCA['longitude']),
                     obs_elev=OCA['elevation'],
                     tel_id=str(self.telescope.id),
                     utc_now=str(datetime.utcnow()),
-                    jd=str(jd),
-                    req_ra=str(self.kwargs["req_ra"]),
-                    req_dec=str(self.kwargs["req_dec"]),
-                    epoch=str(self.kwargs["epoch"]),
-                    tel_ra=str(self.mount.rightascension),
-                    tel_dec=str(self.mount.declination),
-                    tel_alt=str(self.mount.altitude),
-                    tel_az=str(self.mount.azimuth),
-                    focus=str(self.focuser.position),
-                    rotator_pos=str(self.rotator.position),
-                    obs_type=str(self.kwargs['type']),
-                    object=str(self.kwargs["obj_name"]),
-                    filter=str(self.filter.position),
-                    req_exp=str(self.kwargs["exp_time"]),
-                    cam_exp=str(self.kwargs["exp_time"]),
-                    ccd_name=str(self.camera.name),
-                    ccd_temp=str(self.camera.ccdtemperature),
-                    ccd_binx=str(self.camera.binx),
-                    ccd_biny=str(self.camera.biny),
-                    read_mod=str(self.camera.readoutmode))
+                    jd=self.proof_val(jd),
+                    req_ra=self.kwargs["req_ra"],
+                    req_dec=self.kwargs["req_dec"],
+                    epoch=self.kwargs["epoch"],
+                    tel_ra=self.proof_val(self.mount.rightascension),
+                    tel_dec=self.proof_val(self.mount.declination),
+                    tel_alt=self.proof_val(self.mount.altitude),
+                    tel_az=self.proof_val(self.mount.azimuth),
+                    focus=self.proof_val(self.focuser.position),
+                    rotator_pos=self.proof_val(self.rotator.position),
+                    obs_type=self.kwargs['type'],
+                    object=self.kwargs["obj_name"],
+                    filter=str(self.kwargs["filter"]),
+                    req_exp=self.kwargs["exp_time"],
+                    cam_exp=self.kwargs["exp_time"],
+                    ccd_name=self.proof_val(self.camera.sensorname),
+                    ccd_temp=self.proof_val(self.camera.ccdtemperature),
+                    ccd_binx=self.proof_val(self.camera.binx),
+                    ccd_biny=self.proof_val(self.camera.biny),
+                    read_mod=str(readoutmode),
+                    gain=str(gain)
+                    )
+
+        file_name = f'{self.telescope.id}c_{jd_oca.split(".")[0]}_{jd_oca.split(".")[1]}'
+        stat = self.proof_val(fits_stat(array, size=100, median=False, std=False))
+
+        # Camra Log
+        f = open(f'{self.folder}camera_log.txt', "a")
+        f.write(f'Date:{datetime.utcnow()}')
+        f.write(f' Type:{self.kwargs["type"]}')
+        f.write(f' n_exp/n_exp_req:{sub}/{self.kwargs["exp_no"]}')
+        f.write(f' Exp-time:{self.kwargs["exp_time"]}')
+        f.write(f' Object:{self.kwargs["obj_name"]}')
+        f.write(f' Filter:{self.kwargs["filter"]}')
+        
+        f.write(' Min:')
+        f.write(self.proof_val(str(stat['min'])))
+        f.write(' Max:')
+        f.write(self.proof_val(str(stat['max'])))
+        f.write(' Mean:')
+        f.write(self.proof_val(str(round(stat['mean']))))
+        f.write(f' File-name:{file_name}')
+        f.write('\n')
+        f.close()
 
         save_fits_from_array(array,
                              f'{self.folder}',
-                             f'{self.telescope.id}c_{jd_oca.split(".")[0]}_{jd_oca.split(".")[1]}',
+                             file_name,
                              header,
-                             overwrite=True)
+                             overwrite=True,
+                             dtyp='sideint16')
         logger.debug(f'{self.id} {self.subcommand_name} is done')
-        self.info_callback['stream_1'](f'Subexp {sub}/{self.kwargs["exp_no"]} done')
+        self.info_callback['stream_1'](f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} done')
+        self.info_callback['exec_json'](self.exec_json(exp_started=True,
+                                                       exp_done=True,
+                                                       exp_saved=True,
+                                                       n_exp=sub,
+                                                       mean=self.proof_val(round(stat['mean']))
+                                                       ))
 
-    async def _wait_for_subexposure(self, sub: int):
+    async def _wait_for_subexposure(self, sub: int) -> None:
         while True:
-            await asyncio.sleep(1)
-            subexposure_done = self.camera.imageready
-            if subexposure_done:
+            await asyncio.sleep(0.5)
+            subexposure_done = self.proof_val(self.camera.imageready)
+            if subexposure_done and isinstance(subexposure_done, bool):
                 logger.debug(f'{self.id} {self.subcommand_name} is done --> saving')
-                self.info_callback['stream_1'](f'Subexp {sub}/{self.kwargs["exp_no"]} --> saving')
+                self.info_callback['stream_1'](f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} --> saving')
+                self.info_callback['exec_json'](self.exec_json(exp_started=True,
+                                                               exp_done=True,
+                                                               exp_saved=False,
+                                                               n_exp=sub))
                 break
-
-    async def _wait_for_cover(self):
-        wait = 0
-        while True:
-            await asyncio.sleep(1)
-            wait += 1
-            if wait > 10:
-                break
-            """
-            # TODO cover state not working - maybe only time wait
-            cover_status = self.cover.coverstate
-            if cover_status == 3:
-                logger.debug(f'Telescope cover opened')
-                self.info_callback['stream_1'](f'Telescope cover is opened')
-                break"""
-
 
     async def arun(self, step_id: str or None = None) -> int:
         logger.debug(f'{self.id} {self.subcommand_name} is started')
-        if self.kwargs["type"] in ['science', 'flat']:
-            self.info_callback['stream_1'](f'Opening cover')
-            logger.debug(f'Opening cover')
-            if self.telescope.id == 'dev':
-                await self.cover.aput_opencover_dev()
-            else:
-                await self.mount.aput_opencover()
-            await self._wait_for_cover()
-        elif self.kwargs["type"] in ['dark', 'zero']:
-            self.info_callback['stream_1'](f'Closing cover')
-            logger.debug(f'Closing cover')
-            if self.telescope.id == 'dev':
-                await self.cover.aput_closecover_dev()
-            else:
-                await self.mount.aput_closecover()
-            await self._wait_for_cover()
-        else:
-            self.info_callback['stream_1'](f'No exposure type, skipping')
-            logger.debug(f'No exposure type, skipping')
-            return 1
-        self.info_callback['stream_1'](
-            f'{self.id} {self.subcommand_name} {self.kwargs["type"]}'
-            f' time:{self.kwargs["exp_time"]} number:{self.kwargs["exp_no"]} started')
+        self.started = True
+        self.info_callback['exec_json'](self.exec_json())
         for sub in range(1, self.kwargs["exp_no"]+1):
-            self.info_callback['stream_1'](f'Subexp {sub}/{self.kwargs["exp_no"]} started')
+            self.info_callback['stream_1'](f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} started')
+            self.info_callback['exec_json'](self.exec_json(exp_started=True,
+                                                           exp_done=False,
+                                                           exp_saved=False,
+                                                           n_exp=sub))
             await self.camera.aput_startexposure(self.kwargs["exp_time"], self.kwargs["light"])
-            await asyncio.sleep(1)
             await self._wait_for_subexposure(sub)
-            await asyncio.sleep(1)
             await self._wait_for_save_fits(sub)
-        await asyncio.sleep(5)
         self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
         self.info_callback['stream_5'](f'{self.id}')
+        self.done = True
+        self.info_callback['exec_json'](self.exec_json())
+        await asyncio.sleep(1)
         return 0
 
 

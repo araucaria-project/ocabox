@@ -17,6 +17,8 @@ class Mount(TelescopeComponent):
     slewing = OcaBoxParam(default=False, doc="Mount is slewing")
     tracking = OcaBoxParam(default=False, doc="Mount is tracking")
     ispulseguiding = OcaBoxParam(default=False, doc="Mount is pulseguiding")
+    motorstatus = OcaBoxParam(default='', doc="Mount motorstatus")
+    commandstring = OcaBoxParam(default='', doc="Mount motorstatus")
 
     async def aget_ra(self) -> float:
         logger.debug(f'Getting mount RA from {self.tel_addr}')
@@ -102,6 +104,18 @@ class Mount(TelescopeComponent):
                                     callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
+    async def aget_motorstatus(self) -> str:
+        logger.debug(f'Getting mount motorstatus from {self.tel_addr}')
+        ret = await self.aget_value('motorstatus')
+        return ret
+
+    async def asubscribe_motorstatus(self, callback: Callable | None = None,
+                                        time_of_data_tolerance: float | None = None):
+        logger.debug(f'Subscribing mount motorstatus from {self.tel_addr}')
+        return await self.subscribe('motorstatus',
+                                    callback=callback,
+                                    time_of_data_tolerance=time_of_data_tolerance)
+
     async def aput_slewtocoo(self, ra: float, dec: float) -> None:
         logger.debug(f'Putting slew coo to {self.tel_addr}')
         await self.aput_value('slewtocoordinates', RightAscension=ra, Declination=dec)
@@ -152,8 +166,16 @@ class Mount(TelescopeComponent):
 
     async def aput_motoron(self) -> None:
         logger.debug(f'Putting telescope motoron to {self.tel_addr}')
-        await self.aput_value('action', Action='telescope:motoron', Parameters='')
+        await self.aput_value('motoron')
 
     async def aput_motoroff(self) -> None:
         logger.debug(f'Putting telescope motoroff to {self.tel_addr}')
-        await self.aput_value('action', Action='telescope:motoroff', Parameters='')
+        await self.aput_value('motoroff')
+
+    async def aput_domelamp_on(self) -> None:
+        logger.debug(f'Putting dome lamp on to {self.tel_addr}')
+        await self.aput_value('domeflatlampon')
+
+    async def aput_domelamp_off(self) -> None:
+        logger.debug(f'Putting dome lamp off to {self.tel_addr}')
+        await self.aput_value('domeflatlampoff')

@@ -1,5 +1,6 @@
 from typing import Dict, List, Any, Callable
 import logging
+from datetime import datetime
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -10,6 +11,9 @@ class AbstractSequence:
         self.id = id
         self.info_callback = info_callback
         self.name = name
+        self.started: bool = False
+        self.done: bool = False
+        self.skipped: bool = False
         super().__init__()
 
     @staticmethod
@@ -34,6 +38,8 @@ class AbstractSequence:
             return f'0{number}'
 
     async def _arun(self, subcomponents: Any, step_id: str or None = None) -> int:
+        self.started = True
+        self.info_callback['exec_json'](self.exec_json())
         for n in subcomponents.keys():
             skip = 0
             if step_id is None:
@@ -44,6 +50,20 @@ class AbstractSequence:
                     skip = await subcomponents[n].arun(step_id=step_id)
             if skip > 0:
                 self.info_callback['stream_1'](f'{self.id} skipped')
+                self.skipped = True
+                self.info_callback['exec_json'](self.exec_json())
                 return 1
         self.info_callback['stream_1'](f'{self.name} {self.id} done')
+        self.done = True
+        self.info_callback['exec_json'](self.exec_json())
         return 0
+
+    def exec_json(self) -> Dict[str, Any]:
+        ex_js = {}
+        ex_js['id'] = self.id
+        ex_js['name'] = self.name
+        ex_js['started'] = self.started
+        ex_js['done'] = self.done
+        ex_js['skipped'] = self.skipped
+        ex_js['timestamp_utc'] = str(datetime.utcnow())
+        return ex_js
