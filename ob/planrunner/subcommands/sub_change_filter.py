@@ -77,8 +77,21 @@ class ChangeFilter(SubCommand):
             self.skipped = True
             self.info_callback['exec_json'](self.exec_json())
             return 0
-        await self.filterwheel.aput_position(int(pos))
-        await self._wait_to_move(int(pos))
+
+        # TODO it's freeze on aput_position
+        try:
+            self.info_callback['stream_1'](f'Z1')
+            await self.filterwheel.aput_position(pos)
+            self.info_callback['stream_1'](f'Z2')
+        except:
+            try:
+                self.info_callback['stream_1'](f'Z3')
+                await self.filterwheel.aput_position(pos)
+                self.info_callback['stream_1'](f'Z4')
+            except:
+                pass
+
+        await self._wait_to_move(pos)
         self.info_callback['stream_1']('M4')
         self.done = True
         self.info_callback['exec_json'](self.exec_json())
