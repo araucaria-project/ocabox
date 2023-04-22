@@ -150,7 +150,6 @@ class CameraExposure(SubCommand):
         self.info_callback['exec_json'](self.exec_json(exp_started=True,
                                                        exp_done=True,
                                                        exp_saved=True,
-                                                       readout_time=self.readout_time,
                                                        n_exp=sub,
                                                        mean=self.proof_val(round(stat['mean']))
                                                        ))
@@ -179,7 +178,6 @@ class CameraExposure(SubCommand):
             self.info_callback['exec_json'](self.exec_json(exp_started=True,
                                                            exp_done=False,
                                                            exp_saved=False,
-                                                           readout_time=self.readout_time,
                                                            n_exp=sub))
             self.readout_time_start = time.time()
             self.exp_time_start = str(datetime.utcnow())
