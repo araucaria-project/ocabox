@@ -57,10 +57,10 @@ class ChangeFilter(SubCommand):
         self.started = True
         self.info_callback['exec_json'](self.exec_json())
         ZB08_FILT = {'u': 0, 'g': 1, 'r': 2, 'i': 3, 'z': 4, 'B': 5, 'V': 6, 'Ic': 7}
-        if isinstance(self.kwargs["filter"], int):
+        if self.telescope.id=='dev':
             pos = int(self.kwargs["filter"])
-        elif isinstance(self.kwargs["filter"], str):
-            if self.kwargs["filter"] in ZB08_FILT.keys():
+        else:
+            if self.kwargs["filter"] in ZB08_FILT.keys() and self.kwargs["filter"] is not None:
                 pos = ZB08_FILT[self.kwargs["filter"]]
             else:
                 self.info_callback['stream_1'](
@@ -69,13 +69,6 @@ class ChangeFilter(SubCommand):
                 self.skipped = True
                 self.info_callback['exec_json'](self.exec_json())
                 return 1
-        else:
-            self.info_callback['stream_1'](
-                f'Filter index{self.kwargs["filter"]} is wrong, {self.parent.id} skipping')
-            self.info_callback['stream_5'](f'{self.id}')
-            self.skipped = True
-            self.info_callback['exec_json'](self.exec_json())
-            return 1
         fit_pos = await self.get_value_position()
         if pos==fit_pos:
             self.info_callback['stream_1'](f'No need to change filter - skipping')
