@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from ob.planrunner.subcommand import SubCommand
-from pyaraucaria.coordinates import deg_to_decimal_deg
+from pyaraucaria.coordinates import deg_str_to_deg
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 import time
 
@@ -42,12 +42,12 @@ class MountSlewToAltAz(SubCommand):
         self.info_callback['stream_1'](
             f'{self.id} {self.subcommand_name} ALT:{self.kwargs["alt"]} AZ:{self.kwargs["az"]} started')
         try:
-            self.az = int(self.kwargs["alt"])
-            self.alt = int(self.kwargs["alt"])
+            self.az = float(self.kwargs["az"])
+            self.alt = float(self.kwargs["alt"])
         except ValueError:
             try:
-                self.az = deg_to_decimal_deg(self.kwargs["az"])
-                self.alt = deg_to_decimal_deg(self.kwargs["alt"])
+                self.az = deg_str_to_deg(self.kwargs["az"])
+                self.alt = deg_str_to_deg(self.kwargs["alt"])
             except ValueError:
                 self.skipped = True
                 self.info_callback['exec_json'](self.exec_json())

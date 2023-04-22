@@ -164,9 +164,7 @@ class Command(AbstractSequence):
         dome_az = 0.0
         dome_flat_alt = 15.0
 
-        sub = DomeSlew(f'{self.id}_{self.numb(id_next)}',
-                       self,
-                       az=dome_az)
+        sub = DomeSlew(f'{self.id}_{self.numb(id_next)}', self, az=dome_az)
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
         id_next += 1
 
@@ -325,9 +323,11 @@ class Command(AbstractSequence):
 
         # Slave dome
         id_next += 1
-        sub = DomeSlew(f'{self.id}_{self.numb(id_next)}',
-                       self,
-                       az=deg_str_to_deg(self.kwargs['az']))
+        try:
+            az_dom = float(self.kwargs["az"])
+        except ValueError:
+                az_dom = deg_str_to_deg(self.kwargs["az"])
+        sub = DomeSlew(f'{self.id}_{self.numb(id_next)}', self, az=az_dom)
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
 
         # id_next += 1
