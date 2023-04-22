@@ -159,6 +159,21 @@ class ObservPlan:
                 self.running_nightplan = nightplan_id
                 self.tsk = asyncio.create_task(self.arun_night(nightplan_id, step_id=step_id))
 
+    """
+    async def arun_nightplan(self, nightplan_id: str, step_id: str or None = None) -> None:
+        # How to stop nightplan
+        """"""
+        Async method run night plan.
+        :param nightplan_id:  Night plan id (default: julian night date)
+        :param step_id: optional, run from specified step, example: '00' or '00_01_02' or '00_02'
+        :return: None
+        """"""
+        self.stop_nightplan()
+        if self.get_nightplan(nightplan_id):
+            if self.tsk is None:
+                self.running_nightplan = nightplan_id
+                self.tsk = await self.arun_night(nightplan_id, step_id=step_id)"""
+
     def stop_nightplan(self) -> None:
         """
         Method stops night plan.

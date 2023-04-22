@@ -84,7 +84,7 @@ class ChangeFilter(SubCommand):
             self.info_callback['exec_json'](self.exec_json())
             return 0
 
-        # TODO this subcommand is freeze on aput_position
+        # TODO this subcommand is freeze on aput_position -> change_filter_pos_proof
         res = await self.change_filter_pos_proof(pos)
         if res==1:
             self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} filter aput_position error, skipping')
