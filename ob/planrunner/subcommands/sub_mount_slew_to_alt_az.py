@@ -41,16 +41,18 @@ class MountSlewToAltAz(SubCommand):
         logger.info(f'{self.id} {self.subcommand_name} is started')
         self.info_callback['stream_1'](
             f'{self.id} {self.subcommand_name} ALT:{self.kwargs["alt"]} AZ:{self.kwargs["az"]} started')
-        if isinstance(self.kwargs["alt"], str) and isinstance(self.kwargs["az"], str):
-            self.az = deg_to_decimal_deg(self.kwargs["az"])
-            self.alt = deg_to_decimal_deg(self.kwargs["alt"])
-        elif isinstance(self.kwargs["alt"], float) and isinstance(self.kwargs["az"], float):
-            self.az = self.kwargs["az"]
-            self.alt = self.kwargs["alt"]
-        else:
-            self.skipped = True
-            self.info_callback['exec_json'](self.exec_json())
-            return 1
+        try:
+            self.az = int(self.kwargs["alt"])
+            self.alt = int(self.kwargs["alt"])
+        except ValueError:
+            try:
+                self.az = deg_to_decimal_deg(self.kwargs["az"])
+                self.alt = deg_to_decimal_deg(self.kwargs["alt"])
+            except ValueError:
+                self.skipped = True
+                self.info_callback['exec_json'](self.exec_json())
+                logger.error(f"Wrong az alt format")
+                return 1
         # TODO mount_min_alt should be taken from settings
         mount_min_alt = 14.9
         if self.alt>mount_min_alt:
