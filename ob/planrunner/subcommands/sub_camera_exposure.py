@@ -159,7 +159,7 @@ class CameraExposure(SubCommand):
             await asyncio.sleep(0.5)
             subexposure_done = self.proof_val(self.camera.imageready)
             if subexposure_done and isinstance(subexposure_done, bool):
-                self.readout_time = self.readout_time_start - time.time() - self.kwargs["exp_time"]
+                self.readout_time = time.time() - self.readout_time_start - self.kwargs["exp_time"]
                 logger.debug(f'{self.id} {self.subcommand_name} is done --> saving')
                 self.info_callback['stream_1'](f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} --> saving')
                 self.info_callback['exec_json'](self.exec_json(exp_started=True,
