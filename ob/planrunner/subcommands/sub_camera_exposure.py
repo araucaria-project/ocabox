@@ -27,7 +27,8 @@ class CameraExposure(SubCommand):
         self.kwargs = kwargs
         self.id = id
         self.user = pwd.getpwuid(os.getuid())[0]
-        self.folder = f'/home/{self.user}/Desktop/fits_{self.telescope.id}/'
+        # TODO: This folder should be taken from settings
+        self.folder = os.path.expanduser(f'~/Desktop/fits_{self.telescope.id}/')
         self.readout_time: float or None = None
         self.readout_time_start: float or None = None
         self.exp_time_start: str or None = None
@@ -39,13 +40,14 @@ class CameraExposure(SubCommand):
         self._mk_folder()
 
     def _mk_folder(self):
-            lst = os.listdir(f'/home/{self.user}/Desktop/')
-            if f'fits_{self.telescope.id}' not in lst:
-                try:
-                    os.mkdir(self.folder)
-                except Exception as e:
-                    logger.warning(
-                        f'Folder creation failed, please make folder /home/{self.user}/Desktop/fits_{self.telescope.id}')
+        # TODO: This folder should be taken from settings
+        lst = os.listdir(os.path.expanduser('~/Desktop/'))
+        if f'fits_{self.telescope.id}' not in lst:
+            try:
+                os.mkdir(self.folder)
+            except Exception as e:
+                logger.warning( # TODO: This folder should be taken from settings
+                    f'Folder creation failed, please make folder /home/{self.user}/Desktop/fits_{self.telescope.id}')
 
     def indexing_value(self, value: int, values: List[str]) -> int or str:
         if isinstance(value, int) and isinstance(values, list):
