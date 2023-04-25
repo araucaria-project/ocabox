@@ -47,7 +47,8 @@ class ClientAPITest(unittest.TestCase):
 
     def test_initial_client_api(self):
         c_api = ClientAPI()
-        self.assertIsNotNone(c_api.client)
+        self.assertIsNotNone(c_api._CRS)
+        self.assertIsNotNone(c_api._CRS.client)
 
     def test_get_multi(self):
         """

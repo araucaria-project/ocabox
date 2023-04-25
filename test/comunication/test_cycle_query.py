@@ -4,6 +4,7 @@ import time
 import unittest
 
 from ob.comunication.client import Client
+from ob.comunication.client_request_solver import ClientRequestSolver
 from ob.comunication.comunication_error import CommunicationRuntimeError
 from ob.comunication.cycle_query import ConditionalCycleQuery
 from ob.comunication.request_solver import RequestSolver
@@ -46,6 +47,7 @@ class TestConditionalCycleQuery(unittest.TestCase):
         self.vr.start(self.loop)
         self.loop.run_until_complete(self.vr.request_solver.run_tree())
         self.client = Client(name='SampleTestClient')
+        self.crs = ClientRequestSolver(client=self.client)
 
     def tearDown(self) -> None:
         self.vr.stop()
@@ -96,7 +98,7 @@ class TestConditionalCycleQuery(unittest.TestCase):
         delay = 0.5
 
         async def coro():
-            cq = ConditionalCycleQuery(client=self.client, list_request=[request], delay=delay)
+            cq = ConditionalCycleQuery(crs=self.crs, list_request=[request], delay=delay)
             try:
                 cq.start()
                 with self.assertRaises(CommunicationRuntimeError):
@@ -123,7 +125,7 @@ class TestConditionalCycleQuery(unittest.TestCase):
         request_timeout = 0.2
 
         async def coro():
-            cq = ConditionalCycleQuery(client=self.client, list_request=[request], delay=delay,
+            cq = ConditionalCycleQuery(crs=self.crs, list_request=[request], delay=delay,
                                        max_missed_msg=max_missed_msg, request_timeout=request_timeout)
             try:
                 self.vr.stop()
@@ -165,8 +167,8 @@ class TestConditionalCycleQuery(unittest.TestCase):
         delay = 0.2
 
         async def coro():
-            cq = ConditionalCycleQuery(client=self.client, list_request=[request], delay=delay, query_name='fast query')
-            cq2 = ConditionalCycleQuery(client=self.client, list_request=[request2], delay=delay,
+            cq = ConditionalCycleQuery(crs=self.crs, list_request=[request], delay=delay, query_name='fast query')
+            cq2 = ConditionalCycleQuery(crs=self.crs, list_request=[request2], delay=delay,
                                         query_name='slow query')
             try:
                 start_time = time.time()
@@ -210,7 +212,7 @@ class TestConditionalCycleQuery(unittest.TestCase):
             self.tree_provider2.SAMPLE_VALUES[0][1].ts = time.time()
 
         async def coro():
-            cq = ConditionalCycleQuery(client=self.client, list_request=[request], delay=delay, query_name='sample',
+            cq = ConditionalCycleQuery(crs=self.crs, list_request=[request], delay=delay, query_name='sample',
                                        request_timeout=time_expire)  # set short timeout message
             try:
                 cq.start()
@@ -242,7 +244,7 @@ class TestConditionalCycleQuery(unittest.TestCase):
         request_timeout = 0.2
 
         async def time_coro():
-            cq = ConditionalCycleQuery(client=self.client, list_request=[request], delay=delay,
+            cq = ConditionalCycleQuery(crs=self.crs, list_request=[request], delay=delay,
                                        max_missed_msg=max_missed_msg, request_timeout=request_timeout)
             try:
                 cq.start()
@@ -279,7 +281,7 @@ class TestConditionalCycleQuery(unittest.TestCase):
             result = await cq.get_response()
 
         async def coro():
-            cq = ConditionalCycleQuery(client=self.client, list_request=[request], delay=delay,
+            cq = ConditionalCycleQuery(crs=self.crs, list_request=[request], delay=delay,
                                        max_missed_msg=max_missed_msg, request_timeout=request_timeout)
             try:
                 cq.start()

@@ -58,6 +58,23 @@ class BaseRequestSolver(ABC):
         """
         await self.data_provider.stop()
 
+    async def get_answer_internal(self, request: List[ValueRequest], timeout=None) -> List[ValueResponse]:
+        response = []
+        coroutines = []
+        for r in request:
+            coroutines.append(self.get_single_answer_internal(r, timeout=timeout))
+        result = await asyncio.gather(*coroutines, return_exceptions=True)
+        for r in result:
+            if not isinstance(r, Exception):
+                response.append(r)
+            else:
+                logger.error(f"CRITICAL One of the sub-tasks raise some unresolved exception.")
+                re = ResponseError(4001, 'There were unexpected problems trying to respond to the request', repr(self),
+                                   ResponseError.SEVERITY_CRITICAL)
+                v_response = ValueResponse('', None, False, re)
+                response.append(v_response)
+        return response
+
     async def get_single_answer_internal(self, v_request: ValueRequest, timeout=None) -> ValueResponse:
         if isinstance(v_request.user, TreeUser):
             logger.warning(f'Internal request has normal ({TreeUser.__name__}) user instance, should be '

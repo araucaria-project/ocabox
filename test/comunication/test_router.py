@@ -18,6 +18,9 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class RouterTest(unittest.TestCase):
     class CrashResolver(BaseRequestSolver):
 
+        async def get_single_answer(self, request: bytes, user_id: bytes, timeout=None) -> bytes:
+            pass
+
         async def get_answer(self, request: List[bytes], user_id: bytes, timeout=None) -> List[bytes]:
             await asyncio.sleep(5)
             return [b'']
