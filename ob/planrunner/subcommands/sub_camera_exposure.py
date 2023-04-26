@@ -5,6 +5,7 @@ from pyaraucaria.fits import save_fits_from_array, fits_header, fits_stat
 from pyaraucaria.date import datetime_to_julian
 from ocaboxapi.formatter import parse_deg_or_dms
 from datetime import datetime
+import time
 import os
 import pwd
 from typing import Dict, Any, List
@@ -26,7 +27,11 @@ class CameraExposure(SubCommand):
         self.kwargs = kwargs
         self.id = id
         self.user = pwd.getpwuid(os.getuid())[0]
-        self.folder = f'/home/{self.user}/Desktop/fits_{self.telescope.id}/'
+        # TODO: This folder should be taken from settings
+        self.folder = os.path.expanduser(f'~/Desktop/fits_{self.telescope.id}/')
+        self.readout_time: float or None = None
+        self.readout_time_start: float or None = None
+        self.exp_time_start: str or None = None
         self.started: bool = False
         self.done: bool = False
         self.skipped: bool = False
@@ -35,13 +40,14 @@ class CameraExposure(SubCommand):
         self._mk_folder()
 
     def _mk_folder(self):
-            lst = os.listdir(f'/home/{self.user}/Desktop/')
-            if f'fits_{self.telescope.id}' not in lst:
-                try:
-                    os.mkdir(self.folder)
-                except Exception as e:
-                    logger.warning(
-                        f'Folder creation failed, please make folder /home/{self.user}/Desktop/fits_{self.telescope.id}')
+        # TODO: This folder should be taken from settings
+        lst = os.listdir(os.path.expanduser('~/Desktop/'))
+        if f'fits_{self.telescope.id}' not in lst:
+            try:
+                os.mkdir(self.folder)
+            except Exception as e:
+                logger.warning( # TODO: This folder should be taken from settings
+                    f'Folder creation failed, please make folder /home/{self.user}/Desktop/fits_{self.telescope.id}')
 
     def indexing_value(self, value: int, values: List[str]) -> int or str:
         if isinstance(value, int) and isinstance(values, list):
@@ -61,7 +67,7 @@ class CameraExposure(SubCommand):
     async def _wait_for_save_fits(self, sub: int) -> None:
 
         array = await self.camera.aget_imagearray()
-        jd = datetime_to_julian(str(datetime.utcnow()))
+        jd = datetime_to_julian(self.exp_time_start)
         jd_oca = f"{(jd - 2460000):010.5f}"
 
         if self.telescope.id=='dev':
@@ -89,7 +95,7 @@ class CameraExposure(SubCommand):
                     parsed_obs_lon=parse_deg_or_dms(OCA['longitude']),
                     obs_elev=OCA['elevation'],
                     tel_id=str(self.telescope.id),
-                    utc_now=str(datetime.utcnow()),
+                    utc_now=self.exp_time_start,
                     jd=self.proof_val(jd),
                     req_ra=self.kwargs["req_ra"],
                     req_dec=self.kwargs["req_dec"],
@@ -153,13 +159,15 @@ class CameraExposure(SubCommand):
     async def _wait_for_subexposure(self, sub: int) -> None:
         while True:
             await asyncio.sleep(0.5)
-            subexposure_done = self.proof_val(self.camera.imageready)
-            if subexposure_done and isinstance(subexposure_done, bool):
+            subexposure_done = self.camera.imageready
+            if subexposure_done is True:
+                self.readout_time = time.time() - self.readout_time_start - self.kwargs["exp_time"]
                 logger.debug(f'{self.id} {self.subcommand_name} is done --> saving')
                 self.info_callback['stream_1'](f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} --> saving')
                 self.info_callback['exec_json'](self.exec_json(exp_started=True,
                                                                exp_done=True,
                                                                exp_saved=False,
+                                                               readout_time=self.readout_time,
                                                                n_exp=sub))
                 break
 
@@ -173,6 +181,8 @@ class CameraExposure(SubCommand):
                                                            exp_done=False,
                                                            exp_saved=False,
                                                            n_exp=sub))
+            self.readout_time_start = time.time()
+            self.exp_time_start = str(datetime.utcnow())
             await self.camera.aput_startexposure(self.kwargs["exp_time"], self.kwargs["light"])
             await self._wait_for_subexposure(sub)
             await self._wait_for_save_fits(sub)
