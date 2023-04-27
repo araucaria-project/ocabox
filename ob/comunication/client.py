@@ -121,7 +121,7 @@ class Client(BaseZmqCommunicationObject):
                 except asyncio.TimeoutError:
                     # logger.info(f"the response did not come before timeout {self.timeout}s")
                     raise CommunicationTimeoutError(
-                        message=f"Timeout of {time_to_expire:.3}s expired when waiting for response from TIC server")
+                        message=f"Timeout of {time_to_expire:.3}s expired when waiting for response from TIC server {self._front_socket.LAST_ENDPOINT}")
                 except CommunicationRuntimeError:
                     raise
             except CommunicationRuntimeError:

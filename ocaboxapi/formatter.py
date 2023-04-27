@@ -65,6 +65,12 @@ def fmt_calibratorstate(state: int | None):
     except IndexError:
         return f'status: {state}'
 
+def fmt_temperature(temp: float | None, celsius: bool = True):
+    """Format temperature for display"""
+    if temp is None:
+        return 'n/a'
+    return f'{temp:.1f} °C' if celsius else f'{temp + 273.15:.1f} K'
+
 def fmt_az(az, sexagesimal=True):
     """Format azimuth for display"""
     if az is None:
