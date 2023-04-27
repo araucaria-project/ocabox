@@ -1,7 +1,12 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [1.0.9] - 2023-04-21
+## Added
+- Formatter for Celsius degrees and Kelvins
+
+## Changed
+- Added TIC IP to log timeout error  
 
 ## [1.0.8] - 2023-04-21
 ## Added
