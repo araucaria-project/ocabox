@@ -1,6 +1,5 @@
 import logging
 from ob.comunication.base_client_api import BaseClientAPI
-from ob.comunication.base_client_request_solver import BaseClientRequestSolver
 from ob.comunication.client import Client
 from ob.comunication.client_request_solver import ClientRequestSolver
 from ob.data_colection.tree_user import TreeUser, BaseTreeUser
