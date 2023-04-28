@@ -36,6 +36,8 @@ class Camera(TelescopeComponent):
     starty = OcaBoxParam(default=0, doc="Camera starty")
     imagearrayvariant = OcaBoxParam(default=[0], doc="Camera image array variant")
     gains = OcaBoxParam(default=[0], doc="Avaliable Camera gains")
+    lastexposureduration = OcaBoxParam(default=0.0, doc="Camera current exposure duration")
+    lastexposurestarttime = OcaBoxParam(default=0.0, doc="Camera current exposure start time")
 
 
     camerastate_to_code = {
@@ -276,6 +278,31 @@ class Camera(TelescopeComponent):
         return await self.subscribe('setccdtemperature',
                                     callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
+
+    async def aget_lastexposureduration(self) -> float:
+        logger.debug(f'Getting last exposure duration from {self.tel_addr}')
+        ret = await self.aget_value('lastexposureduration')
+        return ret
+
+    async def asubscribe_lastexposureduration(self, callback: Callable | None = None,
+                                                time_of_data_tolerance: float | None = None):
+        logger.debug(f'Subscribing last exposure duration from {self.tel_addr}')
+        return await self.subscribe('lastexposureduration',
+                                    callback=callback,
+                                    time_of_data_tolerance=time_of_data_tolerance)
+
+    async def aget_lastexposurestarttime(self) -> float:
+        logger.debug(f'Getting last exposure start time from {self.tel_addr}')
+        ret = await self.aget_value('lastexposurestarttime')
+        return ret
+
+    async def asubscribe_lastexposurestarttime(self, callback: Callable | None = None,
+                                                time_of_data_tolerance: float | None = None):
+        logger.debug(f'Subscribing last exposure start time from {self.tel_addr}')
+        return await self.subscribe('lastexposurestarttime',
+                                    callback=callback,
+                                    time_of_data_tolerance=time_of_data_tolerance)
+
 
     async def aput_binx(self, binx: int) -> None:
         logger.debug(f'Putting binx to {self.tel_addr}')
