@@ -2,11 +2,11 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
-## Added
+### Added
 - An intermediary module between `Client` and `ClientAPI` and `Client` and cycle-query has been added
 - Created an in-tree API based on the normal API.
 
-## Changed
+### Changed
 - Cycle-query no longer have direct access to the `Client`. Instead, they use the new `BaseClientRequestSolver` module.
 
 ## [1.0.10] - 2023-04-28
