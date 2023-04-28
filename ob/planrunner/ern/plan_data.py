@@ -3,7 +3,7 @@ import logging
 import typing
 import ob.planrunner.ern.command_Object
 import ob.planrunner.ern.command_Sequence
-from ob.data_colection.resource_manager.resource_manager import AccessResourceManager
+from ob.data_colection.resource_manager.resource_manager import ResourceManager
 from ob.planrunner.ern.plan_task_manager import PlanTaskManager
 from ob.planrunner.ern.plan_task_manager_protocol import PlanTaskManagerProtocol
 
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 @dataclasses.dataclass
 class PlanData:
 
-    access_resource_manager: AccessResourceManager
+    access_resource_manager: ResourceManager
     DEFAULT_MAP_COMMANDS: typing.ClassVar[dict] = {
         "SEQUENCE": ob.planrunner.ern.command_Sequence.CommandSequence,
         "OBJECT": ob.planrunner.ern.command_Object.CommandObject,

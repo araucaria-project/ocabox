@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from typing import List, Tuple
 from ob.planrunner.ern.Dome import Dome
 from ob.planrunner.ern.Mount import Mount
 from ob.planrunner.ern.command import Command
@@ -17,8 +18,9 @@ class CommandObject(Command):
         # --- --- --- --- --- --- --- --- --- --- ---
         self._mapped_args: dict = {"ra": None, "dec": None, "object_name": None, "filter": None, "repetitions": None}
         self._read_args(self.get_args())
-        self._needed_modules_list = []
+        self._needed_modules_list = []  # todo do usunięcia
         self._create_modules_from_args()
+        self._needed_modules: List[Tuple[str, int]] = []
 
     def _read_args(self, args: list):
         if len(args) > 2:
@@ -37,6 +39,16 @@ class CommandObject(Command):
         nr = 0
         some_module = Mount(nr=nr, ra='12.3', dec='43.54')  # camera powinno być
         self._needed_modules_list.append(some_module)
+
+        # todo poniżej nowsza wersja - wyżej to z _needed_modules_list do usunięcia
+        some_module = (self.res_mngr.MOUNT, 0)
+        self._needed_modules.append(some_module)
+
+        some_module = (self.res_mngr.DOME, 0)
+        self._needed_modules.append(some_module)
+
+        some_module = (self.res_mngr.CAMERA, 0)
+        self._needed_modules.append(some_module)
 
     def _get_res(self, name: str, nr: int):
         for m in self._needed_modules_list:

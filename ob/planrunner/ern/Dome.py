@@ -1,13 +1,13 @@
 import asyncio
 import logging
 
-from ob.data_colection.resource_manager.resource_manager import AccessResourceManager
+from ob.data_colection.resource_manager.resource_manager import ResourceManager
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class Dome:
-    RESOURCE_NAME = AccessResourceManager.DOME
+    RESOURCE_NAME = ResourceManager.DOME
 
     def __init__(self, nr: int, ra: str, dec: str, subcommand_name: str = 'dome slew coo', **kwargs) -> None:
         self.nr: int = nr

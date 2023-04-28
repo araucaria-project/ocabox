@@ -8,6 +8,8 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - Cycle-query no longer have direct access to the `Client`. Instead, they use the new `BaseClientRequestSolver` module.
+- Rebuild alpaca resource manager `ResourceManagerAlpaca`. From now on, he will also be able to perform operations 
+on resources, not only to manage access to them.
 
 ## [1.0.10] - 2023-04-28
 ### Fixed
