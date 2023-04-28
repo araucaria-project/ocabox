@@ -10,26 +10,26 @@ All notable changes to this project will be documented in this file.
 - Cycle-query no longer have direct access to the `Client`. Instead, they use the new `BaseClientRequestSolver` module.
 
 ## [1.0.10] - 2023-04-28
-## Fixed
+### Fixed
 - Fixed the problem with waiting until the task timeout expires when the Alpaca server is not responding. From now on, 
 before the task is canceled, the alpaca module will return an error saying that it cannot connect to the server.
 
 ## [1.0.9] - 2023-04-21
-## Added
+### Added
 - Formatter for Celsius degrees and Kelvins
 
-## Changed
+### Changed
 - Added TIC IP to log timeout error  
 
 ## [1.0.8] - 2023-04-21
-## Added
+### Added
 - Add to planrunner commands `DOMEFLAT`, `FOCUS`.
 - Parameters dict info_callback.
 - Add camera log.
 - Add fits statistics.
 - Add new methods to `ocaboxapi`
 
-## Changed
+### Changed
 - Add gain and readoutmode to fits header.
 - Dome move subcommand changed.
 - Saving int16 fits to side int16.
