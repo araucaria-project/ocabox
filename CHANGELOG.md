@@ -1,13 +1,18 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-git commit -## [Unreleased]
+## [Unreleased]
 ## Added
 - An intermediary module between `Client` and `ClientAPI` and `Client` and cycle-query has been added
 - Created an in-tree API based on the normal API.
 
 ## Changed
 - Cycle-query no longer have direct access to the `Client`. Instead, they use the new `BaseClientRequestSolver` module.
+
+## [1.0.10] - 2023-04-28
+## Fixed
+- Fixed the problem with waiting until the task timeout expires when the Alpaca server is not responding. From now on, 
+before the task is canceled, the alpaca module will return an error saying that it cannot connect to the server.
 
 ## [1.0.9] - 2023-04-21
 ## Added

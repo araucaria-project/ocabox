@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import time
 from typing import List, Tuple
@@ -12,6 +13,7 @@ from ob.data_colection.coded_error import TreeOtherError
 from ob.data_colection.resource_manager.resource_manager import AccessResourceManager, AccessResourceManagerAlpaca
 from ob.data_colection.value import Value, TreeValueError
 from ob.data_colection.value_call import ValueRequest
+from ob.util_functions.asyncio_util_functions import wait_for_psce
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -33,6 +35,16 @@ class TreeAlpacaObservatory(TreeBaseProvider):
         self._observatory = Observatory()
         self._connector: Connector
         self._connect_to_observatory()
+        self._timeout_multiplier = self._get_timeout_multiplier()
+
+    def _get_timeout_multiplier(self):
+        hard_default = 0.8
+        timeout_multiplier = self._get_cfg("timeout_multiplier", hard_default)
+        if not (0 < timeout_multiplier < 1):
+            logger.warning(f"Can not set timeout_multiplier {timeout_multiplier}. Should be greater than 0 and lover "
+                           f"than 1. Will be set to default value: {hard_default}")
+            timeout_multiplier = hard_default
+        return timeout_multiplier
 
     def _connect_to_observatory(self):
         self._connector = AlpacaConnector()
@@ -72,6 +84,7 @@ class TreeAlpacaObservatory(TreeBaseProvider):
         alpaca_address = address[index:].copy()
         request_type = request.request_type
         request_arguments = request.request_data
+        request_timeout = request.request_timeout
 
         if len(alpaca_address) <= 0:
             logger.debug(f"Incoming address to the {self._component_name} module is too short. Address: {address}")
@@ -88,7 +101,8 @@ class TreeAlpacaObservatory(TreeBaseProvider):
             raise AddressError(address=address, code=1002, message="Can not call this alpaca method in driver")
 
         try:
-            result = await method(alpaca_method_name, **request_arguments)
+            result = await wait_for_psce(method(alpaca_method_name, **request_arguments),
+                                         timeout=request_timeout*self._timeout_multiplier)
         except AlpacaHttp400Error as e:
             # if server alpaca return 400 error
             logger.warning(f"Alpaca throw error 400 for request {address}")
@@ -112,6 +126,11 @@ class TreeAlpacaObservatory(TreeBaseProvider):
         except RequestConnectionError:
             # when can not connect to alpaca
             logger.warning(f"Server alpaca is not responding at {address}")
+            raise TreeOtherError(address=None, code=4005, message=f"Server alpaca is not responding at {address}",
+                                 severity=TreeOtherError.SEVERITY_TEMPORARY)
+        except asyncio.TimeoutError:
+            # Catching error TimeoutError does NOT conflict with the main timeout on task in Router
+            logger.warning(f"Server alpaca is not responding at address {address} before timeout")
             raise TreeOtherError(address=None, code=4005, message=f"Server alpaca is not responding at {address}",
                                  severity=TreeOtherError.SEVERITY_TEMPORARY)
         except (TypeError, ValueError):
