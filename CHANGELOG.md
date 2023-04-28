@@ -1,6 +1,11 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [1.0.10] - 2023-04-28
+## Fixed
+- Fixed the problem with waiting until the task timeout expires when the Alpaca server is not responding. From now on, 
+before the task is canceled, the alpaca module will return an error saying that it cannot connect to the server.
+
 ## [1.0.9] - 2023-04-21
 ## Added
 - Formatter for Celsius degrees and Kelvins
@@ -175,4 +180,4 @@ This allows you to subscribe to these values
 
 [Unreleased]: https://github.com/araucaria-project/ocabox
 
-[1.0.8]: https://github.com/araucaria-project/ocabox
+[1.0.10]: https://github.com/araucaria-project/ocabox
