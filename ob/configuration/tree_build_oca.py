@@ -8,6 +8,7 @@ from ob.data_colection.specialistic_components.tree_base_request_blocker import 
 from ob.data_colection.specialistic_components.tree_blocker_access_grantor import TreeBlockerAccessGrantor
 from ob.data_colection.specialistic_components.tree_cache_observatory import TreeCache
 from ob.data_colection.specialistic_components.tree_conditional_freezer import TreeConditionalFreezer
+from ob.data_colection.specialistic_components.tree_ephemeris import TreeEphemeris
 from ob.data_colection.specialistic_components.tree_plan_executor import TreePlanExecutor
 
 
@@ -31,8 +32,9 @@ def tree_build() -> Router:
     alpaca_blocker_zb08 = TreeBaseRequestBlocker('alpaca-blocker-zb08', alpaca_zb08)
     blocker_grantor_zb08 = TreeBlockerAccessGrantor('access-grantor-zb08', 'access_grantor', alpaca_blocker_zb08)
     plan_executor_zb08 = TreePlanExecutor('executor-zb08', 'executor')
+    ephemeris_zb08 = TreeEphemeris('ephemeris-zb08', 'ephemeris')
     broker_components_zb08 = TreeBaseBrokerDefaultTarget('broker-components-zb08',
-                                                         [blocker_grantor_zb08, plan_executor_zb08],
+                                                         [blocker_grantor_zb08, plan_executor_zb08, ephemeris_zb08],
                                                          default_provider=alpaca_blocker_zb08)
     cache_zb08 = TreeCache('cache-zb08', broker_components_zb08)
     conditional_freezer_zb08 = TreeConditionalFreezer('conditional-freezer-zb08', cache_zb08)
