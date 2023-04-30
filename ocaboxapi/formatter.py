@@ -142,8 +142,10 @@ def parse_deg_or_dms(deg_or_dms: str) -> float:
         """
     return deg_to_decimal_deg(deg_or_dms)
 
-def fmt_binning(binning: tuple[int, int]) -> str:
+def fmt_binning(binning: tuple[int|None, int|None]|None) -> str:
     """Format a binning value for display"""
+    if binning is None or binning[0] is None or binning[1] is None:
+        return 'n/a'
     x, y = binning
     return f'{x}x{y}'
 
@@ -175,8 +177,10 @@ def parse_binning(binning: str) -> tuple[int, int]:
     except ValueError:
         raise ValueError(f'Invalid binning value: {binning}')
 
-def fmt_subframe(subframe: tuple[int, int, int, int]) -> str:
+def fmt_subframe(subframe: tuple[int, int, int, int]|None) -> str:
     """Format a subframe value for display"""
+    if subframe is None:
+        return 'n/a'
     x1, x2, y1, y2 = subframe
     if x1 is None:
         x = '*'
