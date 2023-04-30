@@ -33,7 +33,7 @@ class TreeEphemeris(TreeProvider):
             t = Time.now()
 
             timeout_control = "response string"
-            return Value(v=t.utc.iso, ts=time.time())
+            return Value(v=t.utc, ts=time.time())
 
         if command == 'method2':
             timeout_control = "response string"
