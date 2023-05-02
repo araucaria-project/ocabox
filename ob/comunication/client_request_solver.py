@@ -14,7 +14,6 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class ClientRequestSolver(BaseClientRequestSolver):
 
     def __init__(self, name: str = None, client: Client = None):
-        super().__init__(**kwargs)
         self._client = client if client else Client(name=name)
 
     @property

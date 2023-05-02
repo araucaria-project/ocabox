@@ -1,6 +1,6 @@
 """Formatting varius values for display"""
 from __future__ import annotations
-
+from datetime import datetime
 from pyaraucaria.coordinates import to_degminsec_sexagesimal, to_hourangle_sexagesimal, hourangle_to_decimal_deg, \
     deg_to_decimal_deg
 
@@ -20,6 +20,15 @@ def fmt_domeshutter(shutter: int | None):
     except IndexError:
         return f'status: {shutter}'
 
+def fmt_time(t: datetime|None, decimals: int = 0) -> str:
+    """Format time for display"""
+    if t is None:
+        return 'n/a'
+    format_str = "%H:%M:%S"
+    if decimals > 0:
+        fractional_seconds = t.strftime(".%f")[:decimals + 1]
+        format_str += fractional_seconds
+    return t.strftime(format_str)
 
 def fmt_camerastate(state: int | None):
     """Format shutter status for display"""

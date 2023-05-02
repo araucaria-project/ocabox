@@ -37,6 +37,12 @@ def main(argv=None):
         argv = sys.argv
 
     try:
+        level = SingletonConfig.get_config()['LOG_LEVEL'].get()
+        if level is not None:
+            logging.getLogger().setLevel(level)
+    except Exception:
+        pass
+    try:
         BUILD_FILE = os.environ.get('OCABOX_BUILD_FILE_NAME', None)
         if BUILD_FILE is None:
             BUILD_FILE = SingletonConfig.get_config()['OCABOX_BUILD_FILE_NAME'].get()

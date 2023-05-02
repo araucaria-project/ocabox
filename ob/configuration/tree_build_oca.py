@@ -15,6 +15,16 @@ from ob.data_colection.specialistic_components.tree_plan_executor import TreePla
 def tree_build() -> Router:
     """This is the main ocabox tree structure for the "Observatorio Cerro Armazones" observatory.."""
 
+    # --------------------------------------- global ---------------------------------------
+    ephemeris = TreeEphemeris('ephemeris', 'ephemeris')
+    broker_components_global = TreeBaseBrokerDefaultTarget('broker-components-global',
+                                                         [ephemeris],
+                                                         default_provider=None)
+    cache_global = TreeCache('cache-global', broker_components_global)
+    conditional_freezer_global = TreeConditionalFreezer('conditional-freezer-global', cache_global)
+    target_provider_global = TreeProvider('target-provider-global', 'global', conditional_freezer_global)
+
+
     # --------------------------------------- wk06 ---------------------------------------
     alpaca_wk06 = TreeAlpacaObservatory('alpaca-wk06', observatory_name='wk06')
     alpaca_blocker_wk06 = TreeBaseRequestBlocker('alpaca-blocker-wk06', alpaca_wk06)
@@ -32,9 +42,9 @@ def tree_build() -> Router:
     alpaca_blocker_zb08 = TreeBaseRequestBlocker('alpaca-blocker-zb08', alpaca_zb08)
     blocker_grantor_zb08 = TreeBlockerAccessGrantor('access-grantor-zb08', 'access_grantor', alpaca_blocker_zb08)
     plan_executor_zb08 = TreePlanExecutor('executor-zb08', 'executor')
-    ephemeris_zb08 = TreeEphemeris('ephemeris-zb08', 'ephemeris')
+    # ephemeris_zb08 = TreeEphemeris('ephemeris-zb08', 'ephemeris')
     broker_components_zb08 = TreeBaseBrokerDefaultTarget('broker-components-zb08',
-                                                         [blocker_grantor_zb08, plan_executor_zb08, ephemeris_zb08],
+                                                         [blocker_grantor_zb08, plan_executor_zb08],
                                                          default_provider=alpaca_blocker_zb08)
     cache_zb08 = TreeCache('cache-zb08', broker_components_zb08)
     conditional_freezer_zb08 = TreeConditionalFreezer('conditional-freezer-zb08', cache_zb08)
@@ -108,7 +118,8 @@ def tree_build() -> Router:
                                        target_provider_wg25,
                                        target_provider_iris,
                                        target_provider_sim,
-                                       target_provider_dev])
+                                       target_provider_dev,
+                                       target_provider_global])
 
     # ------------------------------ front receiver blocks -------------------------------
     rs = RequestSolver(data_provider=broker_front_oca)
