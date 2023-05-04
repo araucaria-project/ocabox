@@ -4,7 +4,7 @@ from typing import Optional, Dict
 
 from pyaraucaria.obs_plan.obs_plan_parser import ObsPlanParser
 
-from ob.data_colection.resource_manager.resource_manager import AccessResourceManager
+from ob.data_colection.resource_manager.resource_manager import ResourceManager
 from ob.planrunner.ern.command import Command
 from ob.planrunner.ern.plan_data import PlanData
 from ob.planrunner.ern.plan_task_manager import PlanTaskManager
@@ -13,16 +13,17 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class PlanManager:
-    def __init__(self, acs_res_mngr: AccessResourceManager, loop: asyncio.AbstractEventLoop = None, **kwargs):
+    def __init__(self, acs_res_mngr: ResourceManager, loop: asyncio.AbstractEventLoop = None, **kwargs):
         super().__init__(**kwargs)
         self._loop = loop
         self._set_loop()
         self._acs_res_mngr = acs_res_mngr
-        if not isinstance(self._acs_res_mngr, AccessResourceManager):
+        if not isinstance(self._acs_res_mngr, ResourceManager):
             raise RuntimeError
         self._plans: Dict[str, Command] = {}
         self._plan_runner_task = asyncio.Task = None
         self._running_plan_id: str = ""
+        self._clientAPI = None
 
     @staticmethod
     def _parse_plan(raw_plan: str):
@@ -114,10 +115,6 @@ class PlanManager:
         return True
 
     def _set_loop(self):
-        """
-
-        :raise CommunicationRuntimeError:
-        """
         if not self._loop:
             try:
                 self._loop = asyncio.get_running_loop()

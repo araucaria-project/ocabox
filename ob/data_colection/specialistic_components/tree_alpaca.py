@@ -10,7 +10,7 @@ from ob.data_colection.alpaca_api.exceptions import AlpacaHttp400Error, AlpacaHt
 from ob.data_colection.alpaca_api.observatory import Observatory
 from ob.data_colection.base_components.tree_base_provider import TreeBaseProvider
 from ob.data_colection.coded_error import TreeOtherError
-from ob.data_colection.resource_manager.resource_manager import AccessResourceManager, AccessResourceManagerAlpaca
+from ob.data_colection.resource_manager.resource_manager import ResourceManager, ResourceManagerAlpaca
 from ob.data_colection.value import Value, TreeValueError
 from ob.data_colection.value_call import ValueRequest
 from ob.util_functions.asyncio_util_functions import wait_for_psce
@@ -36,6 +36,7 @@ class TreeAlpacaObservatory(TreeBaseProvider):
         self._connector: Connector
         self._connect_to_observatory()
         self._timeout_multiplier = self._get_timeout_multiplier()
+        self._resource_manager = None
 
     def _get_timeout_multiplier(self):
         hard_default = 0.8
@@ -155,10 +156,11 @@ class TreeAlpacaObservatory(TreeBaseProvider):
             out.append((key + "_RESOURCE", key, val.kind, val.device_nr, val.component_options))
         return out
 
-    async def get_acs_res_manager(self) -> AccessResourceManager:
-        rm = AccessResourceManagerAlpaca()
-        await rm.initiate_resource_manager(self._get_resources_simple_map())
-        return rm
+    async def get_res_manager(self) -> ResourceManager:
+        if self._resource_manager is None:
+            self._resource_manager = ResourceManagerAlpaca()
+            await self._resource_manager.initiate_resource_manager(self._get_resources_simple_map())
+        return self._resource_manager
 
     def __del__(self):
         self._connector.__del__()

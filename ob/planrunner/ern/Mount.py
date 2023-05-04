@@ -1,13 +1,13 @@
 import asyncio
 import logging
 
-from ob.data_colection.resource_manager.resource_manager import AccessResourceManager
+from ob.data_colection.resource_manager.resource_manager import ResourceManager
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class Mount:
-    RESOURCE_NAME = AccessResourceManager.MOUNT
+    RESOURCE_NAME = ResourceManager.MOUNT
 
     def __init__(self, nr: int, ra: str, dec: str, subcommand_name: str = 'mount slew coo', **kwargs) -> None:
         self.nr: int = nr
