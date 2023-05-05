@@ -1,7 +1,7 @@
 import logging
 import confuse
 from abc import ABC, abstractmethod
-from typing import Protocol, runtime_checkable, List, Tuple
+from typing import Protocol, runtime_checkable, List, Tuple, Optional
 from ob.data_colection.base_components.address_dispatcher import AddressedProtocol
 from ob.data_colection.value_call import ValueRequest, ValueResponse
 from ob.ob_config import SingletonConfig
@@ -27,6 +27,8 @@ class TreeComponent(ABC):
         super().__init__(**kwargs)
         self._component_name: str = component_name  # this is name of tree component, used for debug and errors
         self._resource_name = self._component_name + self._SUFFIX
+        self.target_requests = None
+        self.tree_path = None
 
     @abstractmethod
     async def get_response(self, request: ValueRequest) -> ValueResponse:

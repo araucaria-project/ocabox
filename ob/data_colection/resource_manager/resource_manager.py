@@ -16,8 +16,10 @@ class ResourceManager(StandardTelescopeComponents, ABC):
     """
     RESOURCES_MAP = {}
 
-    def __init__(self):
+    def __init__(self, target, path):
         self._resources: List[Resource] = []
+        self._target = target
+        self._path = path
 
     def get_resource(self, name, nr: int = 0):
         """
@@ -59,7 +61,9 @@ class ResourceManagerAlpaca(ResourceManager):
             if c is None:
                 logger.error(f"{self.__class__.__name__} can not create resource. Unrecognised resource type {typ}")
                 continue
-            r = c(source_name=adr, resource_name=name, nr=nr, properties=prop)
+                # todo przekazać, address i target w konstruktorze
+            r = c(source_name=adr, resource_name=name, nr=nr, target_request=self._target, properties=prop,
+                  address_path=self._path)
             self._resources.append(r)
 
     async def initiate_resource_manager(self, resource_map: List[Tuple[str, str, str, int, dict]]):

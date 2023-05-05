@@ -52,7 +52,6 @@ class TreeBaseRequestBlocker(TreeBaseProvider):
         current_user = self._get_current_reservation()
         if current_user and request.user == current_user:
             raise TreeStructureError
-        # TODO może trzeba dodać funkcjonalność że jak urzytkownik straci kontrole to wszystkie jego zadania będą anulowane?
         raise AddressError(code=1004)
 
     def make_reservation(self, user: BaseTreeUser, timeout_reservation: float = None):

@@ -108,7 +108,7 @@ class TreeAlpacaTest(unittest.TestCase, BaseAsyncTest):
         resources = self.tao.get_resources()
         self.assertEqual(resources, [('dibi_RESOURCE', ['dibi']), ('dome_RESOURCE', ['dome'])])
 
-    def test_get_acs_res_manager(self):
+    def test_get_res_manager(self):
         """Test method get_resource_manager()"""
         from ob.data_colection.resource_manager.resource_manager import ResourceManager
 
