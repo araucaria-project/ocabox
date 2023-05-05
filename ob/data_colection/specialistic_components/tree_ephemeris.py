@@ -111,6 +111,8 @@ class EphemerisData(param.Parameterized):
         self._stop()
         logger.info(f'Awaiting for task finish {self}')
         await self.task
+        logger.info(f'Task finished {self}')
+
 
     def _stop(self):
         self.stop_running_event.set()
