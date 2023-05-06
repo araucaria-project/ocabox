@@ -28,7 +28,7 @@ class Command(AbstractSequence):
         self.subcomponents = {}
         self.telescope = parent.telescope
         self.info_callback = parent.info_callback
-        super().__init__(self.id, self.command_name, self.info_callback)
+        super().__init__(self.id, self.command_name, self.info_callback, observatory=self.parent.observatory)
         self._write_subcommands()
 
     def _create_command_string(self):

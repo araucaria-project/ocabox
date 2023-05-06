@@ -7,8 +7,9 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class AbstractSequence:
 
-    def __init__(self, id: str, name: str, info_callback: Dict[str, Callable]) -> None:
+    def __init__(self, id: str, name: str, info_callback: Dict[str, Callable], observatory) -> None:
         self.id = id
+        self.observatory = observatory
         self.info_callback = info_callback
         self.name = name
         self.started: bool = False

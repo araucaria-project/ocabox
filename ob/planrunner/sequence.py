@@ -22,7 +22,7 @@ class Sequence(AbstractSequence):
         self.subcomponents = {}
         self.telescope = parent.telescope
         self.info_callback = parent.info_callback
-        super().__init__(self.id, self.name, self.info_callback)
+        super().__init__(self.id, self.name, self.info_callback, observatory=self.parent.observatory)
         self.build_sequence()
 
     def _create_sequence_string(self):

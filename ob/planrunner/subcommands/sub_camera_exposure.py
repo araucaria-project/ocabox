@@ -15,6 +15,11 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class CameraExposure(SubCommand):
 
     def __init__(self, id: str, parent: 'Command', subcommand_name: str = 'camera-exposure', **kwargs) -> None:
+        self.started: bool = False
+        self.done: bool = False
+        self.skipped: bool = False
+        super().__init__(id=id, parent=parent, subcommand_name=subcommand_name,
+                         started=self.started, done=self.done, skipped=self.skipped, **kwargs)
         self.subcommand_name = subcommand_name
         self.telescope = parent.telescope
         self.mount = self.telescope.get_mount()
@@ -26,22 +31,21 @@ class CameraExposure(SubCommand):
         self.kwargs = kwargs
         self.id = id
         self.user = pwd.getpwuid(os.getuid())[0]
-        self.folder = f'/home/{self.user}/Desktop/fits_{self.telescope.id}/'
-        self.started: bool = False
-        self.done: bool = False
-        self.skipped: bool = False
-        super().__init__(id=id, parent=parent, subcommand_name=subcommand_name,
-                         started=self.started, done=self.done, skipped=self.skipped, **kwargs)
+        # self.base_fits_folder = os.path.expanduser(self.observatory.get_app_cfg('base_fits_dir', f'~/Desktop'))
+        self.base_fits_folder = os.path.expanduser(self.observatory.get_app_cfg('base_fits_dir', f'~/dupa/blada/sraka'))
+        self.folder = os.path.join(self.base_fits_folder, f'fits_{self.telescope.id}')
         self._mk_folder()
 
     def _mk_folder(self):
-            lst = os.listdir(f'/home/{self.user}/Desktop/')
-            if f'fits_{self.telescope.id}' not in lst:
-                try:
-                    os.mkdir(self.folder)
-                except Exception as e:
-                    logger.warning(
-                        f'Folder creation failed, please make folder /home/{self.user}/Desktop/fits_{self.telescope.id}')
+        logger.info(f'Creating folder {self.folder}')
+        if not os.path.exists(self.folder):
+            try:
+                os.mkdir(self.folder)
+            except Exception as e:
+                logger.warning(
+                    f'Folder creation failed, please create folder {self.folder} manually '
+                    f'or adjust config key "app.base_fits_dir". Error: {e}'
+                )
 
     def indexing_value(self, value: int, values: List[str]) -> int or str:
         if isinstance(value, int) and isinstance(values, list):
@@ -117,7 +121,7 @@ class CameraExposure(SubCommand):
         stat = self.proof_val(fits_stat(array, size=100, median=False, std=False))
 
         # Camra Log
-        f = open(f'{self.folder}camera_log.txt', "a")
+        f = open(os.path.join(self.folder, 'camera_log.txt'), "a")
         f.write(f'Date:{datetime.utcnow()}')
         f.write(f' Type:{self.kwargs["type"]}')
         f.write(f' n_exp/n_exp_req:{sub}/{self.kwargs["exp_no"]}')
@@ -136,7 +140,7 @@ class CameraExposure(SubCommand):
         f.close()
 
         save_fits_from_array(array,
-                             f'{self.folder}',
+                             self.folder,
                              file_name,
                              header,
                              overwrite=True,
