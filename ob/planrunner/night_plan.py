@@ -19,7 +19,7 @@ class NightPlan(AbstractSequence):
         self.args = []
         self.kwargs = {}
         self.parent_kwargs = self.parent.kwargs | self.parent.parent_kwargs
-        super().__init__(self.id, self.name, self.info_callback)
+        super().__init__(self.id, self.name, self.info_callback, observatory=self.parent.observatory)
         self.info = {}
         #self._set_callb()
         self._write_subcomponents()
