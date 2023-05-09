@@ -1,3 +1,5 @@
+import datetime
+
 import asyncio
 import logging
 from ob.planrunner.subcommand import SubCommand
@@ -39,9 +41,12 @@ class ChangeFilter(SubCommand):
             await asyncio.sleep(0.1)
 
     async def change_filter_pos_proof(self, pos: int) -> None or int:
+        t = datetime.datetime.now()
         try:
             await self.filterwheel.aput_position(pos)
-        except:
+            logger.info(f'{self.id} {self.subcommand_name} filter position done in {datetime.datetime.now()-t}')
+        except Exception as e:
+            logger.error(f'{self.id} {self.subcommand_name} filter position error after {datetime.datetime.now()-t}: {e}')
             try:
                 await self.filterwheel.aput_position(pos)
             except:
