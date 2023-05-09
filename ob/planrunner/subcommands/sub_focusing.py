@@ -27,7 +27,7 @@ class Focusing(SubCommand):
         focuser_value = 5
         while True:
             await asyncio.sleep(0.5)
-            foc_position = self.proof_val(self.focuser.position)
+            foc_position = self.focuser.position
             if foc_position is not None:
                 if (abs(int(foc_position) - int(position))) < focuser_value:
                     logger.debug(f'{self.id} {self.subcommand_name} is done')

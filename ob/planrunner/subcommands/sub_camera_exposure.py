@@ -96,31 +96,31 @@ class CameraExposure(SubCommand):
                     obs_elev=OCA['elevation'],
                     tel_id=str(self.telescope.id),
                     utc_now=self.exp_time_start,
-                    jd=self.proof_val(jd),
+                    jd=jd,
                     req_ra=self.kwargs["req_ra"],
                     req_dec=self.kwargs["req_dec"],
                     epoch=self.kwargs["epoch"],
-                    tel_ra=self.proof_val(self.mount.rightascension),
-                    tel_dec=self.proof_val(self.mount.declination),
-                    tel_alt=self.proof_val(self.mount.altitude),
-                    tel_az=self.proof_val(self.mount.azimuth),
-                    focus=self.proof_val(self.focuser.position),
-                    rotator_pos=self.proof_val(self.rotator.position),
+                    tel_ra=self.mount.rightascension,
+                    tel_dec=self.mount.declination,
+                    tel_alt=self.mount.altitude,
+                    tel_az=self.mount.azimuth,
+                    focus=self.focuser.position,
+                    rotator_pos=self.rotator.position,
                     obs_type=self.kwargs['type'],
                     object=self.kwargs["obj_name"],
                     filter=str(self.kwargs["filter"]),
                     req_exp=self.kwargs["exp_time"],
                     cam_exp=self.kwargs["exp_time"],
-                    ccd_name=self.proof_val(self.camera.sensorname),
-                    ccd_temp=self.proof_val(self.camera.ccdtemperature),
-                    ccd_binx=self.proof_val(self.camera.binx),
-                    ccd_biny=self.proof_val(self.camera.biny),
+                    ccd_name=self.camera.sensorname,
+                    ccd_temp=self.camera.ccdtemperature,
+                    ccd_binx=self.camera.binx,
+                    ccd_biny=self.camera.biny,
                     read_mod=str(readoutmode),
                     gain=str(gain)
                     )
 
         file_name = f'{self.telescope.id}c_{jd_oca.split(".")[0]}_{jd_oca.split(".")[1]}'
-        stat = self.proof_val(fits_stat(array, size=100, median=False, std=False))
+        stat = fits_stat(array, size=100, median=False, std=False)
 
         # Camra Log
         f = open(f'{self.folder}camera_log.txt', "a")
@@ -132,11 +132,11 @@ class CameraExposure(SubCommand):
         f.write(f' Filter:{self.kwargs["filter"]}')
         
         f.write(' Min:')
-        f.write(self.proof_val(str(stat['min'])))
+        f.write(str(stat['min']))
         f.write(' Max:')
-        f.write(self.proof_val(str(stat['max'])))
+        f.write(str(stat['max']))
         f.write(' Mean:')
-        f.write(self.proof_val(str(round(stat['mean']))))
+        f.write(str(round(stat['mean'])))
         f.write(f' File-name:{file_name}')
         f.write('\n')
         f.close()
@@ -153,12 +153,12 @@ class CameraExposure(SubCommand):
                                                        exp_done=True,
                                                        exp_saved=True,
                                                        n_exp=sub,
-                                                       mean=self.proof_val(round(stat['mean']))
+                                                       mean=round(stat['mean'])
                                                        ))
 
-    async def _wait_for_subexposure(self, sub: int) -> None:
+    async def _wait_for_subexposure(self, sub: int, sub_time: float) -> None:
+        await asyncio.sleep(sub_time)
         while True:
-            await asyncio.sleep(0.5)
             subexposure_done = self.camera.imageready
             if subexposure_done is True:
                 self.readout_time = time.time() - self.readout_time_start - self.kwargs["exp_time"]
@@ -170,6 +170,7 @@ class CameraExposure(SubCommand):
                                                                readout_time=self.readout_time,
                                                                n_exp=sub))
                 break
+            await asyncio.sleep(0.5)
 
     async def arun(self, step_id: str or None = None) -> int:
         logger.debug(f'{self.id} {self.subcommand_name} is started')
@@ -184,7 +185,7 @@ class CameraExposure(SubCommand):
             self.readout_time_start = time.time()
             self.exp_time_start = str(datetime.utcnow())
             await self.camera.aput_startexposure(self.kwargs["exp_time"], self.kwargs["light"])
-            await self._wait_for_subexposure(sub)
+            await self._wait_for_subexposure(sub, self.kwargs["exp_time"])
             await self._wait_for_save_fits(sub)
         self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
         self.info_callback['stream_5'](f'{self.id}')
