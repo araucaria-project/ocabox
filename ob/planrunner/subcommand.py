@@ -17,6 +17,7 @@ class SubCommand:
         self.started = started
         self.done = done
         self.skipped = skipped
+        self.observatory = parent.observatory
         super().__init__()
         self._create_command_string()
 
