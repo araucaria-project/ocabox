@@ -26,9 +26,9 @@ class ClientAPI(BaseClientAPI):
     def _CRS(self) -> ClientRequestSolver:  # todo tu jest zmiana typu po dziedziczeniu - sprawdzić czy jest to poprawne
         return self._crs
 
-    @staticmethod
-    def client_config():
-        return SingletonConfig.get_config()
+    # @staticmethod
+    # def client_config():
+    #     return SingletonConfig.get_config()
 
     def get_cfg(self, name_cfg: str, default=None, use_default_settings=True):
         return self._CRS.get_cfg(name_cfg, default, use_default_settings)

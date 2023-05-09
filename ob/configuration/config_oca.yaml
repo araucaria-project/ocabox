@@ -26,6 +26,9 @@ tree:
         camera:
           kind: camera
           device_number: 0
+        guider:
+          kind: camera
+          device_number: 1
         filterwheel:
           kind: filterwheel
           device_number: 0
@@ -66,6 +69,9 @@ tree:
         camera:
           kind: camera
           device_number: 0
+        guider:
+          kind: camera
+          device_number: 1
         filterwheel:
           kind: filterwheel
           device_number: 0
@@ -91,7 +97,7 @@ tree:
         derotator:
           kind: rotator
           device_number: 0
-        derotator_f2:
+        derotator_fiber:
           kind: rotator
           device_number: 1
         focuser:
@@ -106,6 +112,9 @@ tree:
         camera:
           kind: camera
           device_number: 0
+        guider:
+          kind: camera
+          device_number: 1
         filterwheel:
           kind: filterwheel
           device_number: 0

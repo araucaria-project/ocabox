@@ -209,7 +209,7 @@ class TelescopeComponent(param.Parameterized):
                                                          time_of_data_tolerance=time_of_data_tolerance,
                                                          request_timeout=request_timeout,
                                                          parameters_dict=parameters_dict)
-        logger.debug(f'Got put_async {address}, response: {ret}')
+        logger.debug(f'Got put_async {address}, response: {repr(ret)[:20]}')
         return ret
 
     async def _get_async(self, param_name: str,
@@ -224,7 +224,7 @@ class TelescopeComponent(param.Parameterized):
                                                          time_of_data_tolerance=time_of_data_tolerance,
                                                          request_timeout=request_timeout,
                                                          parameters_dict=parameters_dict)
-        logger.debug(f'Got get_async {address}, response: {ret}')
+        logger.debug(f'Got get_async {address}, response: {repr(ret)[:20]}')
         return ret
 
     def _get(self, param_name: str,
@@ -239,7 +239,7 @@ class TelescopeComponent(param.Parameterized):
                                              time_of_data_tolerance=time_of_data_tolerance,
                                              request_timeout=request_timeout,
                                              parameters_dict=parameters_dict)
-        logger.debug(f'Got get {address}, response: {ret}')
+        logger.debug(f'Got get {address}, response: {repr(ret)[:20]}')
         return ret
 
     def __str__(self):
