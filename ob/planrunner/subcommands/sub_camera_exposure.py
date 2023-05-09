@@ -103,7 +103,7 @@ class CameraExposure(SubCommand):
             parsed_obs_lon=parse_deg_or_dms(OCA['longitude']),
             obs_elev=OCA['elevation'],
             tel_id=str(self.telescope.id),
-            utc_now=self.exp_time_start,
+            utc_now=str(self.exp_time_start),
             jd=jd,
             req_ra=self.kwargs["req_ra"],
             req_dec=self.kwargs["req_dec"],
@@ -114,12 +114,12 @@ class CameraExposure(SubCommand):
             tel_az=self.mount.azimuth,
             focus=self.focuser.position,
             rotator_pos=self.rotator.position,
-            obs_type=self.kwargs['type'],
-            object=self.kwargs["obj_name"],
+            obs_type=str(self.kwargs['type']),
+            object=str(self.kwargs["obj_name"]),
             filter=str(self.kwargs["filter"]),
             req_exp=self.kwargs["exp_time"],
             cam_exp=self.kwargs["exp_time"],
-            ccd_name=self.camera.sensorname,
+            ccd_name=str(self.camera.sensorname),
             ccd_temp=self.camera.ccdtemperature,
             ccd_binx=self.camera.binx,
             ccd_biny=self.camera.biny,
@@ -129,6 +129,7 @@ class CameraExposure(SubCommand):
 
         file_name = f'{self.telescope.id}c_{jd_oca.split(".")[0]}_{jd_oca.split(".")[1]}'
         stat = fits_stat(array, size=100, median=False, std=False)
+
 
         # Camra Log
         f = open(os.path.join(self.folder, 'camera_log.txt'), "a")
@@ -165,7 +166,13 @@ class CameraExposure(SubCommand):
                                                        ))
 
     async def _wait_for_subexposure(self, sub: int, sub_time: float) -> None:
-        await asyncio.sleep(sub_time)
+
+        if sub_time >= 0.5:
+            sub_t = sub_time
+        else:
+            sub_t = 0.5
+        await asyncio.sleep(sub_t)
+
         while True:
             subexposure_done = self.camera.imageready
             if subexposure_done is True:
