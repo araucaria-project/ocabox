@@ -47,15 +47,17 @@ class CameraExposure(SubCommand):
         self._mk_folder()
 
     def _mk_folder(self):
-        logger.info(f'Creating folder {self.folder}')
         if not os.path.exists(self.folder):
             try:
                 os.mkdir(self.folder)
+                logger.info(f'Creating folder {self.folder}')
             except Exception as e:
                 logger.warning(
                     f'Folder creation failed, please create folder {self.folder} manually '
                     f'or adjust config key "app.base_fits_dir". Error: {e}'
                 )
+        else:
+            logger.debug(f'Folder {self.folder} exist')
 
     def indexing_value(self, value: int, values: List[str]) -> int or str:
         if isinstance(value, int) and isinstance(values, list):
@@ -156,7 +158,7 @@ class CameraExposure(SubCommand):
                              header,
                              overwrite=True,
                              dtyp='sideint16')
-        logger.debug(f'{self.id} {self.subcommand_name} is done')
+        logger.info(f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} done')
         self.info_callback['stream_1'](f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} done')
         self.info_callback['exec_json'](self.exec_json(exp_started=True,
                                                        exp_done=True,
@@ -177,7 +179,7 @@ class CameraExposure(SubCommand):
             subexposure_done = self.camera.imageready
             if subexposure_done is True:
                 self.readout_time = time.time() - self.readout_time_start - self.kwargs["exp_time"]
-                logger.debug(f'{self.id} {self.subcommand_name} is done --> saving')
+                logger.info(f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} saving')
                 self.info_callback['stream_1'](f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} --> saving')
                 self.info_callback['exec_json'](self.exec_json(exp_started=True,
                                                                exp_done=True,
@@ -188,10 +190,11 @@ class CameraExposure(SubCommand):
             await asyncio.sleep(0.5)
 
     async def arun(self, step_id: str or None = None) -> int:
-        logger.debug(f'{self.id} {self.subcommand_name} is started')
+        logger.info(f'{self.id} started')
         self.started = True
         self.info_callback['exec_json'](self.exec_json())
         for sub in range(1, self.kwargs["exp_no"] + 1):
+            logger.info(f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} started')
             self.info_callback['stream_1'](f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} started')
             self.info_callback['exec_json'](self.exec_json(exp_started=True,
                                                            exp_done=False,
@@ -204,6 +207,7 @@ class CameraExposure(SubCommand):
             await self._wait_for_save_fits(sub)
         self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
         self.info_callback['stream_5'](f'{self.id}')
+        logger.info(f'{self.id} done')
         self.done = True
         self.info_callback['exec_json'](self.exec_json())
         await asyncio.sleep(1)

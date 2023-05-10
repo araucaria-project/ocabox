@@ -30,9 +30,6 @@ class MountSlew(SubCommand):
             dec = self.mount.declination
             await asyncio.sleep(0.5)
             if (abs(ra - ra_to_decimal(self.ra_now)) < 0.05) and (abs(dec - dec_to_decimal(self.dec_now)) < 0.05):
-                logger.debug(f'{self.id} {self.subcommand_name} done')
-                self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
-                self.info_callback['stream_5'](f'{self.id}')
                 break
 
     async def _wait_to_slew_alt_az(self) -> None:
@@ -44,15 +41,12 @@ class MountSlew(SubCommand):
                 await self.mount.aput_tracking(False)
                 await self.mount.aput_slewtoaltaz_async(self.az, self.alt)
                 await self.mount.aput_tracking(False)
-                logger.info(f'{self.id} {self.subcommand_name} is done')
-                self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
-                self.info_callback['stream_5'](f'{self.id}')
                 break
 
     async def arun(self, step_id: str or None = None) -> int:
         self.started = True
         self.info_callback['exec_json'](self.exec_json())
-        logger.debug(f'{self.id} {self.subcommand_name} is started')
+        logger.info(f'{self.id} started')
         self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} OBJ:{self.kwargs["obj_name"]} started')
 
         # TODO This OCA should be taken from settings
@@ -61,6 +55,7 @@ class MountSlew(SubCommand):
         mount_min_alt = 14.9
 
         if 'alt' and 'az' in self.kwargs.keys():
+            logger.debug(f'{self.id} started --> AltAz')
             try:
                 self.az = float(self.kwargs["az"])
                 self.alt = float(self.kwargs["alt"])
@@ -83,15 +78,22 @@ class MountSlew(SubCommand):
                     await self.mount.aput_tracking(self.kwargs["tracking"])
                     self.info_callback['stream_1'](
                         f'{self.id} {self.subcommand_name} tracking={self.kwargs["tracking"]}')
+                logger.info(f'{self.id} done')
+                self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
+                self.info_callback['stream_5'](f'{self.id}')
                 self.done = True
                 self.info_callback['exec_json'](self.exec_json())
                 return 0
             else:
+                self.info_callback['stream_1'](f'{self.id} target is below allowed alt:{self.alt}, skipping')
+                self.info_callback['stream_5'](f'{self.id}')
                 self.skipped = True
+                logger.info(f'{self.id} target is below allowed alt:{self.alt}, skipping')
                 self.info_callback['exec_json'](self.exec_json())
                 return 1
 
         elif 'ra' and 'dec' in self.kwargs.keys():
+            logger.debug(f'{self.id} started --> RaDec')
             self.ra_now, self.dec_now = ra_dec_epoch(ra=self.kwargs["ra"],
                                                      dec=self.kwargs["dec"],
                                                      latitude=OCA['latitude'],
@@ -108,18 +110,25 @@ class MountSlew(SubCommand):
                 await self.mount.aput_tracking(True)
                 await self.mount.aput_slewtocoo_async(ra_to_decimal(self.ra_now), dec_to_decimal(self.dec_now))
                 await self._wait_to_slew_coo()
+                logger.info(f'{self.id} done')
+                self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
+                self.info_callback['stream_5'](f'{self.id}')
                 self.done = True
                 self.info_callback['exec_json'](self.exec_json())
                 return 0
             else:
-                self.info_callback['stream_1'](f'{self.id} Target is below horizon alt:{alt}, intend to skip')
+                self.info_callback['stream_1'](f'{self.id} target is below allowed alt:{alt}, skipping')
+                self.info_callback['stream_5'](f'{self.id}')
                 self.skipped = True
                 self.info_callback['exec_json'](self.exec_json())
+                logger.info(f'{self.id} target is below allowed alt:{alt}, skipping')
                 return 1
         else:
-            self.info_callback['stream_1'](f'{self.id} No coordinates, intend to skip')
+            self.info_callback['stream_1'](f'{self.id} no coordinates, skipping')
+            self.info_callback['stream_5'](f'{self.id}')
             self.skipped = True
             self.info_callback['exec_json'](self.exec_json())
+            logger.info(f'{self.id} no coordinates, intend to skip')
             return 0
 
 

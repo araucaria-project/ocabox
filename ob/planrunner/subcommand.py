@@ -31,7 +31,7 @@ class SubCommand:
             w+=1
             if w > 3: break
         self.info_callback['c_subcommands'](f'{self.id};{self.subcommand_name};{kw}')
-        logger.info(f'Subcommand {self.id} name: {self.subcommand_name} is written')
+        logger.debug(f'{self.id} is written')
 
     async def arun(self) -> int:
         raise NotImplementedError
