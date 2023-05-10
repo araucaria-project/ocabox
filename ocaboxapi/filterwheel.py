@@ -1,6 +1,6 @@
 from __future__ import annotations
 import logging
-from typing import Callable, List
+from typing import Callable, Dict, List
 from ocaboxapi.telescopecomponent import TelescopeComponent, OcaBoxParam
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -42,3 +42,18 @@ class FilterWheel(TelescopeComponent):
     async def aput_position(self, pos: int) -> None:
         logger.debug(f'Putting filterwheel position to {self.tel_addr}')
         await self.aput_value('position', Position=pos)
+
+    async def aget_names_temp(self) -> Dict:
+        logger.debug(f'Getting filter names from {self.tel_addr}')
+        filters_temp = {'zb08': {'u': 0, 'g': 1, 'r': 2, 'i': 3, 'z': 4, 'B': 5, 'V': 6, 'Ic': 7},
+                        'jk15': {'1': 1},
+                        'wk06': {'1': 1},
+                        'iris': {'1': 1},
+                        'wg25': {'1': 1}
+                        }
+        tel_id = self.telescope.id
+        if tel_id in filters_temp.keys():
+            ret = filters_temp[tel_id]
+        else:
+            ret = {}
+        return ret
