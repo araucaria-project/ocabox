@@ -38,7 +38,7 @@ class Command(AbstractSequence):
         for n in self.parent_kwargs.keys():
             kw = f'{kw} {n}={self.parent_kwargs[n]}'
         self.info_callback['c_commands'](f'{self.id};{self.command_name};{kw}')
-        logger.info(f'Command {self.id} {self.command_name} is written')
+        logger.info(f'{self.id} {self.command_name} {self.args} {self.kwargs} is written')
 
     def _write_subcommands(self) -> None:
         self._create_command_string()
@@ -215,8 +215,10 @@ class Command(AbstractSequence):
 
     async def arun(self, step_id: str or None = None) -> int:
         self.info_callback['stream_1'](f'Command {self.id} {self.command_name} started')
+        logger.info(f'{self.id} {self.command_name} {self.args} {self.kwargs} started')
         await self._arun(self.subcomponents, step_id=step_id)
         self.info_callback['stream_5'](f'{self.id}')
+        logger.info(f'{self.id} done')
         return 0
 
     async def stop(self):
