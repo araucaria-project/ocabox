@@ -132,7 +132,6 @@ class CameraExposure(SubCommand):
         file_name = f'{self.telescope.id}c_{jd_oca.split(".")[0]}_{jd_oca.split(".")[1]}'
         stat = fits_stat(array, size=100, median=False, std=False)
 
-
         # Camra Log
         f = open(os.path.join(self.folder, 'camera_log.txt'), "a")
         f.write(f'Date:{datetime.utcnow()}')
@@ -141,7 +140,7 @@ class CameraExposure(SubCommand):
         f.write(f' Exp-time:{self.kwargs["exp_time"]}')
         f.write(f' Object:{self.kwargs["obj_name"]}')
         f.write(f' Filter:{self.kwargs["filter"]}')
-
+        
         f.write(' Min:')
         f.write(str(stat['min']))
         f.write(' Max:')
@@ -212,5 +211,3 @@ class CameraExposure(SubCommand):
         self.info_callback['exec_json'](self.exec_json())
         await asyncio.sleep(1)
         return 0
-
-

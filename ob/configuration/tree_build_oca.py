@@ -8,6 +8,7 @@ from ob.data_colection.specialistic_components.tree_base_request_blocker import 
 from ob.data_colection.specialistic_components.tree_blocker_access_grantor import TreeBlockerAccessGrantor
 from ob.data_colection.specialistic_components.tree_cache_observatory import TreeCache
 from ob.data_colection.specialistic_components.tree_conditional_freezer import TreeConditionalFreezer
+from ob.data_colection.specialistic_components.tree_plan_executor import TreePlanExecutor
 
 
 def tree_build() -> Router:
@@ -17,7 +18,9 @@ def tree_build() -> Router:
     alpaca_wk06 = TreeAlpacaObservatory('alpaca-wk06', observatory_name='wk06')
     alpaca_blocker_wk06 = TreeBaseRequestBlocker('alpaca-blocker-wk06', alpaca_wk06)
     blocker_grantor_wk06 = TreeBlockerAccessGrantor('access-grantor-wk06', 'access_grantor', alpaca_blocker_wk06)
-    broker_components_wk06 = TreeBaseBrokerDefaultTarget('broker-components-wk06', [blocker_grantor_wk06],
+    plan_executor_wk06 = TreePlanExecutor('executor-wk06', 'executor')
+    broker_components_wk06 = TreeBaseBrokerDefaultTarget('broker-components-wk06',
+                                                         [blocker_grantor_wk06, plan_executor_wk06],
                                                          default_provider=alpaca_blocker_wk06)
     cache_wk06 = TreeCache('cache-wk06', broker_components_wk06)
     conditional_freezer_wk06 = TreeConditionalFreezer('conditional-freezer-wk06', cache_wk06)
@@ -27,7 +30,9 @@ def tree_build() -> Router:
     alpaca_zb08 = TreeAlpacaObservatory('alpaca-zb08', observatory_name='zb08')
     alpaca_blocker_zb08 = TreeBaseRequestBlocker('alpaca-blocker-zb08', alpaca_zb08)
     blocker_grantor_zb08 = TreeBlockerAccessGrantor('access-grantor-zb08', 'access_grantor', alpaca_blocker_zb08)
-    broker_components_zb08 = TreeBaseBrokerDefaultTarget('broker-components-zb08', [blocker_grantor_zb08],
+    plan_executor_zb08 = TreePlanExecutor('executor-zb08', 'executor')
+    broker_components_zb08 = TreeBaseBrokerDefaultTarget('broker-components-zb08',
+                                                         [blocker_grantor_zb08, plan_executor_zb08],
                                                          default_provider=alpaca_blocker_zb08)
     cache_zb08 = TreeCache('cache-zb08', broker_components_zb08)
     conditional_freezer_zb08 = TreeConditionalFreezer('conditional-freezer-zb08', cache_zb08)
@@ -37,7 +42,9 @@ def tree_build() -> Router:
     alpaca_jk15 = TreeAlpacaObservatory('alpaca-jk15', observatory_name='jk15')
     alpaca_blocker_jk15 = TreeBaseRequestBlocker('alpaca-blocker-jk15', alpaca_jk15)
     blocker_grantor_jk15 = TreeBlockerAccessGrantor('access-grantor-jk15', 'access_grantor', alpaca_blocker_jk15)
-    broker_components_jk15 = TreeBaseBrokerDefaultTarget('broker-components-jk15', [blocker_grantor_jk15],
+    plan_executor_jk15 = TreePlanExecutor('executor-jk15', 'executor')
+    broker_components_jk15 = TreeBaseBrokerDefaultTarget('broker-components-jk15',
+                                                         [blocker_grantor_jk15, plan_executor_jk15],
                                                          default_provider=alpaca_blocker_jk15)
     cache_jk15 = TreeCache('cache-jk15', broker_components_jk15)
     conditional_freezer_jk15 = TreeConditionalFreezer('conditional-freezer-jk15', cache_jk15)
@@ -47,7 +54,9 @@ def tree_build() -> Router:
     alpaca_wg25 = TreeAlpacaObservatory('alpaca-wg25', observatory_name='wg25')
     alpaca_blocker_wg25 = TreeBaseRequestBlocker('alpaca-blocker-wg25', alpaca_wg25)
     blocker_grantor_wg25 = TreeBlockerAccessGrantor('access-grantor-wg25', 'access_grantor', alpaca_blocker_wg25)
-    broker_components_wg25 = TreeBaseBrokerDefaultTarget('broker-components-wg25', [blocker_grantor_wg25],
+    plan_executor_wg25 = TreePlanExecutor('executor-wg25', 'executor')
+    broker_components_wg25 = TreeBaseBrokerDefaultTarget('broker-components-wg25',
+                                                         [blocker_grantor_wg25, plan_executor_wg25],
                                                          default_provider=alpaca_blocker_wg25)
     cache_wg25 = TreeCache('cache-wg25', broker_components_wg25)
     conditional_freezer_wg25 = TreeConditionalFreezer('conditional-freezer-wg25', cache_wg25)
@@ -57,7 +66,9 @@ def tree_build() -> Router:
     alpaca_iris = TreeAlpacaObservatory('alpaca-iris', observatory_name='iris')
     alpaca_blocker_iris = TreeBaseRequestBlocker('alpaca-blocker-iris', alpaca_iris)
     blocker_grantor_iris = TreeBlockerAccessGrantor('access-grantor-iris', 'access_grantor', alpaca_blocker_iris)
-    broker_components_iris = TreeBaseBrokerDefaultTarget('broker-components-iris', [blocker_grantor_iris],
+    plan_executor_iris = TreePlanExecutor('executor-iris', 'executor')
+    broker_components_iris = TreeBaseBrokerDefaultTarget('broker-components-iris',
+                                                         [blocker_grantor_iris, plan_executor_iris],
                                                          default_provider=alpaca_blocker_iris)
     cache_iris = TreeCache('cache-iris', broker_components_iris)
     conditional_freezer_iris = TreeConditionalFreezer('conditional-freezer-iris', cache_iris)
@@ -67,7 +78,9 @@ def tree_build() -> Router:
     alpaca_sim = TreeAlpacaObservatory('alpaca-sim', observatory_name='sim')
     alpaca_blocker_sim = TreeBaseRequestBlocker('alpaca-blocker-sim', alpaca_sim)
     blocker_grantor_sim = TreeBlockerAccessGrantor('access-grantor-sim', 'access_grantor', alpaca_blocker_sim)
-    broker_components_sim = TreeBaseBrokerDefaultTarget('broker-components-sim', [blocker_grantor_sim],
+    plan_executor_sim = TreePlanExecutor('executor-sim', 'executor')
+    broker_components_sim = TreeBaseBrokerDefaultTarget('broker-components-sim',
+                                                        [blocker_grantor_sim, plan_executor_sim],
                                                         default_provider=alpaca_blocker_sim)
     cache_sim = TreeCache('cache-sim', broker_components_sim)
     conditional_freezer_sim = TreeConditionalFreezer('conditional-freezer-sim', cache_sim)
@@ -77,7 +90,9 @@ def tree_build() -> Router:
     alpaca_dev = TreeAlpacaObservatory('alpaca-dev', observatory_name='dev')
     alpaca_blocker_dev = TreeBaseRequestBlocker('alpaca-blocker-dev', alpaca_dev)
     blocker_grantor_dev = TreeBlockerAccessGrantor('access-grantor-dev', 'access_grantor', alpaca_blocker_dev)
-    broker_components_dev = TreeBaseBrokerDefaultTarget('broker-components-dev', [blocker_grantor_dev],
+    plan_executor_dev = TreePlanExecutor('executor-dev', 'executor')
+    broker_components_dev = TreeBaseBrokerDefaultTarget('broker-components-dev',
+                                                        [blocker_grantor_dev, plan_executor_dev],
                                                         default_provider=alpaca_blocker_dev)
     cache_dev = TreeCache('cache-dev', broker_components_dev)
     conditional_freezer_dev = TreeConditionalFreezer('conditional-freezer-dev', cache_dev)

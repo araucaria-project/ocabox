@@ -57,22 +57,7 @@ class RequestSolver(BaseRequestSolver):
             # logger.warning('The timeout value passed in the request does not match the actually set. It will be set '
             #                'to real')
             v_request.request_timeout = timeout
-        # Can not find value provider application
-        if not self.data_provider or not isinstance(self.data_provider, ProvidesResponseProtocol):
-            logger.error('Can not find value provider application.')
-            re = ResponseError(4002, '', repr(self), ResponseError.SEVERITY_CRITICAL)
-            v_response = ValueResponse(v_request.address, None, False, re)
-            response = v_response.to_byte()
-            return response
-        # try to get response
-        # get_response method shouldn't raise any errors !!!
-        try:
-            v_response = await self.data_provider.get_response(v_request)
-        except asyncio.CancelledError:
-            raise
-        except Exception as e:
-            logger.error(f'{str(e)}')
-            re = ResponseError(4002, '', repr(self), ResponseError.SEVERITY_CRITICAL)
-            v_response = ValueResponse(v_request.address, None, False, re)
+
+        v_response = await self._get_single_answer(v_request=v_request)
         response = v_response.to_byte()
         return response

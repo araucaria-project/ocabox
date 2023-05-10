@@ -3,7 +3,7 @@ import logging
 import zmq
 from typing import List
 from zmq.asyncio import Poller
-from ob.comunication.base_communication_object import BaseCommunicationObject
+from ob.comunication.base_zmq_communication_object import BaseZmqCommunicationObject
 from ob.comunication.base_request_solver import BaseRequestSolver
 from ob.comunication.comunication_error import CommunicationTimeoutError
 from ob.comunication.message_serializer import MessageSerializer
@@ -13,7 +13,7 @@ from ob.util_functions.asyncio_util_functions import wait_for_psce
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
-class Router(BaseCommunicationObject):
+class Router(BaseZmqCommunicationObject):
     DEFAULT_NAME = 'DefaultRouter'
     TYPE = 'router'
 
