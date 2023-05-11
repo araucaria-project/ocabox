@@ -1,4 +1,7 @@
 from __future__ import annotations
+
+from typing import Optional
+
 import asyncio
 import functools
 import logging
@@ -30,7 +33,7 @@ class EphemerisData(param.Parameterized):
     def __init__(self, **params):
         super().__init__(**params)
         self.task = None
-        self.stop_running_event = asyncio.Event()
+        self.stop_running_event: Optional[asyncio.Event] = None
         self.obs_location = EarthLocation(lat=self.latitude_deg * u.deg,
                                           lon=self.longitude_deg * u.deg,
                                           height=self.height_m * u.m)
@@ -83,8 +86,7 @@ class EphemerisData(param.Parameterized):
                      pressure=self.pressure_hPa * u.hPa
                      )
 
-    def run(self):
-        self.stop_running_event = asyncio.Event()
+    async def run(self):
         logger.info(f'Starting {self}')
         try:
             self.task = asyncio.create_task(self._run())
@@ -94,6 +96,7 @@ class EphemerisData(param.Parameterized):
 
     async def _run(self):
         logger.info(f'Task starting {self}')
+        self.stop_running_event = asyncio.Event()
         while not self.stop_running_event.is_set():
             t = Time.now()
             self.utc = t.utc.unix
@@ -102,33 +105,41 @@ class EphemerisData(param.Parameterized):
                                return_when=asyncio.FIRST_COMPLETED)
         logger.info(f'Task finished {self}')
 
-    def stop(self):
-        logger.info(f'Sync Stopping requested {self}')
-        self._stop()
-
-    async def astop(self):
-        logger.info(f'Async Stopping requested {self}')
-        self._stop()
-        logger.info(f'Awaiting for task finish {self}')
-        await self.task
-        logger.info(f'Task finished {self}')
-
-
-    def _stop(self):
+    async def stop(self):
+        logger.info(f'Stopping requested {self}')
         self.stop_running_event.set()
         if self.task is not None:
             t = self.task
             self.task = None
             logger.info(f'Stopping {self}')
+            await t
+            logger.info(f'Stopped {self}')
         else:
             logger.warning('Task EphemerisData is not running, so it can not be stopped')
 
-    def __del__(self):
-        logger.info(f'Stopping on destructor {self}')
-        self._stop()
-        if self.task is not None:
-            logger.info(f'Canceling {self}')
-            self.task.cancel()
+    # async def astop(self):
+    #     logger.info(f'Async Stopping requested {self}')
+    #     self._stop()
+    #     logger.info(f'Awaiting for task finish {self}')
+    #     await self.task
+    #     logger.info(f'Task finished {self}')
+
+
+    # async def _stop(self):
+    #     self.stop_running_event.set()
+    #     if self.task is not None:
+    #         t = self.task
+    #         self.task = None
+    #         logger.info(f'Stopping {self}')
+    #     else:
+    #         logger.warning('Task EphemerisData is not running, so it can not be stopped')
+
+    # def __del__(self):
+    #     logger.info(f'Stopping on destructor {self}')
+    #     self._stop()
+    #     if self.task is not None:
+    #         logger.info(f'Canceling {self}')
+    #         self.task.cancel()
 
 
 
@@ -170,11 +181,11 @@ class TreeEphemeris(TreeProvider):
         raise AddressError(code=1002, message=f'Unrecognised method for module {self.get_name()}')
 
     async def run(self):
-        self.data.run()
+        await self.data.run()
         return await super().run()
 
     async def stop(self):
-        await self.data.astop()
+        await self.data.stop()
         return await super().stop()
 
 
