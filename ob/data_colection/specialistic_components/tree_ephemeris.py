@@ -89,6 +89,7 @@ class EphemerisData(param.Parameterized):
     async def run(self):
         logger.info(f'Starting {self}')
         try:
+            self.stop_running_event = asyncio.Event()
             self.task = asyncio.create_task(self._run())
         except Exception as e:
             logger.error(f'Error starting {self}: {e}')
@@ -96,7 +97,6 @@ class EphemerisData(param.Parameterized):
 
     async def _run(self):
         logger.info(f'Task starting {self}')
-        self.stop_running_event = asyncio.Event()
         while not self.stop_running_event.is_set():
             t = Time.now()
             self.utc = t.utc.unix
