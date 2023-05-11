@@ -3,7 +3,7 @@ import datetime
 import asyncio
 import logging
 from ob.planrunner.subcommand import SubCommand
-import time
+
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -28,9 +28,6 @@ class ChangeFilter(SubCommand):
             fit_pos = await self.get_value_position()
             if isinstance(fit_pos, int) and fit_pos>-1:
                 if fit_pos==pos:
-                    logger.debug(f'{self.id} {self.subcommand_name} is done')
-                    self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
-                    self.info_callback['stream_5'](f'{self.id}')
                     break
 
     async def get_value_position(self):
@@ -48,16 +45,18 @@ class ChangeFilter(SubCommand):
         except Exception as e:
             logger.error(f'{self.id} {self.subcommand_name} filter position error after {datetime.datetime.now()-t}: {e}')
             try:
+                logger.warning(f'{self.id} filter change 2-nd try')
                 await self.filterwheel.aput_position(pos)
             except:
                 try:
+                    logger.warning(f'{self.id} filter change 3-rd try')
                     await self.filterwheel.aput_position(pos)
                 except:
-                    logger.error(f'{self.id} {self.subcommand_name} filter aput_position error')
+                    logger.error(f'{self.id} filter aput_position error')
                     return 1
 
     async def arun(self, step_id: str or None = None) -> int:
-        logger.debug(f'{self.id} {self.subcommand_name} is started')
+        logger.info(f'{self.id} started')
         self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} {self.kwargs["filter"]} started')
         self.started = True
         self.info_callback['exec_json'](self.exec_json())
@@ -76,8 +75,9 @@ class ChangeFilter(SubCommand):
                 return 1
         fit_pos = await self.get_value_position()
         if pos==fit_pos:
-            self.info_callback['stream_1'](f'No need to change filter - skipping')
+            self.info_callback['stream_1'](f'No need to change filter, skipping')
             self.info_callback['stream_5'](f'{self.id}')
+            logger.info(f'{self.id} no need to change filter, skipping')
             self.skipped = True
             self.info_callback['exec_json'](self.exec_json())
             return 0
@@ -87,10 +87,14 @@ class ChangeFilter(SubCommand):
         if res==1:
             self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} filter aput_position error, skipping')
             self.info_callback['stream_5'](f'{self.id}')
+            logger.info(f'{self.id} filter aput_position error, skipping')
             self.skipped = True
             self.info_callback['exec_json'](self.exec_json())
             return 1
         await self._wait_to_move(pos)
+        logger.info(f'{self.id} done')
+        self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
+        self.info_callback['stream_5'](f'{self.id}')
         self.done = True
         self.info_callback['exec_json'](self.exec_json())
         return 0

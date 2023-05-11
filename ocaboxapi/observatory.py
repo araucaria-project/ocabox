@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import confuse
 import logging
 import asyncio
+from ob.ob_config import SingletonConfig
 from time import time
 import os
 import pwd
@@ -32,6 +34,23 @@ class Observatory():
         self.ephemeris = None
         self._subscribers = []
         super().__init__()
+
+    def get_app_cfg(self, key: str, default = None):
+            clc = None
+            try:
+                clc = SingletonConfig.get_config()['client'][self.client_name]
+            except (LookupError, confuse.NotFoundError):
+                try:
+                    clc = SingletonConfig.get_config()['client']['DefaultClient']
+                except (LookupError, confuse.NotFoundError):
+                    pass
+            if clc is not None:
+                try:
+                    return clc['app'][key].get()
+                except (LookupError, confuse.NotFoundError):
+                    pass
+            return default
+
 
     # def get_client_config(self, client_cfg: Optional[str] = None):
     #     """

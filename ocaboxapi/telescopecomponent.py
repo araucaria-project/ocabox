@@ -67,3 +67,4 @@ class TelescopeComponent(Component):
         logger.debug(f'Getting  description from {self.tel_addr}')
         ret = await self.aget_value('description')
         return ret
+

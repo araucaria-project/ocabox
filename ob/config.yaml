@@ -33,6 +33,8 @@ client:
     request_timeout: 2.17  # extra, not used by ocabox
     delay: 0.1  # extra, not used by ocabox
     max_missed_msg: 3  # extra, not used by ocabox
+    app:
+      base_fits_dir: ~/Desktop
   DefaultClient:
     port: 5559
     url: localhost

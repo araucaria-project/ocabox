@@ -17,6 +17,7 @@ class SubCommand:
         self.started = started
         self.done = done
         self.skipped = skipped
+        self.observatory = parent.observatory
         super().__init__()
         self._create_command_string()
 
@@ -30,7 +31,7 @@ class SubCommand:
             w+=1
             if w > 3: break
         self.info_callback['c_subcommands'](f'{self.id};{self.subcommand_name};{kw}')
-        logger.info(f'Subcommand {self.id} name: {self.subcommand_name} is written')
+        logger.debug(f'{self.id} is written')
 
     async def arun(self) -> int:
         raise NotImplementedError
@@ -56,6 +57,7 @@ class SubCommand:
         ex_js['timestamp_utc'] = str(datetime.utcnow())
         return ex_js
 
+    """
     @staticmethod
     def proof_val(value: Any) -> Any:
         try:
@@ -65,3 +67,4 @@ class SubCommand:
                 return value
             except:
                 return ''
+    """

@@ -1,6 +1,8 @@
 import asyncio
 import logging
 from typing import List, Tuple
+
+from ob.data_colection.resource_manager.resource import ResourceCommandError
 from ob.planrunner.ern.Dome import Dome
 from ob.planrunner.ern.Mount import Mount
 from ob.planrunner.ern.command import Command
@@ -29,7 +31,7 @@ class CommandObject(Command):
         # todo uzupełnić
 
     def _create_modules_from_args(self):
-        # todo uzupełnić, utwożyć obiekty, coś w stylu _write_object() z dawnego runera
+        # todo uzupełnić, utworzyć obiekty, coś w stylu _write_object() z dawnego runera
         nr = 0
         some_module = Mount(nr=nr, ra='12.3', dec='43.54')
         self._needed_modules_list.append(some_module)
@@ -51,16 +53,16 @@ class CommandObject(Command):
         self._needed_modules.append(some_module)
 
     def _get_res(self, name: str, nr: int):
-        for m in self._needed_modules_list:
-            if m.nr == nr and m.RESOURCE_NAME == name:
-                return m
+        m = self.res_mngr.get_resource(name=name, nr=nr)
+        # TODO W przyszłości mogą być inne sterowniki teleskopów które będą mieć inne zasoby dlatego dorobić kiedyś
+        #  trzeba kontrolę typu zasobu, np czy jest alpaca czy inny
+        if m:
+            return m
         raise RuntimeError  # todo zrobić customowy bład
 
     async def _is_loaded(self, resource_name: str, nr: int = 0):
-        for m in self._needed_modules_list:
-            if m.nr == nr and m.RESOURCE_NAME == resource_name:
-                return True
-        return False
+        m = self.res_mngr.get_resource(name=resource_name, nr=nr)
+        return m is not None
 
     async def _run_body(self):
         await self._wait_for_permission_to_locking()  # jeśli zabrało wszystko co potrzebne to można zaczynać zbierać u siebie i lokować
@@ -98,9 +100,10 @@ class CommandObject(Command):
                 # ale może mieć zastosowanie np przy Darkach albo innych komędach
                 self._get_res(self.res_mngr.CAMERA, nr=0).take_photo()  # nie wiem czy jest taka metoda
                 print('d')
+        except ResourceCommandError:
+            self.log("Command have error")
         finally:
             # good practices to have this here, but it is not necessary
             self._unlock_next_command()  # unlock in the end. This is set again in run() method
             self._set_self_finish()  # command finished - this should be last code line. This is set again in run()
             print('e')
-

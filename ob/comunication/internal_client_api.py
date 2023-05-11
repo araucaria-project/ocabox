@@ -29,7 +29,7 @@ class InternalClientAPI(BaseClientAPI):
 
     async def send_multi(self, requests: List[ValueRequest], no_wait: bool = False) -> Optional[List[ValueResponse]]:
         if no_wait:
-            logger.warning("Internal queries do not support the 'no_wait' parameters")
+            # logger.warning("Internal queries do not support the 'no_wait' parameters")
             no_wait = False
         shortest_timeout = None
         for r in requests:

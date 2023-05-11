@@ -22,7 +22,7 @@ class Sequence(AbstractSequence):
         self.subcomponents = {}
         self.telescope = parent.telescope
         self.info_callback = parent.info_callback
-        super().__init__(self.id, self.name, self.info_callback)
+        super().__init__(self.id, self.name, self.info_callback, observatory=self.parent.observatory)
         self.build_sequence()
 
     def _create_sequence_string(self):
@@ -32,7 +32,7 @@ class Sequence(AbstractSequence):
         for n in self.parent_kwargs.keys():
             kw = f'{kw} {n}={self.parent_kwargs[n]}'
         self.info_callback['c_sequences'](f'{self.id};SEQUENCE;{kw}')
-        logger.info(f'Sequence {self.id} is written')
+        logger.info(f'{self.id} is written')
 
     def build_sequence(self) -> None:
         self._create_sequence_string()
@@ -52,18 +52,18 @@ class Sequence(AbstractSequence):
 
     def write_subcomponent(self, sequence_id, sequence_dict) -> 'Sequence':
         sub = Sequence(sequence_id, sequence_dict, self)
-        logger.info(f'Sequence {sequence_id} to {self.id} is written')
         return sub
 
     def write_command(self, command_id, command_dict) -> 'Command':
         com = Command(command_id, command_dict, self)
-        logger.info(f'Command {command_id} to {self.id} is written')
         return com
 
     async def arun(self, step_id: str or None = None) -> int:
         self.info_callback['stream_1'](f'Sequence {self.id} started')
+        logger.info(f'{self.id} started')
         await self._arun(self.subcomponents, step_id=step_id)
         self.info_callback['stream_5'](f'{self.id}')
+        logger.info(f'{self.id} done')
         return 0
 
     async def stop(self):
