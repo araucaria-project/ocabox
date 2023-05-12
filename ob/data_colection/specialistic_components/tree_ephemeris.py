@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from ob.util_functions.asyncio_util_functions import wait_for_psce
 from typing import Optional
 
 import asyncio
@@ -100,9 +101,10 @@ class EphemerisData(param.Parameterized):
         while not self.stop_running_event.is_set():
             t = Time.now()
             self.utc = t.utc.unix
-
-            await asyncio.wait([self.stop_running_event.wait(), asyncio.sleep(1)],
-                               return_when=asyncio.FIRST_COMPLETED)
+            try:
+                await wait_for_psce(self.stop_running_event.wait(), timeout=1.0)
+            except asyncio.TimeoutError:
+                pass
         logger.info(f'Task finished {self}')
 
     async def stop(self):
