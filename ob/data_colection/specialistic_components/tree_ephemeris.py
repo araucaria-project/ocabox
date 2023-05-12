@@ -1,29 +1,22 @@
 from __future__ import annotations
 
-from ob.util_functions.asyncio_util_functions import wait_for_psce
-from typing import Optional
-
-import asyncio
+import astropy.units as u
 import functools
 import logging
-import time as time_module
-
 import param
+import time as time_module
 from astropy.coordinates import EarthLocation, get_moon, get_sun, AltAz, SkyCoord
-import astropy.units as u
 from astropy.time import Time
-
 from ob.data_colection.address import AddressError
 from ob.data_colection.base_components.tree_provider import TreeProvider
+from ob.data_colection.ocaboxtask import OcaboxTask
 from ob.data_colection.value import Value
 from ob.data_colection.value_call import ValueRequest
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
-param.parameterized.async_executor = lambda f: asyncio.create_task(f())
 
-
-class EphemerisData(param.Parameterized):
+class EphemerisData(OcaboxTask):
     latitude_deg = param.Number(default=0.0, doc="Latitude", constant=True)
     longitude_deg = param.Number(default=0.0, doc="Longitude", constant=True)
     height_m = param.Number(default=0.0, doc="Elevation over sea", constant=True)
@@ -33,8 +26,6 @@ class EphemerisData(param.Parameterized):
 
     def __init__(self, **params):
         super().__init__(**params)
-        self.task = None
-        self.stop_running_event: Optional[asyncio.Event] = None
         self.obs_location = EarthLocation(lat=self.latitude_deg * u.deg,
                                           lon=self.longitude_deg * u.deg,
                                           height=self.height_m * u.m)
@@ -51,7 +42,7 @@ class EphemerisData(param.Parameterized):
             return time
         return Time.fromunix(time)
 
-    def get_moon(self, time: float | Time | None =None) -> SkyCoord:
+    def get_moon(self, time: float | Time | None = None) -> SkyCoord:
         t = self.as_time_obj(time)
         return self._get_moon(t)
 
@@ -67,7 +58,7 @@ class EphemerisData(param.Parameterized):
     def _get_sun(self, time: Time) -> SkyCoord:
         return get_sun(time)
 
-    def moon_altaz(self, time: float | Time | None = None)  -> AltAz:
+    def moon_altaz(self, time: float | Time | None = None) -> AltAz:
         return self.get_moon(time).transform_to(self.get_obs_az_frame(time))
 
     def get_moon_phase(self, time: float | Time | None = None) -> float:
@@ -87,70 +78,16 @@ class EphemerisData(param.Parameterized):
                      pressure=self.pressure_hPa * u.hPa
                      )
 
-    async def run(self):
-        logger.info(f'Starting {self}')
-        try:
-            self.stop_running_event = asyncio.Event()
-            self.task = asyncio.create_task(self._run())
-        except Exception as e:
-            logger.error(f'Error starting {self}: {e}')
-            raise
-
-    async def _run(self):
-        logger.info(f'Task starting {self}')
-        while not self.stop_running_event.is_set():
-            t = Time.now()
-            self.utc = t.utc.unix
-            try:
-                await wait_for_psce(self.stop_running_event.wait(), timeout=1.0)
-            except asyncio.TimeoutError:
-                pass
-        logger.info(f'Task finished {self}')
-
-    async def stop(self):
-        logger.info(f'Stopping requested {self}')
-        self.stop_running_event.set()
-        if self.task is not None:
-            t = self.task
-            self.task = None
-            logger.info(f'Stopping {self}')
-            await t
-            logger.info(f'Stopped {self}')
-        else:
-            logger.warning('Task EphemerisData is not running, so it can not be stopped')
-
-    # async def astop(self):
-    #     logger.info(f'Async Stopping requested {self}')
-    #     self._stop()
-    #     logger.info(f'Awaiting for task finish {self}')
-    #     await self.task
-    #     logger.info(f'Task finished {self}')
-
-
-    # async def _stop(self):
-    #     self.stop_running_event.set()
-    #     if self.task is not None:
-    #         t = self.task
-    #         self.task = None
-    #         logger.info(f'Stopping {self}')
-    #     else:
-    #         logger.warning('Task EphemerisData is not running, so it can not be stopped')
-
-    # def __del__(self):
-    #     logger.info(f'Stopping on destructor {self}')
-    #     self._stop()
-    #     if self.task is not None:
-    #         logger.info(f'Canceling {self}')
-    #         self.task.cancel()
-
+    async def on_time_tick(self):
+        t = Time.now()
+        self.utc = t.utc.unix
+        return await super().on_time_tick()
 
 
 class TreeEphemeris(TreeProvider):
     """
-    This module provides current information about sky position of the celestial object and current time in  various timescales.
-    address commands:
-        - method1 - do stuff 1
-        - method2 - do stuff 2
+    This module provides current information about sky position of the celestial object and current time
+    in various timescales.
     """
 
     def __init__(self, component_name: str, source_name: str, **kwargs):
@@ -189,7 +126,3 @@ class TreeEphemeris(TreeProvider):
     async def stop(self):
         await self.data.stop()
         return await super().stop()
-
-
-
-
