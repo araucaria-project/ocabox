@@ -8,7 +8,7 @@ from ob.ob_config import SingletonConfig
 import signal
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-logger = logging.getLogger(__name__.rsplit('.')[-1])
+logger = logging.getLogger('main')
 
 
 # config najpierw z ob/config.yaml potem z configuration.config.yaml
@@ -36,6 +36,13 @@ def main(argv=None):
     if argv is None:
         argv = sys.argv
 
+    try:
+        level = SingletonConfig.get_config()['LOG_LEVEL'].get()
+        if level is not None:
+            logger.info(f'Setting Loglevel to {level}')
+            logging.getLogger().setLevel(level)
+    except Exception:
+        pass
     try:
         BUILD_FILE = os.environ.get('OCABOX_BUILD_FILE_NAME', None)
         if BUILD_FILE is None:
