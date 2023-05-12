@@ -46,7 +46,9 @@ class FilterWheel(TelescopeComponent):
     async def aget_names_temp(self) -> Dict:
         logger.debug(f'Getting filter names from {self.tel_addr}')
         filters_temp = {'zb08': {'u': 0, 'g': 1, 'r': 2, 'i': 3, 'z': 4, 'B': 5, 'V': 6, 'Ic': 7},
-                        'jk15': {'1': 1},
+                        'jk15': {'Empty': 0, 'u SG': 1, 'b SG': 2, 'v SG': 3, 'y SG': 4,
+                                 'Hb_w': 5, 'Hb_n': 6, 'Ha_w': 7, 'Ha_n': 8,
+                                 'u': 9, 'g': 10, 'r': 11, 'i': 12, 'z': 13, 'B': 14, 'V': 15, 'iC': 16},
                         'wk06': {'1': 1},
                         'iris': {'1': 1},
                         'wg25': {'1': 1}
