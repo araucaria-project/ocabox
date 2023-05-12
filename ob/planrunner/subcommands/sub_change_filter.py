@@ -60,12 +60,12 @@ class ChangeFilter(SubCommand):
         self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} {self.kwargs["filter"]} started')
         self.started = True
         self.info_callback['exec_json'](self.exec_json())
-        ZB08_FILT = {'u': 0, 'g': 1, 'r': 2, 'i': 3, 'z': 4, 'B': 5, 'V': 6, 'Ic': 7}
+        filter_dict = await self.filterwheel.aget_names_temp()
         if self.telescope.id=='dev':
             pos = int(self.kwargs["filter"])
         else:
-            if self.kwargs["filter"] in ZB08_FILT.keys() and self.kwargs["filter"] is not None:
-                pos = ZB08_FILT[self.kwargs["filter"]]
+            if self.kwargs["filter"] in filter_dict.keys() and self.kwargs["filter"] is not None:
+                pos = filter_dict[self.kwargs["filter"]]
             else:
                 self.info_callback['stream_1'](
                     f'Filter index{self.kwargs["filter"]} is wrong, {self.parent.id} skipping')
