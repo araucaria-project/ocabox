@@ -8,6 +8,9 @@ from ob.planrunner.subcommands.sub_camera_exposure import CameraExposure
 from ob.planrunner.subcommands.sub_mirror_cover import MirrorCover
 from ob.planrunner.subcommands.sub_dome_screenlight import DomeScreenLight
 from ob.planrunner.subcommands.sub_focusing import Focusing
+from pyaraucaria.coordinates import az_alt_2_ra_dec, ra_to_decimal, ra_to_sexagesimal,\
+    dec_to_decimal, dec_to_sexagesimal
+import random
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -39,6 +42,18 @@ class Command(AbstractSequence):
             kw = f'{kw} {n}={self.parent_kwargs[n]}'
         self.info_callback['c_commands'](f'{self.id};{self.command_name};{kw}')
         logger.info(f'{self.id} {self.command_name} {self.args} {self.kwargs} is written')
+
+    @staticmethod
+    def ra_random_dither(ra: str, dith_val: float, mode: str = 'basic') -> str:
+        ra_deg = ra_to_decimal(ra)
+        if mode == 'basic':
+            return ra_to_sexagesimal(ra_deg + random.uniform(-dith_val / 60, dith_val / 60))
+
+    @staticmethod
+    def dec_random_dither(dec: str, dith_val: float, mode: str = 'basic') -> str:
+        dec_deg = dec_to_decimal(dec)
+        if mode == 'basic':
+            return dec_to_sexagesimal(dec_deg + random.uniform(-dith_val / 60, dith_val / 60))
 
     def _write_subcommands(self) -> None:
         self._create_command_string()
@@ -293,35 +308,95 @@ class Command(AbstractSequence):
             seq_list = self._split_seq(self.kwargs['seq'])
             for n in seq_list:
                 par = list(n.split('/'))
+
                 sub = ChangeFilter(f'{self.id}_{self.numb(id_next)}',
                                    self,
                                    filter=par[1])
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
 
-                sub = DomeSlew(f'{self.id}_{self.numb(id_next)}', self, follow_tol=3.0)
-                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-                id_next += 1
+                for ex in range(1, int(par[0])+1):
 
-                if subcommand_name == 'skyflat':
-                    type = 'skyflat'
-                else:
-                    type = 'science'
+                    # Dithering start - kwarg dither=basic/1/3 kind/for_every_sub/distance_in_minutes
 
-                sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
-                                     self,
-                                     exp_time=float(par[2]),
-                                     exp_no=int(par[0]),
-                                     type=type,
-                                     light=True,
-                                     obj_name=obj_name,
-                                     req_ra=req_ra,
-                                     req_dec=req_dec,
-                                     epoch='2000',
-                                     filter=par[1]
-                                     )
-                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-                id_next += 1
+                    if 'dither' in self.kwargs.keys():
+                        dit_lst = list(self.kwargs['dither'].split('/'))
+                        dit_mode = str(dit_lst[0])
+                        for_every_sub = int(dit_lst[1])
+                        dit_dist = float(dit_lst[2])
+
+                        if ex % for_every_sub == 0:
+                            if 'alt' and 'az' in self.kwargs.keys():
+                                # TODO get OCA values from settings
+                                OCA = {'latitude': '-24:35:53', 'longitude': '-70:11:47', 'elevation': '2817'}
+                                req_ra_dit, req_dec_dit = az_alt_2_ra_dec(alt=self.kwargs['alt'],
+                                                                          az=self.kwargs['az'],
+                                                                          latitude=OCA['latitude'],
+                                                                          longitude=OCA['longitude'],
+                                                                          elevation = OCA['elevation'],
+                                                                          ra_hour=True,
+                                                                          dec_sex=True
+                                                                          )
+
+                                sub = MountSlew(f'{self.id}_{self.numb(id_next)}',
+                                                self,
+                                                obj_name=obj_name,
+                                                ra=self.ra_random_dither(req_ra_dit,
+                                                                         dith_val=dit_dist,
+                                                                         mode=dit_mode),
+                                                dec=self.dec_random_dither(req_dec_dit,
+                                                                           dith_val=dit_dist,
+                                                                           mode=dit_mode),
+                                                epoch='2000')
+                                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+                                id_next += 1
+
+                            elif req_ra and req_dec is not None:
+                                req_ra_dit = req_ra
+                                req_dec_dit = req_dec
+                                sub = MountSlew(f'{self.id}_{self.numb(id_next)}',
+                                                self,
+                                                obj_name=obj_name,
+                                                ra=self.ra_random_dither(req_ra_dit,
+                                                                         dith_val=dit_dist,
+                                                                         mode=dit_mode),
+                                                dec=self.dec_random_dither(req_dec_dit,
+                                                                           dith_val=dit_dist,
+                                                                           mode=dit_mode),
+                                                epoch='2000')
+                                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+                                id_next += 1
+                            else:
+                                pass
+                        else:
+                            pass
+
+                    sub = DomeSlew(f'{self.id}_{self.numb(id_next)}', self, follow_tol=3.0)
+                    self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+                    id_next += 1
+
+                    if subcommand_name == 'skyflat':
+                        type = 'skyflat'
+                    else:
+                        type = 'science'
+
+                    sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
+                                         self,
+                                         exp_time=float(par[2]),
+                                         exp_no=1,
+                                         type=type,
+                                         light=True,
+                                         obj_name=obj_name,
+                                         req_ra=req_ra,
+                                         req_dec=req_dec,
+                                         epoch='2000',
+                                         filter=par[1]
+                                         )
+                    self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+                    id_next += 1
 
         # sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=False)
         # self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+
+
+

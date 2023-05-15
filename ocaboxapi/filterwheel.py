@@ -21,10 +21,11 @@ class FilterWheel(TelescopeComponent):
         logger.debug(f'Subscribing filtrers focus offsets from {self.tel_addr}')
         return await self.subscribe('focusoffsets', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
+    """
     async def aget_names(self) -> List[str]:
         logger.debug(f'Getting filter names from {self.tel_addr}')
         ret = await self.aget_value('names')
-        return ret
+        return ret"""
 
     async def asubscribe_names(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing filter names from {self.tel_addr}')
@@ -45,7 +46,7 @@ class FilterWheel(TelescopeComponent):
 
     # I would not name it `aget_names_temp`, just `aget_names`. Then everybody can use it and will not notice
     # the change in the implementation.
-    async def aget_names_temp(self) -> Dict:
+    async def aget_names(self) -> Dict:
         logger.debug(f'Getting filter names from {self.tel_addr}')
         # that will cange soon - we are going to add diffuser filters
         # see: https://github.com/araucaria-project/oca-problems/issues/38

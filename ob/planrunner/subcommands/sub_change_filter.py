@@ -55,7 +55,7 @@ class ChangeFilter(SubCommand):
         self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} {self.kwargs["filter"]} started')
         self.started = True
         self.info_callback['exec_json'](self.exec_json())
-        filter_dict = await self.filterwheel.aget_names_temp()
+        filter_dict = await self.filterwheel.aget_names()
         if self.telescope.id=='dev':
             pos = int(self.kwargs["filter"])
         else:
