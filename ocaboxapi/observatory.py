@@ -8,11 +8,17 @@ from time import time
 import os
 import pwd
 import socket
+from typing import TYPE_CHECKING
+
 from ob.util_functions.asyncio_util_functions import wait_for_psce
 from ob.comunication.comunication_error import CommunicationTimeoutError, CommunicationRuntimeError
 
 from ocaboxapi import ClientAPI
 from ocaboxapi.exceptions import OcaboxServerError, OcaboxAccessDenied
+
+if TYPE_CHECKING:
+    from ocaboxapi.telescope import Telescope
+    from ocaboxapi.ephemeris import Ephemeris
 
 logger = logging.getLogger("observatory")
 
@@ -25,6 +31,7 @@ class Observatory():
         self.client_name = client_name
         self.software_id = software_id
         self.telescopes = {}
+        self.ephemeris = None
         self._subscribers = []
         super().__init__()
 
@@ -92,6 +99,12 @@ class Observatory():
             tele = Telescope(telescope_id, self)
             self.telescopes[telescope_id] = tele
             return tele
+
+    def get_ephemeris(self) -> Ephemeris:
+        if self.ephemeris is None:
+            from ocaboxapi.ephemeris import Ephemeris
+            self.ephemeris = Ephemeris(id='global.ephemeris', observatory=self)
+        return self.ephemeris
 
     async def put_async(self, address: str,
                         time_of_data: float or None = None,
