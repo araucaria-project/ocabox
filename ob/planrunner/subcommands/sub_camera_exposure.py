@@ -132,6 +132,7 @@ class CameraExposure(SubCommand):
         file_name = f'{self.telescope.id}c_{jd_oca.split(".")[0]}_{jd_oca.split(".")[1]}'
         stat = fits_stat(array, size=100, median=False, std=False)
 
+
         # Camra Log
         f = open(os.path.join(self.folder, 'camera_log.txt'), "a")
         f.write(f'Date:{datetime.utcnow()}')
@@ -201,7 +202,19 @@ class CameraExposure(SubCommand):
                                                            n_exp=sub))
             self.readout_time_start = time.time()
             self.exp_time_start = str(datetime.utcnow())
-            await self.camera.aput_startexposure(self.kwargs["exp_time"], self.kwargs["light"])
+            expos_time = self.kwargs["exp_time"]
+            """
+            TODO for filter, time, make test shot on sky with 1s exposure. If value is not what You expect wait
+            some time and make test shot again until You don't get expected value of adu, then continue to make normal 
+            exposure with calculated length of exposure. On another skyflat sub this data will be read from config and 
+            if its good it will just make another skyflat. If time will pass or if filter will change, test shoot will
+             do again and all parameters will be updated.
+            """
+            if self.kwargs['skyflat']:
+                pass
+                #dir = self.telescope.observatory.get_client_cfg('base_fits_dir', default='/temp')
+
+            await self.camera.aput_startexposure(expos_time, self.kwargs["light"])
             await self._wait_for_subexposure(sub, self.kwargs["exp_time"])
             await self._wait_for_save_fits(sub)
         self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
