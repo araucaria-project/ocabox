@@ -86,6 +86,12 @@ data_collection:
   TreeCache:
     no_cachable_regex:
       - .*\.is_access$
+  TreeCCTV:   # Ubiquity CCTV camera
+    udm_camera_id: ''
+    udm_host: ''
+    udm_port: 443
+    udm_user: 'api'
+    udm_password: ''
 
 tree:
   test_sample_blocker:
@@ -140,3 +146,9 @@ tree:
             derotator:
               kind: rotator
               device_number: 0
+#  cctv-zb08: # Ubiquity CCTV cameras configured inob/configuration/config_oca.yaml
+#    udm_camera_id: CD08
+#    udm_host: ''
+#    udm_port: 443
+#    udm_user: 'api'
+#    udm_password: ''
