@@ -105,7 +105,7 @@ class TreeCCTV(TreeProvider):
         cams = {cam.name: cam for cam in api.bootstrap.cameras.values()}
         try:
             self.cam: Camera = cams[cam_id]
-        except IndexError:
+        except LookupError:
             logger.warning(f'{self} Ubiquity CCTV control disabled: '
                            f"Camera {cam_id} not fund (available cameras: {cams.keys()})")
             return
