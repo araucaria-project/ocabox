@@ -60,7 +60,7 @@ class Telescope(AbstractTelescope):
         try:
             return self.cctvs[id]
         except LookupError:
-            dev = CCTV(id=id, observatory=self.observatory)
+            dev = CCTV(id=id, telescope=self)
             self.cctvs[id] = dev
             return dev
 

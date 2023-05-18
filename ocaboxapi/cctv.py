@@ -17,20 +17,20 @@ class CCTV(TelescopeComponent):
     snapshot = OcaBoxParam(default=None, doc="CCTV camera snapshot")
 
     async def aput_ir(self, on: bool) -> None:
-        logger.debug(f'Putting cctv ir to {self.on}')
-        await self.aput_value('cctv.ir', state=on)
+        logger.debug(f'Putting cctv ir to {on}')
+        await self.aput_value('ir', state=on)
 
     async def aget_ir(self) -> bool:
-        logger.debug(f'Getting cctv ir to {self.on}')
-        ret =  await self.aget_value('cctv.ir')
+        logger.debug(f'Getting cctv ir to {on}')
+        ret =  await self.aget_value('ir')
         return ret
 
     async def aget_snapshot(self):
         logger.debug(f'Getting snapshot from {self.tel_addr}')
-        ret = await self.aget_value('cctv.snapshot')
+        ret = await self.aget_value('snapshot')
         return ret
 
     async def asubscribe_snapshot(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing snapshot from {self.tel_addr}')
-        return await self.subscribe('cctv.snapshot', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
+        return await self.subscribe('snapshot', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 

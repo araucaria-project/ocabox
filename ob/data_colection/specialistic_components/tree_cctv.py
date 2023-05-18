@@ -12,7 +12,6 @@ from ob.data_colection.value_call import ValueRequest
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
-
 class TreeCCTV(TreeProvider):
     """
     This module steers the Ubiquity CCTV camera.
@@ -35,9 +34,9 @@ class TreeCCTV(TreeProvider):
             raise AddressError(code=1001, message='The address does not contain a command.')
 
         if command == 'ir':
-            if request_type == 'put':
+            if request_type == 'PUT':
                 try:
-                    on: bool = kwargs['state']
+                    on: bool = request.request_data['state']
                 except KeyError:
                     raise TreeOtherError(code=4007,
                                          message=f'{self.get_name()}: Missing "state" parameter in {command} request.')
@@ -46,13 +45,12 @@ class TreeCCTV(TreeProvider):
                 # @Ernest: Is it going to be cached in current structure?
                 ret = 'unknown'
             return Value(v=ret, ts=time_module.time())
-        elif command == 'snapshot' and request_type == 'get':
+        elif command == 'snapshot' and request_type == 'GET':
             ret = await self._get_snapshot()
             if ret is None:
                 # @Ernest: Jak to zwrocic blad? Przez raise? Jak wybrać odpowiedni kod? (i severity?)
                 raise TreeOtherError(code=4002, message='Snapshot not returned')
             return Value(v=ret, ts=time_module.time())
-
 
         raise AddressError(code=1002,
                            message=f'Unrecognised method {request_type}:{command} for module {self.get_name()}')
