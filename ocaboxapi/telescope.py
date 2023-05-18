@@ -2,6 +2,7 @@ import logging
 
 from ocaboxapi.abstelescope import AbstractTelescope
 from ocaboxapi.access import AccessGrantor
+from ocaboxapi.cctv import CCTV
 from ocaboxapi.dome import Dome
 from ocaboxapi.mount import Mount
 from ocaboxapi.camera import Camera
@@ -25,6 +26,7 @@ class Telescope(AbstractTelescope):
         self.focusers = {}
         self.filterwheels = {}
         self.cameras = {}
+        self.cctvs = {}
         self.covercalibrators = {}
         self.rotators = {}
         self._access_grantor = None
@@ -52,6 +54,14 @@ class Telescope(AbstractTelescope):
         except LookupError:
             dev = Camera(id=id, telescope=self)
             self.cameras[id] = dev
+            return dev
+
+    def get_cctv(self, id='cctv') -> CCTV:
+        try:
+            return self.cctvs[id]
+        except LookupError:
+            dev = CCTV(id=id, observatory=self.observatory)
+            self.cctvs[id] = dev
             return dev
 
     def get_filterwheel(self, id='filterwheel') -> FilterWheel:

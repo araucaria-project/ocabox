@@ -3,8 +3,8 @@ import logging
 import time
 from typing import List
 
+from ob.comunication.base_client_request_solver import BaseClientRequestSolver
 from ob.comunication.comunication_error import CommunicationRuntimeError, CommunicationTimeoutError
-from ob.data_colection.address import AddressError
 from ob.data_colection.response_error import ResponseError
 from ob.data_colection.value_call import ValueRequest, ValueResponse
 from ob.ob_config import SingletonConfig
@@ -33,10 +33,10 @@ class BaseCycleQuery(ABC):
     :raise CommunicationRuntimeError: if not provide async loop and czn not get existing loop
     """
 
-    def __init__(self, client, list_request: List[ValueRequest], delay: float or None = None, loop=None,
-                 query_name: str = 'Default cycle query', max_missed_msg: int = None, **kwargs):
+    def __init__(self, crs: BaseClientRequestSolver, list_request: List[ValueRequest], delay: float or None = None,
+                 loop=None, query_name: str = 'Default cycle query', max_missed_msg: int = None, **kwargs):
         self._query_name = query_name
-        self._client = client
+        self._CRS: BaseClientRequestSolver = crs
         # TODO sprawdziś czy nie ma problemów z synchronizacją przez Event
         self._event: asyncio.Event = asyncio.Event()
         self._last_response: List[ValueResponse] = []
@@ -94,19 +94,6 @@ class BaseCycleQuery(ABC):
     def _change_time(self, time_now):
         for r in self._list_request:
             r.time_of_data = time_now
-
-    def _read_response(self, list_bytes: List[bytes]) -> List[ValueResponse]:
-        vr = []
-        for r in list_bytes:
-            try:
-                vr.append(ValueResponse.from_byte(r))
-            except (ValueError, AddressError, TypeError):
-                # can not create ValueRequest object (data is damaged) - return empty response witch error
-                logger.info(f'{self}: Can not convert request dictionary to request object.')
-                re = ResponseError(4001, 'Can not build request from ordered data', repr(self._client),
-                                   ResponseError.SEVERITY_CRITICAL)
-                vr.append(ValueResponse('', None, False, re))
-        return vr
 
     def _run(self):
         self._task = self._loop.create_task(self._send_message())
@@ -233,10 +220,10 @@ class PeriodicCycleQuery(BaseCycleQuery):
     :raise CommunicationRuntimeError: if not provide async loop and czn not get existing loop
     """
 
-    def __init__(self, client, list_request: List[ValueRequest], delay: float or None = None, loop=None,
-                 log_missed_msg: bool = False, query_name: str = 'Default periodic query',
+    def __init__(self, crs: BaseClientRequestSolver, list_request: List[ValueRequest], delay: float or None = None,
+                 loop=None, log_missed_msg: bool = False, query_name: str = 'Default periodic query',
                  max_missed_msg: int = None, **kwargs):
-        super().__init__(client=client, list_request=list_request, delay=delay, loop=loop, query_name=query_name,
+        super().__init__(crs=crs, list_request=list_request, delay=delay, loop=loop, query_name=query_name,
                          max_missed_msg=max_missed_msg, **kwargs)
         self._log_missed_msg: bool = log_missed_msg
         self._min_delay = SingletonConfig.get_config()['comunication'][type(self).__name__]['min_delay'].get()
@@ -262,16 +249,16 @@ class PeriodicCycleQuery(BaseCycleQuery):
 
             # make query
             try:
-                list_part = [r.to_byte() for r in self._get_list_request_with_extinction()]
-                result = await self._client.send_multipart(list_part=list_part,
-                                                           request_timeout=start_time + self._delay)
+                requests = self._get_list_request_with_extinction()
+                result = await self._CRS.send_request(requests=requests, timeout=start_time + self._delay,
+                                                      no_wait=False)
                 self._errors = None
                 if result is None:
                     logger.error(f"{self}: Can not get response for giving request")
                     raise CommunicationRuntimeError(message="Can not get response for giving request, check "
                                                             "that the 'no_wait' flag is not set to true")
 
-                self._last_response = self._read_response(result)
+                self._last_response = result
                 missed = 0
                 self._event.set()
             except CommunicationRuntimeError as e:
@@ -327,10 +314,10 @@ class ConditionalCycleQuery(BaseCycleQuery):
     :raise CommunicationRuntimeError: if not provide async loop and czn not get existing loop
     """
 
-    def __init__(self, client, list_request: List[ValueRequest], delay: float or None = None, loop=None,
-                 query_name: str = 'Default conditional query', max_missed_msg: int = None,
+    def __init__(self, crs: BaseClientRequestSolver, list_request: List[ValueRequest], delay: float or None = None,
+                 loop=None, query_name: str = 'Default conditional query', max_missed_msg: int = None,
                  request_timeout: float = None, **kwargs):
-        super().__init__(client=client, list_request=list_request, delay=delay, loop=loop,
+        super().__init__(crs=crs, list_request=list_request, delay=delay, loop=loop,
                          query_name=query_name, max_missed_msg=max_missed_msg, **kwargs)
         if request_timeout is None:
             request_timeout = SingletonConfig.get_config()['comunication'][type(self).__name__]['request_timeout'].get()
@@ -350,16 +337,16 @@ class ConditionalCycleQuery(BaseCycleQuery):
 
             # make query
             try:
-                list_part = [r.to_byte() for r in self._get_list_request_with_extinction()]
-                result = await self._client.send_multipart(list_part=list_part,
-                                                           request_timeout=start_time + self._timeout)
+                requests = self._get_list_request_with_extinction()
+                result = await self._CRS.send_request(requests=requests, timeout=start_time + self._timeout,
+                                                      no_wait=False)
                 self._errors = None
                 if result is None:
                     logger.error(f"{self}: Can not get response for giving request")
                     raise CommunicationRuntimeError(message="Can not get response for giving request, check "
                                                             "that the 'no_wait' flag is not set to true")
 
-                self._last_response = self._read_response(result)
+                self._last_response = result
                 missed = 0
 
                 # check errors

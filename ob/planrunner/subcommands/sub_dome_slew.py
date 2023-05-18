@@ -25,21 +25,17 @@ class DomeSlew(SubCommand):
     async def _wait_to_slew(self, azimuth) -> None:
 
         while True:
-
             dome_az = self.dome.azimuth
             dome_slewing = self.dome.slewing
             await asyncio.sleep(0.5)
             if dome_az is not None and dome_slewing==False:
                 if (abs(azimuth - float(dome_az)))<2.0 or (abs(azimuth - float(dome_az)))>358.0:
-                    logger.debug(f'{self.id} {self.subcommand_name} is done')
-                    self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
-                    self.info_callback['stream_5'](f'{self.id}')
                     break
 
     async def arun(self, step_id: str or None = None) -> int:
         self.started = True
         self.info_callback['exec_json'](self.exec_json())
-        logger.debug(f'{self.id} {self.subcommand_name} is started')
+        logger.info(f'{self.id} started')
         self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} started')
         # TODO maybe use synctoazimuth (if yes add to ocaboxapi)
         if 'az' in self.kwargs.keys():
@@ -48,8 +44,9 @@ class DomeSlew(SubCommand):
             if self.kwargs['follow_tol']<abs(self.mount.azimuth - self.dome.azimuth):
                 az = self.mount.azimuth
             else:
-                self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} no need')
+                self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} dome in position tolerance, skipping')
                 self.info_callback['stream_5'](f'{self.id}')
+                logger.info(f'{self.id} dome in position tolerance, skipping')
                 self.skipped = True
                 self.info_callback['exec_json'](self.exec_json())
                 return 0
@@ -57,6 +54,9 @@ class DomeSlew(SubCommand):
             az = self.mount.azimuth
         await self.dome.aput_slewtoazimuth(az)
         await self._wait_to_slew(az)
+        logger.info(f'{self.id} done')
+        self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
+        self.info_callback['stream_5'](f'{self.id}')
         self.done = True
         self.info_callback['exec_json'](self.exec_json())
         return 0

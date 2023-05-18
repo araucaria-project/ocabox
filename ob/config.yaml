@@ -1,4 +1,7 @@
+LOG_LEVEL: INFO
+
 OCABOX_BUILD_FILE_NAME: "tree_build_example.py"   # file name witch tree build plans, this property can be set only in configuration/config.yaml or environment property
+
 router:
   DefaultRouter:
     port: 5559
@@ -83,6 +86,12 @@ data_collection:
   TreeCache:
     no_cachable_regex:
       - .*\.is_access$
+  TreeCCTV:   # Ubiquity CCTV camera
+    udm_camera_id: ''
+    udm_host: ''
+    udm_port: 443
+    udm_user: 'api'
+    udm_password: ''
 
 tree:
   test_sample_blocker:
@@ -117,6 +126,9 @@ tree:
             derotator:
               kind: rotator
               device_number: 0
+        dome:
+          kind: dome
+          device_number: 0
   test_observatory_down:
     observatory:
       comment: Simulated observatory for tests
@@ -134,3 +146,9 @@ tree:
             derotator:
               kind: rotator
               device_number: 0
+#  cctv-zb08: # Ubiquity CCTV cameras configured inob/configuration/config_oca.yaml
+#    udm_camera_id: CD08
+#    udm_host: ''
+#    udm_port: 443
+#    udm_user: 'api'
+#    udm_password: ''

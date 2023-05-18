@@ -27,16 +27,14 @@ class Focusing(SubCommand):
         focuser_value = 5
         while True:
             await asyncio.sleep(0.5)
-            foc_position = self.proof_val(self.focuser.position)
+            foc_position = self.focuser.position
             if foc_position is not None:
                 if (abs(int(foc_position) - int(position))) < focuser_value:
-                    logger.debug(f'{self.id} {self.subcommand_name} is done')
-                    self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
-                    self.info_callback['stream_5'](f'{self.id}')
                     break
 
     async def arun(self, step_id: str or None = None) -> int:
         self.started = True
+        logger.info(f'{self.id} started')
         self.info_callback['exec_json'](self.exec_json())
         if 'pos' in self.kwargs.keys():
             position = self.kwargs['pos']
@@ -44,12 +42,15 @@ class Focusing(SubCommand):
             logger.debug(f'{self.id} {self.subcommand_name} moving to {position}')
             await self.focuser.aput_move(int(position))
             await self._wait_for_move(position)
+            logger.info(f'{self.id} done')
+            self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
+            self.info_callback['stream_5'](f'{self.id}')
             self.done = True
             self.info_callback['exec_json'](self.exec_json())
             return 0
         else:
             self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} skipping - no position')
-            logger.debug(f'{self.id} {self.subcommand_name} skipping - no position')
+            logger.info(f'{self.id} skipping: no position set')
             self.skipped = True
             self.info_callback['exec_json'](self.exec_json())
             return 0

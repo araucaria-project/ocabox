@@ -137,7 +137,9 @@ class TreeOtherError(BaseCodedError):
                           (3, 'This request cannot be subscribed. The cache does not store the value for this request'),
                           (4, 'The time to generate the value has been exceeded'),
                           (5, 'The module could not connect to the external service.'),
-                          (6, 'Incorrectly calculated request timeout')]
+                          (6, 'Incorrectly calculated request timeout'),
+                          (7, 'Wrong argument'),
+                          ]
 
     def __init__(self, code: int = CODE_GROUP, message="", severity: str = None, **kwargs):
         super().__init__(message=message, code=code, severity=severity, **kwargs)

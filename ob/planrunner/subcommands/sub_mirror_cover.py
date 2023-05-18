@@ -24,36 +24,39 @@ class MirrorCover(SubCommand):
 
     async def _wait_for_move(self):
         await asyncio.sleep(15)
-        self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
-        logger.debug(f'{self.id} {self.subcommand_name} done')
-        self.info_callback['stream_5'](f'{self.id}')
 
     async def arun(self, step_id: str or None = None) -> int:
         self.started = True
         self.info_callback['exec_json'](self.exec_json())
+        logger.info(f'{self.id} started')
         if 'open' in self.kwargs.keys():
             if self.kwargs['open']==True:
                 self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} opening')
-                logger.debug(f'{self.id} {self.subcommand_name} opening')
+                logger.debug(f'{self.id} opening')
                 if self.telescope.id == 'dev':
                     pass
                 else:
                     await self.mount.aput_opencover()
                 await self._wait_for_move()
+                self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
+                logger.info(f'{self.id} done')
+                self.info_callback['stream_5'](f'{self.id}')
                 self.done = True
                 self.info_callback['exec_json'](self.exec_json())
                 return 0
             if self.kwargs['open']==False:
                 self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} closing')
-                logger.debug(f'{self.id} {self.subcommand_name} closing')
+                logger.debug(f'{self.id} closing')
                 if self.telescope.id == 'dev':
                     pass
                 else:
                     await self.mount.aput_closecover()
                 await self._wait_for_move()
+                logger.info(f'{self.id} done')
                 self.done = True
                 self.info_callback['exec_json'](self.exec_json())
                 return 0
         self.skipped = True
         self.info_callback['exec_json'](self.exec_json())
+        logger.info(f'{self.id} skipped')
         return 1

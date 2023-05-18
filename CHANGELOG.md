@@ -1,6 +1,24 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+### Added
+
+### Changed
+
+## [1.0.11] - 2023-05-17
+### Added
+- An intermediary module between `Client` and `ClientAPI` and `Client` and cycle-query has been added
+- Created an in-tree API based on the normal API.
+- Initial support for Ubiquity CCTV camera (IR LED control)
+- Reading config also from .secrets.yaml files
+
+### Changed
+- Cycle-query no longer have direct access to the `Client`. Instead, they use the new `BaseClientRequestSolver` module.
+- Rebuild alpaca resource manager `ResourceManagerAlpaca`. From now on, he will also be able to perform operations 
+on resources, not only to manage access to them.
+- Python 3.9 is now minimal version - requirement of the `pyunifiprotect` library
+
 ## [1.0.10] - 2023-04-28
 ### Fixed
 - Fixed the problem with waiting until the task timeout expires when the Alpaca server is not responding. From now on, 
@@ -180,4 +198,4 @@ This allows you to subscribe to these values
 
 [Unreleased]: https://github.com/araucaria-project/ocabox
 
-[1.0.10]: https://github.com/araucaria-project/ocabox
+[1.0.8]: https://github.com/araucaria-project/ocabox
