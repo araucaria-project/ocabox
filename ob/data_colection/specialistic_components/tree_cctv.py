@@ -71,7 +71,7 @@ class TreeCCTV(TreeProvider):
         except ImportError:
             logger.warning(f'{self} Ubiquity CCTV control disabled: Can not import `pyunifiprotect` package')
             return
-        self.states = {False: types.IRLEDMode.AUTO, True: types.IRLEDMode.AUTO_NO_LED}
+        self.states = {False: types.IRLEDMode.AUTO_NO_LED, True: types.IRLEDMode.AUTO}
 
         cam_id = self._get_cfg("udm_camera_id", None)
         if cam_id is None or cam_id == '':
