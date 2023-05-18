@@ -59,13 +59,13 @@ class Command(AbstractSequence):
         self._create_command_string()
 
         if self.command_name == 'OBJECT':
-            self._write_object_skyflat('object')
+            self._write_object_skyflat_focusing('object')
 
         elif self.command_name == 'DOMEFLAT':
             self._write_domeflat()
 
         elif self.command_name == 'FOCUS':
-            self._write_focus()
+            self._write_object_skyflat_focusing('focusing')
 
         elif self.command_name == 'DARK':
             self._write_zero_dark('dark')
@@ -74,7 +74,7 @@ class Command(AbstractSequence):
             self._write_zero_dark('zero')
 
         elif self.command_name == 'SKYFLAT':
-            self._write_object_skyflat('skyflat')
+            self._write_object_skyflat_focusing('skyflat')
 
         elif self.command_name == 'MARKER':
             self._write_marker()
@@ -147,99 +147,7 @@ class Command(AbstractSequence):
         # sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=False)
         # self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
 
-
-    def _write_focus(self):
-        # faster readmode, fits not saved on Perun
-        id_next = 0
-        if 'pos' in self.kwargs:
-            sub = Focusing(f'{self.id}_{self.numb(id_next)}', self, pos=self.kwargs['pos'])
-            self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-            id_next += 1
-
-        # Camera exposure
-        if 'seq' in self.kwargs:
-            seq_list = self._split_seq(self.kwargs['seq'])
-            for n in seq_list:
-                par = list(n.split('/'))
-                sub = ChangeFilter(f'{self.id}_{self.numb(id_next)}',
-                                   self,
-                                   filter=par[1])
-                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-                id_next += 1
-
-                sub = DomeSlew(f'{self.id}_{self.numb(id_next)}', self, follow_tol=3.0)
-                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-                id_next += 1
-
-                sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
-                                     self,
-                                     exp_time=float(par[2]),
-                                     exp_no=int(par[0]),
-                                     type='focusing',
-                                     light=True,
-                                     obj_name='focus',
-                                     req_ra='',
-                                     req_dec='',
-                                     epoch='2000',
-                                     filter=par[1]
-                                     )
-                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-                id_next += 1
-
-    def _write_zero_dark(self, subcommand_name: str) -> None:
-
-        id_next = 0
-
-        # sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=False)
-        # self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-        # id_next += 1
-
-        # Camera exposure
-        if 'seq' in self.kwargs:
-            seq_list = self._split_seq(self.kwargs['seq'])
-            for n in seq_list:
-                par = list(n.split('/'))
-                sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
-                                     self,
-                                     exp_time=float(par[2]),
-                                     exp_no=int(par[0]),
-                                     type=subcommand_name,
-                                     light=False,
-                                     obj_name=subcommand_name,
-                                     req_ra='',
-                                     req_dec='',
-                                     epoch='2000',
-                                     filter=''
-                                     )
-                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-                id_next += 1
-
-
-    def _write_marker(self):
-        pass
-
-    @staticmethod
-    def _split_seq(seq):
-        if str(seq).find(','):
-            seq_list = list(seq.split(','))
-        # elif str(seq).find('%'):
-        #    seq_list = list(seq.split('%'))
-        else:
-            seq_list = list(seq)
-        return seq_list
-
-    async def arun(self, step_id: str or None = None) -> int:
-        self.info_callback['stream_1'](f'Command {self.id} {self.command_name} started')
-        logger.info(f'{self.id} {self.command_name} {self.args} {self.kwargs} started')
-        await self._arun(self.subcomponents, step_id=step_id)
-        self.info_callback['stream_5'](f'{self.id}')
-        logger.info(f'{self.id} done')
-        return 0
-
-    async def stop(self):
-        await self.parent.stop()
-
-    def _write_object_skyflat(self, subcommand_name: str) -> None:
+    def _write_object_skyflat_focusing(self, subcommand_name: str) -> None:
 
         id_next = 0
         obj_name = ''
@@ -261,6 +169,8 @@ class Command(AbstractSequence):
 
             if subcommand_name == 'skyflat':
                 obj_name = 'skyflat'
+            elif subcommand_name == 'focusing':
+                obj_name = 'focusing'
 
             sub = MountSlew(f'{self.id}_{self.numb(id_next)}',
                             self,
@@ -279,6 +189,8 @@ class Command(AbstractSequence):
 
             if subcommand_name == 'skyflat':
                 obj_name = 'skyflat'
+            elif subcommand_name == 'focusing':
+                obj_name = 'focusing'
 
             if 'alt' and 'az' in self.kwargs.keys():
                 sub = MountSlew(f'{self.id}_{self.numb(id_next)}',
@@ -315,15 +227,42 @@ class Command(AbstractSequence):
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
 
-                for ex in range(1, int(par[0])+1):
+                sub_numb = int(par[0])
+
+                foc_list = []
+                focus_id = 0
+                if subcommand_name == 'focusing':
+                    foc_par = list(self.kwargs['pos'].split('/'))
+                    foc_target = int(foc_par[0])
+                    foc_step = int(foc_par[1])
+                    foc_min = int(round(foc_target-(foc_step*((sub_numb-1)/2))))
+
+                    for n in range(0, sub_numb):
+                        foc_list.append(foc_min+(foc_step*n))
+                    focus_id = random.randrange(0,100000)
+
+                for ex in range(1, sub_numb+1):
+
+                    # If focusing, set focuser position
+                    if subcommand_name == 'focusing':
+                        sub = Focusing(f'{self.id}_{self.numb(id_next)}', self, pos=foc_list[ex-1])
+                        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+                        id_next += 1
 
                     # Dithering start - kwarg dither=basic/1/3 kind/for_every_sub/distance_in_minutes
+                    if (subcommand_name == 'skyflat' and 'dither' not in self.kwargs.keys()) or \
+                            (subcommand_name == 'skyflat' and self.kwargs['dither'] != 'none' ) or \
+                             (subcommand_name != 'skyflat' and 'dither' in self.kwargs.keys()):
 
-                    if 'dither' in self.kwargs.keys():
-                        dit_lst = list(self.kwargs['dither'].split('/'))
-                        dit_mode = str(dit_lst[0])
-                        for_every_sub = int(dit_lst[1])
-                        dit_dist = float(dit_lst[2])
+                        if subcommand_name == 'skyflat' and 'dither' not in self.kwargs.keys():
+                            dit_mode = 'basic'
+                            for_every_sub = 1
+                            dit_dist = 3.0
+                        else:
+                            dit_lst = list(self.kwargs['dither'].split('/'))
+                            dit_mode = str(dit_lst[0])
+                            for_every_sub = int(dit_lst[1])
+                            dit_dist = float(dit_lst[2])
 
                         if ex % for_every_sub == 0:
                             if 'alt' and 'az' in self.kwargs.keys():
@@ -377,6 +316,8 @@ class Command(AbstractSequence):
 
                     if subcommand_name == 'skyflat':
                         type = 'skyflat'
+                    elif subcommand_name == 'focusing':
+                        type = 'focusing'
                     else:
                         type = 'science'
 
@@ -390,13 +331,68 @@ class Command(AbstractSequence):
                                          req_ra=req_ra,
                                          req_dec=req_dec,
                                          epoch='2000',
-                                         filter=par[1]
+                                         filter=par[1],
+                                         focus_id=focus_id
                                          )
                     self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                     id_next += 1
 
         # sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=False)
         # self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+
+    def _write_zero_dark(self, subcommand_name: str) -> None:
+
+        id_next = 0
+
+        # sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=False)
+        # self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+        # id_next += 1
+
+        # Camera exposure
+        if 'seq' in self.kwargs:
+            seq_list = self._split_seq(self.kwargs['seq'])
+            for n in seq_list:
+                par = list(n.split('/'))
+                sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
+                                     self,
+                                     exp_time=float(par[2]),
+                                     exp_no=int(par[0]),
+                                     type=subcommand_name,
+                                     light=False,
+                                     obj_name=subcommand_name,
+                                     req_ra='',
+                                     req_dec='',
+                                     epoch='2000',
+                                     filter=''
+                                     )
+                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+                id_next += 1
+
+    def _write_marker(self):
+        pass
+
+    @staticmethod
+    def _split_seq(seq):
+        if str(seq).find(','):
+            seq_list = list(seq.split(','))
+        # elif str(seq).find('%'):
+        #    seq_list = list(seq.split('%'))
+        else:
+            seq_list = list(seq)
+        return seq_list
+
+    async def arun(self, step_id: str or None = None) -> int:
+        self.info_callback['stream_1'](f'Command {self.id} {self.command_name} started')
+        logger.info(f'{self.id} {self.command_name} {self.args} {self.kwargs} started')
+        await self._arun(self.subcomponents, step_id=step_id)
+        self.info_callback['stream_5'](f'{self.id}')
+        logger.info(f'{self.id} done')
+        return 0
+
+    async def stop(self):
+        await self.parent.stop()
+
+
 
 
 

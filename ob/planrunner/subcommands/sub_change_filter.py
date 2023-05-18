@@ -61,18 +61,15 @@ class ChangeFilter(SubCommand):
         self.started = True
         self.info_callback['exec_json'](self.exec_json())
         filter_dict = await self.filterwheel.aget_names()
-        if self.telescope.id=='dev':
-            pos = int(self.kwargs["filter"])
+        if self.kwargs["filter"] in filter_dict.keys() and self.kwargs["filter"] is not None:
+            pos = filter_dict[self.kwargs["filter"]]
         else:
-            if self.kwargs["filter"] in filter_dict.keys() and self.kwargs["filter"] is not None:
-                pos = filter_dict[self.kwargs["filter"]]
-            else:
-                self.info_callback['stream_1'](
-                    f'Filter index{self.kwargs["filter"]} is wrong, {self.parent.id} skipping')
-                self.info_callback['stream_5'](f'{self.id}')
-                self.skipped = True
-                self.info_callback['exec_json'](self.exec_json())
-                return 1
+            self.info_callback['stream_1'](
+                f'Filter index{self.kwargs["filter"]} is wrong, {self.parent.id} skipping')
+            self.info_callback['stream_5'](f'{self.id}')
+            self.skipped = True
+            self.info_callback['exec_json'](self.exec_json())
+            return 1
         fit_pos = await self.get_value_position()
         if pos==fit_pos:
             self.info_callback['stream_1'](f'No need to change filter, skipping')

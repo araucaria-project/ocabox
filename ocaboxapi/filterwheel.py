@@ -50,13 +50,22 @@ class FilterWheel(TelescopeComponent):
         logger.debug(f'Getting filter names from {self.tel_addr}')
         # that will cange soon - we are going to add diffuser filters
         # see: https://github.com/araucaria-project/oca-problems/issues/38
+        if self.telescope.id == 'dev':
+            dev_dict = {}
+            dev_list = await self.aget_value('names')
+            for n, m in enumerate(dev_list):
+                dev_dict[f'{m}'] = n
+        else:
+            dev_dict = {}
+
         filters_temp = {'zb08': {'u': 0, 'g': 1, 'r': 2, 'i': 3, 'z': 4, 'B': 5, 'V': 6, 'Ic': 7},
                         'jk15': {'Empty': 0, 'u SG': 1, 'b SG': 2, 'v SG': 3, 'y SG': 4,
                                  'Hb_w': 5, 'Hb_n': 6, 'Ha_w': 7, 'Ha_n': 8,
                                  'u': 9, 'g': 10, 'r': 11, 'i': 12, 'z': 13, 'B': 14, 'V': 15, 'iC': 16},
                         'wk06': {'1': 1},
                         'iris': {'1': 1},
-                        'wg25': {'1': 1}
+                        'wg25': {'1': 1},
+                        'dev': dev_dict
                         }
         tel_id = self.telescope.id
         if tel_id in filters_temp.keys():
