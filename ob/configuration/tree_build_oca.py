@@ -31,9 +31,9 @@ def tree_build() -> Router:
     alpaca_blocker_wk06 = TreeBaseRequestBlocker('alpaca-blocker-wk06', alpaca_wk06)
     blocker_grantor_wk06 = TreeBlockerAccessGrantor('access-grantor-wk06', 'access_grantor', alpaca_blocker_wk06)
     plan_executor_wk06 = TreePlanExecutor('executor-wk06', 'executor')
-    cctv_wk06 = TreeCCTV('cctv-wk06', 'cctv')
+    # cctv_wk06 = TreeCCTV('cctv-wk06', 'cctv')
     broker_components_wk06 = TreeBaseBrokerDefaultTarget('broker-components-wk06',
-                                                         [blocker_grantor_wk06, plan_executor_wk06, cctv_wk06],
+                                                         [blocker_grantor_wk06, plan_executor_wk06], #, cctv_wk06],
                                                          default_provider=alpaca_blocker_wk06)
     cache_wk06 = TreeCache('cache-wk06', broker_components_wk06)
     conditional_freezer_wk06 = TreeConditionalFreezer('conditional-freezer-wk06', cache_wk06)
