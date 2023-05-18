@@ -7,6 +7,7 @@ from ob.data_colection.specialistic_components.tree_alpaca import TreeAlpacaObse
 from ob.data_colection.specialistic_components.tree_base_request_blocker import TreeBaseRequestBlocker
 from ob.data_colection.specialistic_components.tree_blocker_access_grantor import TreeBlockerAccessGrantor
 from ob.data_colection.specialistic_components.tree_cache_observatory import TreeCache
+from ob.data_colection.specialistic_components.tree_cctv import TreeCCTV
 from ob.data_colection.specialistic_components.tree_conditional_freezer import TreeConditionalFreezer
 from ob.data_colection.specialistic_components.tree_ephemeris import TreeEphemeris
 from ob.data_colection.specialistic_components.tree_plan_executor import TreePlanExecutor
@@ -30,8 +31,9 @@ def tree_build() -> Router:
     alpaca_blocker_wk06 = TreeBaseRequestBlocker('alpaca-blocker-wk06', alpaca_wk06)
     blocker_grantor_wk06 = TreeBlockerAccessGrantor('access-grantor-wk06', 'access_grantor', alpaca_blocker_wk06)
     plan_executor_wk06 = TreePlanExecutor('executor-wk06', 'executor')
+    cctv_wk06 = TreeCCTV('cctv-wk06', 'cctv')
     broker_components_wk06 = TreeBaseBrokerDefaultTarget('broker-components-wk06',
-                                                         [blocker_grantor_wk06, plan_executor_wk06],
+                                                         [blocker_grantor_wk06, plan_executor_wk06, cctv_wk06],
                                                          default_provider=alpaca_blocker_wk06)
     cache_wk06 = TreeCache('cache-wk06', broker_components_wk06)
     conditional_freezer_wk06 = TreeConditionalFreezer('conditional-freezer-wk06', cache_wk06)
@@ -42,9 +44,10 @@ def tree_build() -> Router:
     alpaca_blocker_zb08 = TreeBaseRequestBlocker('alpaca-blocker-zb08', alpaca_zb08)
     blocker_grantor_zb08 = TreeBlockerAccessGrantor('access-grantor-zb08', 'access_grantor', alpaca_blocker_zb08)
     plan_executor_zb08 = TreePlanExecutor('executor-zb08', 'executor')
+    cctv_zb08 = TreeCCTV('cctv-zb08', 'cctv')
     # ephemeris_zb08 = TreeEphemeris('ephemeris-zb08', 'ephemeris')
     broker_components_zb08 = TreeBaseBrokerDefaultTarget('broker-components-zb08',
-                                                         [blocker_grantor_zb08, plan_executor_zb08],
+                                                         [blocker_grantor_zb08, plan_executor_zb08, cctv_zb08],
                                                          default_provider=alpaca_blocker_zb08)
     cache_zb08 = TreeCache('cache-zb08', broker_components_zb08)
     conditional_freezer_zb08 = TreeConditionalFreezer('conditional-freezer-zb08', cache_zb08)
@@ -55,8 +58,9 @@ def tree_build() -> Router:
     alpaca_blocker_jk15 = TreeBaseRequestBlocker('alpaca-blocker-jk15', alpaca_jk15)
     blocker_grantor_jk15 = TreeBlockerAccessGrantor('access-grantor-jk15', 'access_grantor', alpaca_blocker_jk15)
     plan_executor_jk15 = TreePlanExecutor('executor-jk15', 'executor')
+    cctv_jk15 = TreeCCTV('cctv-jk15', 'cctv')
     broker_components_jk15 = TreeBaseBrokerDefaultTarget('broker-components-jk15',
-                                                         [blocker_grantor_jk15, plan_executor_jk15],
+                                                         [blocker_grantor_jk15, plan_executor_jk15, cctv_jk15],
                                                          default_provider=alpaca_blocker_jk15)
     cache_jk15 = TreeCache('cache-jk15', broker_components_jk15)
     conditional_freezer_jk15 = TreeConditionalFreezer('conditional-freezer-jk15', cache_jk15)

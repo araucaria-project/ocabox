@@ -1,3 +1,11 @@
+data_collection:
+  TreeCCTV:   # Ubiquity CCTV camera
+    udm_camera_id: ''
+    udm_host: sudm.oca.lan
+    udm_port: 443
+    udm_user: api
+    udm_password: ''
+
 tree:
   wk06:
     observatory:
@@ -277,6 +285,17 @@ tree:
         safetymonitor:
           kind: safetymonitor
           device_number: 0
+  cctv-wk06: # Ubiquity CCTV camera
+    udm_camera_id: CD06  # camera name in Ubiquity protect
+#    udm_host: ''
+#    udm_port: 443
+#    udm_user: 'api'
+#    udm_password: ''
+  cctv-zb08: # Ubiquity CCTV camera
+    udm_camera_id: CD08
+  cctv-jk15: # Ubiquity CCTV camera
+    udm_camera_id: CD15
+
 
 
 
