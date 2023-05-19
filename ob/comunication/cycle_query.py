@@ -126,8 +126,8 @@ class BaseCycleQuery(ABC):
         if not self.is_stopped() and not self._task.done():
             self._task.cancel()
             self._event.set()
-        if not (self._callback_task and self._callback_task in asyncio.all_tasks(
-                self._loop)) and not self._callback_task.done():
+        if self._callback_task and self._callback_task in asyncio.all_tasks(
+                self._loop) and not self._callback_task.done():
             self._callback_task.cancel()
 
     async def stop_and_wait(self):
@@ -177,13 +177,19 @@ class BaseCycleQuery(ABC):
 
     async def _execute_callbacks(self):
         """Main loop for callback runner task"""
-        while True:
+        run = True
+        while run:
             # it is not necessary to check main task is still running because it is realized in 'get_response'
             await asyncio.sleep(0)
             try:
                 result = await self.get_response()
             except CommunicationRuntimeError:
-                return
+                run = False
+                result = self._last_response
+                # if exist last response then make callback last time but if not don't do it
+                if not self._last_response:
+                    return
+
             for a_method in self._callback_methods_a:
                 if callable(a_method):
                     try:
@@ -328,6 +334,7 @@ class ConditionalCycleQuery(BaseCycleQuery):
 
     async def _send_message(self):
         missed = 0
+        not_clear_result = False
         self._errors = None
         while True:
             start_time = time.time()
@@ -337,6 +344,7 @@ class ConditionalCycleQuery(BaseCycleQuery):
 
             # make query
             try:
+                not_clear_result = False
                 requests = self._get_list_request_with_extinction()
                 result = await self._CRS.send_request(requests=requests, timeout=start_time + self._timeout,
                                                       no_wait=False)
@@ -345,10 +353,9 @@ class ConditionalCycleQuery(BaseCycleQuery):
                     logger.error(f"{self}: Can not get response for giving request")
                     raise CommunicationRuntimeError(message="Can not get response for giving request, check "
                                                             "that the 'no_wait' flag is not set to true")
-
                 self._last_response = result
                 missed = 0
-
+                not_clear_result = True  # if it gets some result return it for callback
                 # check errors
                 continue_while = False  # this parameter is needed to continue the outer loop
                 for r in self._last_response:
@@ -381,7 +388,8 @@ class ConditionalCycleQuery(BaseCycleQuery):
                 self._event.set()
             except CommunicationRuntimeError as e:
                 self._errors = e
-                self._last_response = []
+                if not not_clear_result:
+                    self._last_response = []
                 self._event.set()
                 break
             except CommunicationTimeoutError:

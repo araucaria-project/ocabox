@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 ### Changed
+- After receiving from the server an error terminating the CycleQuery, the callbacks will be run one last time.
+
+### Fixed
+- Fixed bug with callback executor in CycleQuery when stoping 
 
 ## [1.0.11] - 2023-05-17
 ### Added
