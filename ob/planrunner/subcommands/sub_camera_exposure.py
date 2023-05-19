@@ -245,7 +245,6 @@ class CameraExposure(SubCommand):
         self.info_callback['exec_json'](self.exec_json())
         self.target_folder = self._provide_target_folder()
         sub = self.kwargs["sub_exp"]
-        exp_no = self.kwargs["exp_no"]
         # for sub in range(1, self.kwargs["exp_no"] + 1):
         logger.info(f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} started')
         self.info_callback['stream_1'](f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} started')

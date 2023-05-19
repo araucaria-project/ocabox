@@ -3,8 +3,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 ### Added
-
+- 
 ### Changed
+- planrunner command.py changed architecture for 3 methods: dark_bias, dome_flat, object_skyflat_focusing
+, dithering added, focusing method changed
+- planrunner sub_camera_exposure added folders creation for different commands, some minor changes
 
 ## [1.0.11] - 2023-05-17
 ### Added
