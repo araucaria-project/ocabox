@@ -321,9 +321,14 @@ class Command(AbstractSequence):
                     else:
                         type = 'science'
 
+                    if par[2] == 'a':
+                        exp_t = 'a'
+                    else:
+                        exp_t = float(par[2])
+
                     sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
                                          self,
-                                         exp_time=float(par[2]),
+                                         exp_time=exp_t,
                                          exp_no=1,
                                          type=type,
                                          light=True,
