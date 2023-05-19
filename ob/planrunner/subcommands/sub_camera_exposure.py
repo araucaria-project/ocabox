@@ -244,82 +244,84 @@ class CameraExposure(SubCommand):
         self.started = True
         self.info_callback['exec_json'](self.exec_json())
         self.target_folder = self._provide_target_folder()
-        for sub in range(1, self.kwargs["exp_no"] + 1):
-            logger.info(f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} started')
-            self.info_callback['stream_1'](f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} started')
-            self.info_callback['exec_json'](self.exec_json(exp_started=True,
-                                                           exp_done=False,
-                                                           exp_saved=False,
-                                                           n_exp=sub))
-            exposure_time = self.kwargs["exp_time"]
+        sub = self.kwargs["sub_exp"]
+        exp_no = self.kwargs["exp_no"]
+        # for sub in range(1, self.kwargs["exp_no"] + 1):
+        logger.info(f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} started')
+        self.info_callback['stream_1'](f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} started')
+        self.info_callback['exec_json'](self.exec_json(exp_started=True,
+                                                       exp_done=False,
+                                                       exp_saved=False,
+                                                       n_exp=sub))
+        exposure_time = self.kwargs["exp_time"]
 
-            if self.kwargs['type'] == 'skyflat' and exposure_time=='a':
-                """
-                TODO for filter, time, make test shot on sky with 1s exposure. If value is not what You expect wait
-                some time and make test shot again until You don't get expected value of adu, then continue to make
-                normal exposure with calculated length of exposure. On another sub, test shot calculation will be
-                repeated, up to end. TODO save last value to settings with filter and time and do not take another 
-                test shoot again, but calculate from settings.
-                """
-                mean_list = []
-                test_exposure_time = 1.0
-                test_time_interval = 2.0
-                test_min_max_adu = (20000, 30000)
-                test_min_max_time_exp = (5, 20)
-                mean_diff = None
-                while True:
-                    logger.info(f'{self.id} start test exposure')
-                    await self.camera.aput_startexposure(test_exposure_time, self.kwargs["light"])
-                    await self._wait_for_subexposure(test_exposure_time)
-                    mean = fits_stat(await self.camera.aget_imagearray(), size=100,
-                                     median=False, std=False, min=False, max=False)['mean']
-                    logger.info(f'{self.id} mean test {test_exposure_time}s exposure:{mean}')
-                    self.info_callback['stream_1'](f'{self.id} test_frame time:{test_exposure_time}s mean:{mean}')
-                    self.info_callback['exec_json'](self.exec_json(test_exp_mean=mean))
-                    mean_list.append(mean)
-                    if len(mean_list) > 1:
-                        mean_diff = mean_list[-1] - mean_list[-2]
-                    mean_min_max = (test_min_max_time_exp[0] * mean, test_min_max_time_exp[1] * mean)
+        if self.kwargs['type'] == 'skyflat' and exposure_time=='a':
+            """
+            TODO for filter, time, make test shot on sky with 1s exposure. If value is not what You expect wait
+            some time and make test shot again until You don't get expected value of adu, then continue to make
+            normal exposure with calculated length of exposure. On another sub, test shot calculation will be
+            repeated, up to end. TODO save last value to settings with filter and time and do not take another 
+            test shoot again, but calculate from settings.
+            """
+            mean_list = []
+            test_exposure_time = 1.0
+            test_time_interval = 2.0
+            test_min_max_adu = (20000, 30000)
+            test_min_max_time_exp = (5, 20)
+            mean_diff = None
+            while True:
+                logger.info(f'{self.id} start test exposure')
+                await self.camera.aput_startexposure(test_exposure_time, self.kwargs["light"])
+                await self._wait_for_subexposure(test_exposure_time)
+                mean = fits_stat(await self.camera.aget_imagearray(), size=100,
+                                 median=False, std=False, min=False, max=False)['mean']
+                logger.info(f'{self.id} mean test {test_exposure_time}s exposure:{mean}')
+                self.info_callback['stream_1'](f'{self.id} test_frame time:{test_exposure_time}s mean:{mean}')
+                self.info_callback['exec_json'](self.exec_json(test_exp_mean=mean))
+                mean_list.append(mean)
+                if len(mean_list) > 1:
+                    mean_diff = mean_list[-1] - mean_list[-2]
+                mean_min_max = (test_min_max_time_exp[0] * mean, test_min_max_time_exp[1] * mean)
 
-                    # Check if should skipp
-                    if mean_diff is not None:
-                        if mean_diff < 0 and mean_min_max[1] < test_min_max_adu[0]:
-                            logger.info(f"{self.id} skipped - it's too dark")
-                            self.info_callback['stream_1'](f"{self.id} skipped - it's too dark")
-                            self.skipped = True
-                            self.info_callback['exec_json'](self.exec_json())
-                            return 1
-                        elif mean_diff > 0 and mean_min_max[0] > test_min_max_adu[1]:
-                            logger.info(f"{self.id} skipped - it's too bright")
-                            self.info_callback['stream_1'](f"{self.id} skipped - it's too bright")
-                            self.skipped = True
-                            self.info_callback['exec_json'](self.exec_json())
-                            return 1
+                # Check if should skipp
+                if mean_diff is not None:
+                    if mean_diff < 0 and mean_min_max[1] < test_min_max_adu[0]:
+                        logger.info(f"{self.id} skipped - it's too dark")
+                        self.info_callback['stream_1'](f"{self.id} skipped - it's too dark")
+                        self.skipped = True
+                        self.info_callback['exec_json'](self.exec_json())
+                        return 1
+                    elif mean_diff > 0 and mean_min_max[0] > test_min_max_adu[1]:
+                        logger.info(f"{self.id} skipped - it's too bright")
+                        self.info_callback['stream_1'](f"{self.id} skipped - it's too bright")
+                        self.skipped = True
+                        self.info_callback['exec_json'](self.exec_json())
+                        return 1
 
-                    # Check if it's ready to calculate exposure time
-                    if test_min_max_adu[0] - mean_min_max[1] < 0 and test_min_max_adu[1] - mean_min_max[0] > 0:
-                        if mean_min_max[0] < test_min_max_adu[0]:
-                            exposure_time = test_min_max_adu[0] / mean
-                            logger.info(f"{self.id} calc_exp_time:{exposure_time}, expect_adu:{exposure_time * mean}")
-                            break
-                        else:
-                            exposure_time = mean_min_max[0] / mean
-                            logger.info(f"{self.id} calc_exp_time:{exposure_time}, expect_adu:{exposure_time * mean}")
-                            break
-                    await asyncio.sleep(test_time_interval)
-            self.exp_time_start = datetime.utcnow()
-            self.readout_time_start = time.time()
-            await self.camera.aput_startexposure(float(exposure_time), self.kwargs["light"])
-            await self._wait_for_subexposure(float(exposure_time))
-            self.readout_time = time.time() - self.readout_time_start - float(exposure_time)
-            logger.info(f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} saving')
-            self.info_callback['stream_1'](f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} --> saving')
-            self.info_callback['exec_json'](self.exec_json(exp_started=True,
-                                                           exp_done=True,
-                                                           exp_saved=False,
-                                                           readout_time=self.readout_time,
-                                                           n_exp=sub))
-            await self._wait_for_save_fits(sub)
+                # Check if it's ready to calculate exposure time
+                if test_min_max_adu[0] - mean_min_max[1] < 0 and test_min_max_adu[1] - mean_min_max[0] > 0:
+                    if mean_min_max[0] < test_min_max_adu[0]:
+                        exposure_time = test_min_max_adu[0] / mean
+                        logger.info(f"{self.id} calc_exp_time:{exposure_time}, expect_adu:{exposure_time * mean}")
+                        break
+                    else:
+                        exposure_time = mean_min_max[0] / mean
+                        logger.info(f"{self.id} calc_exp_time:{exposure_time}, expect_adu:{exposure_time * mean}")
+                        break
+                await asyncio.sleep(test_time_interval)
+        self.exp_time_start = datetime.utcnow()
+        self.readout_time_start = time.time()
+        await self.camera.aput_startexposure(float(exposure_time), self.kwargs["light"])
+        await self._wait_for_subexposure(float(exposure_time))
+        self.readout_time = time.time() - self.readout_time_start - float(exposure_time)
+        logger.info(f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} saving')
+        self.info_callback['stream_1'](f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} --> saving')
+        self.info_callback['exec_json'](self.exec_json(exp_started=True,
+                                                       exp_done=True,
+                                                       exp_saved=False,
+                                                       readout_time=self.readout_time,
+                                                       n_exp=sub))
+        await self._wait_for_save_fits(sub)
         self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
         self.info_callback['stream_5'](f'{self.id}')
         logger.info(f'{self.id} done')

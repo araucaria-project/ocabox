@@ -125,20 +125,23 @@ class Command(AbstractSequence):
                                    filter=par[1])
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
-                sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
-                                     self,
-                                     exp_time=float(par[2]),
-                                     exp_no=int(par[0]),
-                                     type='flat',
-                                     light=True,
-                                     obj_name='domeflat',
-                                     req_ra='',
-                                     req_dec='',
-                                     epoch='2000',
-                                     filter=par[1]
-                                     )
-                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-                id_next += 1
+
+                for ex in range(1, int(par[0]) + 1):
+                    sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
+                                         self,
+                                         sub_exp=ex,
+                                         exp_time=float(par[2]),
+                                         exp_no=int(par[0]),
+                                         type='flat',
+                                         light=True,
+                                         obj_name='domeflat',
+                                         req_ra='',
+                                         req_dec='',
+                                         epoch='2000',
+                                         filter=par[1]
+                                         )
+                    self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+                    id_next += 1
 
         sub = DomeScreenLight(f'{self.id}_{self.numb(id_next)}', self, light=False)
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
@@ -328,8 +331,9 @@ class Command(AbstractSequence):
 
                     sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
                                          self,
+                                         sub_exp=ex,
                                          exp_time=exp_t,
-                                         exp_no=1,
+                                         exp_no=sub_numb,
                                          type=type,
                                          light=True,
                                          obj_name=obj_name,
@@ -358,20 +362,23 @@ class Command(AbstractSequence):
             seq_list = self._split_seq(self.kwargs['seq'])
             for n in seq_list:
                 par = list(n.split('/'))
-                sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
-                                     self,
-                                     exp_time=float(par[2]),
-                                     exp_no=int(par[0]),
-                                     type=subcommand_name,
-                                     light=False,
-                                     obj_name=subcommand_name,
-                                     req_ra='',
-                                     req_dec='',
-                                     epoch='2000',
-                                     filter=''
-                                     )
-                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-                id_next += 1
+
+                for ex in range(1, int(par[0]) + 1):
+                    sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
+                                         self,
+                                         sub_exp=ex,
+                                         exp_time=float(par[2]),
+                                         exp_no=int(par[0]),
+                                         type=subcommand_name,
+                                         light=False,
+                                         obj_name=subcommand_name,
+                                         req_ra='',
+                                         req_dec='',
+                                         epoch='2000',
+                                         filter=''
+                                         )
+                    self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+                    id_next += 1
 
     def _write_marker(self):
         pass
