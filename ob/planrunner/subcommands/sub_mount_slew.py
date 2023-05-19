@@ -25,22 +25,24 @@ class MountSlew(SubCommand):
                          started=self.started, done=self.done, skipped=self.skipped, **kwargs)
 
     async def _wait_to_slew_coo(self) -> None:
+        await asyncio.sleep(1)
         while True:
             ra = self.mount.rightascension
             dec = self.mount.declination
-            slew = self.mount.aget_slewing()
+            slew = self.mount.slewing
             await asyncio.sleep(0.5)
             if (abs(ra - ra_to_decimal(self.ra_now)) < 0.05) and \
-                    (abs(dec - dec_to_decimal(self.dec_now)) < 0.05) and (slew is False):
+                    (abs(dec - dec_to_decimal(self.dec_now)) < 0.05) and (slew == False):
                 break
 
     async def _wait_to_slew_alt_az(self) -> None:
+        await asyncio.sleep(1)
         while True:
             az = self.mount.azimuth
             alt = self.mount.altitude
-            slew = self.mount.aget_slewing()
+            slew = self.mount.slewing
             await asyncio.sleep(0.5)
-            if (abs(az - self.az)<1) and (abs(alt - self.alt)<1) and (slew is False):
+            if (abs(az - self.az)<1) and (abs(alt - self.alt)<1) and (slew == False):
                 await self.mount.aput_tracking(False)
                 await self.mount.aput_slewtoaltaz_async(self.az, self.alt)
                 await self.mount.aput_tracking(False)
