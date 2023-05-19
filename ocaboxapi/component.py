@@ -86,6 +86,8 @@ class Component(param.Parameterized):
                 if resps[0].status:
                     v = resps[0].value.v
                     self.param.set_param(f'_{param_name}_value', v)
+                else:
+                    logger.error(f'Error in {param_name} ({resps[0].address}) subscription {resps[0].error}')
             except Exception as e:
                 logger.error(f'Error in callback for {address} with resp: {resps}: {e}')
                 return

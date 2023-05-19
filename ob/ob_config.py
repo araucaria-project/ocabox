@@ -27,6 +27,7 @@ class SingletonMeta(type):
 class SingletonConfig(metaclass=SingletonMeta):
     app_name = 'ocabox'
     _DEFAULT_CONFIG_FILE_NAME = 'config.yaml'
+    _SECRET_CONFIG_FILE_NAME = '.secrets.yaml'
     _config: confuse.ConfigView = None
     additional_files = []
 
@@ -72,8 +73,10 @@ class SingletonConfig(metaclass=SingletonMeta):
     def get_config_files(cls):
         return [
                    cls.get_package_file_path(cls._DEFAULT_CONFIG_FILE_NAME),  # /ob/config.yaml
-                   os.path.join('/etc/ocabox', cls._DEFAULT_CONFIG_FILE_NAME),  # /etc/config.yaml
+                   os.path.join('/etc/ocabox', cls._DEFAULT_CONFIG_FILE_NAME),  # /etc/ocabox/config.yaml
+                   os.path.join('/etc/ocabox', cls._SECRET_CONFIG_FILE_NAME),  # /etc/ocabox/.secrets.yaml
                    os.path.join(cls._get_inst_dir(), 'configuration', cls._DEFAULT_CONFIG_FILE_NAME),
+                   os.path.join(cls._get_inst_dir(), 'configuration', cls._SECRET_CONFIG_FILE_NAME),
                    # /ob/configuration/config.yaml
                ] + cls.additional_files
 
@@ -94,7 +97,7 @@ class SingletonConfig(metaclass=SingletonMeta):
                 if len(source) > 0:
                     logger.info('Using config: %s', f)
                 else:
-                    logger.debug('Empty config: %s', f)
+                    logger.info('Empty config: %s', f)
             except confuse.ConfigReadError:
                 logger.warning('Corrupted config: %s', f)
         return config
