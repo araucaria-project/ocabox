@@ -129,8 +129,9 @@ class DomeSlew(SubCommand):
                 return 0
         else:
             az = self.mount.azimuth
-        if self.telescope.id == 'wk06':
 
+        # TODO config? At lest in final server-side version...
+        if self.telescope.id == 'wk06':
         #if self.telescope.id=='dev':
             OCA = {'latitude': '-24:35:53', 'longitude': '-70:11:47', 'elevation': '2817'}
             ra = self.mount.rightascension

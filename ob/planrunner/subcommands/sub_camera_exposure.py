@@ -49,6 +49,7 @@ class CameraExposure(SubCommand):
 
     @staticmethod
     def _mk_folder(folder: str):
+        # TODO os.makedirs(folder, exist_ok=True) and test
         if not os.path.exists(folder):
             try:
                 os.mkdir(folder)
@@ -83,14 +84,18 @@ class CameraExposure(SubCommand):
 
     @staticmethod
     def add_zero(numb: int):
-        if numb < 10:
-            mnth = f'0{numb}'
-        else:
-            mnth = numb
-        return mnth
+        return f'{numb:02d}'
 
     def _provide_target_folder(self) -> str:
         if self.kwargs['type'] == 'focusing':
+            #TODO - see below
+            """
+            I wold rather use glob.glob or regex to filter out directory names which follw the pattern.
+            Sooner or later, sombody, or operating system itself (mac loves to do so), will add some other file
+            or dir here and you will get exception on int(n) e.g.:
+            import re
+            lst_2 = [int(n) for n in lst if re.fullmatch(r'\d+', n)]
+            """
             lst = os.listdir(self.folder_focusing)
             if 'actual' in lst:
                 lst.remove('actual')
@@ -100,6 +105,8 @@ class CameraExposure(SubCommand):
                 lst_2 = []
                 for n in lst: lst_2.append(int(n))
                 num_last = max(lst_2)
+            # TODO to have nicer sorting leading 0 would be grate e.g. for total of 5 digits with leading
+            #  zeros: f'{num_last:06d}' here and in other formatting
             num = num_last + 1
             if os.path.exists(os.path.join(self.folder_focusing, f'{num_last}', f'{self.kwargs["focus_id"]}')):
                 target_folder = os.path.join(self.folder_focusing, f'{num_last}')
@@ -132,12 +139,24 @@ class CameraExposure(SubCommand):
                self._mk_symlink(target_folder, os.path.join(self.folder, simlink_day))
         return target_folder
 
-    async def _wait_for_save_fits(self, sub: int) -> None:
+    async def _camera_aget_imagearray(self):
+        try:
+            array = await self.camera.aget_imagearray()
+            return array
+        except:
+            try:
+                logger.warning(f'1-st _camera_aget_imagearray failed')
+                array = await self.camera.aget_imagearray()
+                return array
+            except:
+                logger.error(f'2-nd _camera_aget_imagearray failed')
 
-        array = await self.camera.aget_imagearray()
+    async def _wait_for_save_fits(self, sub: int) -> None:
+        logger.debug(f'_wait_for_save_fits started')
+        array = await self._camera_aget_imagearray()
         jd = self.get_julian_date(self.exp_time_start)
         jd_oca = f"{self.get_oca_date(jd):010.5f}"
-
+        logger.debug(f'_wait_for_save_fits aget_imagearray done')
         if self.telescope.id == 'dev':
             gain = 'unknown'
             readoutmode = 'unknown'
@@ -186,7 +205,7 @@ class CameraExposure(SubCommand):
             read_mod=str(readoutmode),
             gain=str(gain)
         )
-
+        logger.debug(f'_wait_for_save_fits fits_header gather data done')
         file_name = f'{self.telescope.id}c_{jd_oca.split(".")[0]}_{jd_oca.split(".")[1]}'
         stat = fits_stat(array, size=100, median=False, std=False, min=False, max=False)
 
@@ -226,7 +245,10 @@ class CameraExposure(SubCommand):
                                                        ))
 
     async def _wait_for_subexposure(self, sub_time: float) -> None:
-
+        logger.debug(f'_wait_for_subexposure started')
+        get_array_delay = self.telescope.observatory.get_app_cfg('get_array_delay', 0.0)
+        # TODO In final version, i.e. on server-side exposures, I would avoid asyncio.sleep and subscibe on imagerady
+        #  and camerastate. (exposures may be aborted earlier, no imagerady then)
         if sub_time >= 0.5:
             sub_t = sub_time
         else:
@@ -236,6 +258,9 @@ class CameraExposure(SubCommand):
             # subexposure_done = self.camera.imageready
             subexposure_done = await self.camera.aget_imageready()
             if subexposure_done is True:
+                logger.debug(f'_wait_for_subexposure subexposure_done is True')
+                await asyncio.sleep(get_array_delay)
+                logger.debug(f'_wait_for_subexposure subexposure_done get_array_delay:{get_array_delay}')
                 break
             await asyncio.sleep(0.5)
 

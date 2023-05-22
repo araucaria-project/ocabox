@@ -35,6 +35,7 @@ client:
     max_missed_msg: 3  # extra, not used by ocabox
     app:
       base_fits_dir: ~/Desktop
+      get_array_delay: 0.0
   DefaultClient:
     port: 5559
     url: localhost

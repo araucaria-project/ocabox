@@ -45,6 +45,7 @@ class Command(AbstractSequence):
 
     @staticmethod
     def ra_random_dither(ra: str, dith_val: float, mode: str = 'basic') -> str:
+        #TODO dith_val = dith_val / cos(dec)
         ra_deg = ra_to_decimal(ra)
         if mode == 'basic':
             return ra_to_sexagesimal(ra_deg + random.uniform(-dith_val / 60, dith_val / 60))
