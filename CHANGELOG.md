@@ -2,9 +2,16 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
-### Added
 
+## [1.0.12] - 2023-05-22
 ### Changed
+- planrunner command.py changed architecture for 3 methods: dark_bias, dome_flat, object_skyflat_focusing
+, dithering added, focusing method changed
+- planrunner sub_camera_exposure added folders creation for different commands, some minor changes
+- After receiving from the server an error terminating the CycleQuery, the callbacks will be run one last time.
+
+### Fixed
+- Fixed bug with callback executor in CycleQuery when stoping 
 
 ## [1.0.11] - 2023-05-17
 ### Added
