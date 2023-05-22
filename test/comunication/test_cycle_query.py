@@ -297,6 +297,47 @@ class TestConditionalCycleQuery(unittest.TestCase):
 
         self.loop.run_until_complete(coro())
 
+    def test_last_callback_after_error(self):
+        """Test do callback last time after retrieve error from server"""
+        address = Address('.'.join([self.tree_provider1.get_source_name(),
+                                    self.tree_provider2.get_source_name(),
+                                    'new_val']))
+        time_of_data_tolerance = self.time_interval
+
+        request = ValueRequest(address, time.time(),
+                               time_of_data_tolerance=time_of_data_tolerance,
+                               request_type='GET',
+                               request_data={'time_of_known_change': None},
+                               cycle_query=True)
+        delay = 0.2
+        max_missed_msg = 7
+        request_timeout = 0.2
+        checker = {'a': 0}  # musi być słownikiem, żeby przekazywać object, a nie int
+
+        async def callback(response):
+            if response[0].status is False:
+                checker['a'] = checker['a'] + 1
+
+        async def time_coro():
+            cq = ConditionalCycleQuery(crs=self.crs, list_request=[request], delay=delay,
+                                       max_missed_msg=max_missed_msg, request_timeout=request_timeout)
+            try:
+                cq.add_callback_async_method(callback)
+                cq.start()
+                await asyncio.sleep(0.5)
+                request.request_data['raise_value_error'] = True
+                await asyncio.sleep(0.5)
+            finally:
+                await cq.stop_and_wait()
+
+        async def coro():
+            # if there is a TimeoutError here, it means that the freezer is blocked indefinitely because parameters
+            # are not sent back to it
+            await wait_for_psce(time_coro(), 2)
+
+        self.loop.run_until_complete(coro())
+        self.assertEqual(1, checker.get('a'))
+
 
 if __name__ == '__main__':
     unittest.main()
