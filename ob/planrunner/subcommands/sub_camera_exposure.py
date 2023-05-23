@@ -152,11 +152,11 @@ class CameraExposure(SubCommand):
                 logger.error(f'2-nd _camera_aget_imagearray failed')
 
     async def _wait_for_save_fits(self, sub: int) -> None:
-        logger.debug(f'_wait_for_save_fits started')
+        logger.info(f'_wait_for_save_fits started')
         array = await self._camera_aget_imagearray()
         jd = self.get_julian_date(self.exp_time_start)
         jd_oca = f"{self.get_oca_date(jd):010.5f}"
-        logger.debug(f'_wait_for_save_fits aget_imagearray done')
+        logger.info(f'_wait_for_save_fits aget_imagearray done')
         if self.telescope.id == 'dev':
             gain = 'unknown'
             readoutmode = 'unknown'
@@ -205,7 +205,7 @@ class CameraExposure(SubCommand):
             read_mod=str(readoutmode),
             gain=str(gain)
         )
-        logger.debug(f'_wait_for_save_fits fits_header gather data done')
+        logger.info(f'_wait_for_save_fits fits_header gather data done')
         file_name = f'{self.telescope.id}c_{jd_oca.split(".")[0]}_{jd_oca.split(".")[1]}'
         stat = fits_stat(array, size=100, median=False, std=False, min=False, max=False)
 
@@ -245,7 +245,7 @@ class CameraExposure(SubCommand):
                                                        ))
 
     async def _wait_for_subexposure(self, sub_time: float) -> None:
-        logger.debug(f'_wait_for_subexposure started')
+        logger.info(f'_wait_for_subexposure started')
         get_array_delay = self.telescope.observatory.get_app_cfg('get_array_delay', 0.0)
         # TODO In final version, i.e. on server-side exposures, I would avoid asyncio.sleep and subscibe on imagerady
         #  and camerastate. (exposures may be aborted earlier, no imagerady then)
@@ -253,14 +253,15 @@ class CameraExposure(SubCommand):
             sub_t = sub_time
         else:
             sub_t = 0.5
-        await asyncio.sleep(sub_t)
+        await asyncio.sleep(int(sub_t))
+        logger.info(f'_wait_for_subexposure subexposure_done is True')
         while True:
-            # subexposure_done = self.camera.imageready
-            subexposure_done = await self.camera.aget_imageready()
+            subexposure_done = self.camera.imageready
+            #subexposure_done = await self.camera.aget_imageready()
             if subexposure_done is True:
-                logger.debug(f'_wait_for_subexposure subexposure_done is True')
+                logger.info(f'_wait_for_subexposure subexposure_done is True')
                 await asyncio.sleep(get_array_delay)
-                logger.debug(f'_wait_for_subexposure subexposure_done get_array_delay:{get_array_delay}')
+                logger.info(f'_wait_for_subexposure subexposure_done get_array_delay:{get_array_delay}')
                 break
             await asyncio.sleep(0.5)
 
@@ -291,7 +292,7 @@ class CameraExposure(SubCommand):
             test_exposure_time = 1.0
             test_time_interval = 2.0
             test_min_max_adu = (20000, 30000)
-            test_min_max_time_exp = (5, 20)
+            test_min_max_time_exp = (5, 40)
             mean_diff = None
             while True:
                 logger.info(f'{self.id} start test exposure')
