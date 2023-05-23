@@ -24,12 +24,19 @@ class RequestSolver(BaseRequestSolver):
             coroutines.append(self.get_single_answer(r, user_id, timeout=timeout))
         result = await asyncio.gather(*coroutines, return_exceptions=True)
         for r in result:
-            if not isinstance(r, Exception):
+            if isinstance(r, bytes):
                 response.append(r)
-            else:
+            elif isinstance(r, BaseException):
                 # This is a precaution against unexpected program failures. To run properly, all errors should be
                 # caught in '_get_single_answer' method.
                 logger.error(f"CRITICAL One of the sub-tasks raise some unresolved exception.")
+                re = ResponseError(4001, 'There were unexpected problems trying to respond to the request', repr(self),
+                                   ResponseError.SEVERITY_CRITICAL)
+                v_response = ValueResponse('', None, False, re)
+                resp = v_response.to_byte()
+                response.append(resp)
+            else:
+                logger.error(f"CRITICAL One of the sub-tasks return not supported type response.")
                 re = ResponseError(4001, 'There were unexpected problems trying to respond to the request', repr(self),
                                    ResponseError.SEVERITY_CRITICAL)
                 v_response = ValueResponse('', None, False, re)
