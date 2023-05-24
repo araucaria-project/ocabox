@@ -55,9 +55,12 @@ class DomeAlpacaTest(unittest.TestCase, BaseAsyncTest):
         super().tearDown()
 
     def test_go_to_position(self):
-        """Test method `go_to_position`"""
+        """Test method `go_to_position`. WARNING, this test may not be performed correctly the first time due to the
+        slow rotation of the dome on the simulator. In this case, the test should be repeated."""
+
         async def coro():
-            position_az = random.randint(1, 50)
+            await self.tree_freezer.run()
+            position_az = random.randint(170, 190)
             rm = await self.tao.get_res_manager()
             dome = rm.get_resource(name=rm.DOME, nr=0)
             result = await dome.go_to_position(2, position_az, None, None)
@@ -65,10 +68,14 @@ class DomeAlpacaTest(unittest.TestCase, BaseAsyncTest):
             await asyncio.sleep(2)  # Wait to reaction
             result = await self.api_test.get_async("dome.azimuth")
             self.assertEqual(position_az, result.value.v)
+            await self.tree_freezer.stop()
+
         asyncio.run(coro())
 
     def test_custom_user_in_request(self):
-        """Test method `go_to_position` when user is non defaulter API witch user with access"""
+        """Test method `go_to_position` when user is non defaulter API witch user with access.
+        WARNING, this test may not be performed correctly the first time due to the
+        slow rotation of the dome on the simulator. In this case, the test should be repeated."""
         blocker = TreeBaseRequestBlocker('block', self.tao)  # ad blocker to tree
         rs = RequestSolver(blocker)
         self.tao.target_requests = rs  # set new request solver
@@ -76,25 +83,30 @@ class DomeAlpacaTest(unittest.TestCase, BaseAsyncTest):
         blocker.make_reservation(api.user, time.time() + 10)  # reserve client
 
         async def coro():
+            await self.tree_freezer.run()
             # wrong user
-            position_az = random.randint(1, 50)
+            position_az = random.randint(170, 190)
             rm = await self.tao.get_res_manager()
             dome = rm.get_resource(name=rm.DOME, nr=0)
             with self.assertRaises(ResourceCommandError):
                 result = await dome.go_to_position(alt=2, az=position_az, ra=None, dec=None)
             # correct user
-            position_az = random.randint(1, 50)
+            position_az = random.randint(170, 190)
             result = await dome.go_to_position(alt=2, az=position_az, ra=None, dec=None, api=api)
             await asyncio.sleep(2)  # Wait to reaction
             result = await self.api_test.get_async("dome.azimuth")
             self.assertEqual(position_az, result.value.v)
+            await self.tree_freezer.stop()
+
         asyncio.run(coro())
 
     def test_wait_to_slew(self):
-        """Test method `wait_to_slew`"""
+        """Test method `wait_to_slew` WARNING, this test may not be performed correctly the first time due to the
+        slow rotation of the dome on the simulator. In this case, the test should be repeated."""
 
         async def coro():
-            position_az = random.randint(1, 50)
+            await self.tree_freezer.run()
+            position_az = random.randint(170, 190)
             rm = await self.tao.get_res_manager()
             dome = rm.get_resource(name=rm.DOME, nr=0)
 
@@ -111,6 +123,55 @@ class DomeAlpacaTest(unittest.TestCase, BaseAsyncTest):
             # wait for finish
             await t
             self.assertTrue(t.done())
+            await self.tree_freezer.stop()
+
+        asyncio.run(coro())
+
+    def test_Position_progress(self):
+        """Test method `progress` from Position object"""
+        async def coro():
+            await self.tree_freezer.run()
+            position_ra = random.randint(170, 190)
+            rm = await self.tao.get_res_manager()
+            dome = rm.get_resource(name=rm.DOME, nr=0)
+
+            pos = dome.Position("abc", t=8.0, c="-1", s=int(-6))
+            self.assertEqual(pos.progress, 5 / 14)
+
+            pos = dome.Position("abc", t=True, c=False, s=False)
+            self.assertEqual(pos.progress, 0)
+
+            pos = dome.Position("abc", t=True, c=True, s=False)
+            self.assertEqual(pos.progress, 1)
+
+            pos = dome.Position("abc", t=1, c=1, s=None)
+            self.assertEqual(pos.progress, 0)
+
+            await self.tree_freezer.stop()
+
+        asyncio.run(coro())
+
+    def test_Move_progress(self):
+        """Test method `progress` from Move object"""
+
+        async def coro():
+            await self.tree_freezer.run()
+            position_ra = random.randint(170, 190)
+            rm = await self.tao.get_res_manager()
+            dome = rm.get_resource(name=rm.DOME, nr=0)
+
+            mov = dome.Move(None)
+            pos = dome.Position("abc", t=8.0, c="-1", s=int(-6))
+            mov.positions.append(pos)
+            pos2 = dome.Position("abc", t=7.0, c="6", s=int(-5))
+            mov.positions.append(pos2)
+
+            self.assertEqual(pos.progress, 5 / 14)
+            self.assertEqual(pos2.progress, 11 / 12)
+
+            self.assertEqual(mov.progress, (5 / 14 + 11 / 12)/2)
+
+            await self.tree_freezer.stop()
 
         asyncio.run(coro())
 
