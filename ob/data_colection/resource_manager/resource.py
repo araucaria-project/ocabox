@@ -3,13 +3,13 @@ import logging
 from abc import ABC
 from typing import Callable, Optional, List
 
-from pyaraucaria.coordinates import deg_str_to_deg, ra_dec_epoch, ra_dec_2_az_alt
+from pyaraucaria.coordinates import deg_str_to_deg, ra_dec_epoch, ra_dec_2_az_alt, dec_to_decimal, ra_to_decimal, \
+    ra_to_sexagesimal
 
 from ob.comunication.comunication_error import CommunicationRuntimeError
 from ob.comunication.internal_client_api import InternalClientAPI
 from ob.data_colection.address import Address
 from ob.data_colection.alpaca_api.standard_telescope_components import StandardTelescopeComponents
-from ob.data_colection.tree_user import BaseTreeUser
 from ob.util_functions.asyncio_util_functions import wait_for_psce
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -106,49 +106,46 @@ class Resource(ABC):
                     raise ValueError
         return alt_, az_
 
-    async def _subscription_pack(self, api, condi, command: str):
-
-        fut = asyncio.get_running_loop().create_future()
-
-        CQ = await api.subscribe(address=f"{self._tree_address_path.__str__()}.{command}",
-                                 time_of_data_tolerance=0.3)
-
-        async def coro(result):
-            try:
-                if fut.done():
-                    return
-                single_result = result[0]
-                if single_result.value and single_result.value.v:
-                    r = await condi(single_result.value.v)
-                    if r is True:
-                        fut.set_result(True)
-                else:
-                    fut.set_result(False)
-            finally:
-                CQ.stop()
-
-        # TODO Wymyślić jakiś lepszy mechanizm zamykania subskrypcji, teraz callback robi stop ale nie czeka a CQ musi
-        #  być przekazywane dalej i oczekiwane ręcznie
-
-        CQ.add_callback_async_method(coro)
-        CQ.start()
-        return fut, CQ
-
     class Position:
         def __init__(self, address, t=None, s=None, c=None):
-            self.target = t
-            self.start = s
-            self.current = c
+            self._target = t
+            self._start = s
+            self._current = c
             self.custom_end_condition: Optional[Callable] = None
-            self.is_slewing = False
+            self.is_moving = False
             self.error = False
             self.error_content = None
             self.task = None
             self._address = address
+            self._finish_fut = None
+
+        @property
+        def start(self):
+            return self._start
+
+        @start.setter
+        def start(self, s):
+            self._start = s
+
+        @property
+        def current(self):
+            return self._current
+
+        @current.setter
+        def current(self, c):
+            self._current = c
+
+        @property
+        def target(self):
+            return self._target
+
+        @target.setter
+        def target(self, t):
+            self._target = t
 
         def check_finish(self):
             if self.custom_end_condition is not None and callable(self.custom_end_condition):
-                return self.custom_end_condition()
+                return self.custom_end_condition(self.start, self.current, self.target)
             if self.current == self.target:
                 return True
             else:
@@ -169,6 +166,8 @@ class Resource(ABC):
                 s = float(self.start)
                 t = float(self.target)
                 c = float(self.current)
+                if abs(t - s) == 0:
+                    return float(1)
                 return float(abs(c - s) / abs(t - s))
             except ValueError:
                 pass
@@ -179,28 +178,43 @@ class Resource(ABC):
                 return float(0)
 
         async def coro(self, api):
+            if self._finish_fut is None:
+                self._finish_fut = asyncio.Future()
             CQ = await api.subscribe(address=self._address,
-                                     time_of_data_tolerance=0.3)
+                                     time_of_data_tolerance=0.3, delay=0.1)
             CQ.start()
-            while True:
-                await asyncio.sleep(0)
-                try:
-                    result = await CQ.get_response()
-                except CommunicationRuntimeError:
-                    self.is_slewing = False
-                    self.error = True
-                    return
+            try:
+                while True:
+                    await asyncio.sleep(0)
+                    try:
+                        result = await CQ.get_response()
+                    except CommunicationRuntimeError:
+                        self.is_moving = False
+                        self.error = True
+                        self._finish_fut.set_result(False)
+                        return
 
-                single_result = result[0]
-                if not single_result.status:
-                    self.error = True
-                if single_result.value:
-                    if self.start is None:
-                        self.start = single_result.value.v
-                    self.current = single_result.value.v
-                    self.check_finish()
-                else:
-                    self.error = True
+                    single_result = result[0]
+                    if not single_result.status:
+                        self.error = True
+                        self._finish_fut.set_result(False)
+                        return
+                    if single_result.value:
+                        if self.start is None:
+                            self.start = single_result.value.v
+                        self.current = single_result.value.v
+                        if self.check_finish():
+                            self._finish_fut.set_result(True)
+                    else:
+                        self.error = True
+                        self._finish_fut.set_result(False)
+                        return
+            finally:
+                await CQ.stop_and_wait()
+
+        async def wait(self):
+            if self._finish_fut is not None:
+                await self._finish_fut
 
     class Move:
         def __init__(self, api):
@@ -210,39 +224,21 @@ class Resource(ABC):
             self.positions = []
             self._api = api
 
-        # async def coro(self, p, address, api):
-        #     CQ = await api.subscribe(address=address,
-        #                              time_of_data_tolerance=0.3)
-        #     CQ.start()
-        #     while True:
-        #         await asyncio.sleep(0)
-        #         try:
-        #             result = await CQ.get_response()
-        #         except CommunicationRuntimeError:
-        #             self.is_slewing = False
-        #             self.error = True
-        #             return
-        #
-        #         single_result = result[0]
-        #         if not single_result.status:
-        #             self.error = True
-        #         if single_result.value:
-        #             if p.start is None:
-        #                 p.start = single_result.value.v
-        #             p.current = single_result.value.v
-        #             self.check_finish()
-        #         else:
-        #             self.error = True
-
-        async def move(self):
+        async def watch(self):
             for p in self.positions:
                 p.task = asyncio.create_task(p.coro(api=self._api))
 
         @property
         def progress(self):
+            """
+            Property representing summ progress of all positions
+
+            :raise ValueError
+            :return:
+            """
             suma = 0
             for p in self.positions:
-                suma += p.progress
+                suma += p.progress  # can raise ValueError
             return suma / len(self.positions)
 
         def check_finish(self):
@@ -250,6 +246,13 @@ class Resource(ABC):
                 if not p.check_finish():
                     return False
             return True
+
+        async def wait(self):
+            for p in self.positions:
+                await p.wait()
+
+        def add_position(self, position):
+            self.positions.append(position)
 
 
 class DomeAlpaca(Resource):
@@ -259,49 +262,6 @@ class DomeAlpaca(Resource):
                  address_path: str = "", **kwargs) -> None:
         super().__init__(source_name=source_name, resource_name=resource_name, nr=nr, target_request=target_request,
                          properties=properties, address_path=address_path, **kwargs)
-
-    async def wait_to_slew(self, alt, az, ra, dec, api: InternalClientAPI = None, timeout: int = 20, **kwargs) -> bool:
-        """
-
-        :param alt:
-        :param az:
-        :param ra:
-        :param dec:
-        :param api:
-        :param timeout:
-        :param kwargs:
-        :raise ResourceCommandError:
-        :return:
-        """
-        if api is None:
-            api = InternalClientAPI(request_solver=self._target, user_name=f"Default_{self.__class__.__name__}")
-
-        az_ = az
-        fut = asyncio.get_running_loop().create_future()
-
-        async def result_check(result):
-            if fut.done():
-                return
-            single_result = result[0]
-            if single_result.value and single_result.value.v:
-                if single_result.value.v == az_:
-                    fut.set_result(True)
-            else:
-                fut.set_result(False)
-
-        CQ = await api.subscribe_with_callback(address=f"{self._tree_address_path.__str__()}.azimuth",
-                                               time_of_data_tolerance=0.3, async_callback_method=result_check)
-        try:
-            await wait_for_psce(fut, timeout=timeout)
-            if fut.done() and fut.result() is False:
-                raise ResourceCommandError("Unexpected error when waiting for subscription")
-            else:
-                pass
-        except asyncio.TimeoutError:
-            raise ResourceCommandError("To long waiting for action")
-        finally:
-            await CQ.stop_and_wait()
-        return True
 
     async def go_to_position(self, alt, az, ra, dec, api: InternalClientAPI = None, **kwargs):
         """
@@ -338,10 +298,8 @@ class DomeAlpaca(Resource):
             raise ResourceCommandError("Action has error status in response")
 
 
-class MountAlpaca(Resource):
+class MountAlpaca_v1(Resource):
     RESOURCE_NAME = StandardTelescopeComponents.MOUNT
-
-    # todo dodać jakoś informację o tym ile procent wykonuje się dana czynność. Do pasków postępów  !!!!
 
     def __init__(self, source_name: str, resource_name: str, nr: int, target_request, properties: dict = None,
                  address_path: str = "", **kwargs) -> None:
@@ -510,73 +468,46 @@ class MountAlpaca(Resource):
         return True
 
 
-class MountAlpaca_v2(Resource):
+class MountAlpaca(Resource):
     RESOURCE_NAME = StandardTelescopeComponents.MOUNT
 
     def __init__(self, source_name: str, resource_name: str, nr: int, target_request, properties: dict = None,
                  address_path: str = "", **kwargs) -> None:
         super().__init__(source_name=source_name, resource_name=resource_name, nr=nr, target_request=target_request,
                          properties=properties, address_path=address_path, **kwargs)
+        self._latitude = self._properties.get("lat", 0)
+        self._longitude = self._properties.get("lon", 0)
+        self._elevation = self._properties.get("elev", 0)
+        # -----------------------------
         self._slewing = None
 
-    # async def go_to_position(self, alt, az, ra, dec, api: InternalClientAPI = None, **kwargs):
-    #     """
-    #
-    #     :param alt: altitude
-    #     :param az: azimuth
-    #     :param ra: ractescention
-    #     :param dec: declination
-    #     :param api:
-    #     :param kwargs:
-    #     :raise ResourceCommandError:
-    #     :return:
-    #     """
-    #
-    #     if api is None:
-    #         api = InternalClientAPI(request_solver=self._target, user_name=f"Default_{self.__class__.__name__}")
-    #
-    #     # TODO This should be taken from settings
-    #     tel = {'latitude': '-24:35:53', 'longitude': '-70:11:47', 'elevation': '2817'}
-    #     epoch = '2000'  # todo co to jest? Mikołaj
-    #
-    #     self._slewing["target_ra"] = None
-    #     self._slewing["target_dec"] = None
-    #     self._slewing["target_alt"] = None
-    #     self._slewing["target_az"] = None
-    #
-    #     # from alt az
-    #     if alt is not None and az is not None:
-    #         self._slewing["target_alt"] = alt
-    #         self._slewing["target_az"] = az
-    #         await self._go_to_position_alt_az(alt, az, api)
-    #     elif ra is not None and dec is not None:
-    #         await self._go_to_position_ra_dec(ra, dec, tel.get("latitude"), tel.get("longitude"), tel.get("elevation"),
-    #                                           epoch, api)
-    #     else:
-    #         raise ResourceCommandError("Wrong parameters")
+    async def go_to_position(self, ra, dec, epoch, api):
+        return await self._go_to_position_ra_dec(ra, dec, epoch, api)
 
-    async def _go_to_position_ra_dec(self, ra, dec, latitude, longitude, elevation, epoch, api):
+    async def _go_to_position_ra_dec(self, ra, dec, epoch, api):
         ra_now, dec_now = ra_dec_epoch(ra=ra,
                                        dec=dec,
-                                       latitude=latitude,
-                                       longitude=longitude,
-                                       elevation=elevation,
+                                       latitude=self._latitude,
+                                       longitude=self._longitude,
+                                       elevation=self._elevation,
                                        epoch=epoch)
         az, alt = ra_dec_2_az_alt(ra=ra_now,
                                   dec=dec_now,
-                                  latitude=latitude,
-                                  longitude=longitude,
-                                  elevation=elevation,
+                                  latitude=self._latitude,
+                                  longitude=self._longitude,
+                                  elevation=self._elevation,
                                   epoch=epoch)
-
+        ra_now_decimal = ra_to_decimal(ra_now)
+        dec_now_decimal = dec_to_decimal(dec_now)
         # ----------------- check min altitude -----------------
         mount_min_alt = 14.9  # todo wo wywalenia albo całkiem albo do settings
-        if deg_str_to_deg(alt) <= mount_min_alt:  # todo w zależności co z mount_min_alt to może do wywalenia
+        if deg_str_to_deg(alt) <= mount_min_alt and False:  # todo w zależności co z mount_min_alt to może do wywalenia
             raise ResourceCommandError(f"Altitude is lover then min altitude")
 
         m = self.Move(api)
-        m.positions[0] = self.Position("declination", t=ra_now)
-        m.positions[1] = self.Position("declination", t=dec_now)
+        m.add_position(self.Position(f"{self._tree_address_path.__str__()}.rightascension", t=ra_now_decimal))
+        m.add_position(self.Position(f"{self._tree_address_path.__str__()}.declination", t=dec_now_decimal))
+        m.add_position(self.Position(f"{self._tree_address_path.__str__()}.tracking", t=True))
 
         try:
             # ----------------- set tracking -----------------
@@ -584,10 +515,10 @@ class MountAlpaca_v2(Resource):
                                          parameters_dict={"Tracking": True}, no_wait=False)
             if not result.status:
                 raise ResourceCommandError("Action has error status in response")
-
             # ----------------- move mount -----------------
             result = await api.put_async(address=f"{self._tree_address_path.__str__()}.slewtocoordinatesasync",
-                                         parameters_dict={"RightAscension": ra_now, "Declination": dec_now},
+                                         parameters_dict={"RightAscension": ra_now_decimal,
+                                                          "Declination": dec_now_decimal},
                                          no_wait=False)
             if not result.status:
                 raise ResourceCommandError("Action has error status in response")
@@ -595,9 +526,16 @@ class MountAlpaca_v2(Resource):
             m.is_slewing = False
             # jeśli coś poszło nie tak, to nie ma sensu czekać na ruch, coś może się wykonać, ale raczej źle
             raise
+        finally:
+            self._slewing = m
+        await m.watch()
         m.is_slewing = True
-        self._slewing = m
         return True
+
+    def get_slew_progres(self):
+        if self._slewing is None:
+            return 0
+        return self._slewing.progress
 
     async def _go_to_position_alt_az(self, alt, az, api):
         try:
@@ -627,13 +565,10 @@ class MountAlpaca_v2(Resource):
 
         return True
 
-    async def _slewing_subscribe_ra_dec(self, api: InternalClientAPI = None, timeout: int = 20, **kwargs):
-        if api is None:
-            api = InternalClientAPI(request_solver=self._target, user_name=f"Default_{self.__class__.__name__}")
-
-        move = self._slewing
-
-        command = "declination"
+    async def wait_for_slew(self):
+        if self._slewing is None:
+            return
+        await self._slewing
 
 
 class CameraAlpaca(Resource):

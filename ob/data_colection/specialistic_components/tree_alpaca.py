@@ -153,7 +153,8 @@ class TreeAlpacaObservatory(TreeBaseProvider):
         obs_children = self._observatory.children
         out = []
         for key, val in obs_children.items():
-            out.append((key + "_RESOURCE", key, val.kind, val.device_nr, val.component_options))
+            out.append((key + "_RESOURCE", key, val.kind, val.device_nr,
+                        {**self._observatory.component_options, **val.component_options}))
         return out
 
     async def get_res_manager(self) -> ResourceManagerAlpaca:
