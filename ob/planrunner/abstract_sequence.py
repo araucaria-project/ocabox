@@ -33,10 +33,7 @@ class AbstractSequence:
 
     @staticmethod
     def numb(number: int) -> str:
-        if number > 9:
-            return f'{number}'
-        else:
-            return f'0{number}'
+        return f'{number:02d}'
 
     async def _arun(self, subcomponents: Any, step_id: str or None = None) -> int:
         self.started = True

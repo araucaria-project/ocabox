@@ -139,7 +139,7 @@ class CameraExposure(SubCommand):
                self._mk_symlink(target_folder, os.path.join(self.folder, simlink_day))
         return target_folder
 
-    async def _camera_aget_imagearray(self):
+    async def _camera_aget_imagearray(self) -> List[Any]:
         try:
             array = await self.camera.aget_imagearray()
             return array

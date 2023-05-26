@@ -108,19 +108,24 @@ class Command(AbstractSequence):
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
         id_next += 1
 
-        sub = DomeScreenLight(f'{self.id}_{self.numb(id_next)}', self, light=True)
-        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-        id_next += 1
+        if 'screen_light' in self.kwargs.keys():
+            if self.kwargs['screen_light'] == 'auto':
+                sub = DomeScreenLight(f'{self.id}_{self.numb(id_next)}', self, light=True)
+                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+                id_next += 1
 
-        # sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=True)
-        # self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-        # id_next += 1
+        if 'mirror_cover' in self.kwargs.keys():
+            if self.kwargs['mirror_cover'] == 'auto':
+                sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=True)
+                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+                id_next += 1
 
         # Camera exposure
         if 'seq' in self.kwargs:
             seq_list = self._split_seq(self.kwargs['seq'])
             for n in seq_list:
                 par = list(n.split('/'))
+
                 sub = ChangeFilter(f'{self.id}_{self.numb(id_next)}',
                                    self,
                                    filter=par[1])
@@ -144,12 +149,11 @@ class Command(AbstractSequence):
                     self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                     id_next += 1
 
-        sub = DomeScreenLight(f'{self.id}_{self.numb(id_next)}', self, light=False)
-        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-        id_next += 1
-
-        # sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=False)
-        # self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+        if 'screen_light' in self.kwargs.keys():
+            if self.kwargs['screen_light'] == 'auto':
+                sub = DomeScreenLight(f'{self.id}_{self.numb(id_next)}', self, light=False)
+                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+                id_next += 1
 
     def _write_object_skyflat_focusing(self, subcommand_name: str) -> None:
 
@@ -215,9 +219,11 @@ class Command(AbstractSequence):
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
         id_next += 1
 
-        # sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=True)
-        # self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-        # id_next += 1
+        if 'mirror_cover' in self.kwargs.keys():
+            if self.kwargs['mirror_cover'] == 'auto':
+                sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=True)
+                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+                id_next += 1
 
         # Camera exposure
         if 'seq' in self.kwargs:
@@ -347,22 +353,27 @@ class Command(AbstractSequence):
                     self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                     id_next += 1
 
-        # sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=False)
-        # self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-
     def _write_zero_dark(self, subcommand_name: str) -> None:
 
         id_next = 0
 
-        # sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=False)
-        # self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-        # id_next += 1
+        if 'mirror_cover' in self.kwargs.keys():
+            if self.kwargs['mirror_cover'] == 'auto':
+                sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=False)
+                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+                id_next += 1
 
         # Camera exposure
         if 'seq' in self.kwargs:
             seq_list = self._split_seq(self.kwargs['seq'])
             for n in seq_list:
                 par = list(n.split('/'))
+
+                sub = ChangeFilter(f'{self.id}_{self.numb(id_next)}',
+                                   self,
+                                   filter=par[1])
+                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+                id_next += 1
 
                 for ex in range(1, int(par[0]) + 1):
                     sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
@@ -376,7 +387,7 @@ class Command(AbstractSequence):
                                          req_ra='',
                                          req_dec='',
                                          epoch='2000',
-                                         filter=''
+                                         filter=par[1]
                                          )
                     self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                     id_next += 1
