@@ -10,6 +10,7 @@ import os
 import pwd
 from typing import Dict, Any, List
 import math
+import re
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -49,18 +50,14 @@ class CameraExposure(SubCommand):
 
     @staticmethod
     def _mk_folder(folder: str):
-        # TODO os.makedirs(folder, exist_ok=True) and test
-        if not os.path.exists(folder):
-            try:
-                os.mkdir(folder)
-                logger.info(f'Creating folder {folder}')
-            except Exception as e:
-                logger.warning(
-                    f'Folder creation failed, please create folder {folder} manually '
-                    f'or adjust config key "app.base_fits_dir". Error: {e}'
-                )
-        else:
-            logger.debug(f'Folder {folder} exist')
+        try:
+            os.makedirs(folder, exist_ok=True)
+            logger.info(f'Creating folder {folder}')
+        except Exception as e:
+            logger.warning(
+                f'Folder creation failed, please create folder {folder} manually '
+                f'or adjust config key "app.base_fits_dir". Error: {e}'
+            )
 
     @staticmethod
     def _mk_symlink(target: str, symlink: str):
@@ -88,30 +85,17 @@ class CameraExposure(SubCommand):
 
     def _provide_target_folder(self) -> str:
         if self.kwargs['type'] == 'focusing':
-            #TODO - see below
-            """
-            I wold rather use glob.glob or regex to filter out directory names which follw the pattern.
-            Sooner or later, sombody, or operating system itself (mac loves to do so), will add some other file
-            or dir here and you will get exception on int(n) e.g.:
-            import re
-            lst_2 = [int(n) for n in lst if re.fullmatch(r'\d+', n)]
-            """
             lst = os.listdir(self.folder_focusing)
-            if 'actual' in lst:
-                lst.remove('actual')
-            if len(lst) == 0:
+            lst_2 = [int(n) for n in lst if re.fullmatch(r'\d{6}', n)]
+            if len(lst_2) == 0:
                 num_last = -1
             else:
-                lst_2 = []
-                for n in lst: lst_2.append(int(n))
                 num_last = max(lst_2)
-            # TODO to have nicer sorting leading 0 would be grate e.g. for total of 5 digits with leading
-            #  zeros: f'{num_last:06d}' here and in other formatting
             num = num_last + 1
-            if os.path.exists(os.path.join(self.folder_focusing, f'{num_last}', f'{self.kwargs["focus_id"]}')):
-                target_folder = os.path.join(self.folder_focusing, f'{num_last}')
+            if os.path.exists(os.path.join(self.folder_focusing, f'{num_last:06d}', f'{self.kwargs["focus_id"]}')):
+                target_folder = os.path.join(self.folder_focusing, f'{num_last:06d}')
             else:
-                target_folder = os.path.join(self.folder_focusing, f'{num}')
+                target_folder = os.path.join(self.folder_focusing, f'{num:06d}')
                 self._mk_folder(target_folder)
                 open(os.path.join(target_folder, f'{self.kwargs["focus_id"]}'), 'a').close()
                 if os.path.exists(os.path.join(self.folder_focusing, f'actual')):
