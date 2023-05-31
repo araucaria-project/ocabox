@@ -278,20 +278,14 @@ class Command(AbstractSequence):
                             if 'alt' and 'az' in self.kwargs.keys():
                                 # TODO get OCA values from settings
                                 OCA = {'latitude': '-24:35:53', 'longitude': '-70:11:47', 'elevation': '2817'}
-                                alt_f = deg_str_to_deg(self.kwargs['alt'])
-                                az_f = deg_str_to_deg(self.kwargs['az'])
-                                lat_f = deg_str_to_deg(OCA['latitude'])
-                                long_f = deg_str_to_deg(OCA['longitude'])
-                                elev_f = float(OCA['elevation'])
-                                req_ra_dit_f, req_dec_dit_f = az_alt_2_ra_dec(alt=alt_f,
-                                                                              az=az_f,
-                                                                              latitude=lat_f,
-                                                                              longitude=long_f,
-                                                                              elevation=elev_f,
-                                                                              epoch='J2000'
-                                                                              )
-                                req_ra_dit = ra_to_sexagesimal(req_ra_dit_f)
-                                req_dec_dit = dec_to_sexagesimal(req_dec_dit_f)
+                                req_ra_dit, req_dec_dit = az_alt_2_ra_dec(alt=self.kwargs['alt'],
+                                                                          az=self.kwargs['az'],
+                                                                          latitude=OCA['latitude'],
+                                                                          longitude=OCA['longitude'],
+                                                                          elevation=OCA['elevation'],
+                                                                          ra_hour = True,
+                                                                          dec_sex = True)
+
                                 sub = MountSlew(f'{self.id}_{self.numb(id_next)}',
                                                 self,
                                                 obj_name=obj_name,
