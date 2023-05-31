@@ -67,7 +67,6 @@ class CameraExposure(SubCommand):
     def get_julian_date(date: str or datetime) -> float:
         return datetime_to_julian(date)
 
-
     def indexing_value(self, value: int, values: List[str]) -> int or str:
         if isinstance(value, int) and isinstance(values, list):
             data = values[value]
@@ -135,7 +134,7 @@ class CameraExposure(SubCommand):
             except:
                 logger.error(f'2-nd _camera_aget_imagearray failed')
 
-    async def _wait_for_save_fits(self, sub: int) -> None:
+    async def _wait_for_save_fits(self, sub: int, sub_time: float) -> None:
         logger.info(f'_wait_for_save_fits started')
         array = await self._camera_aget_imagearray()
         jd = self.get_julian_date(self.exp_time_start)
@@ -166,7 +165,7 @@ class CameraExposure(SubCommand):
             parsed_obs_lon=parse_deg_or_dms(OCA['longitude']),
             obs_elev=OCA['elevation'],
             tel_id=str(self.telescope.id),
-            utc_now=str(self.exp_time_start),
+            utc_now=str(self.exp_time_start), # TODO change for ...T... format
             jd=jd,
             req_ra=self.kwargs["req_ra"],
             req_dec=self.kwargs["req_dec"],
@@ -180,8 +179,8 @@ class CameraExposure(SubCommand):
             obs_type=str(self.kwargs['type']),
             object=str(self.kwargs["obj_name"]),
             filter=str(self.kwargs["filter"]),
-            req_exp=self.kwargs["exp_time"],
-            cam_exp=self.kwargs["exp_time"],
+            req_exp=sub_time,
+            cam_exp=sub_time,
             ccd_name=str(self.camera.sensorname),
             ccd_temp=self.camera.ccdtemperature,
             ccd_binx=self.camera.binx,
@@ -273,7 +272,7 @@ class CameraExposure(SubCommand):
             """
             mean_list = []
             test_exposure_time = 1.0
-            test_time_interval = 2.0
+            test_time_interval = 0.0
             test_min_max_adu = (20000, 30000)
             test_min_max_time_exp = (5, 40)
             mean_diff = None
@@ -283,7 +282,7 @@ class CameraExposure(SubCommand):
                 await self._wait_for_subexposure(test_exposure_time)
                 mean = fits_stat(await self.camera.aget_imagearray(), size=100,
                                  median=False, std=False, min=False, max=False)['mean']
-                logger.info(f'{self.id} mean test {test_exposure_time}s exposure:{mean}')
+                logger.info(f'{self.id} test_frame time:{test_exposure_time}s mean:{mean}')
                 self.info_callback['stream_1'](f'{self.id} test_frame time:{test_exposure_time}s mean:{mean}')
                 self.info_callback['exec_json'](self.exec_json(test_exp_mean=mean))
                 mean_list.append(mean)
@@ -307,13 +306,17 @@ class CameraExposure(SubCommand):
                         return 1
 
                 # Check if it's ready to calculate exposure time
-                if test_min_max_adu[0] - mean_min_max[1] < 0 and test_min_max_adu[1] - mean_min_max[0] > 0:
+                if test_min_max_adu[0] - mean_min_max[1] < 0 < test_min_max_adu[1] - mean_min_max[0]:
                     if mean_min_max[0] < test_min_max_adu[0]:
                         exposure_time = test_min_max_adu[0] / mean
+                        self.info_callback['stream_1'](f"{self.id} calc_exp_time:{exposure_time},"
+                                                       f" expect_adu:{exposure_time * mean}")
                         logger.info(f"{self.id} calc_exp_time:{exposure_time}, expect_adu:{exposure_time * mean}")
                         break
                     else:
                         exposure_time = mean_min_max[0] / mean
+                        self.info_callback['stream_1'](f"{self.id} calc_exp_time:{exposure_time},"
+                                                       f" expect_adu:{exposure_time * mean}")
                         logger.info(f"{self.id} calc_exp_time:{exposure_time}, expect_adu:{exposure_time * mean}")
                         break
                 await asyncio.sleep(test_time_interval)
@@ -329,7 +332,7 @@ class CameraExposure(SubCommand):
                                                        exp_saved=False,
                                                        readout_time=self.readout_time,
                                                        n_exp=sub))
-        await self._wait_for_save_fits(sub)
+        await self._wait_for_save_fits(sub, float(exposure_time))
         self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
         self.info_callback['stream_5'](f'{self.id}')
         logger.info(f'{self.id} done')
