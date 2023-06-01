@@ -44,17 +44,15 @@ class Command(AbstractSequence):
         logger.info(f'{self.id} {self.command_name} {self.args} {self.kwargs} is written')
 
     @staticmethod
-    def ra_random_dither(ra: str, dith_val: float, mode: str = 'basic') -> str:
-        #TODO dith_val = dith_val / cos(dec)
-        ra_deg = ra_to_decimal(ra)
+    def ra_random_dither(ra: float, dith_val: float, mode: str = 'basic') -> float:
+        #TODO dith_val = dith_val / cos(dec) ?
         if mode == 'basic':
-            return ra_to_sexagesimal(ra_deg + random.uniform(-dith_val / 60, dith_val / 60))
+            return ra + random.uniform(-dith_val / 60, dith_val / 60)
 
     @staticmethod
-    def dec_random_dither(dec: str, dith_val: float, mode: str = 'basic') -> str:
-        dec_deg = dec_to_decimal(dec)
+    def dec_random_dither(dec: float, dith_val: float, mode: str = 'basic') -> float:
         if mode == 'basic':
-            return dec_to_sexagesimal(dec_deg + random.uniform(-dith_val / 60, dith_val / 60))
+            return dec + random.uniform(-dith_val / 60, dith_val / 60)
 
     def _write_subcommands(self) -> None:
         self._create_command_string()
@@ -278,40 +276,38 @@ class Command(AbstractSequence):
                             if 'alt' and 'az' in self.kwargs.keys():
                                 # TODO get OCA values from settings
                                 OCA = {'latitude': '-24:35:53', 'longitude': '-70:11:47', 'elevation': '2817'}
-                                req_ra_dit, req_dec_dit = az_alt_2_ra_dec(alt=self.kwargs['alt'],
-                                                                          az=self.kwargs['az'],
-                                                                          latitude=OCA['latitude'],
-                                                                          longitude=OCA['longitude'],
-                                                                          elevation=OCA['elevation'],
-                                                                          ra_hour = True,
-                                                                          dec_sex = True)
+                                req_ra, req_dec = az_alt_2_ra_dec(alt=deg_str_to_deg(self.kwargs['alt']),
+                                                                          az=deg_str_to_deg(self.kwargs['az']),
+                                                                          latitude=deg_str_to_deg(OCA['latitude']),
+                                                                          longitude=deg_str_to_deg(OCA['longitude']),
+                                                                          elevation=float(OCA['elevation']))
 
                                 sub = MountSlew(f'{self.id}_{self.numb(id_next)}',
                                                 self,
                                                 obj_name=obj_name,
-                                                ra=self.ra_random_dither(req_ra_dit,
-                                                                         dith_val=dit_dist,
-                                                                         mode=dit_mode),
-                                                dec=self.dec_random_dither(req_dec_dit,
-                                                                           dith_val=dit_dist,
-                                                                           mode=dit_mode),
-                                                epoch='2000')
+                                                ra=ra_to_sexagesimal(self.ra_random_dither(ra=req_ra,
+                                                                                           dith_val=dit_dist,
+                                                                                           mode=dit_mode)),
+                                                dec=dec_to_sexagesimal(self.dec_random_dither(dec=req_dec,
+                                                                                              dith_val=dit_dist,
+                                                                                              mode=dit_mode)),
+                                                                                              epoch='2000')
                                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                                 id_next += 1
 
                             elif req_ra and req_dec is not None:
-                                req_ra_dit = req_ra
-                                req_dec_dit = req_dec
+                                req_ra = ra_to_decimal(req_ra)
+                                req_dec = dec_to_decimal(req_dec)
                                 sub = MountSlew(f'{self.id}_{self.numb(id_next)}',
                                                 self,
                                                 obj_name=obj_name,
-                                                ra=self.ra_random_dither(req_ra_dit,
-                                                                         dith_val=dit_dist,
-                                                                         mode=dit_mode),
-                                                dec=self.dec_random_dither(req_dec_dit,
-                                                                           dith_val=dit_dist,
-                                                                           mode=dit_mode),
-                                                epoch='2000')
+                                                ra=ra_to_sexagesimal(self.ra_random_dither(ra=req_ra,
+                                                                                           dith_val=dit_dist,
+                                                                                           mode=dit_mode)),
+                                                dec=dec_to_sexagesimal(self.dec_random_dither(dec=req_dec,
+                                                                                              dith_val=dit_dist,
+                                                                                              mode=dit_mode)),
+                                                                                              epoch='2000')
                                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                                 id_next += 1
                             else:
