@@ -157,12 +157,12 @@ class CameraExposure(SubCommand):
             # offset = indexing_value(offset, offsets)
 
         # TODO This OCA should be taken from settings
-        OCA = {'latitude': '-24:35:53', 'longitude': '-70:11:47', 'elevation': '2817'}
+        OCA = {'latitude': -24.598056, 'longitude': -70.196389, 'elevation': 2817}
         header = fits_header(
             obs_lat=OCA['latitude'],
-            parsed_obs_lat=parse_deg_or_dms(OCA['latitude']),
+            parsed_obs_lat=OCA['latitude'],
             obs_lon=OCA['longitude'],
-            parsed_obs_lon=parse_deg_or_dms(OCA['longitude']),
+            parsed_obs_lon=OCA['longitude'],
             obs_elev=OCA['elevation'],
             tel_id=str(self.telescope.id),
             utc_now=str(self.exp_time_start), # TODO change for ...T... format
@@ -237,7 +237,6 @@ class CameraExposure(SubCommand):
         else:
             sub_t = 0.5
         await asyncio.sleep(int(sub_t))
-        await asyncio.sleep(get_array_delay)
         logger.info(f'_wait_for_subexposure subexposure_done get_array_delay:{get_array_delay} done')
         while True:
             # subexposure_done = self.camera.imageready

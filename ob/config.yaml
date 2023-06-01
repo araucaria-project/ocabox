@@ -26,7 +26,6 @@ client:
     max_missed_msg: 3  # extra, not used by ocabox
     app:
       base_fits_dir: ~/Desktop
-      get_array_delay: 0.0
   CliClient:
     port: 5558
     url: tic.oca.lan
@@ -38,7 +37,6 @@ client:
     max_missed_msg: 3  # extra, not used by ocabox
     app:
       base_fits_dir: ~/Desktop
-      get_array_delay: 0.0
   DefaultClient:
     port: 5559
     url: localhost
@@ -50,7 +48,6 @@ client:
     max_missed_msg: 3  # extra, not used by ocabox
     app:
       base_fits_dir: ~/Desktop
-      get_array_delay: 0.0
   SampleTestClient:
     port: 5560
     url: localhost

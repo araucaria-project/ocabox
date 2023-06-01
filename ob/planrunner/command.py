@@ -250,14 +250,15 @@ class Command(AbstractSequence):
                     focus_id = random.randrange(0,100000)
 
                 for ex in range(1, sub_numb+1):
-
+                    req_ra_a = None
+                    req_dec_a = None
                     # If focusing, set focuser position
                     if subcommand_name == 'focusing':
                         sub = Focusing(f'{self.id}_{self.numb(id_next)}', self, pos=foc_list[ex-1])
                         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                         id_next += 1
 
-                    # Dithering start - kwarg dither=basic/1/3 kind/for_every_sub/distance_in_minutes
+                    # Dithering start - kwarg dither=basic/1/1 kind/for_every_sub/distance_in_minutes
                     if (subcommand_name == 'skyflat' and 'dither' not in self.kwargs.keys()) or \
                             (subcommand_name == 'skyflat' and self.kwargs['dither'] != 'none' ) or \
                              (subcommand_name != 'skyflat' and 'dither' in self.kwargs.keys()):
@@ -265,7 +266,7 @@ class Command(AbstractSequence):
                         if subcommand_name == 'skyflat' and 'dither' not in self.kwargs.keys():
                             dit_mode = 'basic'
                             for_every_sub = 1
-                            dit_dist = 3.0
+                            dit_dist = 1.0
                         else:
                             dit_lst = list(self.kwargs['dither'].split('/'))
                             dit_mode = str(dit_lst[0])
@@ -273,27 +274,40 @@ class Command(AbstractSequence):
                             dit_dist = float(dit_lst[2])
 
                         if ex % for_every_sub == 0:
+
                             if 'alt' and 'az' in self.kwargs.keys():
                                 # TODO get OCA values from settings
-                                OCA = {'latitude': '-24:35:53', 'longitude': '-70:11:47', 'elevation': '2817'}
-                                req_ra, req_dec = az_alt_2_ra_dec(alt=deg_str_to_deg(self.kwargs['alt']),
-                                                                          az=deg_str_to_deg(self.kwargs['az']),
-                                                                          latitude=deg_str_to_deg(OCA['latitude']),
-                                                                          longitude=deg_str_to_deg(OCA['longitude']),
-                                                                          elevation=float(OCA['elevation']))
+                                OCA = {'latitude': -24.598056, 'longitude': -70.196389, 'elevation': 2817}
+                                try:
+                                    az = float(self.kwargs["az"])
+                                    alt = float(self.kwargs["alt"])
+                                except ValueError:
+                                    try:
+                                        az = deg_str_to_deg(self.kwargs["az"])
+                                        alt = deg_str_to_deg(self.kwargs["alt"])
+                                    except ValueError:
+                                        az=None
+                                        alt=None
+                                        logger.error(f"Wrong az alt format")
+                                if az and alt:
+                                    req_ra_a, req_dec_a = az_alt_2_ra_dec(alt=alt,
+                                                                      az=az,
+                                                                      latitude=OCA['latitude'],
+                                                                      longitude=OCA['longitude'],
+                                                                      elevation=OCA['elevation'])
 
-                                sub = MountSlew(f'{self.id}_{self.numb(id_next)}',
-                                                self,
-                                                obj_name=obj_name,
-                                                ra=ra_to_sexagesimal(self.ra_random_dither(ra=req_ra,
-                                                                                           dith_val=dit_dist,
-                                                                                           mode=dit_mode)),
-                                                dec=dec_to_sexagesimal(self.dec_random_dither(dec=req_dec,
-                                                                                              dith_val=dit_dist,
-                                                                                              mode=dit_mode)),
-                                                                                              epoch='2000')
-                                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-                                id_next += 1
+                                    sub = MountSlew(f'{self.id}_{self.numb(id_next)}',
+                                                    self,
+                                                    obj_name=obj_name,
+                                                    ra=ra_to_sexagesimal(self.ra_random_dither(ra=req_ra_a,
+                                                                                               dith_val=dit_dist,
+                                                                                               mode=dit_mode)),
+                                                    dec=dec_to_sexagesimal(self.dec_random_dither(dec=req_dec_a,
+                                                                                                  dith_val=dit_dist,
+                                                                                                  mode=dit_mode)),
+                                                                                                  epoch='2000')
+                                    self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+                                    id_next += 1
 
                             elif req_ra and req_dec is not None:
                                 req_ra = ra_to_decimal(req_ra)
@@ -307,7 +321,7 @@ class Command(AbstractSequence):
                                                 dec=dec_to_sexagesimal(self.dec_random_dither(dec=req_dec,
                                                                                               dith_val=dit_dist,
                                                                                               mode=dit_mode)),
-                                                                                              epoch='2000')
+                                                epoch='2000')
                                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                                 id_next += 1
                             else:
@@ -330,7 +344,9 @@ class Command(AbstractSequence):
                         exp_t = 'a'
                     else:
                         exp_t = float(par[2])
-
+                    if req_ra_a and req_dec_a:
+                        req_ra = req_ra_a
+                        req_dec = req_dec_a
                     sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
                                          self,
                                          sub_exp=ex,

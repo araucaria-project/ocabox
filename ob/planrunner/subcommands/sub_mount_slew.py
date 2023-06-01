@@ -1,7 +1,8 @@
 import asyncio
 import logging
 from ob.planrunner.subcommand import SubCommand
-from pyaraucaria.coordinates import ra_to_decimal, dec_to_decimal, ra_dec_epoch, ra_dec_2_az_alt, deg_str_to_deg
+from pyaraucaria.coordinates import ra_to_decimal, dec_to_decimal, ra_dec_epoch, ra_dec_2_az_alt,\
+    deg_str_to_deg, ra_to_sexagesimal, dec_to_sexagesimal
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -14,8 +15,8 @@ class MountSlew(SubCommand):
         self.id = id
         self.mount = self.telescope.get_mount()
         self.kwargs = kwargs
-        self.ra_now: str or None = None
-        self.dec_now: str or None = None
+        self.ra_now: float or None = None
+        self.dec_now: float or None = None
         self.alt: float
         self.az: float
         self.started: bool = False
@@ -31,8 +32,8 @@ class MountSlew(SubCommand):
             dec = self.mount.declination
             slew = self.mount.slewing
             await asyncio.sleep(0.5)
-            if (abs(ra - ra_to_decimal(self.ra_now)) < 0.05) and \
-                    (abs(dec - dec_to_decimal(self.dec_now)) < 0.05) and (slew == False):
+            if (abs(ra - self.ra_now) < 0.05) and \
+                    (abs(dec - self.dec_now) < 0.05) and (slew == False):
                 break
 
     async def _wait_to_slew_alt_az(self) -> None:
@@ -55,7 +56,7 @@ class MountSlew(SubCommand):
         self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} OBJ:{self.kwargs["obj_name"]} started')
 
         # TODO This OCA should be taken from settings
-        OCA = {'latitude': '-24:35:53', 'longitude': '-70:11:47', 'elevation': '2817'}
+        OCA = {'latitude': -24.598056, 'longitude': -70.196389, 'elevation': 2817}
         # TODO mount_min_alt should be taken from settings
         mount_min_alt = 14.9
 
@@ -99,21 +100,20 @@ class MountSlew(SubCommand):
 
         elif 'ra' and 'dec' in self.kwargs.keys():
             logger.debug(f'{self.id} started --> RaDec')
-            self.ra_now, self.dec_now = ra_dec_epoch(ra=self.kwargs["ra"],
-                                                     dec=self.kwargs["dec"],
-                                                     latitude=OCA['latitude'],
-                                                     longitude=OCA['longitude'],
-                                                     elevation=OCA['elevation'],
+            self.ra_now, self.dec_now = ra_dec_epoch(ra=ra_to_decimal(self.kwargs["ra"]),
+                                                     dec=dec_to_decimal(self.kwargs["dec"]),
                                                      epoch=self.kwargs['epoch'])
+
             az, alt = ra_dec_2_az_alt(ra=self.ra_now,
                                       dec=self.dec_now,
                                       latitude=OCA['latitude'],
                                       longitude=OCA['longitude'],
                                       elevation=OCA['elevation'],
                                       epoch=self.kwargs['epoch'])
-            if deg_str_to_deg(alt) > mount_min_alt:
+
+            if alt > mount_min_alt:
                 await self.mount.aput_tracking(True)
-                await self.mount.aput_slewtocoo_async(ra_to_decimal(self.ra_now), dec_to_decimal(self.dec_now))
+                await self.mount.aput_slewtocoo_async(self.ra_now, self.dec_now)
                 await self._wait_to_slew_coo()
                 logger.info(f'{self.id} done')
                 self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')

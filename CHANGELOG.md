@@ -4,10 +4,10 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 ### Changed
 
-- Planrunner/sub_camera exposure array delay, fix some folders creation options
-- Planrunner/sub_change_filter changed timout
-- Planrunner/command added mirror covers on option, domeflat light on option, dark and bias now changing filters and put
-to  fits header, altaz2radec str->float
+- `Planrunner/sub_camera` exposure array delay, fix some folders creation options
+- `Planrunner/sub_change_filter` changed timout
+- `Planrunner/command` added mirror covers on option, domeflat light on option, dark and bias now changing filters and put
+to  fits header, get rid of str coo and location
 
 ## [1.0.12] - 2023-05-22
 ### Changed
