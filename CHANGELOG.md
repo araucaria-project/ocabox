@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - Fixed bug with callback executor in CycleQuery when stoping 
+- Fixed issues with `RequestSolver` not handling some error types.
 
 ## [1.0.11] - 2023-05-17
 ### Added

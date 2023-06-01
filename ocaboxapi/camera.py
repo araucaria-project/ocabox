@@ -134,8 +134,10 @@ class Camera(TelescopeComponent):
         return ret
 
     async def aget_offset(self) -> int:
-        logger.debug(f'Getting camera offset from {self.tel_addr}')
-        ret = await self.aget_value('offset')
+        # logger.debug(f'Getting camera offset from {self.tel_addr}')
+        logger.debug(f'Getting camera offset disabled, returns 0 ({self.tel_addr})')
+        # ret = await self.aget_value('offset')
+        ret = 0
         return ret
 
     async def asubscribe_offset(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
