@@ -3,8 +3,29 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 ### Added
+- added  `Observatory.is_tic_server_available`
 
+
+## [1.0.13] - 2023-06-02
 ### Changed
+- `Planrunner/sub_camera` exposure array delay, fix some folders creation options
+- `Planrunner/sub_change_filter` changed timout
+- `Planrunner/command` added mirror covers on option, domeflat light on option, dark and bias now changing filters and put
+to  fits header, get rid of str coo and location
+
+### Fixed
+- Handled aioHTTP exceptions in `TreeAlpacaObservatory`
+
+## [1.0.12] - 2023-05-22
+### Changed
+- planrunner command.py changed architecture for 3 methods: dark_bias, dome_flat, object_skyflat_focusing
+, dithering added, focusing method changed
+- planrunner sub_camera_exposure added folders creation for different commands, some minor changes
+- After receiving from the server an error terminating the CycleQuery, the callbacks will be run one last time.
+
+### Fixed
+- Fixed bug with callback executor in CycleQuery when stoping 
+- Fixed issues with `RequestSolver` not handling some error types.
 
 ## [1.0.11] - 2023-05-17
 ### Added
@@ -198,4 +219,4 @@ This allows you to subscribe to these values
 
 [Unreleased]: https://github.com/araucaria-project/ocabox
 
-[1.0.8]: https://github.com/araucaria-project/ocabox
+[1.0.13]: https://github.com/araucaria-project/ocabox

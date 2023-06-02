@@ -298,6 +298,7 @@ tree:
 
 
 
+LOG_LEVEL: WARNING
 
 OCABOX_BUILD_FILE_NAME: "tree_build_oca.py"
 
