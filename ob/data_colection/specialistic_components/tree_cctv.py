@@ -131,10 +131,13 @@ class UnifiProtectApiSingleton:
             return await self.refresh_initialization()
 
     def _handle_websocket_message(self, msg):
-        # from pyunifiprotect.data import WSSubscriptionMessage
-        # msg: WSSubscriptionMessage = msg
-        if msg.action == 'update':
-            self._logger.info(f'Websocket update, changed: {msg.changed_data}')
+        from pyunifiprotect.data import WSSubscriptionMessage
+        msg: WSSubscriptionMessage = msg
+        try:
+            c = msg.changed_data['isp_settings']['ir_led_mode']
+            self._logger.info(f'Websocket update, IR LED changed to: {c}')
+        except LookupError:
+            pass
 
     async def close(self):
         if self._protect_client is not None:
