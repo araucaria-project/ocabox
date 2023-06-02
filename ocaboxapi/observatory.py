@@ -249,6 +249,17 @@ class Observatory():
         except asyncio.TimeoutError:
             pass
 
+    async def is_tic_server_available(self, request_timeout: float = None):
+        """
+        The method checks if the server responds
+
+        :param request_timeout: waiting for answer timeout
+        :return: True if server responds
+        """
+        return await self._client.server_is_alive(request_timeout=request_timeout)
+
+
+
     async def subscribe_async_old(self, address: str, callback,
                               time_of_data_tolerance: float | None = None,
                               delay: float | None = None,

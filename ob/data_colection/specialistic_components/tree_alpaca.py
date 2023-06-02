@@ -14,6 +14,7 @@ from ob.data_colection.resource_manager.resource_manager import ResourceManagerA
 from ob.data_colection.value import Value, TreeValueError
 from ob.data_colection.value_call import ValueRequest
 from ob.util_functions.asyncio_util_functions import wait_for_psce
+from aiohttp.client_exceptions import ServerDisconnectedError, ClientConnectionError, ServerConnectionError
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -138,6 +139,12 @@ class TreeAlpacaObservatory(TreeBaseProvider):
             # when given arguments is wrong
             logger.warning(f"Alpaca driver get wrong arguments to run function")
             raise AddressError(address=address, code=1003, message=f"Wrong arguments for method")
+        except ServerConnectionError as e:
+            logger.warning(f"AioHTTP error throw error {str(e)} for request {address}")
+            raise TreeValueError(address=None, code=2002, message=str(e), severity=TreeOtherError.SEVERITY_TEMPORARY)
+        except ClientConnectionError as e:
+            logger.warning(f"AioHTTP error throw error {str(e)} for request {address}")
+            raise TreeValueError(address=None, code=2002, message=str(e))
         return Value(result, time.time())
 
     def get_resources(self):
