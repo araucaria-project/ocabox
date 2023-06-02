@@ -2,6 +2,9 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+
+
+## [1.0.13] - 2023-06-02
 ### Changed
 - `Planrunner/sub_camera` exposure array delay, fix some folders creation options
 - `Planrunner/sub_change_filter` changed timout
@@ -214,4 +217,4 @@ This allows you to subscribe to these values
 
 [Unreleased]: https://github.com/araucaria-project/ocabox
 
-[1.0.8]: https://github.com/araucaria-project/ocabox
+[1.0.13]: https://github.com/araucaria-project/ocabox
