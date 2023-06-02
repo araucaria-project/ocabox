@@ -25,11 +25,11 @@ class MountSlew(SubCommand):
                          started=self.started, done=self.done, skipped=self.skipped, **kwargs)
 
     async def _wait_to_slew_coo(self, ra_in: float, dec_in: float) -> None:
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.5)
         while True:
             ra = await self.mount.aget_ra()
-            dec = self.mount.aget_dec()
-            slew = self.mount.aget_slewing()
+            dec = await self.mount.aget_dec()
+            slew = await self.mount.aget_slewing()
             await asyncio.sleep(0.5)
             if (abs(ra - ra_in) > 359.95 or (abs(ra - ra_in) < 0.05))\
                     and (abs(dec - dec_in) < 0.05) and (slew == False):
@@ -115,8 +115,8 @@ class MountSlew(SubCommand):
             logger.info(f'{self.id} alt:{alt}')
             if alt > mount_min_alt:
                 await self.mount.aput_tracking(True)
-                await self.mount.aput_slewtocoo_async(ra=self.ra_now, dec=self.dec_now)
-                await self._wait_to_slew_coo(ra_in=self.ra_now, dec_in=self.dec_now)
+                await self.mount.aput_slewtocoo_async(ra=float(self.ra_now), dec=float(self.dec_now))
+                await self._wait_to_slew_coo(ra_in=float(self.ra_now), dec_in=float(self.dec_now))
                 logger.info(f'{self.id} done')
                 self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
                 self.info_callback['stream_5'](f'{self.id}')

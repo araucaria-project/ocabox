@@ -108,8 +108,8 @@ class DomeSlew(SubCommand):
     async def _wait_to_slew(self, azimuth) -> None:
 
         while True:
-            dome_az = self.dome.azimuth
-            dome_slewing = self.dome.slewing
+            dome_az = await self.dome.aget_az()
+            dome_slewing = await self.dome.aget_slewing()
             await asyncio.sleep(0.5)
             if dome_az is not None and dome_slewing==False:
                 if (abs(azimuth - float(dome_az)))<2.0 or (abs(azimuth - float(dome_az)))>358.0:
