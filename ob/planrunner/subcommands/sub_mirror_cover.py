@@ -44,7 +44,7 @@ class MirrorCover(SubCommand):
                     pass
                 else:
                     await self.mount.aput_opencover()
-                await self._wait_for_move(expected_status="3")
+                    await self._wait_for_move(expected_status="3")
                 self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
                 logger.info(f'{self.id} done')
                 self.info_callback['stream_5'](f'{self.id}')
@@ -58,7 +58,7 @@ class MirrorCover(SubCommand):
                     pass
                 else:
                     await self.mount.aput_closecover()
-                await self._wait_for_move(expected_status="1")
+                    await self._wait_for_move(expected_status="1")
                 logger.info(f'{self.id} done')
                 self.done = True
                 self.info_callback['exec_json'](self.exec_json())
@@ -68,4 +68,4 @@ class MirrorCover(SubCommand):
         self.skipped = True
         self.info_callback['exec_json'](self.exec_json())
         logger.info(f'{self.id} skipped')
-        return 1
+        return 0

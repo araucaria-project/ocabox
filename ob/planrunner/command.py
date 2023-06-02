@@ -8,8 +8,7 @@ from ob.planrunner.subcommands.sub_camera_exposure import CameraExposure
 from ob.planrunner.subcommands.sub_mirror_cover import MirrorCover
 from ob.planrunner.subcommands.sub_dome_screenlight import DomeScreenLight
 from ob.planrunner.subcommands.sub_focusing import Focusing
-from pyaraucaria.coordinates import az_alt_2_ra_dec, ra_to_decimal, ra_to_sexagesimal,\
-    dec_to_decimal, dec_to_sexagesimal, deg_str_to_deg
+from pyaraucaria.coordinates import az_alt_2_ra_dec, ra_to_decimal, dec_to_decimal, deg_to_decimal_deg, ra_dec_2_az_alt
 import random
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -89,8 +88,8 @@ class Command(AbstractSequence):
         # TODO turn on domeflat lamp, set brightness (value also from some config? or kwarg?)
         # TODO get Alt Az domeflat position from some config
         dome_az = 0.0
+        tel_flat_az = dome_az + 180
         dome_flat_alt = 15.0
-
         sub = DomeSlew(f'{self.id}_{self.numb(id_next)}', self, az=dome_az)
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
         id_next += 1
@@ -99,7 +98,7 @@ class Command(AbstractSequence):
                         self,
                         obj_name='domeflat',
                         alt=dome_flat_alt,
-                        az=dome_az+180,
+                        az=tel_flat_az,
                         tracking=False,
                         epoch='2000'
                         )
@@ -181,8 +180,8 @@ class Command(AbstractSequence):
             sub = MountSlew(f'{self.id}_{self.numb(id_next)}',
                             self,
                             obj_name=obj_name,
-                            ra=req_ra,
-                            dec=req_dec,
+                            ra=ra_to_decimal(req_ra),
+                            dec=dec_to_decimal(req_dec),
                             epoch='2000')
             self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
             id_next += 1
@@ -250,11 +249,11 @@ class Command(AbstractSequence):
                     focus_id = random.randrange(0,100000)
 
                 for ex in range(1, sub_numb+1):
-                    req_ra_a = None
-                    req_dec_a = None
+                    ra_dit = None
+                    dec_dit = None
                     # If focusing, set focuser position
                     if subcommand_name == 'focusing':
-                        sub = Focusing(f'{self.id}_{self.numb(id_next)}', self, pos=foc_list[ex-1])
+                        sub = Focusing(f'{self.id}_{self.numb(id_next)}', self, position=foc_list[ex-1])
                         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                         id_next += 1
 
@@ -283,44 +282,39 @@ class Command(AbstractSequence):
                                     alt = float(self.kwargs["alt"])
                                 except ValueError:
                                     try:
-                                        az = deg_str_to_deg(self.kwargs["az"])
-                                        alt = deg_str_to_deg(self.kwargs["alt"])
+                                        az = deg_to_decimal_deg(self.kwargs["az"])
+                                        alt = deg_to_decimal_deg(self.kwargs["alt"])
                                     except ValueError:
                                         az=None
                                         alt=None
                                         logger.error(f"Wrong az alt format")
-                                if az and alt:
+                                if isinstance(az, float) and isinstance(az, float):
                                     req_ra_a, req_dec_a = az_alt_2_ra_dec(alt=alt,
                                                                       az=az,
                                                                       latitude=OCA['latitude'],
                                                                       longitude=OCA['longitude'],
                                                                       elevation=OCA['elevation'])
-
+                                    ra_dit = self.ra_random_dither(ra=req_ra_a, dith_val=dit_dist, mode=dit_mode)
+                                    dec_dit = self.ra_random_dither(ra=req_ra_a, dith_val=dit_dist, mode=dit_mode)
                                     sub = MountSlew(f'{self.id}_{self.numb(id_next)}',
                                                     self,
                                                     obj_name=obj_name,
-                                                    ra=ra_to_sexagesimal(self.ra_random_dither(ra=req_ra_a,
-                                                                                               dith_val=dit_dist,
-                                                                                               mode=dit_mode)),
-                                                    dec=dec_to_sexagesimal(self.dec_random_dither(dec=req_dec_a,
-                                                                                                  dith_val=dit_dist,
-                                                                                                  mode=dit_mode)),
-                                                                                                  epoch='2000')
+                                                    ra=ra_dit,
+                                                    dec=dec_dit,
+                                                    epoch='2000')
                                     self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                                     id_next += 1
 
                             elif req_ra and req_dec is not None:
                                 req_ra = ra_to_decimal(req_ra)
                                 req_dec = dec_to_decimal(req_dec)
+                                ra_dit = self.ra_random_dither(ra=req_ra, dith_val=dit_dist, mode=dit_mode)
+                                dec_dit = self.dec_random_dither(dec=req_dec, dith_val=dit_dist, mode=dit_mode)
                                 sub = MountSlew(f'{self.id}_{self.numb(id_next)}',
                                                 self,
                                                 obj_name=obj_name,
-                                                ra=ra_to_sexagesimal(self.ra_random_dither(ra=req_ra,
-                                                                                           dith_val=dit_dist,
-                                                                                           mode=dit_mode)),
-                                                dec=dec_to_sexagesimal(self.dec_random_dither(dec=req_dec,
-                                                                                              dith_val=dit_dist,
-                                                                                              mode=dit_mode)),
+                                                ra=ra_dit,
+                                                dec=dec_dit,
                                                 epoch='2000')
                                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                                 id_next += 1
@@ -344,9 +338,9 @@ class Command(AbstractSequence):
                         exp_t = 'a'
                     else:
                         exp_t = float(par[2])
-                    if req_ra_a and req_dec_a:
-                        req_ra = req_ra_a
-                        req_dec = req_dec_a
+                    if ra_dit and ra_dit:
+                        req_ra = ra_dit
+                        req_dec = dec_dit
                     sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
                                          self,
                                          sub_exp=ex,

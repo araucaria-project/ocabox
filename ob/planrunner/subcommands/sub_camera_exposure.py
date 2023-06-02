@@ -21,8 +21,6 @@ class CameraExposure(SubCommand):
         self.started: bool = False
         self.done: bool = False
         self.skipped: bool = False
-        super().__init__(id=id, parent=parent, subcommand_name=subcommand_name,
-                         started=self.started, done=self.done, skipped=self.skipped, **kwargs)
         self.subcommand_name = subcommand_name
         self.telescope = parent.telescope
         self.mount = self.telescope.get_mount()
@@ -50,14 +48,15 @@ class CameraExposure(SubCommand):
 
     @staticmethod
     def _mk_folder(folder: str):
-        try:
-            os.makedirs(folder, exist_ok=True)
-            logger.info(f'Creating folder {folder}')
-        except Exception as e:
-            logger.warning(
-                f'Folder creation failed, please create folder {folder} manually '
-                f'or adjust config key "app.base_fits_dir". Error: {e}'
-            )
+        if not os.path.exists(folder):
+            try:
+                os.makedirs(folder, exist_ok=True)
+                logger.info(f'Creating folder {folder}')
+            except Exception as e:
+                logger.warning(
+                    f'Folder creation failed, please create folder {folder} manually '
+                    f'or adjust config key "app.base_fits_dir". Error: {e}'
+                )
 
     @staticmethod
     def _mk_symlink(target: str, symlink: str):
@@ -229,7 +228,6 @@ class CameraExposure(SubCommand):
 
     async def _wait_for_subexposure(self, sub_time: float) -> None:
         logger.info(f'_wait_for_subexposure started')
-        get_array_delay = self.telescope.observatory.get_app_cfg('get_array_delay', 0.0)
         # TODO In final version, i.e. on server-side exposures, I would avoid asyncio.sleep and subscibe on imagerady
         #  and camerastate. (exposures may be aborted earlier, no imagerady then)
         if sub_time >= 0.5:
@@ -237,14 +235,13 @@ class CameraExposure(SubCommand):
         else:
             sub_t = 0.5
         await asyncio.sleep(int(sub_t))
-        logger.info(f'_wait_for_subexposure subexposure_done get_array_delay:{get_array_delay} done')
         while True:
             # subexposure_done = self.camera.imageready
             subexposure_done = await self.camera.aget_imageready()
             if subexposure_done is True:
                 logger.info(f'_wait_for_subexposure subexposure_done is True')
                 break
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.1)
 
     async def arun(self, step_id: str or None = None) -> int:
         logger.info(f'{self.id} started')
@@ -337,5 +334,5 @@ class CameraExposure(SubCommand):
         logger.info(f'{self.id} done')
         self.done = True
         self.info_callback['exec_json'](self.exec_json())
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.2)
         return 0

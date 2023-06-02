@@ -2,8 +2,7 @@ import asyncio
 import logging
 from ob.planrunner.subcommand import SubCommand
 import math
-from pyaraucaria.coordinates import site_sidereal_time, deg_str_to_deg, hourangle_to_decimal_deg,\
-    ra_dec_2_az_alt, ra_to_sexagesimal, dec_to_sexagesimal
+from pyaraucaria.coordinates import site_sidereal_time, ra_dec_2_az_alt
 
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -52,7 +51,7 @@ class DomeSlew(SubCommand):
         logger.info(f'Dome_eq_azimuth az:{az}')
 
         # Calculating dome vector
-        az_rad = math.radians(deg_str_to_deg(az))
+        az_rad = math.radians(az)
         vector_dome_x = math.sin(az_rad) * r_dome
         vector_dome_y = math.cos(az_rad) * r_dome
         vector_dome = [vector_dome_x, vector_dome_y]
