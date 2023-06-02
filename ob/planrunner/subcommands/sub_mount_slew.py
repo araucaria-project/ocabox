@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from ob.planrunner.subcommand import SubCommand
-from pyaraucaria.coordinates import ra_to_decimal, dec_to_decimal, ra_dec_epoch, ra_dec_2_az_alt, deg_str_to_deg
+from pyaraucaria.coordinates import ra_dec_epoch, ra_dec_2_az_alt, deg_to_decimal_deg
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -14,8 +14,8 @@ class MountSlew(SubCommand):
         self.id = id
         self.mount = self.telescope.get_mount()
         self.kwargs = kwargs
-        self.ra_now: str or None = None
-        self.dec_now: str or None = None
+        self.ra_now: float or None = None
+        self.dec_now: float or None = None
         self.alt: float
         self.az: float
         self.started: bool = False
@@ -24,29 +24,31 @@ class MountSlew(SubCommand):
         super().__init__(id=id, parent=parent, subcommand_name=subcommand_name,
                          started=self.started, done=self.done, skipped=self.skipped, **kwargs)
 
-    async def _wait_to_slew_coo(self) -> None:
-        await asyncio.sleep(1)
+    async def _wait_to_slew_coo(self, ra_in: float, dec_in: float) -> None:
+        await asyncio.sleep(0.5)
         while True:
-            ra = self.mount.rightascension
-            dec = self.mount.declination
-            slew = self.mount.slewing
+            ra = await self.mount.aget_ra()
+            dec = await self.mount.aget_dec()
+            slew = await self.mount.aget_slewing()
             await asyncio.sleep(0.5)
-            if (abs(ra - ra_to_decimal(self.ra_now)) < 0.05) and \
-                    (abs(dec - dec_to_decimal(self.dec_now)) < 0.05) and (slew == False):
+            if (abs(ra - ra_in) > 359.95 or (abs(ra - ra_in) < 0.05))\
+                    and (abs(dec - dec_in) < 0.05) and (slew == False):
                 break
 
-    async def _wait_to_slew_alt_az(self) -> None:
-        await asyncio.sleep(1)
+    async def _wait_to_slew_alt_az(self, az_in: float, alt_in: float) -> None:
+        await asyncio.sleep(0.5)
         while True:
-            az = self.mount.azimuth
-            alt = self.mount.altitude
-            slew = self.mount.slewing
-            await asyncio.sleep(0.5)
-            if (abs(az - self.az)<1) and (abs(alt - self.alt)<1) and (slew == False):
+            az = await self.mount.aget_az()
+            alt = await self.mount.aget_alt()
+            slew = await self.mount.aget_slewing()
+
+            if ((abs(az - az_in) > 359.0) or (abs(az - az_in)<1.0)) and (abs(alt - alt_in)<1.0) and (slew == False):
                 await self.mount.aput_tracking(False)
-                await self.mount.aput_slewtoaltaz_async(self.az, self.alt)
+                await self.mount.aput_slewtoaltaz_async(az=az_in, alt=alt_in)
+                await asyncio.sleep(0.5)
                 await self.mount.aput_tracking(False)
                 break
+            await asyncio.sleep(0.1)
 
     async def arun(self, step_id: str or None = None) -> int:
         self.started = True
@@ -55,7 +57,7 @@ class MountSlew(SubCommand):
         self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} OBJ:{self.kwargs["obj_name"]} started')
 
         # TODO This OCA should be taken from settings
-        OCA = {'latitude': '-24:35:53', 'longitude': '-70:11:47', 'elevation': '2817'}
+        OCA = {'latitude': -24.598056, 'longitude': -70.196389, 'elevation': 2817}
         # TODO mount_min_alt should be taken from settings
         mount_min_alt = 14.9
 
@@ -66,18 +68,19 @@ class MountSlew(SubCommand):
                 self.alt = float(self.kwargs["alt"])
             except ValueError:
                 try:
-                    self.az = deg_str_to_deg(self.kwargs["az"])
-                    self.alt = deg_str_to_deg(self.kwargs["alt"])
+                    self.az = deg_to_decimal_deg(self.kwargs["az"])
+                    self.alt = deg_to_decimal_deg(self.kwargs["alt"])
                 except ValueError:
                     self.skipped = True
                     self.info_callback['exec_json'](self.exec_json())
                     logger.error(f"Wrong az alt format")
                     return 1
             if self.alt > mount_min_alt:
+                logger.info(f'{self.id} alt:{self.alt}')
                 await self.mount.aput_tracking(False)
-                await self.mount.aput_slewtoaltaz_async(self.az, self.alt)
+                await self.mount.aput_slewtoaltaz_async(az=self.az, alt=self.alt)
                 await self.mount.aput_tracking(False)
-                await self._wait_to_slew_alt_az()
+                await self._wait_to_slew_alt_az(az_in=self.az, alt_in=self.alt)
                 if "tracking" in self.kwargs.keys():
                     await asyncio.sleep(5)
                     await self.mount.aput_tracking(self.kwargs["tracking"])
@@ -101,20 +104,19 @@ class MountSlew(SubCommand):
             logger.debug(f'{self.id} started --> RaDec')
             self.ra_now, self.dec_now = ra_dec_epoch(ra=self.kwargs["ra"],
                                                      dec=self.kwargs["dec"],
-                                                     latitude=OCA['latitude'],
-                                                     longitude=OCA['longitude'],
-                                                     elevation=OCA['elevation'],
                                                      epoch=self.kwargs['epoch'])
+
             az, alt = ra_dec_2_az_alt(ra=self.ra_now,
                                       dec=self.dec_now,
                                       latitude=OCA['latitude'],
                                       longitude=OCA['longitude'],
                                       elevation=OCA['elevation'],
                                       epoch=self.kwargs['epoch'])
-            if deg_str_to_deg(alt) > mount_min_alt:
+            logger.info(f'{self.id} alt:{alt}')
+            if alt > mount_min_alt:
                 await self.mount.aput_tracking(True)
-                await self.mount.aput_slewtocoo_async(ra_to_decimal(self.ra_now), dec_to_decimal(self.dec_now))
-                await self._wait_to_slew_coo()
+                await self.mount.aput_slewtocoo_async(ra=float(self.ra_now), dec=float(self.dec_now))
+                await self._wait_to_slew_coo(ra_in=float(self.ra_now), dec_in=float(self.dec_now))
                 logger.info(f'{self.id} done')
                 self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
                 self.info_callback['stream_5'](f'{self.id}')

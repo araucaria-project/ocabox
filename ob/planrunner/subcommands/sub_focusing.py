@@ -27,7 +27,7 @@ class Focusing(SubCommand):
         focuser_value = 5
         while True:
             await asyncio.sleep(0.5)
-            foc_position = self.focuser.position
+            foc_position = await self.focuser.aget_position()
             if foc_position is not None:
                 if (abs(int(foc_position) - int(position))) < focuser_value:
                     break
@@ -36,8 +36,8 @@ class Focusing(SubCommand):
         self.started = True
         logger.info(f'{self.id} started')
         self.info_callback['exec_json'](self.exec_json())
-        if 'pos' in self.kwargs.keys():
-            position = self.kwargs['pos']
+        if 'position' in self.kwargs.keys():
+            position = self.kwargs['position']
             self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} moving to {position}')
             logger.debug(f'{self.id} {self.subcommand_name} moving to {position}')
             await self.focuser.aput_move(int(position))
