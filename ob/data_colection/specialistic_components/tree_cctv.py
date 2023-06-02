@@ -53,6 +53,10 @@ class UnifiProtectApiSingleton:
         logger.propagate = True
         logger.info(f'Added Handler for this log to write to {handler.baseFilename}')
         cls._logger.info(f'Log is maintenance-free rotating-log')
+        # Redirecting pyunifiprotect.data.bootstrap logger to our logger
+        logging.getLogger('pyunifiprotect.data.bootstrap').addHandler(handler)
+        logging.getLogger('pyunifiprotect.data.bootstrap').propagate = False
+
 
     def __new__(cls):
         cls.create_logger()
