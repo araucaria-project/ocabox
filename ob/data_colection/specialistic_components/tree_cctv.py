@@ -131,7 +131,10 @@ class UnifiProtectApiSingleton:
             return await self.refresh_initialization()
 
     def _handle_websocket_message(self, msg):
-        logger.info(f'Websocket message: {msg}')
+        # from pyunifiprotect.data import WSSubscriptionMessage
+        # msg: WSSubscriptionMessage = msg
+        if msg.action == 'update':
+            self._logger.info(f'Websocket update, changed: {msg.changed_data}')
 
     async def close(self):
         if self._protect_client is not None:
