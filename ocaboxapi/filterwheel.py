@@ -2,6 +2,7 @@ from __future__ import annotations
 import logging
 from typing import Callable, Dict, List
 from ocaboxapi.telescopecomponent import TelescopeComponent, OcaBoxParam
+import time
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -42,7 +43,7 @@ class FilterWheel(TelescopeComponent):
 
     async def aput_position(self, pos: int) -> None:
         logger.debug(f'Putting filterwheel position to {self.tel_addr}')
-        await self.aput_value('position', Position=pos)
+        await self.aput_value('position', Position=pos, request_timeout=time.time() + 120)
 
     # I would not name it `aget_names_temp`, just `aget_names`. Then everybody can use it and will not notice
     # the change in the implementation.
