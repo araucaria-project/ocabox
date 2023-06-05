@@ -4,7 +4,8 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 ### Added
 - added  `Observatory.is_tic_server_available`
-
+- added `TreeOcaboxController` controller for administrating tasks
+- possibility to change loglevel in the fly
 
 ## [1.0.13] - 2023-06-02
 ### Changed

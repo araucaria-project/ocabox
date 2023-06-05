@@ -9,6 +9,7 @@ from ob.data_colection.specialistic_components.tree_blocker_access_grantor impor
 from ob.data_colection.specialistic_components.tree_cache_observatory import TreeCache
 from ob.data_colection.specialistic_components.tree_cctv import TreeCCTV
 from ob.data_colection.specialistic_components.tree_conditional_freezer import TreeConditionalFreezer
+from ob.data_colection.specialistic_components.tree_controller import TreeOcaboxController
 from ob.data_colection.specialistic_components.tree_ephemeris import TreeEphemeris
 from ob.data_colection.specialistic_components.tree_plan_executor import TreePlanExecutor
 
@@ -18,8 +19,9 @@ def tree_build() -> Router:
 
     # --------------------------------------- global ---------------------------------------
     ephemeris = TreeEphemeris('ephemeris', 'ephemeris')
+    controller = TreeOcaboxController('tic-controller', 'admin')
     broker_components_global = TreeBaseBrokerDefaultTarget('broker-components-global',
-                                                         [ephemeris],
+                                                         [ephemeris, controller],
                                                          default_provider=None)
     cache_global = TreeCache('cache-global', broker_components_global)
     conditional_freezer_global = TreeConditionalFreezer('conditional-freezer-global', cache_global)

@@ -15,6 +15,7 @@ from ob.comunication.comunication_error import CommunicationTimeoutError, Commun
 
 from ocaboxapi import ClientAPI
 from ocaboxapi.exceptions import OcaboxServerError, OcaboxAccessDenied
+from ocaboxapi.ticserver import TicServer
 
 if TYPE_CHECKING:
     from ocaboxapi.telescope import Telescope
@@ -32,6 +33,7 @@ class Observatory():
         self.software_id = software_id
         self.telescopes = {}
         self.ephemeris = None
+        self.tic_admin = None
         self._subscribers = []
         super().__init__()
 
@@ -105,6 +107,13 @@ class Observatory():
             from ocaboxapi.ephemeris import Ephemeris
             self.ephemeris = Ephemeris(id='global.ephemeris', observatory=self)
         return self.ephemeris
+
+    def get_tic_admin(self) -> TicServer:
+        """Gets TIC server"""
+        if self.tic_admin is None:
+            from ocaboxapi.ticserver import TicServer
+            self.tic_admin = TicServer(id='admin', observatory=self)
+        return self.tic_admin
 
     async def put_async(self, address: str,
                         time_of_data: float or None = None,

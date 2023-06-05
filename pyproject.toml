@@ -3,7 +3,12 @@ name = "ocabox"
 version = "1.0.13"
 license = "MIT"
 description = ""
-authors = ["Ernest Lasek <elasek@akond.com>, Mikołaj Kałuszyński <mkalusz@camk.edu.pl>"]
+authors = [
+    "Ernest Lasek <elasek@akond.com>",
+    "Mikołaj Kałuszyński <mkalusz@camk.edu.pl>",
+    "Mirosław Kicia",
+    "Marek Górski"
+]
 readme = "README.md"
 repository = "https://github.com/araucaria-project/ocabox"
 keywords = ["ocabox"]
@@ -35,6 +40,7 @@ pyunifiprotect = "^4.9.0"
 examples = ["qasync", "PyQt5"]
 develop = ['pylint', 'graphviz']
 jupyter = ["jupyter", "requests"]
+# server = ["pyunifiprotect"]
 
 
 [tool.poetry.scripts]
@@ -42,6 +48,11 @@ tests = "test.run_tests:main"
 cmd_client = "ob.cmd_client:main"
 cmd_simple_client = "ob.cmd_simple_client:main"
 server = "ob.main:main"
+
+[tool.poetry.urls]
+"OCA url" = "tcp://tic.oca.lan:5558"
+
+
 
 [build-system]
 requires = ["poetry-core"]
