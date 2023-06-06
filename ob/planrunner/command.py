@@ -295,7 +295,7 @@ class Command(AbstractSequence):
                                                                       longitude=OCA['longitude'],
                                                                       elevation=OCA['elevation'])
                                     ra_dit = self.ra_random_dither(ra=req_ra_a, dith_val=dit_dist, mode=dit_mode)
-                                    dec_dit = self.ra_random_dither(ra=req_ra_a, dith_val=dit_dist, mode=dit_mode)
+                                    dec_dit = self.dec_random_dither(dec=req_ra_a, dith_val=dit_dist, mode=dit_mode)
                                     sub = MountSlew(f'{self.id}_{self.numb(id_next)}',
                                                     self,
                                                     obj_name=obj_name,
