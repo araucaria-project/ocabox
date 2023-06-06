@@ -256,7 +256,7 @@ class Observatory():
         :param request_timeout: waiting for answer timeout
         :return: True if server responds
         """
-        return await self._client.server_is_alive(request_timeout=request_timeout)
+        return await self.client.server_is_alive(request_timeout=request_timeout)
 
 
 
