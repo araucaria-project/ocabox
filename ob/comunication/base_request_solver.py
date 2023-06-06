@@ -65,7 +65,7 @@ class BaseRequestSolver(ABC):
             coroutines.append(self.get_single_answer_internal(r, timeout=timeout))
         result = await asyncio.gather(*coroutines, return_exceptions=True)
         for r in result:
-            if isinstance(r, bytes):
+            if isinstance(r, ValueResponse):
                 response.append(r)
             elif isinstance(r, BaseException):
                 logger.error(f"CRITICAL One of the sub-tasks raise some unresolved exception - {r}.")
