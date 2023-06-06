@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from abc import ABC
-from typing import Callable, Optional, List
+from typing import Callable, Optional, List, Tuple
 
 from pyaraucaria.coordinates import deg_str_to_deg, ra_dec_epoch, ra_dec_2_az_alt, dec_to_decimal, ra_to_decimal, \
     ra_to_sexagesimal
@@ -107,17 +107,19 @@ class Resource(ABC):
         return alt_, az_
 
     class Position:
-        def __init__(self, address, t=None, s=None, c=None):
+        def __init__(self, address, t=None, s=None, c=None, timeout=None):
             self._target = t
             self._start = s
             self._current = c
             self.custom_end_condition: Optional[Callable] = None
-            self.is_moving = False
             self.error = False
             self.error_content = None
             self.task = None
             self._address = address
             self._finish_fut = None
+            self.timeout = timeout if timeout is not None else 20
+            # ------ optional -------
+            self.bounds: Tuple[Optional[float], Optional[float]] = (None, None)
 
         @property
         def start(self):
@@ -143,13 +145,42 @@ class Resource(ABC):
         def target(self, t):
             self._target = t
 
-        def check_finish(self):
+        def _check_finish(self):
+            """
+            Method check current value is achieved target.
+
+            :raise ValueError
+            :return: bool
+            """
             if self.custom_end_condition is not None and callable(self.custom_end_condition):
                 return self.custom_end_condition(self.start, self.current, self.target)
+            print(self.start, self.current, self.target)
             if self.current == self.target:
                 return True
             else:
                 return False
+
+        def _check_finish_bounded(self):
+            """
+            Method check current value is achieved target witch bounds.
+
+            :raise ValueError
+            :return: bool
+            """
+            try:
+                t = float(self.target)
+                c = float(self.current)
+            except ValueError:
+                return
+            bound_btm = self.bounds[0]
+            bound_top = self.bounds[1]
+            if self.target-bound_btm < self.current < self.target+bound_top:
+                return True
+            else:
+                return False
+
+        def done(self):
+            return self._finish_fut.done()
 
         @property
         def progress(self) -> float:
@@ -177,9 +208,7 @@ class Resource(ABC):
             else:
                 return float(0)
 
-        async def coro(self, api):
-            if self._finish_fut is None:
-                self._finish_fut = asyncio.Future()
+        async def _coro(self, api):
             CQ = await api.subscribe(address=self._address,
                                      time_of_data_tolerance=0.3, delay=0.1)
             CQ.start()
@@ -189,7 +218,6 @@ class Resource(ABC):
                     try:
                         result = await CQ.get_response()
                     except CommunicationRuntimeError:
-                        self.is_moving = False
                         self.error = True
                         self._finish_fut.set_result(False)
                         return
@@ -203,18 +231,33 @@ class Resource(ABC):
                         if self.start is None:
                             self.start = single_result.value.v
                         self.current = single_result.value.v
-                        if self.check_finish():
+                        try:
+                            res = self._check_finish()
+                        except Exception as e:
+                            self.error = True
+                            self.error_content = str(e)
+                            self._finish_fut.set_result(False)
+                            return
+                        if res:
                             self._finish_fut.set_result(True)
                     else:
                         self.error = True
                         self._finish_fut.set_result(False)
                         return
             finally:
+                if not self._finish_fut.done():
+                    self._finish_fut.set_result(False)
                 await CQ.stop_and_wait()
 
         async def wait(self):
             if self._finish_fut is not None:
                 await self._finish_fut
+
+        async def run(self, api):
+            if self.task:
+                self.task.cancel()
+            self._finish_fut = asyncio.get_running_loop().create_future()
+            self.task = asyncio.create_task(wait_for_psce(self._coro(api=api), timeout=self.timeout))
 
     class Move:
         def __init__(self, api):
@@ -225,8 +268,9 @@ class Resource(ABC):
             self._api = api
 
         async def watch(self):
+            self.is_slewing = True
             for p in self.positions:
-                p.task = asyncio.create_task(p.coro(api=self._api))
+                await p.run(api=self._api)
 
         @property
         def progress(self):
@@ -241,9 +285,9 @@ class Resource(ABC):
                 suma += p.progress  # can raise ValueError
             return suma / len(self.positions)
 
-        def check_finish(self):
+        def done(self):
             for p in self.positions:
-                if not p.check_finish():
+                if not p.done():
                     return False
             return True
 
@@ -298,176 +342,6 @@ class DomeAlpaca(Resource):
             raise ResourceCommandError("Action has error status in response")
 
 
-class MountAlpaca_v1(Resource):
-    RESOURCE_NAME = StandardTelescopeComponents.MOUNT
-
-    def __init__(self, source_name: str, resource_name: str, nr: int, target_request, properties: dict = None,
-                 address_path: str = "", **kwargs) -> None:
-        super().__init__(source_name=source_name, resource_name=resource_name, nr=nr, target_request=target_request,
-                         properties=properties, address_path=address_path, **kwargs)
-
-    async def _wait_for_ra(self, ra, api: InternalClientAPI = None, timeout: int = 20, **kwargs):
-        if api is None:
-            api = InternalClientAPI(request_solver=self._target, user_name=f"Default_{self.__class__.__name__}")
-
-        command = "rightascension"
-
-        async def condi(val):
-            if val == ra:
-                return True
-            return False
-
-        fut, cq = await self._subscription_pack(api, condi, command)
-        try:
-            await wait_for_psce(fut, timeout=timeout)
-            if fut.done() and fut.result() is False:
-                raise ResourceCommandError("Unexpected error when waiting for subscription")
-            else:
-                pass
-        except asyncio.TimeoutError:
-            raise ResourceCommandError("To long waiting for action")
-        finally:
-            await cq.stop_and_wait()
-        return True
-
-    async def _wait_for_dec(self, dec, api: InternalClientAPI = None, timeout: int = 20, **kwargs):
-        if api is None:
-            api = InternalClientAPI(request_solver=self._target, user_name=f"Default_{self.__class__.__name__}")
-
-        command = "declination"
-
-        async def condi(val):
-            if val == dec:
-                return True
-            return False
-
-        fut, cq = await self._subscription_pack(api, condi, command)
-        try:
-            await wait_for_psce(fut, timeout=timeout)
-            if fut.done() and fut.result() is False:
-                raise ResourceCommandError("Unexpected error when waiting for subscription")
-            else:
-                pass
-        except asyncio.TimeoutError:
-            raise ResourceCommandError("To long waiting for action")
-        finally:
-            await cq.stop_and_wait()
-        return True
-
-    async def wait_to_slew(self, alt, az, ra, dec, api: InternalClientAPI = None, timeout: int = 20, **kwargs) -> bool:
-        """
-
-        :param alt:
-        :param az:
-        :param ra:
-        :param dec:
-        :param api:
-        :param timeout:
-        :param kwargs:
-        :raise ResourceCommandError:
-        :return:
-        """
-        if api is None:
-            api = InternalClientAPI(request_solver=self._target, user_name=f"Default_{self.__class__.__name__}")
-
-        ra_ = ra
-        dec_ = dec
-        timeout = 60
-        await asyncio.gather(self._wait_for_ra(ra=ra_, api=api, timeout=timeout),
-                             self._wait_for_dec(dec=dec_, api=api, timeout=timeout))
-        return True
-
-    async def go_to_position(self, alt, az, ra, dec, api: InternalClientAPI = None, **kwargs):
-        """
-
-        :param alt: altitude
-        :param az: azimuth
-        :param ra: ractescention
-        :param dec: declination
-        :param api:
-        :param kwargs:
-        :raise ResourceCommandError:
-        :return:
-        """
-
-        if api is None:
-            api = InternalClientAPI(request_solver=self._target, user_name=f"Default_{self.__class__.__name__}")
-
-        # TODO This should be taken from settings
-        tel = {'latitude': '-24:35:53', 'longitude': '-70:11:47', 'elevation': '2817'}
-        epoch = '2000'  # todo co to jest? Mikołaj
-
-        # from alt az
-        if alt is not None and az is not None:
-            await self._go_to_position_alt_az(alt, az, api)
-        elif ra is not None and dec is not None:
-            await self._go_to_position_ra_dec(ra, dec, tel.get("latitude"), tel.get("longitude"), tel.get("elevation"),
-                                              epoch,
-                                              api)
-        else:
-            raise ResourceCommandError("Wrong parameters")
-
-    async def _go_to_position_ra_dec(self, ra, dec, latitude, longitude, elevation, epoch, api):
-        ra_now, dec_now = ra_dec_epoch(ra=ra,
-                                       dec=dec,
-                                       latitude=latitude,
-                                       longitude=longitude,
-                                       elevation=elevation,
-                                       epoch=epoch)
-        az, alt = ra_dec_2_az_alt(ra=ra_now,
-                                  dec=dec_now,
-                                  latitude=latitude,
-                                  longitude=longitude,
-                                  elevation=elevation,
-                                  epoch=epoch)
-
-        # ----------------- check min altitude -----------------
-        mount_min_alt = 14.9  # todo wo wywalenia albo całkiem albo do settings
-        if deg_str_to_deg(alt) <= mount_min_alt:  # todo w zależności co z mount_min_alt to może do wywalenia
-            raise ResourceCommandError(f"Altitude is lover then min altitude")
-
-        # ----------------- set tracking -----------------
-        result = await api.put_async(address=f"{self._tree_address_path.__str__()}.tracking",
-                                     parameters_dict={"Tracking": True}, no_wait=False)
-        if not result.status:
-            raise ResourceCommandError("Action has error status in response")
-
-        # ----------------- move mount -----------------
-        result = await api.put_async(address=f"{self._tree_address_path.__str__()}.slewtocoordinatesasync",
-                                     parameters_dict={"RightAscension": ra_now, "Declination": dec_now}, no_wait=False)
-        if not result.status:
-            raise ResourceCommandError("Action has error status in response")
-        return True
-
-    async def _go_to_position_alt_az(self, alt, az, api):
-        try:
-            alt_, az_ = self._read_alt_az_coord(alt, az)
-        except ValueError:
-            raise ResourceCommandError(msg="given alt az is in wrong format")
-
-        # ----------------- check min altitude -----------------
-        mount_min_alt = 14.9  # todo wo wywalenia albo całkiem albo do settings
-        if deg_str_to_deg(alt) <= mount_min_alt:  # todo w zależności co z mount_min_alt to może do wywalenia
-            raise ResourceCommandError(f"Altitude is lover then min altitude")
-
-        # ----------------- move mount -----------------
-        result = await api.put_async(address=f"{self._tree_address_path.__str__()}.slewtoaltazasync",
-                                     parameters_dict={"Azimuth": az_, "Altitude": alt_}, no_wait=False)
-        if not result.status:
-            raise ResourceCommandError("Action has error status in response")
-
-        # todo traking zawsze będzie włączony w tym a jak ktoś będzie chciał inaczej to w komędach (np Object) sobie napiszę
-        # # ----------------- set tracking -----------------
-        # # todo sprawdzić co z tym trakingiem bo był ustawiany 3 razy w starej wersji
-        # if "tracking" in self.kwargs.keys():
-        #     await asyncio.sleep(5)
-        #     await self.mount.aput_tracking(self.kwargs["tracking"])
-        #     self.info_callback['stream_1'](
-        #         f'{self.id} {self.subcommand_name} tracking={self.kwargs["tracking"]}')
-
-        return True
-
-
 class MountAlpaca(Resource):
     RESOURCE_NAME = StandardTelescopeComponents.MOUNT
 
@@ -476,8 +350,10 @@ class MountAlpaca(Resource):
         super().__init__(source_name=source_name, resource_name=resource_name, nr=nr, target_request=target_request,
                          properties=properties, address_path=address_path, **kwargs)
         self._latitude = self._properties.get("lat", 0)
-        self._longitude = self._properties.get("lon", 0)
+        self._longitude = self._properties.get("lon", 0)  # todo wpisać te wartośći z symulatora do configa
         self._elevation = self._properties.get("elev", 0)
+        self._epoch = self._properties.get("epoch", 2000)  # todo dodac do config albo z kwarksów
+        self._min_alt = self._properties.get("min_alt", 15)  # todo dodac do settings
         # -----------------------------
         self._slewing = None
 
@@ -485,28 +361,27 @@ class MountAlpaca(Resource):
         return await self._go_to_position_ra_dec(ra, dec, epoch, api)
 
     async def _go_to_position_ra_dec(self, ra, dec, epoch, api):
-        ra_now, dec_now = ra_dec_epoch(ra=ra,
-                                       dec=dec,
-                                       latitude=self._latitude,
-                                       longitude=self._longitude,
-                                       elevation=self._elevation,
-                                       epoch=epoch)
+        ra_f = ra_to_decimal(ra)
+        dec_f = dec_to_decimal(dec)
+
+        ra_now, dec_now = ra_dec_epoch(ra=ra_f,
+                                       dec=dec_f,
+                                       epoch=str(self._epoch))  # todo ma byc string zawsze to zapewnić gdzieś wyżej
         az, alt = ra_dec_2_az_alt(ra=ra_now,
                                   dec=dec_now,
                                   latitude=self._latitude,
                                   longitude=self._longitude,
                                   elevation=self._elevation,
-                                  epoch=epoch)
-        ra_now_decimal = ra_to_decimal(ra_now)
-        dec_now_decimal = dec_to_decimal(dec_now)
+                                  epoch=self._epoch)
+
         # ----------------- check min altitude -----------------
-        mount_min_alt = 14.9  # todo wo wywalenia albo całkiem albo do settings
-        if deg_str_to_deg(alt) <= mount_min_alt and False:  # todo w zależności co z mount_min_alt to może do wywalenia
+        if alt <= self._min_alt:
             raise ResourceCommandError(f"Altitude is lover then min altitude")
 
         m = self.Move(api)
-        m.add_position(self.Position(f"{self._tree_address_path.__str__()}.rightascension", t=ra_now_decimal))
-        m.add_position(self.Position(f"{self._tree_address_path.__str__()}.declination", t=dec_now_decimal))
+        # todo dokończyć podmiane metod na tą z wartościami
+        m.add_position(self.Position(f"{self._tree_address_path.__str__()}.rightascension", t=ra_now))
+        m.add_position(self.Position(f"{self._tree_address_path.__str__()}.declination", t=dec_now))
         m.add_position(self.Position(f"{self._tree_address_path.__str__()}.tracking", t=True))
 
         try:
@@ -514,11 +389,11 @@ class MountAlpaca(Resource):
             result = await api.put_async(address=f"{self._tree_address_path.__str__()}.tracking",
                                          parameters_dict={"Tracking": True}, no_wait=False)
             if not result.status:
-                raise ResourceCommandError("Action has error status in response")
+                raise ResourceCommandError(f"Action has error status in response {result.error}")
             # ----------------- move mount -----------------
             result = await api.put_async(address=f"{self._tree_address_path.__str__()}.slewtocoordinatesasync",
-                                         parameters_dict={"RightAscension": ra_now_decimal,
-                                                          "Declination": dec_now_decimal},
+                                         parameters_dict={"RightAscension": ra_now,
+                                                          "Declination": dec_now},
                                          no_wait=False)
             if not result.status:
                 raise ResourceCommandError("Action has error status in response")
@@ -529,7 +404,6 @@ class MountAlpaca(Resource):
         finally:
             self._slewing = m
         await m.watch()
-        m.is_slewing = True
         return True
 
     def get_slew_progres(self):
@@ -537,38 +411,10 @@ class MountAlpaca(Resource):
             return 0
         return self._slewing.progress
 
-    async def _go_to_position_alt_az(self, alt, az, api):
-        try:
-            alt_, az_ = self._read_alt_az_coord(alt, az)
-        except ValueError:
-            raise ResourceCommandError(msg="given alt az is in wrong format")
-
-        # ----------------- check min altitude -----------------
-        mount_min_alt = 14.9  # todo wo wywalenia albo całkiem albo do settings
-        if deg_str_to_deg(alt) <= mount_min_alt:  # todo w zależności co z mount_min_alt to może do wywalenia
-            raise ResourceCommandError(f"Altitude is lover then min altitude")
-
-        # ----------------- move mount -----------------
-        result = await api.put_async(address=f"{self._tree_address_path.__str__()}.slewtoaltazasync",
-                                     parameters_dict={"Azimuth": az_, "Altitude": alt_}, no_wait=False)
-        if not result.status:
-            raise ResourceCommandError("Action has error status in response")
-
-        # todo traking zawsze będzie włączony w tym a jak ktoś będzie chciał inaczej to w komędach (np Object) sobie napiszę
-        # # ----------------- set tracking -----------------
-        # # todo sprawdzić co z tym trakingiem bo był ustawiany 3 razy w starej wersji
-        # if "tracking" in self.kwargs.keys():
-        #     await asyncio.sleep(5)
-        #     await self.mount.aput_tracking(self.kwargs["tracking"])
-        #     self.info_callback['stream_1'](
-        #         f'{self.id} {self.subcommand_name} tracking={self.kwargs["tracking"]}')
-
-        return True
-
     async def wait_for_slew(self):
         if self._slewing is None:
             return
-        await self._slewing
+        await self._slewing.wait()
 
 
 class CameraAlpaca(Resource):

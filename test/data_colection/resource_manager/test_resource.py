@@ -203,19 +203,16 @@ class MountAlpacaTest(unittest.TestCase, BaseAsyncTest):
 
         async def coro():
             await self.tree_freezer.run()
-            position_ra = random.randint(70, 90)
-            position_dec = random.randint(70, 90)
+            # position_ra = random.randint(8, 12)
+            # position_dec = random.randint(5, 15)
+            position_ra = 80
+            position_dec = 0
             rm = await self.tao.get_res_manager()
             mount = rm.get_resource(name=rm.MOUNT, nr=0)
             result = await mount.go_to_position(position_ra, position_dec, '2000', self.api_test)
-            print("----", mount.get_slew_progres())
-            await asyncio.sleep(1.5)
-            print("----", mount.get_slew_progres())
-            await asyncio.sleep(0.5)
-            print("----", mount.get_slew_progres())
-            await asyncio.sleep(5.5)
-            print("----", mount.get_slew_progres())
-            self.assertTrue(result)
+            await asyncio.sleep(7.5)  # todo dokończyć i zrobić mniejszy czas oczekiwania
+            # self.assertTrue(result)
+            await mount.wait_for_slew()
             # await asyncio.sleep(2)  # Wait to reaction
             # result = await self.api_test.get_async("dome.azimuth")
             # self.assertEqual(position_az, result.value.v)

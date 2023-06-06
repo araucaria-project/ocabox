@@ -116,9 +116,9 @@ tree:
   test_observatory:
     observatory:
       comment: Simulated observatory for tests
-      lon: -24.598056    # Paranal
-      lat: -70.196389
-      elev: 2817.0
+      lon: -24.47
+      lat: -0.17
+      elev: 667.0
       protocol: alpaca
       address: http://localhost:80/api/v1
       components:
@@ -136,9 +136,9 @@ tree:
   test_observatory_down:
     observatory:
       comment: Simulated observatory for tests
-      lon: -24.598056    # Paranal
-      lat: -70.196389
-      elev: 2817.0
+      lon: -24.47
+      lat: -0.17
+      elev: 667.0
       protocol: alpaca
       address: http://10.255.255.1/api/v1  # this url address should return connection timeout error
       components:
