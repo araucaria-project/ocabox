@@ -278,8 +278,12 @@ class CameraExposure(SubCommand):
                 await self._wait_for_subexposure(test_exposure_time)
                 mean = fits_stat(await self.camera.aget_imagearray(), size=100,
                                  median=False, std=False, min=False, max=False)['mean']
-                logger.info(f'{self.id} test_frame time:{test_exposure_time}s mean:{mean}')
-                self.info_callback['stream_1'](f'{self.id} test_frame time:{test_exposure_time}s mean:{mean}')
+                # TODO take zero_level from settings
+                zero_level = 290.0
+                if mean > zero_level:
+                    mean = mean - zero_level
+                logger.info(f'{self.id} test_frame time:{test_exposure_time}s mean-zero:{mean}')
+                self.info_callback['stream_1'](f'{self.id} test_frame time:{test_exposure_time}s mean-zero:{mean}')
                 self.info_callback['exec_json'](self.exec_json(test_exp_mean=mean))
                 mean_list.append(mean)
                 if len(mean_list) > 1:
