@@ -23,13 +23,15 @@ class SubCommand:
 
     def _create_command_string(self):
         kw = ''
-        for n in self.args:
-            kw = f'{kw} {n}'
+        if len(self.args) > 0:
+            for n in self.args:
+                kw = f'{kw} {n}'
         w=0
-        for n in self.kwargs.keys():
-            kw = f'{kw} {n}={self.kwargs[n]}'
-            w+=1
-            if w > 3: break
+        if len(self.kwargs) > 0:
+            for n in self.kwargs.keys():
+                kw = f'{kw} {n}={self.kwargs[n]}'
+                w+=1
+                #if w > 3: break
         self.info_callback['c_subcommands'](f'{self.id};{self.subcommand_name};{kw}')
         logger.debug(f'{self.id} is written')
 
@@ -44,11 +46,13 @@ class SubCommand:
     def exec_json(self, **kw) -> Dict[str, Any]:
         ex_js = {}
         if kw:
-            for n in kw.keys():
-                ex_js[n] = kw[n]
+            if len(kw)>0:
+                for n in kw.keys():
+                    ex_js[n] = kw[n]
         if self.kwargs:
-            for n in self.kwargs.keys():
-                ex_js[n] = self.kwargs[n]
+            if len(self.kwargs) > 0:
+                for n in self.kwargs.keys():
+                    ex_js[n] = self.kwargs[n]
         ex_js['id'] = self.id
         ex_js['name'] = self.subcommand_name
         ex_js['started'] = self.started
@@ -56,15 +60,3 @@ class SubCommand:
         ex_js['skipped'] = self.skipped
         ex_js['timestamp_utc'] = str(datetime.utcnow())
         return ex_js
-
-    """
-    @staticmethod
-    def proof_val(value: Any) -> Any:
-        try:
-            return value
-        except:
-            try:
-                return value
-            except:
-                return ''
-    """

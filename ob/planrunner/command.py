@@ -8,6 +8,8 @@ from ob.planrunner.subcommands.sub_camera_exposure import CameraExposure
 from ob.planrunner.subcommands.sub_mirror_cover import MirrorCover
 from ob.planrunner.subcommands.sub_dome_screenlight import DomeScreenLight
 from ob.planrunner.subcommands.sub_focusing import Focusing
+from ob.planrunner.subcommands.sub_stop import Stop
+from ob.planrunner.subcommands.sub_wait import Wait
 from pyaraucaria.coordinates import az_alt_2_ra_dec, ra_to_decimal, dec_to_decimal, deg_to_decimal_deg, ra_dec_2_az_alt
 import random
 
@@ -74,8 +76,11 @@ class Command(AbstractSequence):
         elif self.command_name == 'SKYFLAT':
             self._write_object_skyflat_focusing('skyflat')
 
-        elif self.command_name == 'MARKER':
-            self._write_marker()
+        elif self.command_name == 'WAIT':
+            self._write_wait()
+
+        elif self.command_name == 'STOP':
+            self._write_stop()
 
         else:
             # TODO add info, that parsed plan have errors
@@ -397,8 +402,19 @@ class Command(AbstractSequence):
                     self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                     id_next += 1
 
-    def _write_marker(self):
-        pass
+    def _write_wait(self):
+        id_next = 0
+        if len(self.kwargs.keys()) == 1:
+            key = self.kwargs.keys()[0]
+            sub = Wait(f'{self.id}_{self.numb(id_next)}', self, key=key, value=self.kwargs[key])
+            self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+        else:
+            pass
+
+    def _write_stop(self):
+        id_next = 0
+        sub = Stop(f'{self.id}_{self.numb(id_next)}', self)
+        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
 
     @staticmethod
     def _split_seq(seq):
@@ -413,15 +429,7 @@ class Command(AbstractSequence):
     async def arun(self, step_id: str or None = None) -> int:
         self.info_callback['stream_1'](f'Command {self.id} {self.command_name} started')
         logger.info(f'{self.id} {self.command_name} {self.args} {self.kwargs} started')
-        await self._arun(self.subcomponents, step_id=step_id)
+        skip = await self._arun(self.subcomponents, step_id=step_id)
         self.info_callback['stream_5'](f'{self.id}')
         logger.info(f'{self.id} done')
-        return 0
-
-    async def stop(self):
-        await self.parent.stop()
-
-
-
-
-
+        return skip

@@ -18,9 +18,6 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class CameraExposure(SubCommand):
 
     def __init__(self, id: str, parent: 'Command', subcommand_name: str = 'camera-exposure', **kwargs) -> None:
-        self.started: bool = False
-        self.done: bool = False
-        self.skipped: bool = False
         self.subcommand_name = subcommand_name
         self.telescope = parent.telescope
         self.mount = self.telescope.get_mount()
@@ -223,8 +220,8 @@ class CameraExposure(SubCommand):
                                                        exp_done=True,
                                                        exp_saved=True,
                                                        n_exp=sub,
-                                                       mean=round(stat['mean'])
-                                                       ))
+                                                       mean=round(stat['mean']),
+                                                       exp_time=sub_time))
 
     async def _wait_for_subexposure(self, sub_time: float) -> None:
         logger.info(f'_wait_for_subexposure started')
@@ -245,17 +242,11 @@ class CameraExposure(SubCommand):
 
     async def arun(self, step_id: str or None = None) -> int:
         logger.info(f'{self.id} started')
+        self.target_folder = self._provide_target_folder()
         self.started = True
         self.info_callback['exec_json'](self.exec_json())
-        self.target_folder = self._provide_target_folder()
         sub = self.kwargs["sub_exp"]
-        # for sub in range(1, self.kwargs["exp_no"] + 1):
-        logger.info(f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} started')
-        self.info_callback['stream_1'](f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} started')
-        self.info_callback['exec_json'](self.exec_json(exp_started=True,
-                                                       exp_done=False,
-                                                       exp_saved=False,
-                                                       n_exp=sub))
+
         exposure_time = self.kwargs["exp_time"]
 
         if self.kwargs['type'] == 'skyflat' and exposure_time=='a':
@@ -266,6 +257,8 @@ class CameraExposure(SubCommand):
             repeated, up to end. TODO save last value to settings with filter and time and do not take another 
             test shoot again, but calculate from settings.
             """
+            logger.info(f'{self.id} auto skyflat procedure started')
+            self.info_callback['stream_1'](f'{self.id} auto skyflat procedure started')
             mean_list = []
             test_exposure_time = 1.0
             test_time_interval = 0.0
@@ -273,7 +266,7 @@ class CameraExposure(SubCommand):
             test_min_max_time_exp = (5, 40)
             mean_diff = None
             while True:
-                logger.info(f'{self.id} start test exposure')
+                logger.info(f'{self.id} starting test exposure')
                 await self.camera.aput_startexposure(test_exposure_time, self.kwargs["light"])
                 await self._wait_for_subexposure(test_exposure_time)
                 mean = fits_stat(await self.camera.aget_imagearray(), size=100,
@@ -320,6 +313,14 @@ class CameraExposure(SubCommand):
                         logger.info(f"{self.id} calc_exp_time:{exposure_time}, expect_adu:{exposure_time * mean}")
                         break
                 await asyncio.sleep(test_time_interval)
+
+        logger.info(f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} started')
+        self.info_callback['stream_1'](f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} started')
+        self.info_callback['exec_json'](self.exec_json(exp_started=True,
+                                                       exp_done=False,
+                                                       exp_saved=False,
+                                                       n_exp=sub,
+                                                       exp_time=exposure_time))
         self.exp_time_start = datetime.utcnow()
         self.readout_time_start = time.time()
         await self.camera.aput_startexposure(float(exposure_time), self.kwargs["light"])
@@ -331,12 +332,13 @@ class CameraExposure(SubCommand):
                                                        exp_done=True,
                                                        exp_saved=False,
                                                        readout_time=self.readout_time,
-                                                       n_exp=sub))
+                                                       n_exp=sub,
+                                                       exp_time=exposure_time))
         await self._wait_for_save_fits(sub, float(exposure_time))
         self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
         self.info_callback['stream_5'](f'{self.id}')
         logger.info(f'{self.id} done')
         self.done = True
-        self.info_callback['exec_json'](self.exec_json())
+        self.info_callback['exec_json'](self.exec_json(exp_time=exposure_time))
         await asyncio.sleep(0.2)
         return 0
