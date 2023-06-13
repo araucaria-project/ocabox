@@ -1,5 +1,5 @@
 import datetime
-
+import time
 from ob.planrunner.subcommand import SubCommand
 import logging
 import asyncio
@@ -24,31 +24,35 @@ class Wait(SubCommand):
     async def _wait_exec(self, value: float) -> None:
         await asyncio.sleep(value)
 
-    async def _ut_exec(self, value: float) -> None:
-        """
-        # convert to datetime
-        converted = datetime.datetime.utcfromtimestamp()
+    async def _ut_exec(self, value: str) -> None:
         while True:
-            now = datetime.datetime.utcnow()
-            if now >= converted:
+            myDate = f"{datetime.datetime.today().strftime('%Y-%m-%d')} {value}"
+            target_t = time.mktime(datetime.datetime.strptime(myDate, "%Y-%m-%d %H:%M:%S").timetuple())
+            now_t = time.mktime(datetime.datetime.utcnow().timetuple())
+            if now_t >= target_t:
                 break
-            await asyncio.sleep(0)"""
+            await asyncio.sleep(0)
+
+    async def _wait_sunrise_exec(self, value: float) -> None:
         pass
 
+    async def _wait_sunset_exec(self, value: float) -> None:
+        pass
 
     async def arun(self, step_id: str or None = None) -> int:
         logger.info(f'{self.id} started')
         self.started = True
         self.info_callback['exec_json'](self.exec_json())
-        self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} started')
+        self.info_callback['stream_1'](f"{self.id} {self.subcommand_name} {self.kwargs['key']} started")
+        logger.info(f'{self.id} started')
         if self.kwargs['key'] == 'wait':
-            await _wait_exec(float(self.kwargs['value']))
+            await self._wait_exec(float(self.kwargs['value']))
         elif self.kwargs['key'] == 'ut':
-            await _ut_exec(self.kwargs['value'])
+            await self._ut_exec(self.kwargs['value'])
         elif self.kwargs['key'] == 'wait_sunrise':
-            pass
+            await self._wait_sunrise_exec(self.kwargs['value'])
         elif self.kwargs['key'] == 'wait_sunset':
-            pass
+            await self._wait_sunset_exec(self.kwargs['value'])
         else:
             pass
         self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')

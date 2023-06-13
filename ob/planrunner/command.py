@@ -405,7 +405,7 @@ class Command(AbstractSequence):
     def _write_wait(self):
         id_next = 0
         if len(self.kwargs.keys()) == 1:
-            key = self.kwargs.keys()[0]
+            key = list(self.kwargs.keys())[0]
             sub = Wait(f'{self.id}_{self.numb(id_next)}', self, key=key, value=self.kwargs[key])
             self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
         else:
