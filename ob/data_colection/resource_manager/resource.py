@@ -3,8 +3,7 @@ import logging
 from abc import ABC
 from typing import Callable, Optional, List, Tuple
 
-from pyaraucaria.coordinates import deg_str_to_deg, ra_dec_epoch, ra_dec_2_az_alt, dec_to_decimal, ra_to_decimal, \
-    ra_to_sexagesimal
+from pyaraucaria.coordinates import deg_str_to_deg, ra_dec_epoch, ra_dec_2_az_alt, dec_to_decimal, ra_to_decimal
 
 from ob.comunication.comunication_error import CommunicationRuntimeError
 from ob.comunication.internal_client_api import InternalClientAPI
@@ -107,7 +106,8 @@ class Resource(ABC):
         return alt_, az_
 
     class Position:
-        def __init__(self, address, t=None, s=None, c=None, timeout=None):
+        def __init__(self, address, t=None, s=None, c=None, timeout=None,
+                     bounds: Tuple[Optional[float], Optional[float]] = (None, None)):
             self._target = t
             self._start = s
             self._current = c
@@ -119,7 +119,7 @@ class Resource(ABC):
             self._finish_fut = None
             self.timeout = timeout if timeout is not None else 20
             # ------ optional -------
-            self.bounds: Tuple[Optional[float], Optional[float]] = (None, None)
+            self.bounds: Tuple[Optional[float], Optional[float]] = bounds
 
         @property
         def start(self):
@@ -154,7 +154,8 @@ class Resource(ABC):
             """
             if self.custom_end_condition is not None and callable(self.custom_end_condition):
                 return self.custom_end_condition(self.start, self.current, self.target)
-            print(self.start, self.current, self.target)
+            elif self.bounds[0] is not None and self.bounds[1] is not None:
+                return self._check_finish_bounded()
             if self.current == self.target:
                 return True
             else:
@@ -171,10 +172,10 @@ class Resource(ABC):
                 t = float(self.target)
                 c = float(self.current)
             except ValueError:
-                return
+                raise
             bound_btm = self.bounds[0]
             bound_top = self.bounds[1]
-            if self.target-bound_btm < self.current < self.target+bound_top:
+            if t - bound_btm < c < t + bound_top:
                 return True
             else:
                 return False
@@ -189,6 +190,8 @@ class Resource(ABC):
 
             :return: progress in float format from 0 to 1
             """
+            if self.done():
+                return float(1)
             # one of values not loaded
             if self.current is None or self.start is None or self.target is None:
                 return float(0)
@@ -240,6 +243,7 @@ class Resource(ABC):
                             return
                         if res:
                             self._finish_fut.set_result(True)
+                            return
                     else:
                         self.error = True
                         self._finish_fut.set_result(False)
@@ -350,14 +354,14 @@ class MountAlpaca(Resource):
         super().__init__(source_name=source_name, resource_name=resource_name, nr=nr, target_request=target_request,
                          properties=properties, address_path=address_path, **kwargs)
         self._latitude = self._properties.get("lat", 0)
-        self._longitude = self._properties.get("lon", 0)  # todo wpisać te wartośći z symulatora do configa
+        self._longitude = self._properties.get("lon", 0)
         self._elevation = self._properties.get("elev", 0)
         self._epoch = self._properties.get("epoch", 2000)  # todo dodac do config albo z kwarksów
         self._min_alt = self._properties.get("min_alt", 15)  # todo dodac do settings
         # -----------------------------
         self._slewing = None
 
-    async def go_to_position(self, ra, dec, epoch, api):
+    async def go_to_position(self, ra, dec, api, epoch=""):
         return await self._go_to_position_ra_dec(ra, dec, epoch, api)
 
     async def _go_to_position_ra_dec(self, ra, dec, epoch, api):
@@ -379,11 +383,10 @@ class MountAlpaca(Resource):
             raise ResourceCommandError(f"Altitude is lover then min altitude")
 
         m = self.Move(api)
-        # todo dokończyć podmiane metod na tą z wartościami
-        m.add_position(self.Position(f"{self._tree_address_path.__str__()}.rightascension", t=ra_now))
-        m.add_position(self.Position(f"{self._tree_address_path.__str__()}.declination", t=dec_now))
+        m.add_position(self.Position(f"{self._tree_address_path.__str__()}.rightascension", t=ra_now, bounds=(0.5, 0.5)))
+        m.add_position(self.Position(f"{self._tree_address_path.__str__()}.declination", t=dec_now, bounds=(0.5, 0.5)))
         m.add_position(self.Position(f"{self._tree_address_path.__str__()}.tracking", t=True))
-
+        #todo dodać jeszcze pozycje is_moving i zrobić możliwość kolejności tych pozycji
         try:
             # ----------------- set tracking -----------------
             result = await api.put_async(address=f"{self._tree_address_path.__str__()}.tracking",

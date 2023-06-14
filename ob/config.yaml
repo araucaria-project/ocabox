@@ -116,7 +116,7 @@ tree:
   test_observatory:
     observatory:
       comment: Simulated observatory for tests
-      lon: -24.47
+      lon: 51.47
       lat: -0.17
       elev: 667.0
       protocol: alpaca
