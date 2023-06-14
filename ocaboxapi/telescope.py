@@ -13,6 +13,7 @@ from ocaboxapi.rotator import Rotator
 from ocaboxapi.plan import ObservationPlan
 from ocaboxapi.exceptions import OcaboxServerError
 from typing import Dict
+from ob.comunication.comunication_error import CommunicationTimeoutError, CommunicationRuntimeError
 
 logger = logging.getLogger("telescope")
 
@@ -118,7 +119,5 @@ class Telescope(AbstractTelescope):
             va = await self.observatory.get_async(f'{self.tel_addr}.mount.connected', request_timeout=request_timeout)
             if va == True or va == False:
                 return {'alpaca': True}
-        except OcaboxServerError:
+        except (CommunicationTimeoutError, CommunicationRuntimeError, OcaboxServerError):
             return {'alpaca': False}
-
-
