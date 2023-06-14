@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 ### Added
 - added  `Observatory.is_tic_server_available`
+- added `Telescope.is_telescope_alpaca_server_available`
+- added STOP, WAIT commands  to client plan runner
+- ocaboxapi.Mount errorstring and cleanerror
+
+### Changed
+- improved automatic skyflats time calculation (substracted bias level)
+
+### Fixed
+-  automatic skyflat time in fits header 
 
 
 ## [1.0.13] - 2023-06-02

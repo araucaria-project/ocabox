@@ -161,7 +161,7 @@ class CameraExposure(SubCommand):
             parsed_obs_lon=OCA['longitude'],
             obs_elev=OCA['elevation'],
             tel_id=str(self.telescope.id),
-            utc_now=str(self.exp_time_start), # TODO change for ...T... format
+            utc_now=str(self.exp_time_start.isoformat(sep='T', timespec='auto')),
             jd=jd,
             req_ra=self.kwargs["req_ra"],
             req_dec=self.kwargs["req_dec"],

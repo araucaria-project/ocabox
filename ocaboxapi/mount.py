@@ -19,6 +19,7 @@ class Mount(TelescopeComponent):
     ispulseguiding = OcaBoxParam(default=False, doc="Mount is pulseguiding")
     motorstatus = OcaBoxParam(default='', doc="Mount motorstatus")
     commandstring = OcaBoxParam(default='', doc="Mount motorstatus")
+    errorstring = OcaBoxParam(default='', doc="Telescope errorstring")
 
     async def aget_ra(self) -> float:
         logger.debug(f'Getting mount RA from {self.tel_addr}')
@@ -116,6 +117,20 @@ class Mount(TelescopeComponent):
                                     callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
+    """
+    # TODO Waiting for Ernest implementation
+    async def aget_errorstring(self) -> bool:
+        logger.debug(f'Getting telescope errorstring from {self.tel_addr}')
+        ret = await self.aget_value('errorstring')
+        return ret
+
+    async def asubscribe_errorstring(self, callback: Callable | None = None,
+                                        time_of_data_tolerance: float | None = None):
+        logger.debug(f'Subscribing telescope errorstring from {self.tel_addr}')
+        return await self.subscribe('errorstring',
+                                    callback=callback,
+                                    time_of_data_tolerance=time_of_data_tolerance)"""
+
     async def aput_slewtocoo(self, ra: float, dec: float) -> None:
         logger.debug(f'Putting slew coo to {self.tel_addr}')
         await self.aput_value('slewtocoordinates', RightAscension=ra, Declination=dec)
@@ -179,3 +194,7 @@ class Mount(TelescopeComponent):
     async def aput_domelamp_off(self) -> None:
         logger.debug(f'Putting dome lamp off to {self.tel_addr}')
         await self.aput_value('domeflatlampoff')
+
+    async def aput_clearerror(self) -> None:
+        logger.debug(f'Putting telescope clearerror to {self.tel_addr}')
+        await self.aput_value('action', Action='telescope:clearerror', Parameters='')
