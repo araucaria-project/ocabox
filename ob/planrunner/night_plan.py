@@ -56,13 +56,11 @@ class NightPlan(AbstractSequence):
     async def arun(self, step_id: str or None = None) -> int:
         self.info_callback['stream_1'](f'Night plan {self.id} started')
         logger.info(f'Night plan {self.id} started')
-        await self._arun(self.subcomponents, step_id=step_id)
+        skip = await self._arun(self.subcomponents, step_id=step_id)
         self.info_callback['stream_5'](f'{self.id}')
+        self.info_callback['stream_1'](f'Night plan {self.id} completed')
         logger.info(f'Night plan {self.id} completed')
-        return 0
-
-    async def stop(self):
-        await self.parent.stop()
+        return skip
 
     def __del__(self):
         logger.info(f"Nightplan {self.id} deleted")

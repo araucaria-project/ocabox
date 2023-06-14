@@ -46,11 +46,15 @@ class AbstractSequence:
                 match = step_id[: len(subcomponents[n].id)]
                 if match <= subcomponents[n].id:
                     skip = await subcomponents[n].arun(step_id=step_id)
-            if skip > 0:
+            if skip == 1:
                 self.info_callback['stream_1'](f'{self.id} skipped')
                 self.skipped = True
                 self.info_callback['exec_json'](self.exec_json())
-                return 1
+                return 0
+            if skip == 2:
+                self.skipped = True
+                self.info_callback['exec_json'](self.exec_json())
+                return 2
         self.info_callback['stream_1'](f'{self.name} {self.id} done')
         self.done = True
         self.info_callback['exec_json'](self.exec_json())

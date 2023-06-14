@@ -61,11 +61,7 @@ class Sequence(AbstractSequence):
     async def arun(self, step_id: str or None = None) -> int:
         self.info_callback['stream_1'](f'Sequence {self.id} started')
         logger.info(f'{self.id} started')
-        await self._arun(self.subcomponents, step_id=step_id)
+        skip = await self._arun(self.subcomponents, step_id=step_id)
         self.info_callback['stream_5'](f'{self.id}')
         logger.info(f'{self.id} done')
-        return 0
-
-    async def stop(self):
-        await self.parent.stop()
-
+        return skip

@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 ### Added
 - added  `Observatory.is_tic_server_available`
 - added a nev method GET to alpaca api `errorstring`
+- added `Telescope.is_telescope_alpaca_server_available`
+- added STOP, WAIT commands  to client plan runner
+- ocaboxapi.Mount errorstring and cleanerror
+
+### Changed
+- improved automatic skyflats time calculation (substracted bias level)
+
+### Fixed
+- Automatic skyflat time in fits header 
+- Fixed internal api response type error
+
 
 ### Fixed
 - Fixed internal api response type error

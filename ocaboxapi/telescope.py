@@ -11,6 +11,8 @@ from ocaboxapi.filterwheel import FilterWheel
 from ocaboxapi.covercalibrator import CoverCalibrator
 from ocaboxapi.rotator import Rotator
 from ocaboxapi.plan import ObservationPlan
+from ocaboxapi.exceptions import OcaboxServerError
+from typing import Dict
 
 logger = logging.getLogger("telescope")
 
@@ -105,3 +107,18 @@ class Telescope(AbstractTelescope):
             dev = Rotator(id=id, telescope=self)
             self.rotators[id] = dev
             return dev
+
+    async def is_telescope_alpaca_server_available(self, request_timeout: float = None) -> Dict[str, bool]:
+        """
+        The method checks if the telescope alpaca server responds
+        :param request_timeout: waiting for answer timeout
+        :return: True if server responds
+        """
+        try:
+            va = await self.observatory.get_async(f'{self.tel_addr}.mount.connected', request_timeout=request_timeout)
+            if va == True or va == False:
+                return {'alpaca': True}
+        except OcaboxServerError:
+            return {'alpaca': False}
+
+
