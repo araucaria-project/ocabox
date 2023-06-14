@@ -222,4 +222,4 @@ This allows you to subscribe to these values
 
 [Unreleased]: https://github.com/araucaria-project/ocabox
 
-[1.0.13]: https://github.com/araucaria-project/ocabox
+[1.0.8]: https://github.com/araucaria-project/ocabox
