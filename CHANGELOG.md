@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 ### Added
 - added  `Observatory.is_tic_server_available`
+- added a nev method GET to alpaca api `errorstring`
 - added `Telescope.is_telescope_alpaca_server_available`
 - added STOP, WAIT commands  to client plan runner
 - ocaboxapi.Mount errorstring and cleanerror
