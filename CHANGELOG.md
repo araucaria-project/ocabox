@@ -17,6 +17,9 @@ All notable changes to this project will be documented in this file.
 - Fixed internal api response type error
 
 
+### Fixed
+- Fixed internal api response type error
+
 ## [1.0.13] - 2023-06-02
 ### Changed
 - `Planrunner/sub_camera` exposure array delay, fix some folders creation options
