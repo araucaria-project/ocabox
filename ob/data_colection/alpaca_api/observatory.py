@@ -347,6 +347,9 @@ class Telescope(Device):
     async def motorstatus(self, **kwargs):
         return await self._put("commandstring", Command="MotStat", Raw="True")
 
+    async def errorstring(self, **kwargs):
+        return await self._put("action", Action="telescope:errorstring", Parameters="")
+
     @staticmethod
     def _hourangle_to_deg_processor(attribute, res):
         return res / 24 * 360
