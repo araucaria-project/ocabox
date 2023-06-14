@@ -12,8 +12,12 @@ All notable changes to this project will be documented in this file.
 - improved automatic skyflats time calculation (substracted bias level)
 
 ### Fixed
+- added a nev method GET to alpaca api `errorstring`
 -  automatic skyflat time in fits header 
 
+
+### Fixed
+- Fixed internal api response type error
 
 ## [1.0.13] - 2023-06-02
 ### Changed
