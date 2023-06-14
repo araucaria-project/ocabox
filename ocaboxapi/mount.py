@@ -117,9 +117,7 @@ class Mount(TelescopeComponent):
                                     callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    """
-    # TODO Waiting for Ernest implementation
-    async def aget_errorstring(self) -> bool:
+    async def aget_errorstring(self) -> str:
         logger.debug(f'Getting telescope errorstring from {self.tel_addr}')
         ret = await self.aget_value('errorstring')
         return ret
@@ -129,7 +127,7 @@ class Mount(TelescopeComponent):
         logger.debug(f'Subscribing telescope errorstring from {self.tel_addr}')
         return await self.subscribe('errorstring',
                                     callback=callback,
-                                    time_of_data_tolerance=time_of_data_tolerance)"""
+                                    time_of_data_tolerance=time_of_data_tolerance)
 
     async def aput_slewtocoo(self, ra: float, dec: float) -> None:
         logger.debug(f'Putting slew coo to {self.tel_addr}')
