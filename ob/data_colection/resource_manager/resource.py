@@ -107,7 +107,7 @@ class Resource(ABC):
 
     class Position:
         def __init__(self, address, t=None, s=None, c=None, timeout=None,
-                     bounds: Tuple[Optional[float], Optional[float]] = (None, None)):
+                     bounds: Tuple[Optional[float], Optional[float]] = (None, None), level: int = 1):
             self._target = t
             self._start = s
             self._current = c
@@ -118,8 +118,10 @@ class Resource(ABC):
             self._address = address
             self._finish_fut = None
             self.timeout = timeout if timeout is not None else 20
+            self.level = level
             # ------ optional -------
             self.bounds: Tuple[Optional[float], Optional[float]] = bounds
+            self._wait_for_others: list = []
 
         @property
         def start(self):
@@ -144,6 +146,9 @@ class Resource(ABC):
         @target.setter
         def target(self, t):
             self._target = t
+
+        def get_finish_future(self):
+            return self._finish_fut
 
         def _check_finish(self):
             """
@@ -212,6 +217,11 @@ class Resource(ABC):
                 return float(0)
 
         async def _coro(self, api):
+            # wait for your turn
+            for o in self._wait_for_others:
+                print('ok')
+                await o.get_finish_future()
+            # todo dodać jeszcze timeouty
             CQ = await api.subscribe(address=self._address,
                                      time_of_data_tolerance=0.3, delay=0.1)
             CQ.start()
@@ -263,6 +273,9 @@ class Resource(ABC):
             self._finish_fut = asyncio.get_running_loop().create_future()
             self.task = asyncio.create_task(wait_for_psce(self._coro(api=api), timeout=self.timeout))
 
+        def add_more_important_position(self, position):
+            self._wait_for_others.append(position)
+
     class Move:
         def __init__(self, api):
             self.error = False
@@ -300,7 +313,17 @@ class Resource(ABC):
                 await p.wait()
 
         def add_position(self, position):
+            # this should be before add given position to list
+            self._set_in_level(position=position)
             self.positions.append(position)
+
+        def _set_in_level(self, position):
+            """This should be before add given position to list"""
+            for p in self.positions:
+                if p.level < position.level:
+                    position.add_more_important_position(p)
+                elif p.level > position.level:
+                    p.add_more_important_position(position)
 
 
 class DomeAlpaca(Resource):
@@ -383,10 +406,11 @@ class MountAlpaca(Resource):
             raise ResourceCommandError(f"Altitude is lover then min altitude")
 
         m = self.Move(api)
-        m.add_position(self.Position(f"{self._tree_address_path.__str__()}.rightascension", t=ra_now, bounds=(0.5, 0.5)))
+        m.add_position(
+            self.Position(f"{self._tree_address_path.__str__()}.rightascension", t=ra_now, bounds=(0.5, 0.5)))
         m.add_position(self.Position(f"{self._tree_address_path.__str__()}.declination", t=dec_now, bounds=(0.5, 0.5)))
         m.add_position(self.Position(f"{self._tree_address_path.__str__()}.tracking", t=True))
-        #todo dodać jeszcze pozycje is_moving i zrobić możliwość kolejności tych pozycji
+        m.add_position(self.Position(f"{self._tree_address_path.__str__()}.slewing", t=False, level=2))
         try:
             # ----------------- set tracking -----------------
             result = await api.put_async(address=f"{self._tree_address_path.__str__()}.tracking",

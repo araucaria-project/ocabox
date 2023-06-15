@@ -138,8 +138,8 @@ class MountAlpacaTest(unittest.TestCase, BaseAsyncTest):
             position_ra, position_dec = az_alt_2_ra_dec(random.randint(30, 50), random.randint(20, 50),
                                                         mount._longitude, mount._latitude, mount._elevation)
             position_ra_final, position_dec_final = ra_dec_epoch(ra=position_ra,
-                                                     dec=position_dec,
-                                                     epoch=str("2000"))
+                                                                 dec=position_dec,
+                                                                 epoch=str("2000"))
             result = await mount.go_to_position(position_ra, position_dec, self.api_test)
             self.assertTrue(result)
             await mount.wait_for_slew()
