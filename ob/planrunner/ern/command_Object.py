@@ -3,8 +3,6 @@ import logging
 from typing import List, Tuple
 
 from ob.data_colection.resource_manager.resource import ResourceCommandError
-from ob.planrunner.ern.Dome import Dome
-from ob.planrunner.ern.Mount import Mount
 from ob.planrunner.ern.command import Command
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -20,7 +18,6 @@ class CommandObject(Command):
         # --- --- --- --- --- --- --- --- --- --- ---
         self._mapped_args: dict = {"ra": None, "dec": None, "object_name": None, "filter": None, "repetitions": None}
         self._read_args(self.get_args())
-        self._needed_modules_list = []  # todo do usunięcia
         self._create_modules_from_args()
         self._needed_modules: List[Tuple[str, int]] = []
 
@@ -33,16 +30,6 @@ class CommandObject(Command):
     def _create_modules_from_args(self):
         # todo uzupełnić, utworzyć obiekty, coś w stylu _write_object() z dawnego runera
         nr = 0
-        some_module = Mount(nr=nr, ra='12.3', dec='43.54')
-        self._needed_modules_list.append(some_module)
-        nr = 0
-        some_module = Dome(nr=nr, ra='12.3', dec='43.54')
-        self._needed_modules_list.append(some_module)
-        nr = 0
-        some_module = Mount(nr=nr, ra='12.3', dec='43.54')  # camera powinno być
-        self._needed_modules_list.append(some_module)
-
-        # todo poniżej nowsza wersja - wyżej to z _needed_modules_list do usunięcia
         some_module = (self.res_mngr.MOUNT, 0)
         self._needed_modules.append(some_module)
 
