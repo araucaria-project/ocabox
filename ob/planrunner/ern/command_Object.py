@@ -2,7 +2,7 @@ import asyncio
 import logging
 from typing import List, Tuple
 
-from ob.data_colection.resource_manager.resource import ResourceCommandError
+from ob.data_colection.resource_manager.errors import ResourceCommandError
 from ob.planrunner.ern.command import Command
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])

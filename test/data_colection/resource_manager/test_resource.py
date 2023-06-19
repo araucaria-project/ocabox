@@ -5,7 +5,9 @@ import unittest
 from pyaraucaria.coordinates import az_alt_2_ra_dec, ra_dec_epoch
 from ob.comunication.internal_client_api import InternalClientAPI
 from ob.comunication.request_solver import RequestSolver
-from ob.data_colection.resource_manager.resource import DomeAlpaca, Position, Move
+from ob.data_colection.resource_manager.resource import DomeAlpaca
+from ob.data_colection.resource_manager.moves.move import Move
+from ob.data_colection.resource_manager.moves.position import Position
 from ob.data_colection.specialistic_components.tree_alpaca import TreeAlpacaObservatory
 from ob.data_colection.specialistic_components.tree_cache_observatory import TreeCache
 from ob.data_colection.specialistic_components.tree_conditional_freezer import TreeConditionalFreezer
