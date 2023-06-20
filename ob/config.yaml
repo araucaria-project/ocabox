@@ -24,8 +24,6 @@ client:
     request_timeout: 5.1  # extra, not used by ocabox
     delay: 0.1  # extra, not used by ocabox
     max_missed_msg: 3  # extra, not used by ocabox
-    app:
-      base_fits_dir: ~/Desktop
   CliClient:
     port: 5558
     url: tic.oca.lan
@@ -35,8 +33,6 @@ client:
     request_timeout: 2.17  # extra, not used by ocabox
     delay: 0.1  # extra, not used by ocabox
     max_missed_msg: 3  # extra, not used by ocabox
-    app:
-      base_fits_dir: ~/Desktop
   DefaultClient:
     port: 5559
     url: localhost
@@ -48,6 +44,8 @@ client:
     max_missed_msg: 3  # extra, not used by ocabox
     app:
       base_fits_dir: ~/Desktop
+      base_log_dir: ~/.oca
+
   SampleTestClient:
     port: 5560
     url: localhost

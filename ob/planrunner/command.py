@@ -30,7 +30,8 @@ class Command(AbstractSequence):
         self.subcomponents = {}
         self.telescope = parent.telescope
         self.info_callback = parent.info_callback
-        super().__init__(self.id, self.command_name, self.info_callback, observatory=self.parent.observatory)
+        super().__init__(self.id, self.command_name, self.info_callback,
+                         observatory=self.parent.observatory, c_type='command', kwargs=self.kwargs)
         self._write_subcommands()
 
     def _create_command_string(self):
@@ -86,6 +87,13 @@ class Command(AbstractSequence):
             # TODO add info, that parsed plan have errors
             self.info_callback['stream_1'](f'Command {self.command_name} not recognized, check plan syntax' )
 
+    @property
+    def _uobi(self) -> int:
+        if 'uobi' in self.kwargs.keys():
+            return self.kwargs['uobi']
+        else:
+            return 0
+
     def _write_domeflat(self):
         id_next = 0
 
@@ -95,7 +103,7 @@ class Command(AbstractSequence):
         dome_az = 0.0
         tel_flat_az = dome_az + 180
         dome_flat_alt = 15.0
-        sub = DomeSlew(f'{self.id}_{self.numb(id_next)}', self, az=dome_az)
+        sub = DomeSlew(f'{self.id}_{self.numb(id_next)}', self, az=dome_az, uobi=self._uobi)
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
         id_next += 1
 
@@ -105,20 +113,21 @@ class Command(AbstractSequence):
                         alt=dome_flat_alt,
                         az=tel_flat_az,
                         tracking=False,
-                        epoch='2000'
+                        epoch='2000',
+                        uobi=self._uobi
                         )
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
         id_next += 1
 
         if 'screen_light' in self.kwargs.keys():
             if self.kwargs['screen_light'] == 'auto':
-                sub = DomeScreenLight(f'{self.id}_{self.numb(id_next)}', self, light=True)
+                sub = DomeScreenLight(f'{self.id}_{self.numb(id_next)}', self, light=True, uobi=self._uobi)
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
 
         if 'mirror_cover' in self.kwargs.keys():
             if self.kwargs['mirror_cover'] == 'auto':
-                sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=True)
+                sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=True, uobi=self._uobi)
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
 
@@ -130,7 +139,8 @@ class Command(AbstractSequence):
 
                 sub = ChangeFilter(f'{self.id}_{self.numb(id_next)}',
                                    self,
-                                   filter=par[1])
+                                   filter=par[1],
+                                   uobi=self._uobi)
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
 
@@ -146,14 +156,15 @@ class Command(AbstractSequence):
                                          req_ra='',
                                          req_dec='',
                                          epoch='2000',
-                                         filter=par[1]
+                                         filter=par[1],
+                                         uobi=self._uobi
                                          )
                     self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                     id_next += 1
 
         if 'screen_light' in self.kwargs.keys():
             if self.kwargs['screen_light'] == 'auto':
-                sub = DomeScreenLight(f'{self.id}_{self.numb(id_next)}', self, light=False)
+                sub = DomeScreenLight(f'{self.id}_{self.numb(id_next)}', self, light=False, uobi=self._uobi)
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
 
@@ -187,7 +198,8 @@ class Command(AbstractSequence):
                             obj_name=obj_name,
                             ra=ra_to_decimal(req_ra),
                             dec=dec_to_decimal(req_dec),
-                            epoch='2000')
+                            epoch='2000',
+                            uobi=self._uobi)
             self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
             id_next += 1
 
@@ -209,7 +221,8 @@ class Command(AbstractSequence):
                                 alt=self.kwargs['alt'],
                                 az=self.kwargs['az'],
                                 tracking=True,
-                                epoch='2000')
+                                epoch='2000',
+                                uobi=self._uobi)
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
 
@@ -217,13 +230,13 @@ class Command(AbstractSequence):
                 # TODO syntax error
                 pass
 
-        sub = DomeSlew(f'{self.id}_{self.numb(id_next)}', self, follow_tol=2.0)
+        sub = DomeSlew(f'{self.id}_{self.numb(id_next)}', self, follow_tol=2.0, uobi=self._uobi)
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
         id_next += 1
 
         if 'mirror_cover' in self.kwargs.keys():
             if self.kwargs['mirror_cover'] == 'auto':
-                sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=True)
+                sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=True, uobi=self._uobi)
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
 
@@ -235,7 +248,8 @@ class Command(AbstractSequence):
 
                 sub = ChangeFilter(f'{self.id}_{self.numb(id_next)}',
                                    self,
-                                   filter=par[1])
+                                   filter=par[1],
+                                   uobi=self._uobi)
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
 
@@ -258,7 +272,8 @@ class Command(AbstractSequence):
                     dec_dit = None
                     # If focusing, set focuser position
                     if subcommand_name == 'focusing':
-                        sub = Focusing(f'{self.id}_{self.numb(id_next)}', self, position=foc_list[ex-1])
+                        sub = Focusing(f'{self.id}_{self.numb(id_next)}', self,
+                                       position=foc_list[ex-1], uobi=self._uobi)
                         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                         id_next += 1
 
@@ -306,7 +321,8 @@ class Command(AbstractSequence):
                                                     obj_name=obj_name,
                                                     ra=ra_dit,
                                                     dec=dec_dit,
-                                                    epoch='2000')
+                                                    epoch='2000',
+                                                    uobi=self._uobi)
                                     self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                                     id_next += 1
 
@@ -320,7 +336,8 @@ class Command(AbstractSequence):
                                                 obj_name=obj_name,
                                                 ra=ra_dit,
                                                 dec=dec_dit,
-                                                epoch='2000')
+                                                epoch='2000',
+                                                uobi=self._uobi)
                                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                                 id_next += 1
                             else:
@@ -328,7 +345,7 @@ class Command(AbstractSequence):
                         else:
                             pass
 
-                    sub = DomeSlew(f'{self.id}_{self.numb(id_next)}', self, follow_tol=3.0)
+                    sub = DomeSlew(f'{self.id}_{self.numb(id_next)}', self, follow_tol=3.0, uobi=self._uobi)
                     self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                     id_next += 1
 
@@ -358,7 +375,8 @@ class Command(AbstractSequence):
                                          req_dec=req_dec,
                                          epoch='2000',
                                          filter=par[1],
-                                         focus_id=focus_id
+                                         focus_id=focus_id,
+                                         uobi=self._uobi
                                          )
                     self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                     id_next += 1
@@ -369,7 +387,7 @@ class Command(AbstractSequence):
 
         if 'mirror_cover' in self.kwargs.keys():
             if self.kwargs['mirror_cover'] == 'auto':
-                sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=False)
+                sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=False, uobi=self._uobi)
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
 
@@ -381,7 +399,8 @@ class Command(AbstractSequence):
 
                 sub = ChangeFilter(f'{self.id}_{self.numb(id_next)}',
                                    self,
-                                   filter=par[1])
+                                   filter=par[1],
+                                   uobi=self._uobi)
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
 
@@ -397,7 +416,8 @@ class Command(AbstractSequence):
                                          req_ra='',
                                          req_dec='',
                                          epoch='2000',
-                                         filter=par[1]
+                                         filter=par[1],
+                                         uobi=self._uobi
                                          )
                     self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                     id_next += 1

@@ -8,9 +8,11 @@ All notable changes to this project will be documented in this file.
 - added `Telescope.is_telescope_alpaca_server_available`
 - added STOP, WAIT commands  to client plan runner
 - ocaboxapi.Mount errorstring and cleanerror
+- base_command, root class for sequences and subcommands
 
 ### Changed
 - improved automatic skyflats time calculation (substracted bias level)
+- ocaboxapi formatter cover status 4 updated
 
 ### Fixed
 - Automatic skyflat time in fits header 

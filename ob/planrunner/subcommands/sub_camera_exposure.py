@@ -2,7 +2,7 @@ import asyncio
 import logging
 from ob.planrunner.subcommand import SubCommand
 from pyaraucaria.fits import save_fits_from_array, fits_header, fits_stat
-from pyaraucaria.date import datetime_to_julian, julian_to_tuple
+from pyaraucaria.date import julian_to_tuple
 from ocaboxapi.formatter import parse_deg_or_dms
 from datetime import datetime
 import time
@@ -28,7 +28,6 @@ class CameraExposure(SubCommand):
         self.rotator = self.telescope.get_rotator()
         self.kwargs = kwargs
         self.id = id
-        self.user = pwd.getpwuid(os.getuid())[0]
         self.base_fits_folder = os.path.expanduser(self.telescope.observatory.get_app_cfg('base_fits_dir', f'~/Desktop'))
         self.folder = os.path.join(self.base_fits_folder, f'fits_{self.telescope.id}')
         self.folder_focusing = os.path.join(self.folder, f'focus')
@@ -43,25 +42,11 @@ class CameraExposure(SubCommand):
         self._mk_folder(self.folder)
         self._mk_folder(self.folder_focusing)
 
-    @staticmethod
-    def _mk_folder(folder: str):
-        if not os.path.exists(folder):
-            try:
-                os.makedirs(folder, exist_ok=True)
-                logger.info(f'Creating folder {folder}')
-            except Exception as e:
-                logger.warning(
-                    f'Folder creation failed, please create folder {folder} manually '
-                    f'or adjust config key "app.base_fits_dir". Error: {e}'
-                )
+
 
     @staticmethod
     def _mk_symlink(target: str, symlink: str):
         os.symlink(src=target, dst=symlink, dir_fd = None)
-
-    @staticmethod
-    def get_julian_date(date: str or datetime) -> float:
-        return datetime_to_julian(date)
 
     def indexing_value(self, value: int, values: List[str]) -> int or str:
         if isinstance(value, int) and isinstance(values, list):
