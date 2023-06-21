@@ -1,4 +1,5 @@
 import asyncio
+import time
 from typing import Tuple, Optional, Callable
 
 from ob.comunication.comunication_error import CommunicationRuntimeError
@@ -19,6 +20,8 @@ class Position:
         self._finish_fut = None
         self.timeout = timeout if timeout is not None else 20
         self.level = level
+        self._start_tmstp = 0
+        self._finish_tmstp = 0
         # ------ optional -------
         self.bounds: Tuple[Optional[float], Optional[float]] = bounds
         self._wait_for_others: list = []
@@ -50,6 +53,18 @@ class Position:
     @target.setter
     def target(self, t):
         self._target = t
+
+    @property
+    def start_timestamp(self):
+        return self._start_tmstp
+
+    @start_timestamp.setter
+    def start_timestamp(self, s):
+        self._start_tmstp = s
+
+    @property
+    def finish_timestamp(self):
+        return self._finish_tmstp
 
     def get_finish_future(self):
         return self._finish_fut
@@ -164,6 +179,7 @@ class Position:
                     self._finish_fut.set_result(False)
                     return
         finally:
+            self._finish_tmstp = time.time()
             if not self._finish_fut.done():
                 self._finish_fut.set_result(False)
             await CQ.stop_and_wait()

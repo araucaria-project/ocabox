@@ -29,14 +29,7 @@ class CommandObject(Command):
 
     def _create_modules_from_args(self):
         # todo uzupełnić, utworzyć obiekty, coś w stylu _write_object() z dawnego runera
-        nr = 0
         some_module = (self.res_mngr.MOUNT, 0)
-        self._needed_modules.append(some_module)
-
-        some_module = (self.res_mngr.DOME, 0)
-        self._needed_modules.append(some_module)
-
-        some_module = (self.res_mngr.CAMERA, 0)
         self._needed_modules.append(some_module)
 
     def _get_res(self, name: str, nr: int):

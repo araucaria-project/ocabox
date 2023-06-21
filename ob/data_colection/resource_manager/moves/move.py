@@ -1,3 +1,5 @@
+import time
+
 from ob.data_colection.resource_manager.errors import ResourceCommandError
 
 
@@ -53,6 +55,10 @@ class Move:
         self._actn = action
 
     async def make(self):
+        ts = time.time()
+        # set start timestamp
+        for p in self.positions:
+            p.start_timestamp = ts
         try:
             if self._actn is not None:
                 await self._actn
