@@ -169,6 +169,7 @@ class Position:
             await CQ.stop_and_wait()
 
     async def wait(self):
+        # todo może powinien zwracać błąd gdy czekamy a nie zostało uruchomione
         if self._finish_fut is not None:
             await self._finish_fut
 

@@ -6,6 +6,7 @@ from pyaraucaria.coordinates import deg_str_to_deg
 
 from ob.data_colection.address import Address
 from ob.data_colection.alpaca_api.standard_telescope_components import StandardTelescopeComponents
+from ob.data_colection.resource_manager.moves.custom_moves.mount_slew_alt_az import MountSlewAltAz
 from ob.data_colection.resource_manager.moves.custom_moves.mount_slew_ra_dec import MountSlewRaDec
 from ob.data_colection.resource_manager.moves.move import Move
 
@@ -128,11 +129,17 @@ class MountAlpaca(Resource):
         # -----------------------------
         self._slewing = None
 
-    def build_go_to_position(self, ra, dec, api) -> Move:
-        return self._build_ra_dec_slew(ra, dec, api)
+    def build_go_to_position(self, ra, dec, alt, az, api) -> Move:
+        if alt and az:
+            return self._build_alt_az_slew(alt=alt, az=az, api=api)
+        return self._build_ra_dec_slew(ra=ra, dec=dec, api=api)
 
     def _build_ra_dec_slew(self, ra, dec, api) -> Move:
         m = MountSlewRaDec(api, resource=self, ra_dec=(ra, dec))
+        return m
+
+    def _build_alt_az_slew(self, alt, az, api):
+        m = MountSlewAltAz(api, resource=self, alt_az=(alt, az))
         return m
 
 
@@ -162,5 +169,3 @@ class SafetymonitorAlpaca(Resource):
 
 class CovercalibratorAlpaca(Resource):
     RESOURCE_NAME = StandardTelescopeComponents.COVERCALIBRATOR
-
-

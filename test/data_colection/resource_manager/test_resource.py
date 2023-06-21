@@ -5,6 +5,7 @@ import unittest
 from pyaraucaria.coordinates import az_alt_2_ra_dec, ra_dec_epoch
 from ob.comunication.internal_client_api import InternalClientAPI
 from ob.comunication.request_solver import RequestSolver
+from ob.data_colection.resource_manager.errors import ResourceCommandError
 from ob.data_colection.resource_manager.resource import DomeAlpaca
 from ob.data_colection.resource_manager.moves.move import Move
 from ob.data_colection.resource_manager.moves.position import Position
@@ -124,8 +125,8 @@ class MountAlpacaTest(unittest.TestCase, BaseAsyncTest):
         self._tearDownLoop()
         super().tearDown()
 
-    def test_go_to_position(self):
-        """Test slew mount to position"""
+    def test_go_to_position_ra_dec(self):
+        """Test slew mount to position ra dec"""
 
         async def coro():
             await self.tree_freezer.run()
@@ -136,7 +137,7 @@ class MountAlpacaTest(unittest.TestCase, BaseAsyncTest):
             position_ra_final, position_dec_final = ra_dec_epoch(ra=position_ra,
                                                                  dec=position_dec,
                                                                  epoch=str("2000"))
-            m = mount.build_go_to_position(position_ra, position_dec, self.api_test)
+            m = mount.build_go_to_position(ra=position_ra, dec=position_dec, alt=None, az=None, api=self.api_test)
             await m.make()
             await m.wait()
             result = await self.api_test.get_async(f"{mount.adr}.rightascension")
@@ -144,6 +145,42 @@ class MountAlpacaTest(unittest.TestCase, BaseAsyncTest):
             result = await self.api_test.get_async(f"{mount.adr}.declination")
             self.assertTrue(position_dec_final - 0.5 < result.value.v < position_dec_final + 0.5)
             self.assertEqual(m.progress, 1)
+            await self.tree_freezer.stop()
+
+        asyncio.run(coro())
+
+    def test_go_to_position_alt_az(self):
+        """Test slew mount to position alt az"""
+
+        async def coro():
+            await self.tree_freezer.run()
+            rm = await self.tao.get_res_manager()
+            mount = rm.get_resource(name=rm.MOUNT, nr=0)
+            position_alt = random.randint(30, 50)
+            position_az = random.randint(30, 50)
+            m = mount.build_go_to_position(ra=None, dec=None, alt=position_alt, az=position_az, api=self.api_test)
+            await m.make()
+            await m.wait()
+            result = await self.api_test.get_async(f"{mount.adr}.altitude")
+            self.assertTrue(position_alt - 0.5 < result.value.v < position_alt + 0.5)
+            result = await self.api_test.get_async(f"{mount.adr}.azimuth")
+            self.assertTrue(position_az - 0.5 < result.value.v < position_az + 0.5)
+            self.assertEqual(m.progress, 1)
+            await self.tree_freezer.stop()
+
+        asyncio.run(coro())
+
+    def test_go_to_position_wrong_params(self):
+        """Test slew mount to position wrong position format"""
+
+        async def coro():
+            await self.tree_freezer.run()
+            rm = await self.tao.get_res_manager()
+            mount = rm.get_resource(name=rm.MOUNT, nr=0)
+            m = mount.build_go_to_position(ra=random.randint(30, 50), dec=None, alt=None, az=random.randint(30, 50),
+                                           api=self.api_test)
+            with self.assertRaises(ResourceCommandError):
+                await m.make()
             await self.tree_freezer.stop()
 
         asyncio.run(coro())

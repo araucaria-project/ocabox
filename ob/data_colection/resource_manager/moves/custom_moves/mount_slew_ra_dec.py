@@ -9,8 +9,8 @@ class MountSlewRaDec(Move):
     def __init__(self, api, resource, ra_dec):
         super().__init__(api=api)
         self._resource_content = resource
-        self._ra_f = ra_to_decimal(ra_dec[0])
-        self._dec_f = dec_to_decimal(ra_dec[1])
+        self._ra = ra_dec[0]
+        self._dec = ra_dec[1]
         self._position_ra_name = "ra"
         self._position_dec_name = "dec"
         self._build()
@@ -18,24 +18,29 @@ class MountSlewRaDec(Move):
     def _build(self):
         # positions ra and dec have to have a name because it will be used in updating targets
         self.add_position(
-            Position(f"{self._resource_content.adr}.rightascension", t=self._ra_f, bounds=(0.5, 0.5),
+            Position(f"{self._resource_content.adr}.rightascension", t=self._ra, bounds=(0.5, 0.5),
                      name=self._position_ra_name))
         self.add_position(
-            Position(f"{self._resource_content.adr}.declination", t=self._dec_f, bounds=(0.5, 0.5),
+            Position(f"{self._resource_content.adr}.declination", t=self._dec, bounds=(0.5, 0.5),
                      name=self._position_dec_name))
         self.add_position(Position(f"{self._resource_content.adr}.tracking", t=True))
         self.add_position(Position(f"{self._resource_content.adr}.slewing", t=False, level=2))
 
     async def _action(self):
-        ra_now, dec_now = ra_dec_epoch(ra=self._ra_f,
-                                       dec=self._dec_f,
-                                       epoch=str(self._resource_content.epoch))
-        az, alt = ra_dec_2_az_alt(ra=ra_now,
-                                  dec=dec_now,
-                                  latitude=self._resource_content.latitude,
-                                  longitude=self._resource_content.longitude,
-                                  elevation=self._resource_content.elevation,
-                                  epoch=self._resource_content.epoch)
+        try:
+            ra_f = ra_to_decimal(self._ra)
+            dec_f = dec_to_decimal(self._dec)
+            ra_now, dec_now = ra_dec_epoch(ra=ra_f,
+                                           dec=dec_f,
+                                           epoch=str(self._resource_content.epoch))
+            az, alt = ra_dec_2_az_alt(ra=ra_now,
+                                      dec=dec_now,
+                                      latitude=self._resource_content.latitude,
+                                      longitude=self._resource_content.longitude,
+                                      elevation=self._resource_content.elevation,
+                                      epoch=self._resource_content.epoch)
+        except Exception as e:
+            raise ResourceCommandError(f"Error when converting RA DEC values. {str(e)}")
         if alt <= self._resource_content.min_alt:
             raise ResourceCommandError(f"Altitude is lover then min altitude")
 
