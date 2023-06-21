@@ -175,6 +175,11 @@ class Command(AbstractSequence):
         req_ra = ''
         req_dec = ''
 
+        if 'epoch' in self.kwargs.keys():
+            epoch = str(self.kwargs['epoch'])
+        else:
+            epoch = '2000'
+
         if len(self.args) >= 2:
 
             if len(self.args) == 2:
@@ -198,7 +203,7 @@ class Command(AbstractSequence):
                             obj_name=obj_name,
                             ra=ra_to_decimal(req_ra),
                             dec=dec_to_decimal(req_dec),
-                            epoch='2000',
+                            epoch=epoch,
                             uobi=self._uobi)
             self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
             id_next += 1
@@ -221,7 +226,7 @@ class Command(AbstractSequence):
                                 alt=self.kwargs['alt'],
                                 az=self.kwargs['az'],
                                 tracking=True,
-                                epoch='2000',
+                                epoch=epoch,
                                 uobi=self._uobi)
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
@@ -321,7 +326,7 @@ class Command(AbstractSequence):
                                                     obj_name=obj_name,
                                                     ra=ra_dit,
                                                     dec=dec_dit,
-                                                    epoch='2000',
+                                                    epoch=epoch,
                                                     uobi=self._uobi)
                                     self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                                     id_next += 1
@@ -336,7 +341,7 @@ class Command(AbstractSequence):
                                                 obj_name=obj_name,
                                                 ra=ra_dit,
                                                 dec=dec_dit,
-                                                epoch='2000',
+                                                epoch=epoch,
                                                 uobi=self._uobi)
                                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                                 id_next += 1
@@ -373,7 +378,7 @@ class Command(AbstractSequence):
                                          obj_name=obj_name,
                                          req_ra=req_ra,
                                          req_dec=req_dec,
-                                         epoch='2000',
+                                         epoch=epoch,
                                          filter=par[1],
                                          focus_id=focus_id,
                                          uobi=self._uobi
