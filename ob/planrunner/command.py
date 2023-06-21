@@ -94,6 +94,23 @@ class Command(AbstractSequence):
         else:
             return 0
 
+    @property
+    def _dome_follow(self) -> bool:
+        if 'dome_follow' in self.kwargs.keys():
+            if self.kwargs['dome_follow'] == 'off':
+                return False
+            else:
+                return True
+        else:
+            return True
+
+    @property
+    def _epoch(self) -> str:
+        if 'epoch' in self.kwargs.keys():
+            return str(self.kwargs['epoch'])
+        else:
+            return f'2000'
+
     def _write_domeflat(self):
         id_next = 0
 
@@ -103,9 +120,11 @@ class Command(AbstractSequence):
         dome_az = 0.0
         tel_flat_az = dome_az + 180
         dome_flat_alt = 15.0
-        sub = DomeSlew(f'{self.id}_{self.numb(id_next)}', self, az=dome_az, uobi=self._uobi)
-        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-        id_next += 1
+
+        if self._dome_follow is True:
+            sub = DomeSlew(f'{self.id}_{self.numb(id_next)}', self, az=dome_az, uobi=self._uobi)
+            self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+            id_next += 1
 
         sub = MountSlew(f'{self.id}_{self.numb(id_next)}',
                         self,
@@ -113,7 +132,7 @@ class Command(AbstractSequence):
                         alt=dome_flat_alt,
                         az=tel_flat_az,
                         tracking=False,
-                        epoch='2000',
+                        epoch=self._epoch,
                         uobi=self._uobi
                         )
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
@@ -155,7 +174,7 @@ class Command(AbstractSequence):
                                          obj_name='domeflat',
                                          req_ra='',
                                          req_dec='',
-                                         epoch='2000',
+                                         epoch=self._epoch,
                                          filter=par[1],
                                          uobi=self._uobi
                                          )
@@ -174,11 +193,6 @@ class Command(AbstractSequence):
         obj_name = ''
         req_ra = ''
         req_dec = ''
-
-        if 'epoch' in self.kwargs.keys():
-            epoch = str(self.kwargs['epoch'])
-        else:
-            epoch = '2000'
 
         if len(self.args) >= 2:
 
@@ -203,7 +217,7 @@ class Command(AbstractSequence):
                             obj_name=obj_name,
                             ra=ra_to_decimal(req_ra),
                             dec=dec_to_decimal(req_dec),
-                            epoch=epoch,
+                            epoch=self._epoch,
                             uobi=self._uobi)
             self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
             id_next += 1
@@ -226,7 +240,7 @@ class Command(AbstractSequence):
                                 alt=self.kwargs['alt'],
                                 az=self.kwargs['az'],
                                 tracking=True,
-                                epoch=epoch,
+                                epoch=self._epoch,
                                 uobi=self._uobi)
                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                 id_next += 1
@@ -235,9 +249,10 @@ class Command(AbstractSequence):
                 # TODO syntax error
                 pass
 
-        sub = DomeSlew(f'{self.id}_{self.numb(id_next)}', self, follow_tol=2.0, uobi=self._uobi)
-        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-        id_next += 1
+        if self._dome_follow is True:
+            sub = DomeSlew(f'{self.id}_{self.numb(id_next)}', self, follow_tol=2.0, uobi=self._uobi)
+            self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+            id_next += 1
 
         if 'mirror_cover' in self.kwargs.keys():
             if self.kwargs['mirror_cover'] == 'auto':
@@ -288,6 +303,7 @@ class Command(AbstractSequence):
                              (subcommand_name != 'skyflat' and 'dither' in self.kwargs.keys()):
 
                         if subcommand_name == 'skyflat' and 'dither' not in self.kwargs.keys():
+                            # TODO Get this values from settings
                             dit_mode = 'basic'
                             for_every_sub = 1
                             dit_dist = 1.0
@@ -326,7 +342,7 @@ class Command(AbstractSequence):
                                                     obj_name=obj_name,
                                                     ra=ra_dit,
                                                     dec=dec_dit,
-                                                    epoch=epoch,
+                                                    epoch=self._epoch,
                                                     uobi=self._uobi)
                                     self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                                     id_next += 1
@@ -341,7 +357,7 @@ class Command(AbstractSequence):
                                                 obj_name=obj_name,
                                                 ra=ra_dit,
                                                 dec=dec_dit,
-                                                epoch=epoch,
+                                                epoch=self._epoch,
                                                 uobi=self._uobi)
                                 self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                                 id_next += 1
@@ -350,9 +366,10 @@ class Command(AbstractSequence):
                         else:
                             pass
 
-                    sub = DomeSlew(f'{self.id}_{self.numb(id_next)}', self, follow_tol=3.0, uobi=self._uobi)
-                    self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-                    id_next += 1
+                    if self._dome_follow is True:
+                        sub = DomeSlew(f'{self.id}_{self.numb(id_next)}', self, follow_tol=3.0, uobi=self._uobi)
+                        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+                        id_next += 1
 
                     if subcommand_name == 'skyflat':
                         type = 'skyflat'
@@ -378,7 +395,7 @@ class Command(AbstractSequence):
                                          obj_name=obj_name,
                                          req_ra=req_ra,
                                          req_dec=req_dec,
-                                         epoch=epoch,
+                                         epoch=self._epoch,
                                          filter=par[1],
                                          focus_id=focus_id,
                                          uobi=self._uobi
@@ -420,7 +437,7 @@ class Command(AbstractSequence):
                                          obj_name=subcommand_name,
                                          req_ra='',
                                          req_dec='',
-                                         epoch='2000',
+                                         epoch=self._epoch,
                                          filter=par[1],
                                          uobi=self._uobi
                                          )
