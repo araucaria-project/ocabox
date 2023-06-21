@@ -111,6 +111,28 @@ class Command(AbstractSequence):
         else:
             return f'2000'
 
+    @property
+    def _mirror_cover_mode(self):
+        modes = ['auto', 'open', 'close']
+        if 'mirror_cover' in self.kwargs.keys():
+            if self.kwargs['mirror_cover'] in modes:
+                return self.kwargs['mirror_cover']
+            else:
+                return None
+        else:
+            return None
+
+    @property
+    def _screen_light_mode(self):
+        modes = ['auto', 'on', 'off']
+        if 'screen_light' in self.kwargs.keys():
+            if self.kwargs['screen_light'] in modes:
+                return self.kwargs['screen_light']
+            else:
+                return None
+        else:
+            return None
+
     def _write_domeflat(self):
         id_next = 0
 
@@ -138,17 +160,15 @@ class Command(AbstractSequence):
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
         id_next += 1
 
-        if 'screen_light' in self.kwargs.keys():
-            if self.kwargs['screen_light'] == 'auto':
-                sub = DomeScreenLight(f'{self.id}_{self.numb(id_next)}', self, light=True, uobi=self._uobi)
-                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-                id_next += 1
+        if self._screen_light_mode in ['auto', 'on']:
+            sub = DomeScreenLight(f'{self.id}_{self.numb(id_next)}', self, light=True, uobi=self._uobi)
+            self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+            id_next += 1
 
-        if 'mirror_cover' in self.kwargs.keys():
-            if self.kwargs['mirror_cover'] == 'auto':
-                sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=True, uobi=self._uobi)
-                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-                id_next += 1
+        if self._mirror_cover_mode in ['auto', 'open']:
+            sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=True, uobi=self._uobi)
+            self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+            id_next += 1
 
         # Camera exposure
         if 'seq' in self.kwargs:
@@ -181,11 +201,15 @@ class Command(AbstractSequence):
                     self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                     id_next += 1
 
-        if 'screen_light' in self.kwargs.keys():
-            if self.kwargs['screen_light'] == 'auto':
-                sub = DomeScreenLight(f'{self.id}_{self.numb(id_next)}', self, light=False, uobi=self._uobi)
-                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-                id_next += 1
+        if self._screen_light_mode in ['auto', 'off']:
+            sub = DomeScreenLight(f'{self.id}_{self.numb(id_next)}', self, light=False, uobi=self._uobi)
+            self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+            id_next += 1
+
+        if self._mirror_cover_mode in ['close']:
+            sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=False, uobi=self._uobi)
+            self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+            id_next += 1
 
     def _write_object_skyflat_focusing(self, subcommand_name: str) -> None:
 
@@ -254,11 +278,10 @@ class Command(AbstractSequence):
             self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
             id_next += 1
 
-        if 'mirror_cover' in self.kwargs.keys():
-            if self.kwargs['mirror_cover'] == 'auto':
-                sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=True, uobi=self._uobi)
-                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-                id_next += 1
+        if self._mirror_cover_mode in ['auto', 'open']:
+            sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=True, uobi=self._uobi)
+            self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+            id_next += 1
 
         # Camera exposure
         if 'seq' in self.kwargs:
@@ -403,15 +426,19 @@ class Command(AbstractSequence):
                     self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
                     id_next += 1
 
+        if self._mirror_cover_mode in ['close']:
+            sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=False, uobi=self._uobi)
+            self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+            id_next += 1
+
     def _write_zero_dark(self, subcommand_name: str) -> None:
 
         id_next = 0
 
-        if 'mirror_cover' in self.kwargs.keys():
-            if self.kwargs['mirror_cover'] == 'auto':
-                sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=False, uobi=self._uobi)
-                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-                id_next += 1
+        if self._mirror_cover_mode in ['auto', 'close']:
+            sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=False, uobi=self._uobi)
+            self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+            id_next += 1
 
         # Camera exposure
         if 'seq' in self.kwargs:
