@@ -12,6 +12,7 @@ from ob.planrunner.subcommands.sub_stop import Stop
 from ob.planrunner.subcommands.sub_wait import Wait
 from pyaraucaria.coordinates import az_alt_2_ra_dec, ra_to_decimal, dec_to_decimal, deg_to_decimal_deg, ra_dec_2_az_alt
 import random
+from ob.planrunner.subcommand import SubCommand
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -133,8 +134,14 @@ class Command(AbstractSequence):
         else:
             return None
 
+    def _op_id(self, id_next: int) -> str:
+        return f'{self.id}_{self.numb(id_next)}'
+
+    def _add_comp(self, sub: SubCommand, id_next: int) -> int:
+        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+        return id_next + 1
+
     def _write_domeflat(self):
-        id_next = 0
 
         # Slew to altaz
         # TODO turn on domeflat lamp, set brightness (value also from some config? or kwarg?)
@@ -143,73 +150,73 @@ class Command(AbstractSequence):
         tel_flat_az = dome_az + 180
         dome_flat_alt = 15.0
 
-        if self._dome_follow is True:
-            sub = DomeSlew(f'{self.id}_{self.numb(id_next)}', self, az=dome_az, uobi=self._uobi)
-            self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-            id_next += 1
+        id_next = 0
 
-        sub = MountSlew(f'{self.id}_{self.numb(id_next)}',
-                        self,
-                        obj_name='domeflat',
-                        alt=dome_flat_alt,
-                        az=tel_flat_az,
-                        tracking=False,
-                        epoch=self._epoch,
-                        uobi=self._uobi
-                        )
-        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-        id_next += 1
+        if self._dome_follow is True:
+            id_next = self._add_comp(DomeSlew(id=self._op_id(id_next=id_next),
+                                              parent=self,
+                                              az=dome_az,
+                                              uobi=self._uobi), id_next=id_next)
+
+        id_next = self._add_comp(MountSlew(id=self._op_id(id_next=id_next),
+                                           parent=self,
+                                           obj_name='domeflat',
+                                           alt=dome_flat_alt,
+                                           az=tel_flat_az,
+                                           tracking=False,
+                                           epoch=self._epoch,
+                                           uobi=self._uobi
+                                           ), id_next=id_next)
 
         if self._screen_light_mode in ['auto', 'on']:
-            sub = DomeScreenLight(f'{self.id}_{self.numb(id_next)}', self, light=True, uobi=self._uobi)
-            self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-            id_next += 1
+            id_next = self._add_comp(DomeScreenLight(id=self._op_id(id_next=id_next),
+                                                     parent=self,
+                                                     light=True,
+                                                     uobi=self._uobi), id_next=id_next)
 
         if self._mirror_cover_mode in ['auto', 'open']:
-            sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=True, uobi=self._uobi)
-            self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-            id_next += 1
+            id_next = self._add_comp(MirrorCover(id=self._op_id(id_next=id_next),
+                                                 parent=self,
+                                                 open=True,
+                                                 uobi=self._uobi), id_next=id_next)
 
         # Camera exposure
-        if 'seq' in self.kwargs:
+        if 'seq' in self.kwargs.keys():
             seq_list = self._split_seq(self.kwargs['seq'])
             for n in seq_list:
                 par = list(n.split('/'))
 
-                sub = ChangeFilter(f'{self.id}_{self.numb(id_next)}',
-                                   self,
-                                   filter=par[1],
-                                   uobi=self._uobi)
-                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-                id_next += 1
+                id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),
+                                                      parent=self,
+                                                      filter=par[1],
+                                                      uobi=self._uobi), id_next=id_next)
 
                 for ex in range(1, int(par[0]) + 1):
-                    sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
-                                         self,
-                                         sub_exp=ex,
-                                         exp_time=float(par[2]),
-                                         exp_no=int(par[0]),
-                                         type='flat',
-                                         light=True,
-                                         obj_name='domeflat',
-                                         req_ra='',
-                                         req_dec='',
-                                         epoch=self._epoch,
-                                         filter=par[1],
-                                         uobi=self._uobi
-                                         )
-                    self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-                    id_next += 1
+                    id_next = self._add_comp(CameraExposure(id=self._op_id(id_next=id_next),
+                                                            parent=self,
+                                                            sub_exp=ex,
+                                                            exp_time=float(par[2]),
+                                                            exp_no=int(par[0]),
+                                                            type='flat',
+                                                            light=True,
+                                                            obj_name='domeflat',
+                                                            req_ra='',
+                                                            req_dec='',
+                                                            epoch=self._epoch,
+                                                            filter=par[1],
+                                                            uobi=self._uobi), id_next=id_next)
 
         if self._screen_light_mode in ['auto', 'off']:
-            sub = DomeScreenLight(f'{self.id}_{self.numb(id_next)}', self, light=False, uobi=self._uobi)
-            self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-            id_next += 1
+            id_next = self._add_comp(DomeScreenLight(id=self._op_id(id_next=id_next),
+                                                     parent=self,
+                                                     light=False,
+                                                     uobi=self._uobi), id_next=id_next)
 
         if self._mirror_cover_mode in ['close']:
-            sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=False, uobi=self._uobi)
-            self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-            id_next += 1
+            id_next = self._add_comp(MirrorCover(id=self._op_id(id_next=id_next),
+                                                 parent=self,
+                                                 open=False,
+                                                 uobi=self._uobi), id_next=id_next)
 
     def _write_object_skyflat_focusing(self, subcommand_name: str) -> None:
 
@@ -236,16 +243,13 @@ class Command(AbstractSequence):
             elif subcommand_name == 'focusing':
                 obj_name = 'focusing'
 
-            sub = MountSlew(f'{self.id}_{self.numb(id_next)}',
-                            self,
-                            obj_name=obj_name,
-                            ra=ra_to_decimal(req_ra),
-                            dec=dec_to_decimal(req_dec),
-                            epoch=self._epoch,
-                            uobi=self._uobi)
-            self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-            id_next += 1
-
+            id_next = self._add_comp(MountSlew(id=self._op_id(id_next=id_next),
+                                               parent=self,
+                                               obj_name=obj_name,
+                                               ra=ra_to_decimal(req_ra),
+                                               dec=dec_to_decimal(req_dec),
+                                               epoch=self._epoch,
+                                               uobi=self._uobi), id_next=id_next)
         else:
             if len(self.args) == 1:
                 obj_name = self.args[0]
@@ -258,30 +262,29 @@ class Command(AbstractSequence):
                 obj_name = 'focusing'
 
             if 'alt' and 'az' in self.kwargs.keys():
-                sub = MountSlew(f'{self.id}_{self.numb(id_next)}',
-                                self,
-                                obj_name=obj_name,
-                                alt=self.kwargs['alt'],
-                                az=self.kwargs['az'],
-                                tracking=True,
-                                epoch=self._epoch,
-                                uobi=self._uobi)
-                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-                id_next += 1
-
+                id_next = self._add_comp(MountSlew(id=self._op_id(id_next=id_next),
+                                                   parent=self,
+                                                   obj_name=obj_name,
+                                                   alt=self.kwargs['alt'],
+                                                   az=self.kwargs['az'],
+                                                   tracking=True,
+                                                   epoch=self._epoch,
+                                                   uobi=self._uobi), id_next=id_next)
             else:
                 # TODO syntax error
                 pass
 
         if self._dome_follow is True:
-            sub = DomeSlew(f'{self.id}_{self.numb(id_next)}', self, follow_tol=2.0, uobi=self._uobi)
-            self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-            id_next += 1
+            id_next = self._add_comp(DomeSlew(id=self._op_id(id_next=id_next),
+                                              parent=self,
+                                              follow_tol=2.0,
+                                              uobi=self._uobi), id_next=id_next)
 
         if self._mirror_cover_mode in ['auto', 'open']:
-            sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=True, uobi=self._uobi)
-            self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-            id_next += 1
+            id_next = self._add_comp(MirrorCover(id=self._op_id(id_next=id_next),
+                                                 parent=self,
+                                                 open=True,
+                                                 uobi=self._uobi), id_next=id_next)
 
         # Camera exposure
         if 'seq' in self.kwargs:
@@ -289,15 +292,11 @@ class Command(AbstractSequence):
             for n in seq_list:
                 par = list(n.split('/'))
 
-                sub = ChangeFilter(f'{self.id}_{self.numb(id_next)}',
-                                   self,
-                                   filter=par[1],
-                                   uobi=self._uobi)
-                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-                id_next += 1
-
+                id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),
+                                                      parent=self,
+                                                      filter=par[1],
+                                                      uobi=self._uobi), id_next=id_next)
                 sub_numb = int(par[0])
-
                 foc_list = []
                 focus_id = 0
                 if subcommand_name == 'focusing':
@@ -315,10 +314,10 @@ class Command(AbstractSequence):
                     dec_dit = None
                     # If focusing, set focuser position
                     if subcommand_name == 'focusing':
-                        sub = Focusing(f'{self.id}_{self.numb(id_next)}', self,
-                                       position=foc_list[ex-1], uobi=self._uobi)
-                        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-                        id_next += 1
+                        id_next = self._add_comp(Focusing(id=self._op_id(id_next=id_next),
+                                                          parent=self,
+                                                          position=foc_list[ex-1],
+                                                          uobi=self._uobi), id_next=id_next)
 
                     # Dithering start - kwarg dither=basic/1/1 kind/for_every_sub/distance_in_minutes
                     if (subcommand_name == 'skyflat' and 'dither' not in self.kwargs.keys()) or \
@@ -354,45 +353,42 @@ class Command(AbstractSequence):
                                         logger.error(f"Wrong az alt format")
                                 if isinstance(az, float) and isinstance(az, float):
                                     req_ra_a, req_dec_a = az_alt_2_ra_dec(alt=alt,
-                                                                      az=az,
-                                                                      latitude=OCA['latitude'],
-                                                                      longitude=OCA['longitude'],
-                                                                      elevation=OCA['elevation'])
+                                                                          az=az,
+                                                                          latitude=OCA['latitude'],
+                                                                          longitude=OCA['longitude'],
+                                                                          elevation=OCA['elevation'])
                                     ra_dit = self.ra_random_dither(ra=req_ra_a, dith_val=dit_dist, mode=dit_mode)
                                     dec_dit = self.dec_random_dither(dec=req_dec_a, dith_val=dit_dist, mode=dit_mode)
-                                    sub = MountSlew(f'{self.id}_{self.numb(id_next)}',
-                                                    self,
-                                                    obj_name=obj_name,
-                                                    ra=ra_dit,
-                                                    dec=dec_dit,
-                                                    epoch=self._epoch,
-                                                    uobi=self._uobi)
-                                    self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-                                    id_next += 1
+                                    id_next = self._add_comp(MountSlew(id=self._op_id(id_next=id_next),
+                                                                       parent=self,
+                                                                       obj_name=obj_name,
+                                                                       ra=ra_dit,
+                                                                       dec=dec_dit,
+                                                                       epoch=self._epoch,
+                                                                       uobi=self._uobi), id_next=id_next)
 
                             elif req_ra and req_dec is not None:
                                 req_ra = ra_to_decimal(req_ra)
                                 req_dec = dec_to_decimal(req_dec)
                                 ra_dit = self.ra_random_dither(ra=req_ra, dith_val=dit_dist, mode=dit_mode)
                                 dec_dit = self.dec_random_dither(dec=req_dec, dith_val=dit_dist, mode=dit_mode)
-                                sub = MountSlew(f'{self.id}_{self.numb(id_next)}',
-                                                self,
-                                                obj_name=obj_name,
-                                                ra=ra_dit,
-                                                dec=dec_dit,
-                                                epoch=self._epoch,
-                                                uobi=self._uobi)
-                                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-                                id_next += 1
+                                id_next = self._add_comp(MountSlew(id=self._op_id(id_next=id_next),
+                                                                   parent=self,
+                                                                   obj_name=obj_name,
+                                                                   ra=ra_dit,
+                                                                   dec=dec_dit,
+                                                                   epoch=self._epoch,
+                                                                   uobi=self._uobi), id_next=id_next)
                             else:
                                 pass
                         else:
                             pass
 
                     if self._dome_follow is True:
-                        sub = DomeSlew(f'{self.id}_{self.numb(id_next)}', self, follow_tol=3.0, uobi=self._uobi)
-                        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-                        id_next += 1
+                        id_next = self._add_comp(DomeSlew(id=self._op_id(id_next=id_next),
+                                                          parent=self,
+                                                          follow_tol=3.0,
+                                                          uobi=self._uobi), id_next=id_next)
 
                     if subcommand_name == 'skyflat':
                         type = 'skyflat'
@@ -408,37 +404,36 @@ class Command(AbstractSequence):
                     if ra_dit and ra_dit:
                         req_ra = ra_dit
                         req_dec = dec_dit
-                    sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
-                                         self,
-                                         sub_exp=ex,
-                                         exp_time=exp_t,
-                                         exp_no=sub_numb,
-                                         type=type,
-                                         light=True,
-                                         obj_name=obj_name,
-                                         req_ra=req_ra,
-                                         req_dec=req_dec,
-                                         epoch=self._epoch,
-                                         filter=par[1],
-                                         focus_id=focus_id,
-                                         uobi=self._uobi
-                                         )
-                    self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-                    id_next += 1
+                    id_next = self._add_comp(CameraExposure(id=self._op_id(id_next=id_next),
+                                                            parent=self,
+                                                            sub_exp=ex,
+                                                            exp_time=exp_t,
+                                                            exp_no=sub_numb,
+                                                            type=type,
+                                                            light=True,
+                                                            obj_name=obj_name,
+                                                            req_ra=req_ra,
+                                                            req_dec=req_dec,
+                                                            epoch=self._epoch,
+                                                            filter=par[1],
+                                                            focus_id=focus_id,
+                                                            uobi=self._uobi), id_next=id_next)
 
         if self._mirror_cover_mode in ['close']:
-            sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=False, uobi=self._uobi)
-            self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-            id_next += 1
+            id_next = self._add_comp(MirrorCover(id=self._op_id(id_next=id_next),
+                                                 parent=self,
+                                                 open=False,
+                                                 uobi=self._uobi), id_next=id_next)
 
     def _write_zero_dark(self, subcommand_name: str) -> None:
 
         id_next = 0
 
         if self._mirror_cover_mode in ['auto', 'close']:
-            sub = MirrorCover(f'{self.id}_{self.numb(id_next)}', self, open=False, uobi=self._uobi)
-            self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-            id_next += 1
+            id_next = self._add_comp(MirrorCover(id=self._op_id(id_next=id_next),
+                                                 parent=self,
+                                                 open=False,
+                                                 uobi=self._uobi), id_next=id_next)
 
         # Camera exposure
         if 'seq' in self.kwargs:
@@ -446,44 +441,41 @@ class Command(AbstractSequence):
             for n in seq_list:
                 par = list(n.split('/'))
 
-                sub = ChangeFilter(f'{self.id}_{self.numb(id_next)}',
-                                   self,
-                                   filter=par[1],
-                                   uobi=self._uobi)
-                self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-                id_next += 1
+                id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),
+                                                      parent=self,
+                                                      filter=par[1],
+                                                      uobi=self._uobi), id_next=id_next)
 
                 for ex in range(1, int(par[0]) + 1):
-                    sub = CameraExposure(f'{self.id}_{self.numb(id_next)}',
-                                         self,
-                                         sub_exp=ex,
-                                         exp_time=float(par[2]),
-                                         exp_no=int(par[0]),
-                                         type=subcommand_name,
-                                         light=False,
-                                         obj_name=subcommand_name,
-                                         req_ra='',
-                                         req_dec='',
-                                         epoch=self._epoch,
-                                         filter=par[1],
-                                         uobi=self._uobi
-                                         )
-                    self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-                    id_next += 1
+                    id_next = self._add_comp(CameraExposure(id=self._op_id(id_next=id_next),
+                                                            parent=self,
+                                                            sub_exp=ex,
+                                                            exp_time=float(par[2]),
+                                                            exp_no=int(par[0]),
+                                                            type=subcommand_name,
+                                                            light=False,
+                                                            obj_name=subcommand_name,
+                                                            req_ra='',
+                                                            req_dec='',
+                                                            epoch=self._epoch,
+                                                            filter=par[1],
+                                                            uobi=self._uobi), id_next=id_next)
 
     def _write_wait(self):
         id_next = 0
         if len(self.kwargs.keys()) == 1:
             key = list(self.kwargs.keys())[0]
-            sub = Wait(f'{self.id}_{self.numb(id_next)}', self, key=key, value=self.kwargs[key])
-            self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+            id_next = self._add_comp(Wait(id=self._op_id(id_next=id_next),
+                                          parent=self,
+                                          key=key,
+                                          value=self.kwargs[key]), id_next=id_next)
         else:
             pass
 
     def _write_stop(self):
         id_next = 0
-        sub = Stop(f'{self.id}_{self.numb(id_next)}', self)
-        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+        id_next = self._add_comp(Stop(id=self._op_id(id_next=id_next),
+                                      parent=self), id_next=id_next)
 
     @staticmethod
     def _split_seq(seq):
