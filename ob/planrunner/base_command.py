@@ -89,6 +89,5 @@ class BaseCommand(ABC):
         ex_js['skipped'] = self.skipped
         ex_js['timestamp_utc'] = str(datetime.utcnow())
         ex_js['c_type'] = self.c_type
-        self._add_to_log_night(ex_js, {'c_type': 'command', 'done': True})
-        self._add_to_log_night(ex_js, {'c_type': 'command', 'skip': True})
+        self._add_to_log_night(ex_js, {'c_type': 'command'})
         return ex_js

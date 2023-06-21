@@ -3,6 +3,7 @@ import logging
 from datetime import datetime
 from ob.planrunner.base_command import BaseCommand
 
+
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
