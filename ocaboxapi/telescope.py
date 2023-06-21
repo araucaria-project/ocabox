@@ -127,24 +127,31 @@ class Telescope(AbstractTelescope):
         while True:
             c = await current
             if isinstance(target, bool):
-                if c == target:
+                if bool(c) == target:
                     await execute
                     break
             elif isinstance(target, int):
-                if abs(c - target) == tolerance:
+                if abs(int(c) - target) == tolerance:
                     await execute
                     break
             elif  isinstance(target, float):
-                if abs(c - target) <= tolerance:
+                if abs(float(c) - target) <= tolerance:
                     await execute
                     break
             else:
                 break
 
+    def _get_mount_dome_cover(self):
+        try:
+            m = self.mounts[0]
+            d = self.domes[0]
+            c = self.covercalibrators[0]
+            return m, d, c
+        except IndexError:
+            logger.warning(f"No components, please create instances")
+
     async def shutdown(self):
-        m = self.mounts[0]
-        d = self.domes[0]
-        c = self.covercalibrators[0]
+        m, d, c = self._get_mount_dome_cover()
         await m.aput_tracking(False)
         await m.aput_closecover()
         await m.aput_park()
@@ -155,9 +162,7 @@ class Telescope(AbstractTelescope):
         await d.aput_park()
 
     async def weather_stop(self):
-        m = self.mounts[0]
-        d = self.domes[0]
-        c = self.covercalibrators[0]
+        m, d, c = self._get_mount_dome_cover()
         await m.aput_tracking(False)
         await m.aput_closecover()
         await m.aput_park()
@@ -166,8 +171,8 @@ class Telescope(AbstractTelescope):
         await d.aput_park()
 
     async def emergency_stop(self):
-        m = self.mounts[0]
-        d = self.domes[0]
+        m, d, c = self._get_mount_dome_cover()
+        await m.aput_tracking(False)
         await m.aput_abortslew()
         await m.aput_motoroff()
         await d.aput_abortslew()
