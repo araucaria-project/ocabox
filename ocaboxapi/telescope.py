@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from ocaboxapi.abstelescope import AbstractTelescope
@@ -121,3 +122,52 @@ class Telescope(AbstractTelescope):
                 return {'alpaca': True}
         except (CommunicationTimeoutError, CommunicationRuntimeError, OcaboxServerError):
             return {'alpaca': False}
+
+    async def waiting_for_value(self, current, target, tolerance, execute):
+        while True:
+            c = await current
+            if isinstance(target, bool):
+                if c == target:
+                    await execute
+                    break
+            elif isinstance(target, int):
+                if abs(c - target) == tolerance:
+                    await execute
+                    break
+            elif  isinstance(target, float):
+                if abs(c - target) <= tolerance:
+                    await execute
+                    break
+            else:
+                break
+
+    async def shutdown(self):
+        m = self.mounts[0]
+        d = self.domes[0]
+        c = self.covercalibrators[0]
+        await m.aput_tracking(False)
+        await m.aput_closecover()
+        await m.aput_park()
+        await self.waiting_for_value(current=m.aget_atpark(),
+                                     target=True, tolerance=None, execute=m.aput_motoroff())
+        await self.waiting_for_value(current=c.aget_calibratorstate(),
+                                     target=1, tolerance=0, execute=d.aput_closeshutter())
+        await d.aput_park()
+
+    async def weather_stop(self):
+        m = self.mounts[0]
+        d = self.domes[0]
+        c = self.covercalibrators[0]
+        await m.aput_tracking(False)
+        await m.aput_closecover()
+        await m.aput_park()
+        await self.waiting_for_value(current=c.aget_calibratorstate(),
+                                     target=1, tolerance=0, execute=d.aput_closeshutter())
+        await d.aput_park()
+
+    async def emergency_stop(self):
+        m = self.mounts[0]
+        d = self.domes[0]
+        await m.aput_abortslew()
+        await m.aput_motoroff()
+        await d.aput_abortslew()
