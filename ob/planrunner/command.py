@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, List
 from ob.planrunner.abstract_sequence import AbstractSequence
 from ob.planrunner.subcommands.sub_mount_slew import MountSlew
 from ob.planrunner.subcommands.sub_dome_slew import DomeSlew
@@ -10,14 +10,20 @@ from ob.planrunner.subcommands.sub_dome_screenlight import DomeScreenLight
 from ob.planrunner.subcommands.sub_focusing import Focusing
 from ob.planrunner.subcommands.sub_stop import Stop
 from ob.planrunner.subcommands.sub_wait import Wait
-from pyaraucaria.coordinates import az_alt_2_ra_dec, ra_to_decimal, dec_to_decimal, deg_to_decimal_deg, ra_dec_2_az_alt
+from pyaraucaria.coordinates import az_alt_2_ra_dec, ra_to_decimal, dec_to_decimal, \
+    deg_to_decimal_deg, ra_dec_2_az_alt,  deg_str_to_deg
 import random
 from ob.planrunner.subcommand import SubCommand
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
+
+
 class Command(AbstractSequence):
+
+    TYPES = {'SKYFLAT': 'flat', 'FOCUS': 'focusing', 'DOMEFLAT': 'flat',
+             'DARK': 'dark', 'ZERO': 'zero', 'OBJECT': 'science', 'WAIT': '', 'STOP': ''}
 
     def __init__(self, id: str, sequence_dict: Dict[Any, Any],
                  parent: 'Sequence' or 'NightPlan') -> None:
@@ -61,22 +67,22 @@ class Command(AbstractSequence):
         self._create_command_string()
 
         if self.command_name == 'OBJECT':
-            self._write_object_skyflat_focusing('object')
+            self._write_object_skyflat_focusing()
 
         elif self.command_name == 'DOMEFLAT':
             self._write_domeflat()
 
         elif self.command_name == 'FOCUS':
-            self._write_object_skyflat_focusing('focusing')
+            self._write_object_skyflat_focusing()
 
         elif self.command_name == 'DARK':
-            self._write_zero_dark('dark')
+            self._write_zero_dark()
 
         elif self.command_name == 'ZERO':
-            self._write_zero_dark('zero')
+            self._write_zero_dark()
 
         elif self.command_name == 'SKYFLAT':
-            self._write_object_skyflat_focusing('skyflat')
+            self._write_object_skyflat_focusing()
 
         elif self.command_name == 'WAIT':
             self._write_wait()
@@ -89,7 +95,7 @@ class Command(AbstractSequence):
             self.info_callback['stream_1'](f'Command {self.command_name} not recognized, check plan syntax' )
 
     @property
-    def _uobi(self) -> int:
+    def uobi(self) -> int:
         if 'uobi' in self.kwargs.keys():
             return self.kwargs['uobi']
         else:
@@ -106,14 +112,14 @@ class Command(AbstractSequence):
             return True
 
     @property
-    def _epoch(self) -> str:
+    def epoch(self) -> str:
         if 'epoch' in self.kwargs.keys():
             return str(self.kwargs['epoch'])
         else:
             return f'2000'
 
     @property
-    def _mirror_cover_mode(self):
+    def mirror_cover_mode(self):
         modes = ['auto', 'open', 'close']
         if 'mirror_cover' in self.kwargs.keys():
             if self.kwargs['mirror_cover'] in modes:
@@ -124,7 +130,7 @@ class Command(AbstractSequence):
             return None
 
     @property
-    def _screen_light_mode(self):
+    def screen_light_mode(self):
         modes = ['auto', 'on', 'off']
         if 'screen_light' in self.kwargs.keys():
             if self.kwargs['screen_light'] in modes:
@@ -141,10 +147,90 @@ class Command(AbstractSequence):
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
         return id_next + 1
 
+    @property
+    def plan_object_name(self) -> str or None:
+        if len(self.args) == 3:
+            name = self.args[0]
+        elif len(self.args) == 1:
+            name = self.args[0]
+        else:
+            name = None
+        return name
+
+    @property
+    def plan_ra(self) -> float or None:
+        if len(self.args) == 2:
+            ra = ra_to_decimal(self.args[0])
+        elif len(self.args) == 3:
+            ra = ra_to_decimal(self.args[1])
+        else:
+            ra = None
+        return ra
+
+    @property
+    def plan_dec(self) -> float or None:
+        if len(self.args) == 2:
+            dec = dec_to_decimal(self.args[1])
+        elif len(self.args) == 3:
+            dec = dec_to_decimal(self.args[2])
+        else:
+            dec = None
+        return dec
+
+    @property
+    def plan_az(self) -> float or None:
+        if 'alt' and 'az' in self.kwargs.keys():
+            try:
+                return float(self.kwargs['az'])
+            except ValueError:
+                return deg_str_to_deg(self.kwargs['az'])
+        else:
+            return None
+
+    @property
+    def plan_alt(self) -> float or None:
+        if 'alt' and 'az' in self.kwargs.keys():
+            try:
+                return float(self.kwargs['alt'])
+            except ValueError:
+                return deg_str_to_deg(self.kwargs['alt'])
+        else:
+            return None
+
+    @property
+    def plan_seq(self):
+        if 'seq' in self.kwargs.keys():
+            return self._split_seq(self.kwargs['seq'])
+        else:
+            return None
+
+    @property
+    def object_name(self) -> str:
+        if not self.plan_object_name:
+            if self.command_name == 'SKYFLAT':
+                name = 'skyflat'
+            elif self.command_name == 'FOCUS':
+                name = 'focusing'
+            elif self.command_name == 'DOMEFLAT':
+                name = 'domeflat'
+            elif self.command_name == 'DARK':
+                name = 'dark'
+            elif self.command_name == 'ZERO':
+                name = 'zero'
+            else:
+                name = ''
+        else:
+            name = self.plan_object_name
+        return name
+
+    @property
+    def exp_type(self):
+        return Command.TYPES[self.command_name]
+
+
+
     def _write_domeflat(self):
 
-        # Slew to altaz
-        # TODO turn on domeflat lamp, set brightness (value also from some config? or kwarg?)
         # TODO get Alt Az domeflat position from some config
         dome_az = 0.0
         tel_flat_az = dome_az + 180
@@ -156,40 +242,39 @@ class Command(AbstractSequence):
             id_next = self._add_comp(DomeSlew(id=self._op_id(id_next=id_next),
                                               parent=self,
                                               az=dome_az,
-                                              uobi=self._uobi), id_next=id_next)
+                                              uobi=self.uobi), id_next=id_next)
 
         id_next = self._add_comp(MountSlew(id=self._op_id(id_next=id_next),
                                            parent=self,
-                                           obj_name='domeflat',
+                                           obj_name=self.object_name,
                                            alt=dome_flat_alt,
                                            az=tel_flat_az,
                                            tracking=False,
-                                           epoch=self._epoch,
-                                           uobi=self._uobi
+                                           epoch=self.epoch,
+                                           uobi=self.uobi
                                            ), id_next=id_next)
 
-        if self._screen_light_mode in ['auto', 'on']:
+        if self.screen_light_mode in ['auto', 'on']:
             id_next = self._add_comp(DomeScreenLight(id=self._op_id(id_next=id_next),
                                                      parent=self,
                                                      light=True,
-                                                     uobi=self._uobi), id_next=id_next)
+                                                     uobi=self.uobi), id_next=id_next)
 
-        if self._mirror_cover_mode in ['auto', 'open']:
+        if self.mirror_cover_mode in ['auto', 'open']:
             id_next = self._add_comp(MirrorCover(id=self._op_id(id_next=id_next),
                                                  parent=self,
                                                  open=True,
-                                                 uobi=self._uobi), id_next=id_next)
+                                                 uobi=self.uobi), id_next=id_next)
 
         # Camera exposure
-        if 'seq' in self.kwargs.keys():
-            seq_list = self._split_seq(self.kwargs['seq'])
-            for n in seq_list:
+        if self.plan_seq:
+            for n in self.plan_seq:
                 par = list(n.split('/'))
 
                 id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),
                                                       parent=self,
                                                       filter=par[1],
-                                                      uobi=self._uobi), id_next=id_next)
+                                                      uobi=self.uobi), id_next=id_next)
 
                 for ex in range(1, int(par[0]) + 1):
                     id_next = self._add_comp(CameraExposure(id=self._op_id(id_next=id_next),
@@ -197,134 +282,105 @@ class Command(AbstractSequence):
                                                             sub_exp=ex,
                                                             exp_time=float(par[2]),
                                                             exp_no=int(par[0]),
-                                                            type='flat',
+                                                            type=self.exp_type,
                                                             light=True,
-                                                            obj_name='domeflat',
+                                                            obj_name=self.object_name,
                                                             req_ra='',
                                                             req_dec='',
-                                                            epoch=self._epoch,
+                                                            epoch=self.epoch,
                                                             filter=par[1],
-                                                            uobi=self._uobi), id_next=id_next)
+                                                            uobi=self.uobi), id_next=id_next)
 
-        if self._screen_light_mode in ['auto', 'off']:
+        if self.screen_light_mode in ['auto', 'off']:
             id_next = self._add_comp(DomeScreenLight(id=self._op_id(id_next=id_next),
                                                      parent=self,
                                                      light=False,
-                                                     uobi=self._uobi), id_next=id_next)
+                                                     uobi=self.uobi), id_next=id_next)
 
-        if self._mirror_cover_mode in ['close']:
+        if self.mirror_cover_mode in ['close']:
             id_next = self._add_comp(MirrorCover(id=self._op_id(id_next=id_next),
                                                  parent=self,
                                                  open=False,
-                                                 uobi=self._uobi), id_next=id_next)
+                                                 uobi=self.uobi), id_next=id_next)
 
-    def _write_object_skyflat_focusing(self, subcommand_name: str) -> None:
+    def _write_object_skyflat_focusing(self) -> None:
 
         id_next = 0
-        obj_name = ''
-        req_ra = ''
-        req_dec = ''
 
-        if len(self.args) >= 2:
+        # Mount slewing - if no coordinates no slewing
+        if self.plan_ra and self.plan_dec:
+            id_next = self._add_comp(MountSlew(id=self._op_id(id_next=id_next),
+                                                   parent=self,
+                                                   obj_name=self.object_name,
+                                                   ra=self.plan_ra,
+                                                   dec=self.plan_dec,
+                                                   epoch=self.epoch,
+                                                   uobi=self.uobi), id_next=id_next)
 
-            if len(self.args) == 2:
-                req_ra = self.args[0]
-                req_dec = self.args[1]
-            elif len(self.args) == 3:
-                obj_name = self.args[0]
-                req_ra = self.args[1]
-                req_dec = self.args[2]
-            else:
-                # TODO syntax error
-                pass
-
-            if subcommand_name == 'skyflat':
-                obj_name = 'skyflat'
-            elif subcommand_name == 'focusing':
-                obj_name = 'focusing'
-
+        elif self.plan_az and self.plan_alt:
             id_next = self._add_comp(MountSlew(id=self._op_id(id_next=id_next),
                                                parent=self,
-                                               obj_name=obj_name,
-                                               ra=ra_to_decimal(req_ra),
-                                               dec=dec_to_decimal(req_dec),
-                                               epoch=self._epoch,
-                                               uobi=self._uobi), id_next=id_next)
+                                               obj_name=self.object_name,
+                                               alt=self.plan_alt,
+                                               az=self.plan_az,
+                                               tracking=True,
+                                               epoch=self.epoch,
+                                               uobi=self.uobi), id_next=id_next)
         else:
-            if len(self.args) == 1:
-                obj_name = self.args[0]
-            else:
-                obj_name = ''
-
-            if subcommand_name == 'skyflat':
-                obj_name = 'skyflat'
-            elif subcommand_name == 'focusing':
-                obj_name = 'focusing'
-
-            if 'alt' and 'az' in self.kwargs.keys():
-                id_next = self._add_comp(MountSlew(id=self._op_id(id_next=id_next),
-                                                   parent=self,
-                                                   obj_name=obj_name,
-                                                   alt=self.kwargs['alt'],
-                                                   az=self.kwargs['az'],
-                                                   tracking=True,
-                                                   epoch=self._epoch,
-                                                   uobi=self._uobi), id_next=id_next)
-            else:
-                # TODO syntax error
-                pass
+            pass
 
         if self._dome_follow is True:
             id_next = self._add_comp(DomeSlew(id=self._op_id(id_next=id_next),
                                               parent=self,
                                               follow_tol=2.0,
-                                              uobi=self._uobi), id_next=id_next)
+                                              uobi=self.uobi), id_next=id_next)
 
-        if self._mirror_cover_mode in ['auto', 'open']:
+        if self.mirror_cover_mode in ['auto', 'open']:
             id_next = self._add_comp(MirrorCover(id=self._op_id(id_next=id_next),
                                                  parent=self,
                                                  open=True,
-                                                 uobi=self._uobi), id_next=id_next)
+                                                 uobi=self.uobi), id_next=id_next)
 
         # Camera exposure
-        if 'seq' in self.kwargs:
-            seq_list = self._split_seq(self.kwargs['seq'])
-            for n in seq_list:
-                par = list(n.split('/'))
-
+        if self.plan_seq:
+            for s in self.plan_seq:
+                seqc = Seq(seq=s, parent=self)
                 id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),
                                                       parent=self,
-                                                      filter=par[1],
-                                                      uobi=self._uobi), id_next=id_next)
-                sub_numb = int(par[0])
+                                                      filter=seqc.filter,
+                                                      uobi=self.uobi), id_next=id_next)
+                #sub_numb = int(par[0])
                 foc_list = []
-                focus_id = 0
-                if subcommand_name == 'focusing':
+                if self.exp_type == 'focusing':
+
                     foc_par = list(self.kwargs['pos'].split('/'))
                     foc_target = int(foc_par[0])
                     foc_step = int(foc_par[1])
-                    foc_min = int(round(foc_target-(foc_step*((sub_numb-1)/2))))
+                    foc_min = int(round(foc_target-(foc_step*((seqc.exp_no-1)/2))))
 
-                    for n in range(0, sub_numb):
+                    for n in range(0, seqc.exp_no):
                         foc_list.append(foc_min+(foc_step*n))
-                    focus_id = random.randrange(0,100000)
 
-                for ex in range(1, sub_numb+1):
+
+                for ex in range(1, seqc.exp_no+1):
                     ra_dit = None
                     dec_dit = None
                     # If focusing, set focuser position
-                    if subcommand_name == 'focusing':
+                    if self.exp_type == 'focusing':
                         id_next = self._add_comp(Focusing(id=self._op_id(id_next=id_next),
                                                           parent=self,
                                                           position=foc_list[ex-1],
-                                                          uobi=self._uobi), id_next=id_next)
+                                                          uobi=self.uobi), id_next=id_next)
+
+
+
 
                     # Dithering start - kwarg dither=basic/1/1 kind/for_every_sub/distance_in_minutes
-                    if (subcommand_name == 'skyflat' and 'dither' not in self.kwargs.keys()) or \
-                            (subcommand_name == 'skyflat' and self.kwargs['dither'] != 'none' ) or \
-                             (subcommand_name != 'skyflat' and 'dither' in self.kwargs.keys()):
+                    if (self.exp_type == 'skyflat' and 'dither' not in self.kwargs.keys()) or \
+                            (self.exp_type == 'skyflat' and self.kwargs['dither'] != 'none' ) or \
+                             (self.exp_type != 'skyflat' and 'dither' in self.kwargs.keys()):
 
-                        if subcommand_name == 'skyflat' and 'dither' not in self.kwargs.keys():
+                        if self.exp_type == 'skyflat' and 'dither' not in self.kwargs.keys():
                             # TODO Get this values from settings
                             dit_mode = 'basic'
                             for_every_sub = 1
@@ -337,65 +393,47 @@ class Command(AbstractSequence):
 
                         if ex % for_every_sub == 0:
 
-                            if 'alt' and 'az' in self.kwargs.keys():
+                            if self.plan_az and self.plan_alt:
                                 # TODO get OCA values from settings
                                 OCA = {'latitude': -24.598056, 'longitude': -70.196389, 'elevation': 2817}
-                                try:
-                                    az = float(self.kwargs["az"])
-                                    alt = float(self.kwargs["alt"])
-                                except ValueError:
-                                    try:
-                                        az = deg_to_decimal_deg(self.kwargs["az"])
-                                        alt = deg_to_decimal_deg(self.kwargs["alt"])
-                                    except ValueError:
-                                        az=None
-                                        alt=None
-                                        logger.error(f"Wrong az alt format")
-                                if isinstance(az, float) and isinstance(az, float):
-                                    req_ra_a, req_dec_a = az_alt_2_ra_dec(alt=alt,
-                                                                          az=az,
-                                                                          latitude=OCA['latitude'],
-                                                                          longitude=OCA['longitude'],
-                                                                          elevation=OCA['elevation'])
-                                    ra_dit = self.ra_random_dither(ra=req_ra_a, dith_val=dit_dist, mode=dit_mode)
-                                    dec_dit = self.dec_random_dither(dec=req_dec_a, dith_val=dit_dist, mode=dit_mode)
-                                    id_next = self._add_comp(MountSlew(id=self._op_id(id_next=id_next),
-                                                                       parent=self,
-                                                                       obj_name=obj_name,
-                                                                       ra=ra_dit,
-                                                                       dec=dec_dit,
-                                                                       epoch=self._epoch,
-                                                                       uobi=self._uobi), id_next=id_next)
-
-                            elif req_ra and req_dec is not None:
-                                req_ra = ra_to_decimal(req_ra)
-                                req_dec = dec_to_decimal(req_dec)
-                                ra_dit = self.ra_random_dither(ra=req_ra, dith_val=dit_dist, mode=dit_mode)
-                                dec_dit = self.dec_random_dither(dec=req_dec, dith_val=dit_dist, mode=dit_mode)
+                                req_ra_a, req_dec_a = az_alt_2_ra_dec(alt=self.plan_alt,
+                                                                      az=self.plan_az,
+                                                                      latitude=OCA['latitude'],
+                                                                      longitude=OCA['longitude'],
+                                                                      elevation=OCA['elevation'])
+                                ra_dit = self.ra_random_dither(ra=req_ra_a, dith_val=dit_dist, mode=dit_mode)
+                                dec_dit = self.dec_random_dither(dec=req_dec_a, dith_val=dit_dist, mode=dit_mode)
                                 id_next = self._add_comp(MountSlew(id=self._op_id(id_next=id_next),
                                                                    parent=self,
-                                                                   obj_name=obj_name,
+                                                                   obj_name=self.object_name,
                                                                    ra=ra_dit,
                                                                    dec=dec_dit,
-                                                                   epoch=self._epoch,
-                                                                   uobi=self._uobi), id_next=id_next)
+                                                                   epoch=self.epoch,
+                                                                   uobi=self.uobi), id_next=id_next)
+
+                            elif self.plan_ra and self.plan_dec:
+                                ra_dit = self.ra_random_dither(ra=self.plan_ra, dith_val=dit_dist, mode=dit_mode)
+                                dec_dit = self.dec_random_dither(dec=self.plan_dec, dith_val=dit_dist, mode=dit_mode)
+                                id_next = self._add_comp(MountSlew(id=self._op_id(id_next=id_next),
+                                                                   parent=self,
+                                                                   obj_name=self.object_name,
+                                                                   ra=ra_dit,
+                                                                   dec=dec_dit,
+                                                                   epoch=self.epoch,
+                                                                   uobi=self.uobi), id_next=id_next)
                             else:
                                 pass
                         else:
                             pass
 
+
+
+
                     if self._dome_follow is True:
                         id_next = self._add_comp(DomeSlew(id=self._op_id(id_next=id_next),
                                                           parent=self,
                                                           follow_tol=3.0,
-                                                          uobi=self._uobi), id_next=id_next)
-
-                    if subcommand_name == 'skyflat':
-                        type = 'skyflat'
-                    elif subcommand_name == 'focusing':
-                        type = 'focusing'
-                    else:
-                        type = 'science'
+                                                          uobi=self.uobi), id_next=id_next)
 
                     if par[2] == 'a':
                         exp_t = 'a'
@@ -404,47 +442,49 @@ class Command(AbstractSequence):
                     if ra_dit and ra_dit:
                         req_ra = ra_dit
                         req_dec = dec_dit
+                    else:
+                        req_ra = self.plan_ra
+                        req_dec = self.plan_dec
                     id_next = self._add_comp(CameraExposure(id=self._op_id(id_next=id_next),
                                                             parent=self,
                                                             sub_exp=ex,
-                                                            exp_time=exp_t,
-                                                            exp_no=sub_numb,
-                                                            type=type,
+                                                            exp_time=seqc.exp_time,
+                                                            exp_no=seqc.exp_no,
+                                                            type=self.exp_type,
                                                             light=True,
-                                                            obj_name=obj_name,
+                                                            obj_name=self.object_name,
                                                             req_ra=req_ra,
                                                             req_dec=req_dec,
-                                                            epoch=self._epoch,
-                                                            filter=par[1],
-                                                            focus_id=focus_id,
-                                                            uobi=self._uobi), id_next=id_next)
+                                                            epoch=self.epoch,
+                                                            filter=seqc.filter,
+                                                            focus_id=seqc.focus_id,
+                                                            uobi=self.uobi), id_next=id_next)
 
-        if self._mirror_cover_mode in ['close']:
+        if self.mirror_cover_mode in ['close']:
             id_next = self._add_comp(MirrorCover(id=self._op_id(id_next=id_next),
                                                  parent=self,
                                                  open=False,
-                                                 uobi=self._uobi), id_next=id_next)
+                                                 uobi=self.uobi), id_next=id_next)
 
-    def _write_zero_dark(self, subcommand_name: str) -> None:
+    def _write_zero_dark(self) -> None:
 
         id_next = 0
 
-        if self._mirror_cover_mode in ['auto', 'close']:
+        if self.mirror_cover_mode in ['auto', 'close']:
             id_next = self._add_comp(MirrorCover(id=self._op_id(id_next=id_next),
                                                  parent=self,
                                                  open=False,
-                                                 uobi=self._uobi), id_next=id_next)
+                                                 uobi=self.uobi), id_next=id_next)
 
         # Camera exposure
-        if 'seq' in self.kwargs:
-            seq_list = self._split_seq(self.kwargs['seq'])
-            for n in seq_list:
+        if self.plan_seq:
+            for n in self.plan_seq:
                 par = list(n.split('/'))
 
                 id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),
                                                       parent=self,
                                                       filter=par[1],
-                                                      uobi=self._uobi), id_next=id_next)
+                                                      uobi=self.uobi), id_next=id_next)
 
                 for ex in range(1, int(par[0]) + 1):
                     id_next = self._add_comp(CameraExposure(id=self._op_id(id_next=id_next),
@@ -452,14 +492,14 @@ class Command(AbstractSequence):
                                                             sub_exp=ex,
                                                             exp_time=float(par[2]),
                                                             exp_no=int(par[0]),
-                                                            type=subcommand_name,
+                                                            type=self.exp_type,
                                                             light=False,
-                                                            obj_name=subcommand_name,
+                                                            obj_name=self.object_name,
                                                             req_ra='',
                                                             req_dec='',
-                                                            epoch=self._epoch,
+                                                            epoch=self.epoch,
                                                             filter=par[1],
-                                                            uobi=self._uobi), id_next=id_next)
+                                                            uobi=self.uobi), id_next=id_next)
 
     def _write_wait(self):
         id_next = 0
@@ -481,8 +521,6 @@ class Command(AbstractSequence):
     def _split_seq(seq):
         if str(seq).find(','):
             seq_list = list(seq.split(','))
-        # elif str(seq).find('%'):
-        #    seq_list = list(seq.split('%'))
         else:
             seq_list = list(seq)
         return seq_list
@@ -494,3 +532,89 @@ class Command(AbstractSequence):
         self.info_callback['stream_5'](f'{self.id}')
         logger.info(f'{self.id} done')
         return skip
+
+class Seq:
+
+    def __init__(self, seq: str, parent: Command):
+        self._seq: str = seq
+        self._focus_id: int or None = None
+        self.parent_kwargs: Dict = parent.kwargs
+        self.set_focus_id()
+
+    @property
+    def focus_id(self) -> int or None:
+        return self._focus_id
+
+    def set_focus_id(self):
+        self._focus_id = random.randrange(0, 100000)
+
+    @property
+    def focus_list(self) -> List[str] or None:
+        """
+        Input format focus_target/focus_step
+        :return: [focus_target/focus_step]
+        """
+        if 'pos' in self.parent_kwargs.keys():
+            if len(self.parent_kwargs['pos']) == 2:
+                return list(self.parent_kwargs['pos'].split('/'))
+            else:
+                return None
+        else:
+            return None
+
+    @property
+    def focus_target(self) -> int or None:
+        if self.focus_list:
+            return int(self.focus_list[0])
+        else:
+            return None
+
+    @property
+    def focus_min(self) -> int or None:
+        if self.focus_list:
+            return int(round(self.focus_target - (self.focus_step * ((self.exp_no - 1) / 2))))
+        else:
+            return None
+
+    @property
+    def focus_step(self) -> int or None:
+        if self.focus_list:
+            return int(self.focus_list[1])
+        else:
+            return None
+
+    @property
+    def focus_values_list(self) -> List[str] or None:
+        if self.focus_list:
+            f = []
+            for n in range(0, self.exp_no):
+                f.append(self.focus_min + (self.focus_step * n))
+            return f
+        else:
+            return None
+
+    @property
+    def seq_list(self) -> List[str]:
+        return list(self._seq.split('/'))
+
+    @property
+    def exp_no(self) -> int:
+        return int(self.seq_list[0])
+
+    @property
+    def filter(self) -> str or int:
+        return self.seq_list[1]
+
+    @property
+    def exp_time(self) -> float or None:
+        try:
+            return float(self.seq_list[2])
+        except ValueError:
+            return None
+
+    @property
+    def auto_exposure(self) -> bool:
+        if self.seq_list[2] == 'a':
+            return True
+        else:
+            return False
