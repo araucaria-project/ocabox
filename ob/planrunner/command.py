@@ -52,16 +52,7 @@ class Command(AbstractSequence):
         self.info_callback['c_commands'](f'{self.id};{self.command_name};{kw}')
         logger.info(f'{self.id} {self.command_name} {self.args} {self.kwargs} is written')
 
-    @staticmethod
-    def ra_random_dither(ra: float, dith_val: float, mode: str = 'basic') -> float:
-        #TODO dith_val = dith_val / cos(dec) ?
-        if mode == 'basic':
-            return ra + random.uniform(-dith_val / 60, dith_val / 60)
 
-    @staticmethod
-    def dec_random_dither(dec: float, dith_val: float, mode: str = 'basic') -> float:
-        if mode == 'basic':
-            return dec + random.uniform(-dith_val / 60, dith_val / 60)
 
     def _write_subcommands(self) -> None:
         self._create_command_string()
@@ -308,7 +299,7 @@ class Command(AbstractSequence):
 
         id_next = 0
 
-        # Mount slewing - if no coordinates no slewing
+        # Mount slewing radec
         if self.plan_ra and self.plan_dec:
             id_next = self._add_comp(MountSlew(id=self._op_id(id_next=id_next),
                                                    parent=self,
@@ -317,7 +308,7 @@ class Command(AbstractSequence):
                                                    dec=self.plan_dec,
                                                    epoch=self.epoch,
                                                    uobi=self.uobi), id_next=id_next)
-
+        # Mount slewing altaz
         elif self.plan_az and self.plan_alt:
             id_next = self._add_comp(MountSlew(id=self._op_id(id_next=id_next),
                                                parent=self,
@@ -327,6 +318,7 @@ class Command(AbstractSequence):
                                                tracking=True,
                                                epoch=self.epoch,
                                                uobi=self.uobi), id_next=id_next)
+        # No coordinates - no slewing
         else:
             pass
 
@@ -347,16 +339,15 @@ class Command(AbstractSequence):
         # Camera exposure sequences
         if self.plan_seq:
             for s in self.plan_seq:
-
-                # Camera single sequence, all exposures
                 seq_data = Seq(seq=s, parent=self)
+
+                # Change filter
                 id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),
                                                       parent=self,
                                                       filter=seq_data.filter,
                                                       uobi=self.uobi), id_next=id_next)
 
                 for ex in range(1, seq_data.exp_no + 1):
-
                     # Camera single sequence, single exposure
 
                     # Focusig
@@ -366,72 +357,24 @@ class Command(AbstractSequence):
                                                           position=seq_data.focus_position(exp_no=ex),
                                                           uobi=self.uobi), id_next=id_next)
 
+                    # Dithering
+                    if seq_data.dither_this_exp:
+                        id_next = self._add_comp(MountSlew(id=self._op_id(id_next=id_next),
+                                                           parent=self,
+                                                           obj_name=self.object_name,
+                                                           ra=seq_data.ra_dither,
+                                                           dec=seq_data.dec_dither,
+                                                           epoch=self.epoch,
+                                                           uobi=self.uobi), id_next=id_next)
 
-
-
-                    # Dithering start - kwarg dither=basic/1/1 kind/for_every_sub/distance_in_minutes
-                    if (self.exp_type == 'skyflat' and 'dither' not in self.kwargs.keys()) or \
-                            (self.exp_type == 'skyflat' and self.kwargs['dither'] != 'none' ) or \
-                             (self.exp_type != 'skyflat' and 'dither' in self.kwargs.keys()):
-
-                        #dit_mode = seq_data.dither_mode
-                        #for_every_sub = seq_data.dither_every_sub
-                        #dit_dist = seq_data.dither_distance
-
-                        # TODO for first exposure no dithering
-                        if ex % seq_data.dither_every_sub == 0:
-
-                            if self.plan_az and self.plan_alt:
-                                # TODO get OCA values from settings
-                                OCA = {'latitude': -24.598056, 'longitude': -70.196389, 'elevation': 2817}
-                                req_ra_a, req_dec_a = az_alt_2_ra_dec(alt=self.plan_alt,
-                                                                      az=self.plan_az,
-                                                                      latitude=OCA['latitude'],
-                                                                      longitude=OCA['longitude'],
-                                                                      elevation=OCA['elevation'])
-                                ra_dit = self.ra_random_dither(ra=req_ra_a, dith_val=seq_data.dither_distance, mode=seq_data.dither_mode)
-                                dec_dit = self.dec_random_dither(dec=req_dec_a, dith_val=seq_data.dither_distance, mode=seq_data.dither_mode)
-                                id_next = self._add_comp(MountSlew(id=self._op_id(id_next=id_next),
-                                                                   parent=self,
-                                                                   obj_name=self.object_name,
-                                                                   ra=ra_dit,
-                                                                   dec=dec_dit,
-                                                                   epoch=self.epoch,
-                                                                   uobi=self.uobi), id_next=id_next)
-
-                            elif self.plan_ra and self.plan_dec:
-                                ra_dit = self.ra_random_dither(ra=self.plan_ra, dith_val=seq_data.dither_distance, mode=seq_data.dither_mode)
-                                dec_dit = self.dec_random_dither(dec=self.plan_dec, dith_val=seq_data.dither_distance, mode=seq_data.dither_mode)
-                                id_next = self._add_comp(MountSlew(id=self._op_id(id_next=id_next),
-                                                                   parent=self,
-                                                                   obj_name=self.object_name,
-                                                                   ra=ra_dit,
-                                                                   dec=dec_dit,
-                                                                   epoch=self.epoch,
-                                                                   uobi=self.uobi), id_next=id_next)
-                            else:
-                                pass
-                        else:
-                            pass
-
-                    # Dome follow telescope between exposures
+                    # Dome follow between exposures
                     if self._dome_follow is True:
                         id_next = self._add_comp(DomeSlew(id=self._op_id(id_next=id_next),
                                                           parent=self,
                                                           follow_tol=3.0,
                                                           uobi=self.uobi), id_next=id_next)
-                    """
-                    if par[2] == 'a':
-                        exp_t = 'a'
-                    else:
-                        exp_t = float(par[2])
-                    if ra_dit and ra_dit:
-                        req_ra = ra_dit
-                        req_dec = dec_dit
-                    else:
-                        req_ra = self.plan_ra
-                        req_dec = self.plan_dec"""
 
+                    # Camera exposure
                     id_next = self._add_comp(CameraExposure(id=self._op_id(id_next=id_next),
                                                             parent=self,
                                                             sub_exp=ex,
@@ -440,55 +383,63 @@ class Command(AbstractSequence):
                                                             type=self.exp_type,
                                                             light=True,
                                                             obj_name=self.object_name,
-                                                            req_ra=req_ra,
-                                                            req_dec=req_dec,
+                                                            req_ra=seq_data.ra_final,
+                                                            req_dec=seq_data.dec_final,
                                                             epoch=self.epoch,
                                                             filter=seq_data.filter,
                                                             focus_id=seq_data.focus_id,
                                                             auto_exposure=seq_data.auto_exposure,
                                                             uobi=self.uobi), id_next=id_next)
 
+        # Mirror cover close
         if self.mirror_cover_mode in ['close']:
             id_next = self._add_comp(MirrorCover(id=self._op_id(id_next=id_next),
                                                  parent=self,
                                                  open=False,
                                                  uobi=self.uobi), id_next=id_next)
+        del seq_data
 
     def _write_zero_dark(self) -> None:
 
         id_next = 0
 
+        # Mirror cover
         if self.mirror_cover_mode in ['auto', 'close']:
             id_next = self._add_comp(MirrorCover(id=self._op_id(id_next=id_next),
                                                  parent=self,
                                                  open=False,
                                                  uobi=self.uobi), id_next=id_next)
 
-        # Camera exposure
+        # Camera exposure sequences
         if self.plan_seq:
-            for n in self.plan_seq:
-                par = list(n.split('/'))
+            for s in self.plan_seq:
+                seq_data = Seq(seq=s, parent=self)
 
+                # Change filter
                 id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),
                                                       parent=self,
-                                                      filter=par[1],
+                                                      filter=seq_data.filter,
                                                       uobi=self.uobi), id_next=id_next)
 
-                for ex in range(1, int(par[0]) + 1):
+                for ex in range(1, seq_data.exp_no + 1):
+
+                    # Camera exposure
                     id_next = self._add_comp(CameraExposure(id=self._op_id(id_next=id_next),
                                                             parent=self,
                                                             sub_exp=ex,
-                                                            exp_time=float(par[2]),
-                                                            exp_no=int(par[0]),
+                                                            exp_time=seq_data.exp_time,
+                                                            exp_no=seq_data.exp_no,
                                                             type=self.exp_type,
                                                             light=False,
                                                             obj_name=self.object_name,
                                                             req_ra='',
                                                             req_dec='',
                                                             epoch=self.epoch,
-                                                            filter=par[1],
+                                                            filter=seq_data.filter,
                                                             auto_exposure=False,
                                                             uobi=self.uobi), id_next=id_next)
+
+        del seq_data
 
     def _write_wait(self):
         id_next = 0
@@ -503,8 +454,7 @@ class Command(AbstractSequence):
 
     def _write_stop(self):
         id_next = 0
-        id_next = self._add_comp(Stop(id=self._op_id(id_next=id_next),
-                                      parent=self), id_next=id_next)
+        id_next = self._add_comp(Stop(id=self._op_id(id_next=id_next), parent=self), id_next=id_next)
 
     @staticmethod
     def _split_seq(seq):
@@ -533,7 +483,92 @@ class Seq:
         self._seq: str = seq
         self._focus_id: int or None = None
         self.parent_kwargs: Dict = parent.kwargs
+        self.parent: Command = parent
         self.set_focus_id()
+
+    @property
+    def site_coo(self) -> Dict[str, float]:
+        return {'latitude': -24.598056, 'longitude': -70.196389, 'elevation': 2817}
+
+    @property
+    def if_radec(self) -> bool:
+        if self.parent.plan_ra and self.parent.plan_dec:
+            return True
+        else:
+            return False
+
+    def if_altaz(self) -> bool:
+        if self.parent.plan_az and self.parent.plan_alt:
+            return True
+        else:
+            return False
+
+    @staticmethod
+    def ra_random_dither(ra: float, dith_val: float, mode: str = 'basic') -> float:
+        # TODO dith_val = dith_val / cos(dec) ?
+        if mode == 'basic':
+            return ra + random.uniform(-dith_val / 60, dith_val / 60)
+
+    @staticmethod
+    def dec_random_dither(dec: float, dith_val: float, mode: str = 'basic') -> float:
+        if mode == 'basic':
+            return dec + random.uniform(-dith_val / 60, dith_val / 60)
+
+    @property
+    def ra_dither(self) -> float or None:
+        if self.dither_this_exp:
+            if self.if_radec:
+                return self.ra_random_dither(ra=self.parent.plan_ra,
+                                             dith_val=self.dither_distance,
+                                             mode=self.dither_mode)
+            elif self.if_altaz:
+                ra, _ = az_alt_2_ra_dec(alt=self.parent.plan_alt,
+                                                      az=self.parent.plan_az,
+                                                      latitude=self.site_coo['latitude'],
+                                                      longitude=self.site_coo['longitude'],
+                                                      elevation=self.site_coo['elevation'])
+                return self.ra_random_dither(ra=ra,
+                                             dith_val=self.dither_distance,
+                                             mode=self.dither_mode)
+            else:
+                return None
+        else:
+            return None
+
+    @property
+    def dec_dither(self) -> float or None:
+        if self.dither_this_exp:
+            if self.if_radec:
+                return self.dec_random_dither(dec=self.parent.plan_dec,
+                                              dith_val=self.dither_distance,
+                                              mode=self.dither_mode)
+            elif self.if_altaz:
+                _, dec = az_alt_2_ra_dec(alt=self.parent.plan_alt,
+                                         az=self.parent.plan_az,
+                                         latitude=self.site_coo['latitude'],
+                                         longitude=self.site_coo['longitude'],
+                                         elevation=self.site_coo['elevation'])
+                return self.dec_random_dither(dec=dec,
+                                              dith_val=self.dither_distance,
+                                              mode=self.dither_mode)
+            else:
+                return None
+        else:
+            return None
+
+    @property
+    def ra_final(self) -> float:
+        if self.dither_this_exp:
+            return self.ra_dither
+        else:
+            return self.parent.plan_ra
+
+    @property
+    def dec_final(self) -> float:
+        if self.dither_this_exp:
+            return self.dec_dither
+        else:
+            return self.parent.plan_dec
 
     @property
     def focus_id(self) -> int or None:
@@ -621,6 +656,7 @@ class Seq:
 
     @property
     def dither_list(self) -> List[str] or None:
+        # [dither_mode, dither_every_sub, dither_distance]
         if 'dither' in self.parent_kwargs.keys():
             return list(self.parent_kwargs['dither'].split('/'))
         else:
@@ -628,7 +664,7 @@ class Seq:
 
     @property
     def dither_mode(self) -> str:
-        if self.parent_kwargs:
+        if self.dither_list:
             return str(self.dither_list[0])
         else:
             # TODO get from settings
@@ -636,7 +672,7 @@ class Seq:
 
     @property
     def dither_every_sub(self) -> int:
-        if self.parent_kwargs:
+        if self.dither_list:
             return int(self.dither_list[1])
         else:
             # TODO get from settings
@@ -644,7 +680,7 @@ class Seq:
 
     @property
     def dither_distance(self) -> float:
-        if self.parent_kwargs:
+        if self.dither_list:
             return float(self.dither_list[2])
         else:
             # TODO get from settings
@@ -654,6 +690,19 @@ class Seq:
     def dither_on(self) -> bool:
         """
         Do dithering or not.
-        :return:
+        :return: bool
         """
-        return
+        if self.parent.exp_type == 'skyflat':
+            return True
+        elif self.parent.exp_type == 'object' and 'dither' in self.parent_kwargs.keys():
+            return True
+        else:
+            return False
+
+    def dither_this_exp(self, ex: int) -> bool:
+        if (ex % self.dither_every_sub == 0) and (self.dither_on is True) and (ex > 1):
+            return True
+        else:
+            return False
+
+
