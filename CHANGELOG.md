@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 - added  `Observatory.is_tic_server_available`
 - added a nev method GET to alpaca api `errorstring`
+- Added methods to build a dictionary mapping the tree structure together with the configuration.
 
 ### Fixed
 - Fixed internal api response type error
