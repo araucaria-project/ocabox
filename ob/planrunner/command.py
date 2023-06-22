@@ -199,6 +199,30 @@ class Command(AbstractSequence):
             return None
 
     @property
+    def domeflat_dome_az(self) -> float or None:
+        # TODO take this value from settings
+        if self.exp_type == 'skyflat':
+            return 0.0
+        else:
+            return None
+
+    @property
+    def domeflat_mount_az(self) -> float or None:
+        # TODO take this value from settings
+        if self.exp_type == 'skyflat':
+            return self.domeflat_dome_az + 180.0
+        else:
+            return None
+
+    @property
+    def domeflat_mount_alt(self) -> float or None:
+        # TODO take this value from settings
+        if self.exp_type == 'skyflat':
+            return 15.0
+        else:
+            return None
+
+    @property
     def object_name(self) -> str:
         if not self.plan_object_name:
             if self.command_name == 'SKYFLAT':
@@ -223,26 +247,21 @@ class Command(AbstractSequence):
 
     def _write_domeflat(self):
 
-        # TODO get Alt Az domeflat position from some config
-        dome_az = 0.0
-        tel_flat_az = dome_az + 180
-        dome_flat_alt = 15.0
-
         id_next = 0
 
         # Dome slewing to domeflat position
         if self._dome_follow is True:
             id_next = self._add_comp(DomeSlew(id=self._op_id(id_next=id_next),
                                               parent=self,
-                                              az=dome_az,
+                                              az=self.domeflat_dome_az,
                                               uobi=self.uobi), id_next=id_next)
 
         # Mount slewing to domeflat position
         id_next = self._add_comp(MountSlew(id=self._op_id(id_next=id_next),
                                            parent=self,
                                            obj_name=self.object_name,
-                                           alt=dome_flat_alt,
-                                           az=tel_flat_az,
+                                           alt=self.domeflat_mount_alt,
+                                           az=self.domeflat_mount_az,
                                            tracking=False,
                                            epoch=self.epoch,
                                            uobi=self.uobi
@@ -436,6 +455,7 @@ class Command(AbstractSequence):
                                                       uobi=self.uobi), id_next=id_next)
 
                 for ex in range(1, seq_data.exp_no + 1):
+                    # Camera single sequence, single exposure
 
                     # Camera exposure
                     id_next = self._add_comp(CameraExposure(id=self._op_id(id_next=id_next),
@@ -502,6 +522,7 @@ class Seq:
 
     @property
     def site_coo(self) -> Dict[str, float]:
+        # TODO Take this from settings
         return {'latitude': -24.598056, 'longitude': -70.196389, 'elevation': 2817}
 
     @property
@@ -537,10 +558,10 @@ class Seq:
                                              mode=self.dither_mode)
             elif self.if_altaz:
                 ra, _ = az_alt_2_ra_dec(alt=self.parent.plan_alt,
-                                                      az=self.parent.plan_az,
-                                                      latitude=self.site_coo['latitude'],
-                                                      longitude=self.site_coo['longitude'],
-                                                      elevation=self.site_coo['elevation'])
+                                        az=self.parent.plan_az,
+                                        latitude=self.site_coo['latitude'],
+                                        longitude=self.site_coo['longitude'],
+                                        elevation=self.site_coo['elevation'])
                 return self.ra_random_dither(ra=ra,
                                              dith_val=self.dither_distance,
                                              mode=self.dither_mode)
