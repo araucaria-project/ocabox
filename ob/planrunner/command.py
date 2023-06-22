@@ -17,13 +17,10 @@ from ob.planrunner.subcommand import SubCommand
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
-
-
-
 class Command(AbstractSequence):
 
     TYPES = {'SKYFLAT': 'flat', 'FOCUS': 'focusing', 'DOMEFLAT': 'flat',
-             'DARK': 'dark', 'ZERO': 'zero', 'OBJECT': 'science', 'WAIT': '', 'STOP': ''}
+             'DARK': 'dark', 'ZERO': 'zero', 'OBJECT': 'science', 'WAIT': 'wait', 'STOP': 'stop'}
 
     def __init__(self, id: str, sequence_dict: Dict[Any, Any],
                  parent: 'Sequence' or 'NightPlan') -> None:
@@ -174,7 +171,10 @@ class Command(AbstractSequence):
             try:
                 return float(self.kwargs['az'])
             except ValueError:
-                return deg_str_to_deg(self.kwargs['az'])
+                try:
+                    return deg_str_to_deg(self.kwargs['az'])
+                except ValueError:
+                    return None
         else:
             return None
 
@@ -184,7 +184,10 @@ class Command(AbstractSequence):
             try:
                 return float(self.kwargs['alt'])
             except ValueError:
-                return deg_str_to_deg(self.kwargs['alt'])
+                try:
+                    return deg_str_to_deg(self.kwargs['alt'])
+                except ValueError:
+                    return None
         else:
             return None
 
@@ -218,8 +221,6 @@ class Command(AbstractSequence):
     def exp_type(self):
         return Command.TYPES[self.command_name]
 
-
-
     def _write_domeflat(self):
 
         # TODO get Alt Az domeflat position from some config
@@ -229,12 +230,14 @@ class Command(AbstractSequence):
 
         id_next = 0
 
+        # Dome slewing to domeflat position
         if self._dome_follow is True:
             id_next = self._add_comp(DomeSlew(id=self._op_id(id_next=id_next),
                                               parent=self,
                                               az=dome_az,
                                               uobi=self.uobi), id_next=id_next)
 
+        # Mount slewing to domeflat position
         id_next = self._add_comp(MountSlew(id=self._op_id(id_next=id_next),
                                            parent=self,
                                            obj_name=self.object_name,
@@ -245,55 +248,64 @@ class Command(AbstractSequence):
                                            uobi=self.uobi
                                            ), id_next=id_next)
 
+        # Turn screen light on
         if self.screen_light_mode in ['auto', 'on']:
             id_next = self._add_comp(DomeScreenLight(id=self._op_id(id_next=id_next),
                                                      parent=self,
                                                      light=True,
                                                      uobi=self.uobi), id_next=id_next)
 
+        # Open mirror cover
         if self.mirror_cover_mode in ['auto', 'open']:
             id_next = self._add_comp(MirrorCover(id=self._op_id(id_next=id_next),
                                                  parent=self,
                                                  open=True,
                                                  uobi=self.uobi), id_next=id_next)
 
-        # Camera exposure
+        # Camera exposure sequences
         if self.plan_seq:
-            for n in self.plan_seq:
-                par = list(n.split('/'))
+            for s in self.plan_seq:
+                seq_data = Seq(seq=s, parent=self)
 
+                # Change filter
                 id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),
                                                       parent=self,
-                                                      filter=par[1],
+                                                      filter=seq_data.filter,
                                                       uobi=self.uobi), id_next=id_next)
 
-                for ex in range(1, int(par[0]) + 1):
+                for ex in range(1, seq_data.exp_no + 1):
+                    # Camera single sequence, single exposure
+
+                    # Camera exposure
                     id_next = self._add_comp(CameraExposure(id=self._op_id(id_next=id_next),
                                                             parent=self,
                                                             sub_exp=ex,
-                                                            exp_time=float(par[2]),
-                                                            exp_no=int(par[0]),
+                                                            exp_time=seq_data.exp_time,
+                                                            exp_no=seq_data.exp_no,
                                                             type=self.exp_type,
                                                             light=True,
                                                             obj_name=self.object_name,
                                                             req_ra='',
                                                             req_dec='',
                                                             epoch=self.epoch,
-                                                            filter=par[1],
+                                                            filter=seq_data.filter,
                                                             auto_exposure=False,
                                                             uobi=self.uobi), id_next=id_next)
 
+        # Turning off light
         if self.screen_light_mode in ['auto', 'off']:
             id_next = self._add_comp(DomeScreenLight(id=self._op_id(id_next=id_next),
                                                      parent=self,
                                                      light=False,
                                                      uobi=self.uobi), id_next=id_next)
 
+        # Close mirror covers
         if self.mirror_cover_mode in ['close']:
             id_next = self._add_comp(MirrorCover(id=self._op_id(id_next=id_next),
                                                  parent=self,
                                                  open=False,
                                                  uobi=self.uobi), id_next=id_next)
+        del seq_data
 
     def _write_object_skyflat_focusing(self) -> None:
 
@@ -358,7 +370,9 @@ class Command(AbstractSequence):
                                                           uobi=self.uobi), id_next=id_next)
 
                     # Dithering
-                    if seq_data.dither_this_exp:
+                    if seq_data.dither_this_exp(ex=ex):
+
+                        # Mount slew dithering
                         id_next = self._add_comp(MountSlew(id=self._op_id(id_next=id_next),
                                                            parent=self,
                                                            obj_name=self.object_name,
@@ -368,7 +382,7 @@ class Command(AbstractSequence):
                                                            uobi=self.uobi), id_next=id_next)
 
                     # Dome follow between exposures
-                    if self._dome_follow is True:
+                    if self._dome_follow is True and (ex > 1):
                         id_next = self._add_comp(DomeSlew(id=self._op_id(id_next=id_next),
                                                           parent=self,
                                                           follow_tol=3.0,
@@ -516,7 +530,7 @@ class Seq:
 
     @property
     def ra_dither(self) -> float or None:
-        if self.dither_this_exp:
+        if self.dither_on:
             if self.if_radec:
                 return self.ra_random_dither(ra=self.parent.plan_ra,
                                              dith_val=self.dither_distance,
@@ -537,7 +551,7 @@ class Seq:
 
     @property
     def dec_dither(self) -> float or None:
-        if self.dither_this_exp:
+        if self.dither_on:
             if self.if_radec:
                 return self.dec_random_dither(dec=self.parent.plan_dec,
                                               dith_val=self.dither_distance,
@@ -558,14 +572,14 @@ class Seq:
 
     @property
     def ra_final(self) -> float:
-        if self.dither_this_exp:
+        if self.dither_on:
             return self.ra_dither
         else:
             return self.parent.plan_ra
 
     @property
     def dec_final(self) -> float:
-        if self.dither_this_exp:
+        if self.dither_on:
             return self.dec_dither
         else:
             return self.parent.plan_dec
@@ -584,10 +598,7 @@ class Seq:
         :return: [focus_target/focus_step]
         """
         if 'pos' in self.parent_kwargs.keys():
-            if len(self.parent_kwargs['pos']) == 2:
-                return list(self.parent_kwargs['pos'].split('/'))
-            else:
-                return None
+            return list(self.parent_kwargs['pos'].split('/'))
         else:
             return None
 
@@ -658,7 +669,10 @@ class Seq:
     def dither_list(self) -> List[str] or None:
         # [dither_mode, dither_every_sub, dither_distance]
         if 'dither' in self.parent_kwargs.keys():
-            return list(self.parent_kwargs['dither'].split('/'))
+            if self.parent_kwargs['dither'] == 'none':
+                return None
+            else:
+                return list(self.parent_kwargs['dither'].split('/'))
         else:
             return None
 
@@ -693,14 +707,29 @@ class Seq:
         :return: bool
         """
         if self.parent.exp_type == 'skyflat':
-            return True
-        elif self.parent.exp_type == 'object' and 'dither' in self.parent_kwargs.keys():
-            return True
+            if 'dither' not in self.parent_kwargs.keys():
+                return True
+            elif 'dither' in self.parent_kwargs.keys() and self.parent_kwargs['dither'] != 'none':
+                return True
+            elif 'dither' in self.parent_kwargs.keys() and self.parent_kwargs['dither'] =='none':
+                return False
+            else:
+                return False
+
+        elif self.parent.exp_type == 'science':
+            if 'dither' not in self.parent_kwargs.keys():
+                return False
+            elif 'dither' in self.parent_kwargs.keys() and self.parent_kwargs['dither'] != 'none':
+                return True
+            elif 'dither' in self.parent_kwargs.keys() and self.parent_kwargs['dither'] == 'none':
+                return False
+            else:
+                return False
         else:
             return False
 
     def dither_this_exp(self, ex: int) -> bool:
-        if (ex % self.dither_every_sub == 0) and (self.dither_on is True) and (ex > 1):
+        if (ex % self.dither_every_sub == 0) and self.dither_on and (ex > 1):
             return True
         else:
             return False
