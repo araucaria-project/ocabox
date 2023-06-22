@@ -234,7 +234,7 @@ class CameraExposure(SubCommand):
 
         exposure_time = self.kwargs["exp_time"]
 
-        if self.kwargs['type'] == 'skyflat' and exposure_time=='a':
+        if self.kwargs['type'] == 'skyflat' and self.kwargs['auto_exposure']:
             """
             TODO for filter, time, make test shot on sky with 1s exposure. If value is not what You expect wait
             some time and make test shot again until You don't get expected value of adu, then continue to make
