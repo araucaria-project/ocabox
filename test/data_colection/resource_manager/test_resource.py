@@ -138,7 +138,7 @@ class MountAlpacaTest(unittest.TestCase, BaseAsyncTest):
                                                                  dec=position_dec,
                                                                  epoch=str("2000"))
             m = mount.build_go_to_position(ra=position_ra, dec=position_dec, alt=None, az=None, api=self.api_test)
-            await m.make()
+            await m.run()
             await m.wait()
             result = await self.api_test.get_async(f"{mount.adr}.rightascension")
             self.assertTrue(position_ra_final - 0.5 < result.value.v < position_ra_final + 0.5)
@@ -159,7 +159,7 @@ class MountAlpacaTest(unittest.TestCase, BaseAsyncTest):
             position_alt = random.randint(30, 50)
             position_az = random.randint(30, 50)
             m = mount.build_go_to_position(ra=None, dec=None, alt=position_alt, az=position_az, api=self.api_test)
-            await m.make()
+            await m.run()
             await m.wait()
             result = await self.api_test.get_async(f"{mount.adr}.altitude")
             self.assertTrue(position_alt - 0.5 < result.value.v < position_alt + 0.5)
@@ -180,7 +180,7 @@ class MountAlpacaTest(unittest.TestCase, BaseAsyncTest):
             m = mount.build_go_to_position(ra=random.randint(30, 50), dec=None, alt=None, az=random.randint(30, 50),
                                            api=self.api_test)
             with self.assertRaises(ResourceCommandError):
-                await m.make()
+                await m.run()
             await self.tree_freezer.stop()
 
         asyncio.run(coro())

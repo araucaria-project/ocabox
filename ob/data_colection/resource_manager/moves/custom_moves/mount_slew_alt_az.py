@@ -16,6 +16,7 @@ class MountSlewAltAz(Move):
         self._build()
 
     def _build(self):
+        # todo moe wsadzać byle czego do Position tylko jakoś to przeliczyć na początku
         # positions ra and dec have to have a name because it will be used in updating targets
         self.add_position(
             Position(f"{self._resource_content.adr}.altitude", t=self._alt, bounds=(0.5, 0.5),
@@ -24,7 +25,7 @@ class MountSlewAltAz(Move):
             Position(f"{self._resource_content.adr}.azimuth", t=self._az, bounds=(0.5, 0.5),
                      name=self._position_az_name))
         self.add_position(Position(f"{self._resource_content.adr}.tracking", t=False))
-        self.add_position(Position(f"{self._resource_content.adr}.slewing", t=False, level=2))
+        self.add_position(Position(f"{self._resource_content.adr}.slewing", t=False, order=2))
 
     async def _action(self):
         try:
@@ -42,7 +43,7 @@ class MountSlewAltAz(Move):
                 p.target = alt
             if p.get_name() == self._position_az_name:
                 p.target = az
-
+        # todo zacząć uzywać głównego API a nie RARE API
         # ----------------- set tracking -----------------
         result = await self._api.put_async(address=f"{self._resource_content.adr}.tracking",
                                            parameters_dict={"Tracking": False}, no_wait=False)

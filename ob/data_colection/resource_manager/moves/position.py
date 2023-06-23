@@ -6,9 +6,10 @@ from ob.comunication.comunication_error import CommunicationRuntimeError
 from ob.util_functions.asyncio_util_functions import wait_for_psce
 
 
+# todo Position do zmiany nazwy
 class Position:
     def __init__(self, address, t=None, s=None, c=None, timeout=None,
-                 bounds: Tuple[Optional[float], Optional[float]] = (None, None), level: int = 1, name: str = ""):
+                 bounds: Tuple[Optional[float], Optional[float]] = (None, None), order: int = 1, name: str = ""):
         self._target = t
         self._start = s
         self._current = c
@@ -19,7 +20,7 @@ class Position:
         self._address = address
         self._finish_fut = None
         self.timeout = timeout if timeout is not None else 20
-        self.level = level
+        self.order = order
         self._start_tmstp = 0
         self._finish_tmstp = 0
         # ------ optional -------

@@ -24,7 +24,7 @@ class MountSlewRaDec(Move):
             Position(f"{self._resource_content.adr}.declination", t=self._dec, bounds=(0.5, 0.5),
                      name=self._position_dec_name))
         self.add_position(Position(f"{self._resource_content.adr}.tracking", t=True))
-        self.add_position(Position(f"{self._resource_content.adr}.slewing", t=False, level=2))
+        self.add_position(Position(f"{self._resource_content.adr}.slewing", t=False, order=2))
 
     async def _action(self):
         try:

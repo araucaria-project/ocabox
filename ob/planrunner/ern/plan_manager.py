@@ -39,6 +39,7 @@ class PlanManager:
         return None
 
     def upload_plan(self, plan_id: str, raw_plan: str, overwrite: bool = False) -> None:
+        # todo plan może przyjść w foormacie słownika na nie tylko stringa
         parsed_plan = self._parse_plan(raw_plan)
         if parsed_plan is None:
             logger.error(f'Plan is wrong. Check the syntax.')

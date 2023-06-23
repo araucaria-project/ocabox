@@ -25,7 +25,6 @@ class Command(ABC):
         self._command_dict: dict = command_dict
 
         # --- --- --- --- --- --- --- --- --- --- ---
-        self._needed_modules_list = []  # todo do usunięcia
         self._needed_modules = []
         self._finish_locking: Optional[asyncio.Future] = None
         self._finish: Optional[asyncio.Future] = None

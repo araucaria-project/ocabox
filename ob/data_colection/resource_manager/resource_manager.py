@@ -9,6 +9,7 @@ from ob.data_colection.resource_manager.resource import DomeAlpaca, Resource, Co
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
+# todo zmienić nazwe na TelescopeComponentManager
 class ResourceManager(StandardTelescopeComponents, ABC):
     """
     This is the resource manager for the telescope api support modules. The alpaca api class structure has been

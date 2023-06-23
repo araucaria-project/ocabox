@@ -23,6 +23,7 @@ class Move:
         :raise ValueError
         :return:
         """
+        # todo dodać możliwośc subskrypcji na progres, przemyśleć dodanie Param klasy albo jakieś Eventy
         suma = 0
         for p in self.positions:
             suma += p.progress  # can raise ValueError
@@ -40,21 +41,21 @@ class Move:
 
     def add_position(self, position):
         # this should be before add given position to list
-        self._set_in_level(position=position)
+        self._set_in_order(position=position)
         self.positions.append(position)
 
-    def _set_in_level(self, position):
+    def _set_in_order(self, position):
         """This should be before add given position to list"""
         for p in self.positions:
-            if p.level < position.level:
+            if p.order < position.order:
                 position.add_more_important_position(p)
-            elif p.level > position.level:
+            elif p.order > position.order:
                 p.add_more_important_position(position)
 
     def set_action(self, action):
         self._actn = action
 
-    async def make(self):
+    async def run(self):
         ts = time.time()
         # set start timestamp
         for p in self.positions:

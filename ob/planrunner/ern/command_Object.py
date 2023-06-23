@@ -4,6 +4,7 @@ from typing import List, Tuple
 
 from ob.data_colection.resource_manager.errors import ResourceCommandError
 from ob.planrunner.ern.command import Command
+from ob.planrunner.ern.errors import ResourceError
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -18,8 +19,11 @@ class CommandObject(Command):
         # --- --- --- --- --- --- --- --- --- --- ---
         self._mapped_args: dict = {"ra": None, "dec": None, "object_name": None, "filter": None, "repetitions": None}
         self._read_args(self.get_args())
+        # todo dodać metodę build wywoływaną jak __init__ w którym się zbuduje wszystko np tak jak przy asynchronicznych metodach taki acync init
         self._create_modules_from_args()
         self._needed_modules: List[Tuple[str, int]] = []
+        # ------ subcommands ------
+        self._move_mount = None
 
     def _read_args(self, args: list):
         if len(args) > 2:
@@ -28,6 +32,13 @@ class CommandObject(Command):
         # todo uzupełnić
 
     def _create_modules_from_args(self):
+        mount = self._get_res(self.res_mngr.MOUNT, nr=0)
+        self._move_mount = mount.build_go_to_position(ra=self._mapped_args.get('ra', None),
+                                                      dec=self._mapped_args.get('dec', None),
+                                                      alt=self._mapped_args.get('alt', None),
+                                                      az=self._mapped_args.get('az', None),
+                                                      api=4)
+
         # todo uzupełnić, utworzyć obiekty, coś w stylu _write_object() z dawnego runera
         some_module = (self.res_mngr.MOUNT, 0)
         self._needed_modules.append(some_module)
@@ -38,7 +49,7 @@ class CommandObject(Command):
         #  trzeba kontrolę typu zasobu, np czy jest alpaca czy inny
         if m:
             return m
-        raise RuntimeError  # todo zrobić customowy bład
+        raise ResourceError(f"Can't find resource")
 
     async def _is_loaded(self, resource_name: str, nr: int = 0):
         m = self.res_mngr.get_resource(name=resource_name, nr=nr)
@@ -60,6 +71,13 @@ class CommandObject(Command):
                 print('start2')
                 await self._get_res(self.res_mngr.MOUNT, nr=0).go_to_position()
                 await self._get_res(self.res_mngr.DOME, nr=0).go_to_position()
+
+
+                await self._move_mount.run()
+
+                await self._move_mount.wait()
+
+
 
                 await self._get_res(self.res_mngr.DOME, nr=0).wait_to_slew()
                 await self._get_res(self.res_mngr.MOUNT, nr=0).wait_to_slew()
