@@ -105,20 +105,22 @@ class ObservPlan:
         except LookupError:
             logger.warning(f'There is no night plan {nightplan_id}')
 
-    def write_nightplan(self, nightplan_id: str, nightplan_dict: List[Any], overwrite: bool = False) -> None:
+    def write_nightplan(self, nightplan_id: str, nightplan_dict: List[Any],
+                        overwrite: bool = False, param: Dict[str, Any] or None = None) -> None:
         if (nightplan_id in self.subcomponents.keys()) and (overwrite is True):
             self.delete_nightplan(nightplan_id)
-            np = NightPlan(nightplan_id, nightplan_dict, self)
+            np = NightPlan(nightplan_id, nightplan_dict, self, param=param)
             self.subcomponents[nightplan_id] = np
             logger.info(f'Night plan {nightplan_id} to {self.observ_plan_id} is overwritten')
         elif (nightplan_id in self.subcomponents.keys()) and (overwrite is False):
             raise CantOverideNightPlanError
         else:
-            np = NightPlan(nightplan_id, nightplan_dict, self)
+            np = NightPlan(nightplan_id, nightplan_dict, self, param=param)
             self.subcomponents[nightplan_id] = np
             logger.info(f'Night plan {nightplan_id} is written')
 
-    def load_nightplan_string(self, nightplan_id: str, string: str, overwrite: bool = False) -> None:
+    def load_nightplan_string(self, nightplan_id: str, string: str,
+                              overwrite: bool = False, param: Dict[str, Any] or None = None) -> None:
         """
         :param nightplan_id: Night plan id (default: julian night date)
         :param string:
@@ -130,7 +132,7 @@ class ObservPlan:
         self._parse_plan()
         if self.parsed_plan is not None:
             try:
-                self.write_nightplan(nightplan_id, self.parsed_plan, overwrite=overwrite)
+                self.write_nightplan(nightplan_id, self.parsed_plan, overwrite=overwrite, param=param)
             except CantOverideNightPlanError:
                 logger.error(f'Cannot overwrite night plan {nightplan_id}, please select overwrite=True')
         else:

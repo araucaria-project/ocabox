@@ -11,8 +11,10 @@ class ObservPlanApi:
         self.observ_plan = ObservPlan(observ_plan_id=id, telescope=telescope)
         super().__init__()
 
-    def load_nightplan_string(self, nightplan_id: str, string: str, overwrite: bool = False) -> None:
-        self.observ_plan.load_nightplan_string(nightplan_id=nightplan_id, string=string, overwrite=overwrite)
+    def load_nightplan_string(self, nightplan_id: str, string: str,
+                              overwrite: bool = False, param: Dict[str, Any] or None = None) -> None:
+        self.observ_plan.load_nightplan_string(nightplan_id=nightplan_id,
+                                               string=string, overwrite=overwrite, param=param)
 
     def delete_nightplan(self, nightplan_id: str) -> None:
         self.observ_plan.delete_nightplan(nightplan_id=nightplan_id)

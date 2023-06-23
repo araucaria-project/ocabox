@@ -177,6 +177,7 @@ class CameraExposure(SubCommand):
             obs_type=str(self.kwargs['type']),
             object=str(self.kwargs["obj_name"]),
             filter=str(self.kwargs["filter"]),
+            observer=str(self.kwargs['observer']),
             req_exp=sub_time,
             cam_exp=sub_time,
             ccd_name=str(self.camera.sensorname),

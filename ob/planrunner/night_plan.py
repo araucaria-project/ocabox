@@ -1,5 +1,5 @@
 import logging
-from typing import List, Any
+from typing import List, Any, Dict
 from ob.planrunner.abstract_sequence import AbstractSequence
 from ob.planrunner.sequence import Sequence
 
@@ -8,7 +8,8 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class NightPlan(AbstractSequence):
-    def __init__(self, id: str, sequence_dict: List[Any], parent: 'ObservationPlan') -> None:
+    def __init__(self, id: str, sequence_dict: List[Any],
+                 parent: 'ObservationPlan', param: Dict[str, Any] or None = None) -> None:
         self.id = id
         self.name = 'Night plan'
         self.parent = parent
@@ -16,6 +17,7 @@ class NightPlan(AbstractSequence):
         self.subcomponents = {}
         self.telescope = parent.telescope
         self.info_callback = parent.info_callback
+        self.param = param
         self.args = []
         self.kwargs = {}
         self.parent_kwargs = self.parent.kwargs | self.parent.parent_kwargs
@@ -50,7 +52,7 @@ class NightPlan(AbstractSequence):
         self.info_callback['stream_1'](f'Nightplan {self.id} written')
         seq_id = 0
         for se in self.sequence_dict:
-            sub = Sequence(f'{self.numb(seq_id)}', se, self)
+            sub = Sequence(f'{self.numb(seq_id)}', se, self, param=self.param)
             self.subcomponents[f'{self.numb(seq_id)}'] = sub
             seq_id += 1
 

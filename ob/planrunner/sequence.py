@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class Sequence(AbstractSequence):
 
     def __init__(self, id: str, sequence_dict: Dict[Any, Any],
-                 parent: 'NightPlan' or 'Sequence') -> None:
+                 parent: 'NightPlan' or 'Sequence', param: Dict[str, Any] or None = None) -> None:
         self.id = id
         self.name = 'Sequence'
         self.sequence_dict = sequence_dict
@@ -19,6 +19,7 @@ class Sequence(AbstractSequence):
         self.args = self.build_args(self.sequence_dict)
         self.kwargs = self.build_kwargs(self.sequence_dict)
         self.parent_kwargs = self.parent.kwargs | self.parent.parent_kwargs
+        self.param = param
         self.subcomponents = {}
         self.telescope = parent.telescope
         self.info_callback = parent.info_callback
@@ -52,11 +53,11 @@ class Sequence(AbstractSequence):
                     raise SequenceTreeError(Exception)
 
     def write_subcomponent(self, sequence_id, sequence_dict) -> 'Sequence':
-        sub = Sequence(sequence_id, sequence_dict, self)
+        sub = Sequence(sequence_id, sequence_dict, self, param=self.param)
         return sub
 
     def write_command(self, command_id, command_dict) -> 'Command':
-        com = Command(command_id, command_dict, self)
+        com = Command(command_id, command_dict, self, param=self.param)
         return com
 
     async def arun(self, step_id: str or None = None) -> int:

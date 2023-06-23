@@ -23,7 +23,7 @@ class Command(AbstractSequence):
              'DARK': 'dark', 'ZERO': 'zero', 'OBJECT': 'science', 'WAIT': 'wait', 'STOP': 'stop'}
 
     def __init__(self, id: str, sequence_dict: Dict[Any, Any],
-                 parent: 'Sequence' or 'NightPlan') -> None:
+                 parent: 'Sequence' or 'NightPlan', param: Dict[str, Any] or None = None) -> None:
         self.id = id
         self.sequence_dict = sequence_dict
         self.parent = parent
@@ -33,6 +33,7 @@ class Command(AbstractSequence):
         self.command_name = self.sequence_dict['command_name']
         self.subcomponents = {}
         self.telescope = parent.telescope
+        self.param = param
         self.info_callback = parent.info_callback
         super().__init__(self.id, self.command_name, self.info_callback,
                          observatory=self.parent.observatory, c_type='command', kwargs=self.kwargs)
@@ -48,8 +49,6 @@ class Command(AbstractSequence):
             kw = f'{kw} {n}={self.parent_kwargs[n]}'
         self.info_callback['c_commands'](f'{self.id};{self.command_name};{kw}')
         logger.info(f'{self.id} {self.command_name} {self.args} {self.kwargs} is written')
-
-
 
     def _write_subcommands(self) -> None:
         self._create_command_string()
@@ -116,6 +115,13 @@ class Command(AbstractSequence):
                 return None
         else:
             return None
+
+    @property
+    def observer(self) -> str:
+        if 'observer' in self.param.keys():
+            return self.param['observer']
+        else:
+            return ''
 
     @property
     def screen_light_mode(self):
@@ -309,6 +315,7 @@ class Command(AbstractSequence):
                                                             epoch=self.epoch,
                                                             filter=seq_data.filter,
                                                             auto_exposure=False,
+                                                            observer=self.observer,
                                                             uobi=self.uobi), id_next=id_next)
 
         # Turning off light
@@ -422,6 +429,7 @@ class Command(AbstractSequence):
                                                             filter=seq_data.filter,
                                                             focus_id=seq_data.focus_id,
                                                             auto_exposure=seq_data.auto_exposure,
+                                                            observer=self.observer,
                                                             uobi=self.uobi), id_next=id_next)
 
         # Mirror cover close
@@ -471,6 +479,7 @@ class Command(AbstractSequence):
                                                             epoch=self.epoch,
                                                             filter=seq_data.filter,
                                                             auto_exposure=False,
+                                                            observer=self.observer,
                                                             uobi=self.uobi), id_next=id_next)
 
         del seq_data
