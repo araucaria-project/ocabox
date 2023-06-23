@@ -382,7 +382,7 @@ class Command(AbstractSequence):
                     # Camera single sequence, single exposure
 
                     # Focusig
-                    if self.exp_type == 'focusing':
+                    if self.command_name == 'FOCUS':
                         id_next = self._add_comp(Focusing(id=self._op_id(id_next=id_next),
                                                           parent=self,
                                                           position=seq_data.focus_position(exp_no=ex),
@@ -727,7 +727,7 @@ class Seq:
         Do dithering or not.
         :return: bool
         """
-        if self.parent.exp_type == 'skyflat':
+        if self.parent.command_name == 'SKYFLAT':
             if 'dither' not in self.parent_kwargs.keys():
                 return True
             elif 'dither' in self.parent_kwargs.keys() and self.parent_kwargs['dither'] != 'none':
@@ -737,7 +737,7 @@ class Seq:
             else:
                 return False
 
-        elif self.parent.exp_type == 'science':
+        elif self.parent.command_name == 'OBJECT':
             if 'dither' not in self.parent_kwargs.keys():
                 return False
             elif 'dither' in self.parent_kwargs.keys() and self.parent_kwargs['dither'] != 'none':

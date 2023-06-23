@@ -149,10 +149,7 @@ class ObservPlan:
 
     def run_nightplan(self, nightplan_id: str, step_id: str or None = None) -> None:
         """
-        Method run night plan.
-        :param nightplan_id:  Night plan id (default: julian night date)
-        :param step_id: optional, run from specified step, example: '00' or '00_01_02' or '00_02'
-        :return: None
+        WARNING: Old sync method, do not use it
         """
         self.stop_nightplan()
         if self.get_nightplan(nightplan_id):
@@ -160,24 +157,47 @@ class ObservPlan:
                 self.running_nightplan = nightplan_id
                 self.tsk = asyncio.create_task(self.arun_night(nightplan_id, step_id=step_id))
 
-    """
+    def stop_nightplan(self) -> None:
+        """
+        WARNING: Old sync method, do not use it
+        """
+        if self.tsk:
+            self.tsk.cancel()
+            logger.info(f'Night plan stopped')
+            self.info_callback['stream_1'](f'Night plan stopped')
+            self.tsk = None
+        self.tsk = None
+        self.running_nightplan = None
+
+    def get_loop(self) -> Any or None:
+        try:
+            loop = asyncio.get_event_loop()
+            return loop
+        except RuntimeError:
+            logger.error("There is no running asyncio loop")
+            return None
+
     async def arun_nightplan(self, nightplan_id: str, step_id: str or None = None) -> None:
-        # How to stop nightplan
-        """"""
+        """
         Async method run night plan.
-        :param nightplan_id:  Night plan id (default: julian night date)
+        :param nightplan_id:  Night plan id
         :param step_id: optional, run from specified step, example: '00' or '00_01_02' or '00_02'
         :return: None
-        """"""
-        self.stop_nightplan()
+        """
+        await self.astop_nightplan()
         if self.get_nightplan(nightplan_id):
             if self.tsk is None:
                 self.running_nightplan = nightplan_id
-                self.tsk = await self.arun_night(nightplan_id, step_id=step_id)"""
+                loop = self.get_loop()
+                if loop:
+                    self.tsk = loop.create_task(self.arun_night(nightplan_id, step_id=step_id))
+                else:
+                    logger.error(f"Can't run night plan, no loop")
+                    self.info_callback['stream_1'](f"Can't run night plan, no loop")
 
-    def stop_nightplan(self) -> None:
+    async def astop_nightplan(self) -> None:
         """
-        Method stops night plan.
+        Async method stops night plan.
         :return: None
         """
         if self.tsk:
@@ -192,4 +212,4 @@ class ObservPlan:
         await self.subcomponents[nightplan_id].arun(step_id=step_id)
 
     async def stop(self):
-        self.stop_nightplan()
+        await self.astop_nightplan()

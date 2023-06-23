@@ -63,6 +63,23 @@ class CameraExposure(SubCommand):
     def add_zero(numb: int):
         return f'{numb:02d}'
 
+    @property
+    def if_autoexposure(self) -> bool:
+        if 'auto_exposure' in self.kwargs.keys():
+            if self.kwargs['auto_exposure'] == True:
+                return True
+            else:
+                return False
+        else:
+            return False
+
+    @property
+    def subexp_no(self) -> int or None:
+        if "sub_exp" in self.kwargs.keys():
+            return self.kwargs["sub_exp"]
+        else:
+            return None
+
     def _provide_target_folder(self) -> str:
         if self.kwargs['type'] == 'focusing':
             lst = os.listdir(self.folder_focusing)
@@ -230,11 +247,11 @@ class CameraExposure(SubCommand):
         self.target_folder = self._provide_target_folder()
         self.started = True
         self.info_callback['exec_json'](self.exec_json())
-        sub = self.kwargs["sub_exp"]
+        # sub = self.kwargs["sub_exp"]
 
         exposure_time = self.kwargs["exp_time"]
 
-        if self.kwargs['type'] == 'skyflat' and self.kwargs['auto_exposure']:
+        if self.if_autoexposure:
             """
             TODO for filter, time, make test shot on sky with 1s exposure. If value is not what You expect wait
             some time and make test shot again until You don't get expected value of adu, then continue to make
@@ -299,27 +316,27 @@ class CameraExposure(SubCommand):
                         break
                 await asyncio.sleep(test_time_interval)
 
-        logger.info(f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} started')
-        self.info_callback['stream_1'](f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} started')
+        logger.info(f'{self.id} exp:{self.subexp_no}/{self.kwargs["exp_no"]} started')
+        self.info_callback['stream_1'](f'{self.id} exp:{self.subexp_no}/{self.kwargs["exp_no"]} started')
         self.info_callback['exec_json'](self.exec_json(exp_started=True,
                                                        exp_done=False,
                                                        exp_saved=False,
-                                                       n_exp=sub,
+                                                       n_exp=self.subexp_no,
                                                        exp_time=exposure_time))
         self.exp_time_start = datetime.utcnow()
         self.readout_time_start = time.time()
         await self.camera.aput_startexposure(float(exposure_time), self.kwargs["light"])
         await self._wait_for_subexposure(float(exposure_time))
         self.readout_time = time.time() - self.readout_time_start - float(exposure_time)
-        logger.info(f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} saving')
-        self.info_callback['stream_1'](f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} --> saving')
+        logger.info(f'{self.id} exp:{self.subexp_no}/{self.kwargs["exp_no"]} saving')
+        self.info_callback['stream_1'](f'{self.id} exp:{self.subexp_no}/{self.kwargs["exp_no"]} --> saving')
         self.info_callback['exec_json'](self.exec_json(exp_started=True,
                                                        exp_done=True,
                                                        exp_saved=False,
                                                        readout_time=self.readout_time,
-                                                       n_exp=sub,
+                                                       n_exp=self.subexp_no,
                                                        exp_time=exposure_time))
-        await self._wait_for_save_fits(sub, float(exposure_time))
+        await self._wait_for_save_fits(self.subexp_no, float(exposure_time))
         self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
         self.info_callback['stream_5'](f'{self.id}')
         logger.info(f'{self.id} done')

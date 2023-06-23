@@ -26,10 +26,24 @@ class ObservPlanApi:
         return self.observ_plan.get_nightplan_info(nightplan_id=nightplan_id)
 
     def run_nightplan(self, nightplan_id: str, step_id: str or None = None) -> None:
+        """
+        WARNING: Old sync method, do not use it
+        """
         self.observ_plan.run_nightplan(nightplan_id=nightplan_id, step_id=step_id)
 
     def stop_nightplan(self) -> None:
+        """
+        WARNING: Old sync method, do not use it
+        """
         self.observ_plan.stop_nightplan()
+
+    async def arun_nightplan(self, nightplan_id: str, step_id: str or None = None) -> None:
+        await self.observ_plan.arun_nightplan(nightplan_id=nightplan_id, step_id=step_id)
+
+    async def astop_nightplan(self) -> None:
+        await self.observ_plan.astop_nightplan()
+
+
 
 
 
