@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from ob.planrunner.subcommand import SubCommand
-from pyaraucaria.coordinates import ra_dec_epoch, ra_dec_2_az_alt, deg_str_to_deg
+from pyaraucaria.coordinates import ra_dec_epoch, ra_dec_2_az_alt, deg_to_decimal_deg
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -68,8 +68,8 @@ class MountSlew(SubCommand):
                 self.alt = float(self.kwargs["alt"])
             except ValueError:
                 try:
-                    self.az = deg_str_to_deg(self.kwargs["az"])
-                    self.alt = deg_str_to_deg(self.kwargs["alt"])
+                    self.az = deg_to_decimal_deg(self.kwargs["az"])
+                    self.alt = deg_to_decimal_deg(self.kwargs["alt"])
                 except ValueError:
                     self.skipped = True
                     self.info_callback['exec_json'](self.exec_json())

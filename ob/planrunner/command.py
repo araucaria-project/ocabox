@@ -10,8 +10,7 @@ from ob.planrunner.subcommands.sub_dome_screenlight import DomeScreenLight
 from ob.planrunner.subcommands.sub_focusing import Focusing
 from ob.planrunner.subcommands.sub_stop import Stop
 from ob.planrunner.subcommands.sub_wait import Wait
-from pyaraucaria.coordinates import az_alt_2_ra_dec, ra_to_decimal, dec_to_decimal, \
-    deg_to_decimal_deg, ra_dec_2_az_alt,  deg_str_to_deg
+from pyaraucaria.coordinates import az_alt_2_ra_dec, ra_to_decimal, dec_to_decimal, deg_to_decimal_deg
 import random
 from ob.planrunner.subcommand import SubCommand
 
@@ -178,7 +177,7 @@ class Command(AbstractSequence):
                 return float(self.kwargs['az'])
             except ValueError:
                 try:
-                    return deg_str_to_deg(self.kwargs['az'])
+                    return deg_to_decimal_deg(self.kwargs['az'])
                 except ValueError:
                     return None
         else:
@@ -191,7 +190,7 @@ class Command(AbstractSequence):
                 return float(self.kwargs['alt'])
             except ValueError:
                 try:
-                    return deg_str_to_deg(self.kwargs['alt'])
+                    return deg_to_decimal_deg(self.kwargs['alt'])
                 except ValueError:
                     return None
         else:
@@ -331,7 +330,6 @@ class Command(AbstractSequence):
                                                  parent=self,
                                                  open=False,
                                                  uobi=self.uobi), id_next=id_next)
-        del seq_data
 
     def _write_object_skyflat_focusing(self) -> None:
 
@@ -438,7 +436,6 @@ class Command(AbstractSequence):
                                                  parent=self,
                                                  open=False,
                                                  uobi=self.uobi), id_next=id_next)
-        del seq_data
 
     def _write_zero_dark(self) -> None:
 
@@ -481,8 +478,6 @@ class Command(AbstractSequence):
                                                             auto_exposure=False,
                                                             observer=self.observer,
                                                             uobi=self.uobi), id_next=id_next)
-
-        del seq_data
 
     def _write_wait(self):
         id_next = 0
