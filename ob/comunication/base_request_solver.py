@@ -65,7 +65,7 @@ class BaseRequestSolver(ABC):
             coroutines.append(self.get_single_answer_internal(r, timeout=timeout))
         result = await asyncio.gather(*coroutines, return_exceptions=True)
         for r in result:
-            if isinstance(r, bytes):
+            if isinstance(r, ValueResponse):
                 response.append(r)
             elif isinstance(r, BaseException):
                 logger.error(f"CRITICAL One of the sub-tasks raise some unresolved exception - {r}.")
@@ -109,3 +109,11 @@ class BaseRequestSolver(ABC):
             re = ResponseError(4002, '', repr(self), ResponseError.SEVERITY_CRITICAL)
             v_response = ValueResponse(v_request.address, None, False, re)
         return v_response
+
+    def get_tree_configuration(self) -> dict:
+        """
+        Method return dictionary witch tree structure and configuration every single block in tree.
+
+        :return: dictionary
+        """
+        return self.data_provider.get_configuration()

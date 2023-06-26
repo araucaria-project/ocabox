@@ -1,5 +1,5 @@
 import logging
-from typing import List, Any
+from typing import List, Any, Dict
 from ob.planrunner.abstract_sequence import AbstractSequence
 from ob.planrunner.sequence import Sequence
 
@@ -8,7 +8,8 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class NightPlan(AbstractSequence):
-    def __init__(self, id: str, sequence_dict: List[Any], parent: 'ObservationPlan') -> None:
+    def __init__(self, id: str, sequence_dict: Dict[str, Any],
+                 parent: 'ObservationPlan', param: Dict[str, Any] or None = None) -> None:
         self.id = id
         self.name = 'Night plan'
         self.parent = parent
@@ -16,10 +17,12 @@ class NightPlan(AbstractSequence):
         self.subcomponents = {}
         self.telescope = parent.telescope
         self.info_callback = parent.info_callback
+        self.param = param
         self.args = []
         self.kwargs = {}
         self.parent_kwargs = self.parent.kwargs | self.parent.parent_kwargs
-        super().__init__(self.id, self.name, self.info_callback, observatory=self.parent.observatory)
+        super().__init__(id=self.id, name=self.name, info_callback=self.info_callback,
+                         observatory=self.parent.observatory, c_type='night_plan', kwargs=self.kwargs)
         self.info = {}
         #self._set_callb()
         self._write_subcomponents()
@@ -48,21 +51,17 @@ class NightPlan(AbstractSequence):
     def _write_subcomponents(self):
         self.info_callback['stream_1'](f'Nightplan {self.id} written')
         seq_id = 0
-        for se in self.sequence_dict:
-            sub = Sequence(f'{self.numb(seq_id)}', se, self)
-            self.subcomponents[f'{self.numb(seq_id)}'] = sub
-            seq_id += 1
+        sub = Sequence(f'{self.numb(seq_id)}', self.sequence_dict, self, param=self.param)
+        self.subcomponents[f'{self.numb(seq_id)}'] = sub
 
     async def arun(self, step_id: str or None = None) -> int:
         self.info_callback['stream_1'](f'Night plan {self.id} started')
         logger.info(f'Night plan {self.id} started')
-        await self._arun(self.subcomponents, step_id=step_id)
+        skip = await self._arun(self.subcomponents, step_id=step_id)
         self.info_callback['stream_5'](f'{self.id}')
+        self.info_callback['stream_1'](f'Night plan {self.id} completed')
         logger.info(f'Night plan {self.id} completed')
-        return 0
-
-    async def stop(self):
-        await self.parent.stop()
+        return skip
 
     def __del__(self):
         logger.info(f"Nightplan {self.id} deleted")

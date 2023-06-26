@@ -127,6 +127,18 @@ class TreeBaseBrokerTest(unittest.TestCase):
         self.assertFalse(response.status)
         self.assertEqual(response.error.code, 1002)
 
+    def test_get_configuration(self):
+        """Test method get_configuration()"""
+        provider = TreeProvider("test_sample_provider", "source_name")
+        broker = TreeBaseBroker("test_sample_broker", [provider])
+        cfg = broker.get_configuration()
+        self.assertListEqual(list(cfg.keys()), ["test_sample_broker"])
+        self.assertListEqual(list(cfg.get("test_sample_broker").keys()), ["child", "config"])
+        self.assertListEqual(list(cfg.get("test_sample_broker").get("child").keys()), ["test_sample_provider"])
+        self.assertTrue(isinstance(cfg.get("test_sample_broker").get("child").get("test_sample_provider").
+                                   get("config"), dict))
+        self.assertTrue(cfg.get("test_sample_broker").get("child").get("test_sample_provider").get("config"))
+
 
 if __name__ == '__main__':
     unittest.main()

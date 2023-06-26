@@ -2,7 +2,7 @@ import asyncio
 import logging
 from ob.planrunner.subcommand import SubCommand
 from pyaraucaria.fits import save_fits_from_array, fits_header, fits_stat
-from pyaraucaria.date import datetime_to_julian, julian_to_tuple
+from pyaraucaria.date import julian_to_tuple
 from ocaboxapi.formatter import parse_deg_or_dms
 from datetime import datetime
 import time
@@ -18,9 +18,6 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class CameraExposure(SubCommand):
 
     def __init__(self, id: str, parent: 'Command', subcommand_name: str = 'camera-exposure', **kwargs) -> None:
-        self.started: bool = False
-        self.done: bool = False
-        self.skipped: bool = False
         self.subcommand_name = subcommand_name
         self.telescope = parent.telescope
         self.mount = self.telescope.get_mount()
@@ -31,7 +28,6 @@ class CameraExposure(SubCommand):
         self.rotator = self.telescope.get_rotator()
         self.kwargs = kwargs
         self.id = id
-        self.user = pwd.getpwuid(os.getuid())[0]
         self.base_fits_folder = os.path.expanduser(self.telescope.observatory.get_app_cfg('base_fits_dir', f'~/Desktop'))
         self.folder = os.path.join(self.base_fits_folder, f'fits_{self.telescope.id}')
         self.folder_focusing = os.path.join(self.folder, f'focus')
@@ -46,25 +42,11 @@ class CameraExposure(SubCommand):
         self._mk_folder(self.folder)
         self._mk_folder(self.folder_focusing)
 
-    @staticmethod
-    def _mk_folder(folder: str):
-        if not os.path.exists(folder):
-            try:
-                os.makedirs(folder, exist_ok=True)
-                logger.info(f'Creating folder {folder}')
-            except Exception as e:
-                logger.warning(
-                    f'Folder creation failed, please create folder {folder} manually '
-                    f'or adjust config key "app.base_fits_dir". Error: {e}'
-                )
+
 
     @staticmethod
     def _mk_symlink(target: str, symlink: str):
         os.symlink(src=target, dst=symlink, dir_fd = None)
-
-    @staticmethod
-    def get_julian_date(date: str or datetime) -> float:
-        return datetime_to_julian(date)
 
     def indexing_value(self, value: int, values: List[str]) -> int or str:
         if isinstance(value, int) and isinstance(values, list):
@@ -80,6 +62,23 @@ class CameraExposure(SubCommand):
     @staticmethod
     def add_zero(numb: int):
         return f'{numb:02d}'
+
+    @property
+    def if_autoexposure(self) -> bool:
+        if 'auto_exposure' in self.kwargs.keys():
+            if self.kwargs['auto_exposure'] == True:
+                return True
+            else:
+                return False
+        else:
+            return False
+
+    @property
+    def subexp_no(self) -> int or None:
+        if "sub_exp" in self.kwargs.keys():
+            return self.kwargs["sub_exp"]
+        else:
+            return None
 
     def _provide_target_folder(self) -> str:
         if self.kwargs['type'] == 'focusing':
@@ -102,6 +101,8 @@ class CameraExposure(SubCommand):
                         self._mk_symlink(target_folder, os.path.join(self.folder_focusing, f'actual'))
                 else:
                     self._mk_symlink(target_folder, os.path.join(self.folder_focusing, f'actual'))
+        elif self.kwargs['type'] == 'snap':
+            target_folder = self.folder
         else:
             jd_tuple = julian_to_tuple(math.floor(self.get_julian_date(str(datetime.utcnow())))+0.1)
             mnth = self.add_zero(jd_tuple[1])
@@ -139,21 +140,16 @@ class CameraExposure(SubCommand):
         jd = self.get_julian_date(self.exp_time_start)
         jd_oca = f"{self.get_oca_date(jd):010.5f}"
         logger.info(f'_wait_for_save_fits aget_imagearray done')
-        if self.telescope.id == 'dev':
-            gain = 'unknown'
-            readoutmode = 'unknown'
-        else:
 
-            gains = self.camera.gains
-            readoutmodes = self.camera.readoutmodes
-            # offsets = await self.camera.aget_offsets()
-            gain = self.camera.gain
-            readoutmode = self.camera.readoutmode
-            # offset = await self.camera.aget_offset()
-
-            gain = self.indexing_value(gain, gains)
-            readoutmode = self.indexing_value(readoutmode, readoutmodes)
-            # offset = indexing_value(offset, offsets)
+        gains = await self.camera.aget_gains()
+        readoutmodes = await self.camera.aget_readoutmodes()
+        # offsets = await self.camera.aget_offsets()
+        gain = await self.camera.aget_gain()
+        readoutmode = await self.camera.aget_readoutmode()
+        # offset = await self.camera.aget_offset()
+        gain = self.indexing_value(gain, gains)
+        readoutmode = self.indexing_value(readoutmode, readoutmodes)
+         # offset = indexing_value(offset, offsets)
 
         # TODO This OCA should be taken from settings
         OCA = {'latitude': -24.598056, 'longitude': -70.196389, 'elevation': 2817}
@@ -164,7 +160,7 @@ class CameraExposure(SubCommand):
             parsed_obs_lon=OCA['longitude'],
             obs_elev=OCA['elevation'],
             tel_id=str(self.telescope.id),
-            utc_now=str(self.exp_time_start), # TODO change for ...T... format
+            utc_now=str(self.exp_time_start.isoformat(sep='T', timespec='auto')),
             jd=jd,
             req_ra=self.kwargs["req_ra"],
             req_dec=self.kwargs["req_dec"],
@@ -178,6 +174,7 @@ class CameraExposure(SubCommand):
             obs_type=str(self.kwargs['type']),
             object=str(self.kwargs["obj_name"]),
             filter=str(self.kwargs["filter"]),
+            observer=str(self.kwargs['observer']),
             req_exp=sub_time,
             cam_exp=sub_time,
             ccd_name=str(self.camera.sensorname),
@@ -188,7 +185,10 @@ class CameraExposure(SubCommand):
             gain=str(gain)
         )
         logger.info(f'_wait_for_save_fits fits_header gather data done')
-        file_name = f'{self.telescope.id}c_{jd_oca.split(".")[0]}_{jd_oca.split(".")[1]}'
+        if self.kwargs['type'] == 'snap':
+            file_name = f'snap'
+        else:
+            file_name = f'{self.telescope.id}c_{jd_oca.split(".")[0]}_{jd_oca.split(".")[1]}'
         stat = fits_stat(array, size=100, median=False, std=False, min=False, max=False)
 
         """
@@ -223,8 +223,8 @@ class CameraExposure(SubCommand):
                                                        exp_done=True,
                                                        exp_saved=True,
                                                        n_exp=sub,
-                                                       mean=round(stat['mean'])
-                                                       ))
+                                                       mean=round(stat['mean']),
+                                                       exp_time=sub_time))
 
     async def _wait_for_subexposure(self, sub_time: float) -> None:
         logger.info(f'_wait_for_subexposure started')
@@ -245,20 +245,14 @@ class CameraExposure(SubCommand):
 
     async def arun(self, step_id: str or None = None) -> int:
         logger.info(f'{self.id} started')
+        self.target_folder = self._provide_target_folder()
         self.started = True
         self.info_callback['exec_json'](self.exec_json())
-        self.target_folder = self._provide_target_folder()
-        sub = self.kwargs["sub_exp"]
-        # for sub in range(1, self.kwargs["exp_no"] + 1):
-        logger.info(f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} started')
-        self.info_callback['stream_1'](f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} started')
-        self.info_callback['exec_json'](self.exec_json(exp_started=True,
-                                                       exp_done=False,
-                                                       exp_saved=False,
-                                                       n_exp=sub))
+        # sub = self.kwargs["sub_exp"]
+
         exposure_time = self.kwargs["exp_time"]
 
-        if self.kwargs['type'] == 'skyflat' and exposure_time=='a':
+        if self.if_autoexposure:
             """
             TODO for filter, time, make test shot on sky with 1s exposure. If value is not what You expect wait
             some time and make test shot again until You don't get expected value of adu, then continue to make
@@ -266,6 +260,8 @@ class CameraExposure(SubCommand):
             repeated, up to end. TODO save last value to settings with filter and time and do not take another 
             test shoot again, but calculate from settings.
             """
+            logger.info(f'{self.id} auto skyflat procedure started')
+            self.info_callback['stream_1'](f'{self.id} auto skyflat procedure started')
             mean_list = []
             test_exposure_time = 1.0
             test_time_interval = 0.0
@@ -273,13 +269,17 @@ class CameraExposure(SubCommand):
             test_min_max_time_exp = (5, 40)
             mean_diff = None
             while True:
-                logger.info(f'{self.id} start test exposure')
+                logger.info(f'{self.id} starting test exposure')
                 await self.camera.aput_startexposure(test_exposure_time, self.kwargs["light"])
                 await self._wait_for_subexposure(test_exposure_time)
                 mean = fits_stat(await self.camera.aget_imagearray(), size=100,
                                  median=False, std=False, min=False, max=False)['mean']
-                logger.info(f'{self.id} test_frame time:{test_exposure_time}s mean:{mean}')
-                self.info_callback['stream_1'](f'{self.id} test_frame time:{test_exposure_time}s mean:{mean}')
+                # TODO take zero_level from settings
+                zero_level = 290.0
+                if mean > zero_level:
+                    mean = mean - zero_level
+                logger.info(f'{self.id} test_frame time:{test_exposure_time}s mean-zero:{mean}')
+                self.info_callback['stream_1'](f'{self.id} test_frame time:{test_exposure_time}s mean-zero:{mean}')
                 self.info_callback['exec_json'](self.exec_json(test_exp_mean=mean))
                 mean_list.append(mean)
                 if len(mean_list) > 1:
@@ -316,23 +316,32 @@ class CameraExposure(SubCommand):
                         logger.info(f"{self.id} calc_exp_time:{exposure_time}, expect_adu:{exposure_time * mean}")
                         break
                 await asyncio.sleep(test_time_interval)
+
+        logger.info(f'{self.id} exp:{self.subexp_no}/{self.kwargs["exp_no"]} started')
+        self.info_callback['stream_1'](f'{self.id} exp:{self.subexp_no}/{self.kwargs["exp_no"]} started')
+        self.info_callback['exec_json'](self.exec_json(exp_started=True,
+                                                       exp_done=False,
+                                                       exp_saved=False,
+                                                       n_exp=self.subexp_no,
+                                                       exp_time=exposure_time))
         self.exp_time_start = datetime.utcnow()
         self.readout_time_start = time.time()
         await self.camera.aput_startexposure(float(exposure_time), self.kwargs["light"])
         await self._wait_for_subexposure(float(exposure_time))
         self.readout_time = time.time() - self.readout_time_start - float(exposure_time)
-        logger.info(f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} saving')
-        self.info_callback['stream_1'](f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} --> saving')
+        logger.info(f'{self.id} exp:{self.subexp_no}/{self.kwargs["exp_no"]} saving')
+        self.info_callback['stream_1'](f'{self.id} exp:{self.subexp_no}/{self.kwargs["exp_no"]} --> saving')
         self.info_callback['exec_json'](self.exec_json(exp_started=True,
                                                        exp_done=True,
                                                        exp_saved=False,
                                                        readout_time=self.readout_time,
-                                                       n_exp=sub))
-        await self._wait_for_save_fits(sub, float(exposure_time))
+                                                       n_exp=self.subexp_no,
+                                                       exp_time=exposure_time))
+        await self._wait_for_save_fits(self.subexp_no, float(exposure_time))
         self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
         self.info_callback['stream_5'](f'{self.id}')
         logger.info(f'{self.id} done')
         self.done = True
-        self.info_callback['exec_json'](self.exec_json())
+        self.info_callback['exec_json'](self.exec_json(exp_time=exposure_time))
         await asyncio.sleep(0.2)
         return 0

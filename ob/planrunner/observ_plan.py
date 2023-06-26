@@ -2,9 +2,8 @@ from ob.planrunner.night_plan import NightPlan
 import logging
 from typing import List, Any, Callable, Dict
 import asyncio
-from ob.planrunner.coded_error import CantOverideNightPlanError
+from ob.planrunner.coded_error import CantOverideNightPlanError, SequenceTreeError
 from pyaraucaria.obs_plan.obs_plan_parser import ObsPlanParser
-
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -105,20 +104,24 @@ class ObservPlan:
         except LookupError:
             logger.warning(f'There is no night plan {nightplan_id}')
 
-    def write_nightplan(self, nightplan_id: str, nightplan_dict: List[Any], overwrite: bool = False) -> None:
+    def write_nightplan(self, nightplan_id: str, nightplan_dict: Dict[str, Any],
+                        overwrite: bool = False, param: Dict[str, Any] or None = None) -> None:
         if (nightplan_id in self.subcomponents.keys()) and (overwrite is True):
             self.delete_nightplan(nightplan_id)
-            np = NightPlan(nightplan_id, nightplan_dict, self)
+            np = NightPlan(nightplan_id, nightplan_dict, self, param=param)
             self.subcomponents[nightplan_id] = np
             logger.info(f'Night plan {nightplan_id} to {self.observ_plan_id} is overwritten')
+
         elif (nightplan_id in self.subcomponents.keys()) and (overwrite is False):
             raise CantOverideNightPlanError
+
         else:
-            np = NightPlan(nightplan_id, nightplan_dict, self)
+            np = NightPlan(nightplan_id, nightplan_dict, self, param=param)
             self.subcomponents[nightplan_id] = np
             logger.info(f'Night plan {nightplan_id} is written')
 
-    def load_nightplan_string(self, nightplan_id: str, string: str, overwrite: bool = False) -> None:
+    def load_nightplan_string(self, nightplan_id: str, string: str,
+                              overwrite: bool = False, param: Dict[str, Any] or None = None) -> None:
         """
         :param nightplan_id: Night plan id (default: julian night date)
         :param string:
@@ -130,11 +133,14 @@ class ObservPlan:
         self._parse_plan()
         if self.parsed_plan is not None:
             try:
-                self.write_nightplan(nightplan_id, self.parsed_plan, overwrite=overwrite)
+                self.write_nightplan(nightplan_id, self.parsed_plan, overwrite=overwrite, param=param)
             except CantOverideNightPlanError:
-                logger.error(f'Cannot overwrite night plan {nightplan_id}, please select overwrite=True')
-        else:
-            logger.error(f'Plan is wrong. Check the syntax.')
+                logger.warning(f'Cannot overwrite night plan {nightplan_id}, please select overwrite=True')
+                self.info_callback['stream_1'](f'Cannot overwrite night plan {nightplan_id},'
+                                               f' please select overwrite=True')
+            except SequenceTreeError:
+                logger.warning(f'Plan is wrong. Check the syntax.')
+                self.info_callback['stream_1'](f'Warning: Plan have syntax errors.')
 
     def _parse_plan(self) -> None:
         if self.plan_string:
@@ -149,10 +155,7 @@ class ObservPlan:
 
     def run_nightplan(self, nightplan_id: str, step_id: str or None = None) -> None:
         """
-        Method run night plan.
-        :param nightplan_id:  Night plan id (default: julian night date)
-        :param step_id: optional, run from specified step, example: '00' or '00_01_02' or '00_02'
-        :return: None
+        WARNING: Old sync method, do not use it
         """
         self.stop_nightplan()
         if self.get_nightplan(nightplan_id):
@@ -160,24 +163,47 @@ class ObservPlan:
                 self.running_nightplan = nightplan_id
                 self.tsk = asyncio.create_task(self.arun_night(nightplan_id, step_id=step_id))
 
-    """
+    def stop_nightplan(self) -> None:
+        """
+        WARNING: Old sync method, do not use it
+        """
+        if self.tsk:
+            self.tsk.cancel()
+            logger.info(f'Night plan stopped')
+            self.info_callback['stream_1'](f'Night plan stopped')
+            self.tsk = None
+        self.tsk = None
+        self.running_nightplan = None
+
+    def get_loop(self) -> Any or None:
+        try:
+            loop = asyncio.get_event_loop()
+            return loop
+        except RuntimeError:
+            logger.error("There is no running asyncio loop")
+            return None
+
     async def arun_nightplan(self, nightplan_id: str, step_id: str or None = None) -> None:
-        # How to stop nightplan
-        """"""
+        """
         Async method run night plan.
-        :param nightplan_id:  Night plan id (default: julian night date)
+        :param nightplan_id:  Night plan id
         :param step_id: optional, run from specified step, example: '00' or '00_01_02' or '00_02'
         :return: None
-        """"""
-        self.stop_nightplan()
+        """
+        await self.astop_nightplan()
         if self.get_nightplan(nightplan_id):
             if self.tsk is None:
                 self.running_nightplan = nightplan_id
-                self.tsk = await self.arun_night(nightplan_id, step_id=step_id)"""
+                loop = self.get_loop()
+                if loop:
+                    self.tsk = loop.create_task(self.arun_night(nightplan_id, step_id=step_id))
+                else:
+                    logger.error(f"Can't run night plan, no loop")
+                    self.info_callback['stream_1'](f"Can't run night plan, no loop")
 
-    def stop_nightplan(self) -> None:
+    async def astop_nightplan(self) -> None:
         """
-        Method stops night plan.
+        Async method stops night plan.
         :return: None
         """
         if self.tsk:
@@ -192,4 +218,4 @@ class ObservPlan:
         await self.subcomponents[nightplan_id].arun(step_id=step_id)
 
     async def stop(self):
-        self.stop_nightplan()
+        await self.astop_nightplan()
