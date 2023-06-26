@@ -65,6 +65,32 @@ class TreeComponent(ABC):
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def get_configuration(self) -> dict:
+        """
+        Method returns self configuration and children configurations as dict.
+
+        :return: dictionary witch configuration
+        """
+        raise NotImplementedError
+
+    def _get_self_configuration(self) -> dict:
+        out = {self.get_name(): {"child": {},
+                                 "config": self._extract_cfg(
+                                     SingletonConfig.get_config()['data_collection'][self.COMPONENT_DEFAULT_NAME])}}
+        out.get(self.get_name()).get("config").update(self._extract_cfg(SingletonConfig.get_config()['tree'][self._component_name]))
+        return out
+
+    def _extract_cfg(self, x):
+        out = {}
+        items = x.items()
+        for k, i in items:
+            if isinstance(i.get(), dict):
+                out[k] = self._extract_cfg(i)
+            else:
+                out[k] = i.get()
+        return out
+
     def _get_cfg(self, name_cfg: str, default=None, use_default_settings=True):
         """
         The method looks for a value in the configuration file and returns it.
@@ -129,6 +155,12 @@ class ProvidesResponseProtocol(Protocol):
         pass
 
     def get_resources(self) -> List[Tuple[str, List[str]]]:
+        pass
+
+    def get_name(self):
+        pass
+
+    def get_configuration(self):
         pass
 
 

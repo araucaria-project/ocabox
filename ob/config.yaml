@@ -69,9 +69,7 @@ data_collection:
     time_of_data_tolerance: 60
   TreeAlpacaObservatory:
     timeout_multiplier: 0.8  # this should be 0 < x < 1
-    address: localhost:80
     api_version: 1
-    url_protocol: http
   TreeBaseRequestBlocker:
     default_control_time: 60
     max_control_time: 86400 # 24h
@@ -110,7 +108,11 @@ tree:
     max_unsuccessful_refreshes: 10
     alarm_timeout: 2
     min_time_of_data_tolerance: 0.2
-
+  test_sample_provider:
+    h:
+      d: 9
+    f:
+      j: 7
   test_observatory:
     observatory:
       comment: Simulated observatory for tests

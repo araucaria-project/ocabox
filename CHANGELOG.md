@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 - added `Observatory.is_tic_server_available`
 - added a new method GET to alpaca api `errorstring`
 - added `Telescope.is_telescope_alpaca_server_available`
+- Added methods to build a dictionary mapping the tree structure together with the configuration.
 - added STOP, WAIT commands  to client plan runner
 - ocaboxapi.Mount errorstring and cleanerror
 - base_command, root class for sequences and subcommands
@@ -250,4 +251,4 @@ This allows you to subscribe to these values
 
 [Unreleased]: https://github.com/araucaria-project/ocabox
 
-[1.0.8]: https://github.com/araucaria-project/ocabox
+[1.0.14]: https://github.com/araucaria-project/ocabox

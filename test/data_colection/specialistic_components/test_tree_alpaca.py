@@ -143,6 +143,16 @@ class TreeAlpacaTest(unittest.TestCase, BaseAsyncTest):
 
         self.loop.run_until_complete(coro())
 
+    def test_get_configuration(self):
+        """Test method get_configuration()"""
+        provider = self.tao
+        cfg = provider.get_configuration()
+        self.assertListEqual(list(cfg.keys()), ["sample_component"])
+        self.assertListEqual(list(cfg.get("sample_component").keys()), ["child", "config"])
+        self.assertListEqual(list(cfg.get("sample_component").get("child").keys()), ["dibi", "dome"])
+        self.assertTrue(isinstance(cfg.get("sample_component").get("child").get("dibi").
+                                   get("config"), dict))
+
 
 if __name__ == '__main__':
     unittest.main()
