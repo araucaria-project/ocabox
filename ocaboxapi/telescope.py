@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from ocaboxapi.abstelescope import AbstractTelescope
@@ -121,3 +122,57 @@ class Telescope(AbstractTelescope):
                 return {'alpaca': True}
         except (CommunicationTimeoutError, CommunicationRuntimeError, OcaboxServerError):
             return {'alpaca': False}
+
+    async def waiting_for_value(self, current, target, tolerance, execute):
+        while True:
+            c = await current
+            if isinstance(target, bool):
+                if bool(c) == target:
+                    await execute
+                    break
+            elif isinstance(target, int):
+                if abs(int(c) - target) == tolerance:
+                    await execute
+                    break
+            elif  isinstance(target, float):
+                if abs(float(c) - target) <= tolerance:
+                    await execute
+                    break
+            else:
+                break
+
+    def _get_mount_dome_cover(self):
+        try:
+            m = self.mounts[0]
+            d = self.domes[0]
+            c = self.covercalibrators[0]
+            return m, d, c
+        except IndexError:
+            logger.warning(f"No components, please create instances")
+
+    async def shutdown(self):
+        m, d, c = self._get_mount_dome_cover()
+        await m.aput_tracking(False)
+        await m.aput_closecover()
+        await m.aput_park()
+        await self.waiting_for_value(current=m.aget_atpark(),
+                                     target=True, tolerance=None, execute=m.aput_motoroff())
+        await self.waiting_for_value(current=c.aget_calibratorstate(),
+                                     target=1, tolerance=0, execute=d.aput_closeshutter())
+        await d.aput_park()
+
+    async def weather_stop(self):
+        m, d, c = self._get_mount_dome_cover()
+        await m.aput_tracking(False)
+        await m.aput_closecover()
+        await m.aput_park()
+        await self.waiting_for_value(current=c.aget_calibratorstate(),
+                                     target=1, tolerance=0, execute=d.aput_closeshutter())
+        await d.aput_park()
+
+    async def emergency_stop(self):
+        m, d, c = self._get_mount_dome_cover()
+        await m.aput_tracking(False)
+        await m.aput_abortslew()
+        await m.aput_motoroff()
+        await d.aput_abortslew()

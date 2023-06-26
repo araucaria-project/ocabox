@@ -10,19 +10,21 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class Sequence(AbstractSequence):
 
-    def __init__(self, id: str, sequence_dict: Dict[Any, Any],
-                 parent: 'NightPlan' or 'Sequence') -> None:
+    def __init__(self, id: str, sequence_dict: Dict[str, Any],
+                 parent: 'NightPlan' or 'Sequence', param: Dict[str, Any] or None = None) -> None:
         self.id = id
         self.name = 'Sequence'
         self.sequence_dict = sequence_dict
         self.parent = parent
-        self.args = self.build_args(self.sequence_dict)
-        self.kwargs = self.build_kwargs(self.sequence_dict)
+        self.info_callback = parent.info_callback
+        self.args = self.build_args(sequence_dict=self.sequence_dict)
+        self.kwargs = self.build_kwargs(sequence_dict=self.sequence_dict, info_callback=self.info_callback, id=id)
         self.parent_kwargs = self.parent.kwargs | self.parent.parent_kwargs
+        self.param = param
         self.subcomponents = {}
         self.telescope = parent.telescope
-        self.info_callback = parent.info_callback
-        super().__init__(self.id, self.name, self.info_callback, observatory=self.parent.observatory)
+        super().__init__(self.id, self.name, self.info_callback,
+                         observatory=self.parent.observatory, c_type='sequence', kwargs=self.kwargs)
         self.build_sequence()
 
     def _create_sequence_string(self):
@@ -37,25 +39,31 @@ class Sequence(AbstractSequence):
     def build_sequence(self) -> None:
         self._create_sequence_string()
         id_next = 0
-        if 'all_commands' in self.sequence_dict.keys():
-            for case in self.sequence_dict['all_commands']:
-                if 'begin_sequence' in case.keys():
-                    sub = self.write_subcomponent(f'{self.id}_{self.numb(id_next)}',case)
-                    self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-                    id_next += 1
-                elif 'command_name' in case.keys():
-                    com = self.write_command(f'{self.id}_{self.numb(id_next)}', case)
-                    self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = com
-                    id_next += 1
+        if 'subcommands' in self.sequence_dict.keys():
+            for case in self.sequence_dict['subcommands']:
+                if 'command_name' in case.keys():
+                    if case['command_name'] in self.COMMAND_NAMES:
+                        if case['command_name'] == 'SEQUENCE':
+                            sub = self.write_subcomponent(f'{self.id}_{self.numb(id_next)}',case)
+                            self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+                            id_next += 1
+                        else:
+                            com = self.write_command(f'{self.id}_{self.numb(id_next)}', case)
+                            self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = com
+                            id_next += 1
+                    else:
+                        self.info_callback['stream_1'](f'Wrong command name {case["command_name"]}')
+                        logger.warning(f'Wrong command name {case["command_name"]}')
+                        raise SequenceTreeError
                 else:
-                    raise SequenceTreeError(Exception)
+                    raise SequenceTreeError
 
     def write_subcomponent(self, sequence_id, sequence_dict) -> 'Sequence':
-        sub = Sequence(sequence_id, sequence_dict, self)
+        sub = Sequence(sequence_id, sequence_dict, self, param=self.param)
         return sub
 
     def write_command(self, command_id, command_dict) -> 'Command':
-        com = Command(command_id, command_dict, self)
+        com = Command(command_id, command_dict, self, param=self.param)
         return com
 
     async def arun(self, step_id: str or None = None) -> int:

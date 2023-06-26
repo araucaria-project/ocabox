@@ -1,21 +1,27 @@
 from typing import Dict, List, Any, Callable
 import logging
 from datetime import datetime
+from ob.planrunner.base_command import BaseCommand
+from ob.planrunner.coded_error import SequenceTreeError
+
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
-class AbstractSequence:
+class AbstractSequence(BaseCommand):
 
-    def __init__(self, id: str, name: str, info_callback: Dict[str, Callable], observatory) -> None:
+    def __init__(self, id: str, name: str, info_callback: Dict[str, Callable], observatory, c_type, kwargs) -> None:
         self.id = id
         self.observatory = observatory
         self.info_callback = info_callback
         self.name = name
+        self.c_type: str = c_type
+        self.kwargs = kwargs
         self.started: bool = False
         self.done: bool = False
         self.skipped: bool = False
-        super().__init__()
+        super().__init__(self.id, name=name, info_callback=info_callback,
+                         observatory=observatory, c_type=c_type, kwargs=self.kwargs)
 
     @staticmethod
     def build_args(sequence_dict: Dict[Any, Any]) -> List[Any]:
@@ -24,9 +30,18 @@ class AbstractSequence:
         else:
             return []
 
-    @staticmethod
-    def build_kwargs(sequence_dict: Dict[Any, Any]) -> Dict[Any, Any]:
+    def build_kwargs(self, sequence_dict: Dict[str, Any],
+                     info_callback: Dict[str, Any] or None = None,
+                     id: str or None = None) -> Dict[str, Any]:
         if 'kwargs' in sequence_dict.keys():
+            for n, m in sequence_dict['kwargs'].items():
+                if n in self.KWARGS:
+                    pass
+                else:
+                    if info_callback:
+                        info_callback['stream_1'](f'Warning: {id} kwarg:{n} wrong name')
+                    logger.warning(f'{id} kwarg:{n} wrong name')
+                    raise SequenceTreeError
             return sequence_dict['kwargs']
         else:
             return {}
@@ -59,13 +74,3 @@ class AbstractSequence:
         self.done = True
         self.info_callback['exec_json'](self.exec_json())
         return 0
-
-    def exec_json(self) -> Dict[str, Any]:
-        ex_js = {}
-        ex_js['id'] = self.id
-        ex_js['name'] = self.name
-        ex_js['started'] = self.started
-        ex_js['done'] = self.done
-        ex_js['skipped'] = self.skipped
-        ex_js['timestamp_utc'] = str(datetime.utcnow())
-        return ex_js
