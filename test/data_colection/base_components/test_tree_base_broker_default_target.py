@@ -43,6 +43,20 @@ class TreeBaseBrokerDefaultTargetTest(unittest.TestCase):
         provider = self.vb._get_provider(request)
         self.assertEqual(provider.get_source_name(), self.de_provider.get_source_name())
 
+    def test_get_configuration(self):
+        """Test method get_configuration()"""
+        provider = TreeProvider("test_sample_provider", "source_name")
+        provider2 = TreeProvider("test_default_provider", "source_name")
+        broker = TreeBaseBrokerDefaultTarget("test_sample_broker", [provider], default_provider=provider2)
+        cfg = broker.get_configuration()
+
+        self.assertListEqual(list(cfg.keys()), ["test_sample_broker"])
+        self.assertListEqual(list(cfg.get("test_sample_broker").keys()), ["child", "config"])
+        self.assertListEqual(list(cfg.get("test_sample_broker").get("child").keys()), ["test_sample_provider",
+                                                                                       "test_default_provider"])
+        self.assertTrue(isinstance(cfg.get("test_sample_broker").get("child").get("test_default_provider").
+                                   get("config"), dict))
+
 
 if __name__ == '__main__':
     unittest.main()

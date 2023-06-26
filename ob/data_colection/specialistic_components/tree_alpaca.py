@@ -14,7 +14,7 @@ from ob.data_colection.resource_manager.resource_manager import ResourceManagerA
 from ob.data_colection.value import Value, TreeValueError
 from ob.data_colection.value_call import ValueRequest
 from ob.util_functions.asyncio_util_functions import wait_for_psce
-from aiohttp.client_exceptions import ServerDisconnectedError, ClientConnectionError, ServerConnectionError
+from aiohttp.client_exceptions import ClientConnectionError, ServerConnectionError
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -169,6 +169,15 @@ class TreeAlpacaObservatory(TreeBaseProvider):
             self._resource_manager = ResourceManagerAlpaca(target=self.target_requests, path=self.tree_path)
             await self._resource_manager.initiate_resource_manager(self._get_resources_simple_map())
         return self._resource_manager
+
+    def get_configuration(self) -> dict:
+        out = self._get_self_configuration()
+
+        map_ = self._get_resources_simple_map()
+        for key, adr, kind, nr, prop in map_:
+            out.get(self.get_name()).get("child").update({adr: {"child": {},
+                                                                "config": prop}})
+        return out
 
     def __del__(self):
         self._connector.__del__()

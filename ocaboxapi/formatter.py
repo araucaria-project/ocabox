@@ -55,7 +55,8 @@ def fmt_coverstate(state: int | None):
             'unknown',
             'Closed',
             'Moving',
-            'Open'
+            'Open',
+            'unknown'
         ][state]
     except IndexError:
         return f'status: {state}'

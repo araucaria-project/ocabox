@@ -3,10 +3,40 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 ### Added
-- added  `Observatory.is_tic_server_available`
+
+
+## [1.0.14] - 2023-06-26
+### Added
+- added `Observatory.is_tic_server_available`
+- added a new method GET to alpaca api `errorstring`
+- added `Telescope.is_telescope_alpaca_server_available`
+- Added methods to build a dictionary mapping the tree structure together with the configuration.
+- added STOP, WAIT commands  to client plan runner
+- ocaboxapi.Mount errorstring and cleanerror
+- base_command, root class for sequences and subcommands
+- night log added
+- shutdown, wheather stop, emergency stop added in ocaboxapi.Telescope
+- epoch option in planner
+- dome_follow=off kwarg planner
+- async plan runner run
+- param dict in night plan dict, observer name to fits
+- add SNAP command
+- partly plan syntax verification
+
+### Changed
+- improved automatic skyflats time calculation (substracted bias level)
+- ocaboxapi formatter cover status 4 updated
+- refactor comm screen light, cover
+- removed deg_str_to_deg pyaraucaria module
+- new plan parsing construction - pyaraucaria issue #5
 
 ### Fixed
+- Automatic skyflat time in fits header 
+- Automatic skyflats time calculation (zero substract)
 - Fixed internal api response type error
+- Altaz dither fix
+- Fixed internal api response type error
+- 
 
 ## [1.0.13] - 2023-06-02
 ### Changed
@@ -221,4 +251,4 @@ This allows you to subscribe to these values
 
 [Unreleased]: https://github.com/araucaria-project/ocabox
 
-[1.0.8]: https://github.com/araucaria-project/ocabox
+[1.0.14]: https://github.com/araucaria-project/ocabox
