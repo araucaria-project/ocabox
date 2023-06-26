@@ -13,6 +13,7 @@ from ob.planrunner.subcommands.sub_wait import Wait
 from pyaraucaria.coordinates import az_alt_2_ra_dec, ra_to_decimal, dec_to_decimal, deg_to_decimal_deg
 import random
 from ob.planrunner.subcommand import SubCommand
+from ob.planrunner.coded_error import SequenceTreeError
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -26,8 +27,9 @@ class Command(AbstractSequence):
         self.id = id
         self.sequence_dict = sequence_dict
         self.parent = parent
+        self.info_callback = parent.info_callback
         self.args = self.build_args(self.sequence_dict)
-        self.kwargs = self.build_kwargs(self.sequence_dict)
+        self.kwargs = self.build_kwargs(sequence_dict=self.sequence_dict, info_callback=self.info_callback, id=id)
         self.parent_kwargs = self.parent.kwargs | self.parent.parent_kwargs
         self.command_name = self.sequence_dict['command_name']
         self.subcomponents = {}
@@ -80,8 +82,9 @@ class Command(AbstractSequence):
             self._write_object_skyflat_focusing()
 
         else:
-            # TODO add info, that parsed plan have errors
-            self.info_callback['stream_1'](f'Command {self.command_name} not recognized, check plan syntax' )
+            logger.warning(f'{self.id} command name: {self.name} is wrong')
+            self.info_callback['stream_1'](f'{self.id} command name: {self.name} is wrong')
+            raise SequenceTreeError
 
     @property
     def uobi(self) -> int:

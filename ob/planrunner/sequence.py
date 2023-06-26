@@ -16,13 +16,13 @@ class Sequence(AbstractSequence):
         self.name = 'Sequence'
         self.sequence_dict = sequence_dict
         self.parent = parent
-        self.args = self.build_args(self.sequence_dict)
-        self.kwargs = self.build_kwargs(self.sequence_dict)
+        self.info_callback = parent.info_callback
+        self.args = self.build_args(sequence_dict=self.sequence_dict)
+        self.kwargs = self.build_kwargs(sequence_dict=self.sequence_dict, info_callback=self.info_callback, id=id)
         self.parent_kwargs = self.parent.kwargs | self.parent.parent_kwargs
         self.param = param
         self.subcomponents = {}
         self.telescope = parent.telescope
-        self.info_callback = parent.info_callback
         super().__init__(self.id, self.name, self.info_callback,
                          observatory=self.parent.observatory, c_type='sequence', kwargs=self.kwargs)
         self.build_sequence()
@@ -42,14 +42,19 @@ class Sequence(AbstractSequence):
         if 'subcommands' in self.sequence_dict.keys():
             for case in self.sequence_dict['subcommands']:
                 if 'command_name' in case.keys():
-                    if case['command_name'] == 'SEQUENCE':
-                        sub = self.write_subcomponent(f'{self.id}_{self.numb(id_next)}',case)
-                        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-                        id_next += 1
+                    if case['command_name'] in self.COMMAND_NAMES:
+                        if case['command_name'] == 'SEQUENCE':
+                            sub = self.write_subcomponent(f'{self.id}_{self.numb(id_next)}',case)
+                            self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+                            id_next += 1
+                        else:
+                            com = self.write_command(f'{self.id}_{self.numb(id_next)}', case)
+                            self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = com
+                            id_next += 1
                     else:
-                        com = self.write_command(f'{self.id}_{self.numb(id_next)}', case)
-                        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = com
-                        id_next += 1
+                        self.info_callback['stream_1'](f'Wrong command name {case["command_name"]}')
+                        logger.warning(f'Wrong command name {case["command_name"]}')
+                        raise SequenceTreeError
                 else:
                     raise SequenceTreeError
 

@@ -2,6 +2,7 @@ from typing import Dict, List, Any, Callable
 import logging
 from datetime import datetime
 from ob.planrunner.base_command import BaseCommand
+from ob.planrunner.coded_error import SequenceTreeError
 
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -29,9 +30,18 @@ class AbstractSequence(BaseCommand):
         else:
             return []
 
-    @staticmethod
-    def build_kwargs(sequence_dict: Dict[Any, Any]) -> Dict[Any, Any]:
+    def build_kwargs(self, sequence_dict: Dict[str, Any],
+                     info_callback: Dict[str, Any] or None = None,
+                     id: str or None = None) -> Dict[str, Any]:
         if 'kwargs' in sequence_dict.keys():
+            for n, m in sequence_dict['kwargs'].items():
+                if n in self.KWARGS:
+                    pass
+                else:
+                    if info_callback:
+                        info_callback['stream_1'](f'Warning: {id} kwarg:{n} wrong name')
+                    logger.warning(f'{id} kwarg:{n} wrong name')
+                    raise SequenceTreeError
             return sequence_dict['kwargs']
         else:
             return {}

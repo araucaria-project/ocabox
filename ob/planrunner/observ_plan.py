@@ -2,9 +2,8 @@ from ob.planrunner.night_plan import NightPlan
 import logging
 from typing import List, Any, Callable, Dict
 import asyncio
-from ob.planrunner.coded_error import CantOverideNightPlanError
+from ob.planrunner.coded_error import CantOverideNightPlanError, SequenceTreeError
 from pyaraucaria.obs_plan.obs_plan_parser import ObsPlanParser
-
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -105,15 +104,17 @@ class ObservPlan:
         except LookupError:
             logger.warning(f'There is no night plan {nightplan_id}')
 
-    def write_nightplan(self, nightplan_id: str, nightplan_dict: List[Any],
+    def write_nightplan(self, nightplan_id: str, nightplan_dict: Dict[str, Any],
                         overwrite: bool = False, param: Dict[str, Any] or None = None) -> None:
         if (nightplan_id in self.subcomponents.keys()) and (overwrite is True):
             self.delete_nightplan(nightplan_id)
             np = NightPlan(nightplan_id, nightplan_dict, self, param=param)
             self.subcomponents[nightplan_id] = np
             logger.info(f'Night plan {nightplan_id} to {self.observ_plan_id} is overwritten')
+
         elif (nightplan_id in self.subcomponents.keys()) and (overwrite is False):
             raise CantOverideNightPlanError
+
         else:
             np = NightPlan(nightplan_id, nightplan_dict, self, param=param)
             self.subcomponents[nightplan_id] = np
@@ -134,9 +135,12 @@ class ObservPlan:
             try:
                 self.write_nightplan(nightplan_id, self.parsed_plan, overwrite=overwrite, param=param)
             except CantOverideNightPlanError:
-                logger.error(f'Cannot overwrite night plan {nightplan_id}, please select overwrite=True')
-        else:
-            logger.error(f'Plan is wrong. Check the syntax.')
+                logger.warning(f'Cannot overwrite night plan {nightplan_id}, please select overwrite=True')
+                self.info_callback['stream_1'](f'Cannot overwrite night plan {nightplan_id},'
+                                               f' please select overwrite=True')
+            except SequenceTreeError:
+                logger.warning(f'Plan is wrong. Check the syntax.')
+                self.info_callback['stream_1'](f'Warning: Plan have syntax errors.')
 
     def _parse_plan(self) -> None:
         if self.plan_string:
