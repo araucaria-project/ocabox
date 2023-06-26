@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class Sequence(AbstractSequence):
 
-    def __init__(self, id: str, sequence_dict: Dict[Any, Any],
+    def __init__(self, id: str, sequence_dict: Dict[str, Any],
                  parent: 'NightPlan' or 'Sequence', param: Dict[str, Any] or None = None) -> None:
         self.id = id
         self.name = 'Sequence'
@@ -39,18 +39,19 @@ class Sequence(AbstractSequence):
     def build_sequence(self) -> None:
         self._create_sequence_string()
         id_next = 0
-        if 'all_commands' in self.sequence_dict.keys():
-            for case in self.sequence_dict['all_commands']:
-                if 'begin_sequence' in case.keys():
-                    sub = self.write_subcomponent(f'{self.id}_{self.numb(id_next)}',case)
-                    self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
-                    id_next += 1
-                elif 'command_name' in case.keys():
-                    com = self.write_command(f'{self.id}_{self.numb(id_next)}', case)
-                    self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = com
-                    id_next += 1
+        if 'subcommands' in self.sequence_dict.keys():
+            for case in self.sequence_dict['subcommands']:
+                if 'command_name' in case.keys():
+                    if case['command_name'] == 'SEQUENCE':
+                        sub = self.write_subcomponent(f'{self.id}_{self.numb(id_next)}',case)
+                        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
+                        id_next += 1
+                    else:
+                        com = self.write_command(f'{self.id}_{self.numb(id_next)}', case)
+                        self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = com
+                        id_next += 1
                 else:
-                    raise SequenceTreeError(Exception)
+                    raise SequenceTreeError
 
     def write_subcomponent(self, sequence_id, sequence_dict) -> 'Sequence':
         sub = Sequence(sequence_id, sequence_dict, self, param=self.param)

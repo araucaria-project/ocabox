@@ -101,6 +101,8 @@ class CameraExposure(SubCommand):
                         self._mk_symlink(target_folder, os.path.join(self.folder_focusing, f'actual'))
                 else:
                     self._mk_symlink(target_folder, os.path.join(self.folder_focusing, f'actual'))
+        elif self.kwargs['type'] == 'snap':
+            target_folder = self.folder
         else:
             jd_tuple = julian_to_tuple(math.floor(self.get_julian_date(str(datetime.utcnow())))+0.1)
             mnth = self.add_zero(jd_tuple[1])
@@ -138,21 +140,16 @@ class CameraExposure(SubCommand):
         jd = self.get_julian_date(self.exp_time_start)
         jd_oca = f"{self.get_oca_date(jd):010.5f}"
         logger.info(f'_wait_for_save_fits aget_imagearray done')
-        if self.telescope.id == 'dev':
-            gain = 'unknown'
-            readoutmode = 'unknown'
-        else:
 
-            gains = self.camera.gains
-            readoutmodes = self.camera.readoutmodes
-            # offsets = await self.camera.aget_offsets()
-            gain = self.camera.gain
-            readoutmode = self.camera.readoutmode
-            # offset = await self.camera.aget_offset()
-
-            gain = self.indexing_value(gain, gains)
-            readoutmode = self.indexing_value(readoutmode, readoutmodes)
-            # offset = indexing_value(offset, offsets)
+        gains = await self.camera.aget_gains()
+        readoutmodes = await self.camera.aget_readoutmodes()
+        # offsets = await self.camera.aget_offsets()
+        gain = await self.camera.aget_gain()
+        readoutmode = await self.camera.aget_readoutmode()
+        # offset = await self.camera.aget_offset()
+        gain = self.indexing_value(gain, gains)
+        readoutmode = self.indexing_value(readoutmode, readoutmodes)
+         # offset = indexing_value(offset, offsets)
 
         # TODO This OCA should be taken from settings
         OCA = {'latitude': -24.598056, 'longitude': -70.196389, 'elevation': 2817}
@@ -188,7 +185,10 @@ class CameraExposure(SubCommand):
             gain=str(gain)
         )
         logger.info(f'_wait_for_save_fits fits_header gather data done')
-        file_name = f'{self.telescope.id}c_{jd_oca.split(".")[0]}_{jd_oca.split(".")[1]}'
+        if self.kwargs['type'] == 'snap':
+            file_name = f'snap'
+        else:
+            file_name = f'{self.telescope.id}c_{jd_oca.split(".")[0]}_{jd_oca.split(".")[1]}'
         stat = fits_stat(array, size=100, median=False, std=False, min=False, max=False)
 
         """

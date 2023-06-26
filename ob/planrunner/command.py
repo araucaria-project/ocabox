@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class Command(AbstractSequence):
 
     TYPES = {'SKYFLAT': 'flat', 'FOCUS': 'focusing', 'DOMEFLAT': 'flat',
-             'DARK': 'dark', 'ZERO': 'zero', 'OBJECT': 'science', 'WAIT': 'wait', 'STOP': 'stop'}
+             'DARK': 'dark', 'ZERO': 'zero', 'OBJECT': 'science', 'WAIT': 'wait', 'STOP': 'stop', 'SNAP': 'snap'}
 
     def __init__(self, id: str, sequence_dict: Dict[Any, Any],
                  parent: 'Sequence' or 'NightPlan', param: Dict[str, Any] or None = None) -> None:
@@ -75,6 +75,9 @@ class Command(AbstractSequence):
 
         elif self.command_name == 'STOP':
             self._write_stop()
+
+        elif self.command_name == 'SNAP':
+            self._write_object_skyflat_focusing()
 
         else:
             # TODO add info, that parsed plan have errors
@@ -228,6 +231,14 @@ class Command(AbstractSequence):
             return None
 
     @property
+    def possible_dither(self) -> List[str]:
+        """
+        List of commands with possibility of dither (excluding SKYFLAT, witch is dithering in default)
+        :return: List of commands name
+        """
+        return ['OBJECT', 'SNAP']
+
+    @property
     def object_name(self) -> str:
         if not self.plan_object_name:
             if self.command_name == 'SKYFLAT':
@@ -240,6 +251,8 @@ class Command(AbstractSequence):
                 name = 'dark'
             elif self.command_name == 'ZERO':
                 name = 'zero'
+            elif self.command_name == 'SNAP':
+                name = 'snap'
             else:
                 name = ''
         else:
@@ -741,7 +754,7 @@ class Seq:
             else:
                 return False
 
-        elif self.parent.command_name == 'OBJECT':
+        elif self.parent.command_name == self.parent.possible_dither:
             if 'dither' not in self.parent_kwargs.keys():
                 return False
             elif 'dither' in self.parent_kwargs.keys() and self.parent_kwargs['dither'] != 'none':
