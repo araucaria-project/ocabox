@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 ### Added
+- CCTV method asubscribe_ir
+- ocaboxapi.__init__ CCTV
 
 
 ## [1.0.14] - 2023-06-26
