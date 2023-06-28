@@ -3,6 +3,7 @@ import logging
 from typing import List
 from ob.planrunner.ern.command import Command
 from ob.planrunner.ern.command_error import CriticalCommandError, NormalCommandError
+from ob.planrunner.ern.errors import PlanBuildError
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -20,6 +21,12 @@ class CommandSequence(Command):
         self._create_subcommands_objects(self._command_dict.get(self._SUBCOMMANDS_KEY, []))
 
     def _create_subcommands_objects(self, subcommands: list):
+        """
+
+        :param subcommands:
+        :raise PlanBuildError
+        :return:
+        """
         if not subcommands:
             logger.info(f"Command {self._NAME} has empty list of Subcommands")
             return
@@ -29,7 +36,10 @@ class CommandSequence(Command):
             return
         com = None
         for s in subcommands:
-            com = Command.build_command(dic=s, plan_data=self._plan_data, previous_command=com, loop=self._loop)
+            try:
+                com = Command.build_command(dic=s, plan_data=self._plan_data, previous_command=com, loop=self._loop)
+            except PlanBuildError:
+                raise
             self._subcommands.append(com)
 
     def get_subcommands(self) -> List[Command]:
@@ -72,3 +82,9 @@ class CommandSequence(Command):
         for t in tasks:
             t.cancel()
             # await asyncio.gather(*tasks, return_exceptions=True)
+
+    async def a_init(self):
+        await super().a_init()
+        for s in self._subcommands:
+            await s.a_init()
+

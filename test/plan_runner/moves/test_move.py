@@ -4,11 +4,12 @@ import unittest
 
 from ob.comunication.internal_client_api import InternalClientAPI
 from ob.comunication.request_solver import RequestSolver
-from ob.data_colection.resource_manager.moves.move import Move
-from ob.data_colection.resource_manager.moves.position import Position
+from ob.planrunner.ern.moves.move import Move
+from ob.planrunner.ern.moves.position import Position
 from ob.data_colection.specialistic_components.tree_alpaca import TreeAlpacaObservatory
 from ob.data_colection.specialistic_components.tree_cache_observatory import TreeCache
 from ob.data_colection.specialistic_components.tree_conditional_freezer import TreeConditionalFreezer
+from ob.planrunner.ern.plan_data import PlanData
 from test.data_colection.base_async_test import BaseAsyncTest
 
 
@@ -33,12 +34,13 @@ class ResourceTest(unittest.TestCase, BaseAsyncTest):
         """Test method `progress` from Move object"""
 
         async def coro():
+            plan_data = PlanData(access_resource_manager=await self.tao.get_res_manager())
             await self.tree_freezer.run()
             position_ra = random.randint(170, 190)
             rm = await self.tao.get_res_manager()
             dome = rm.get_resource(name=rm.DOME, nr=0)
 
-            mov = Move(None)
+            mov = Move(None, plan_data=plan_data)
             pos = Position("abc", t=8.0, c="-1", s=int(-6))
             mov.positions.append(pos)
             pos2 = Position("abc", t=7.0, c="6", s=int(-5))

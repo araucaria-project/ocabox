@@ -25,7 +25,7 @@ class BaseZmqCommunicationObject(BaseCommunicationObject, ABC):
 
     @staticmethod
     def _open_envelope(multipart: List[bytes]) -> MultipartStructure:
-        raise NotImplemented
+        raise NotImplementedError
 
     @staticmethod
     def _pack_to_envelope(target: List[bytes], create_time: bytes, msg_id: bytes, request_timeout: bytes,
@@ -38,7 +38,7 @@ class BaseZmqCommunicationObject(BaseCommunicationObject, ABC):
         :param data_b: list sub-requests
         :return: multipart
         """
-        raise NotImplemented
+        raise NotImplementedError
 
     def __del__(self):
         self.context.destroy()  # without this zmq not close socket when BaseCommunicationObject is destroyed

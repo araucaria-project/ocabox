@@ -1,10 +1,14 @@
 import time
 
 from ob.data_colection.resource_manager.errors import ResourceCommandError
+from ob.planrunner.ern.base_command import BaseCommand
 
 
-class Move:
-    def __init__(self, api):
+class Move(BaseCommand):
+    _NAME = "MOVE"
+
+    def __init__(self, api, plan_data):
+        super().__init__(plan_data=plan_data)
         self.error = False
         self.error_content = None
         self.positions = []
@@ -72,3 +76,6 @@ class Move:
 
     async def _action(self):
         raise NotImplementedError
+
+    async def a_init(self):
+        pass

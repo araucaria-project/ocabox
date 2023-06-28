@@ -1,13 +1,11 @@
 import asyncio
 import logging
 from typing import Optional, Dict
-
 from pyaraucaria.obs_plan.obs_plan_parser import ObsPlanParser
-
 from ob.data_colection.resource_manager.resource_manager import ResourceManager
 from ob.planrunner.ern.command import Command
+from ob.planrunner.ern.errors import PlanBuildError
 from ob.planrunner.ern.plan_data import PlanData
-from ob.planrunner.ern.plan_task_manager import PlanTaskManager
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -38,23 +36,44 @@ class PlanManager:
             logger.error(f"Unexpected error when parse plan: {e}")
         return None
 
-    def upload_plan(self, plan_id: str, raw_plan: str, overwrite: bool = False) -> None:
+    async def upload_plan(self, plan_id: str, raw_plan: str, overwrite: bool = False) -> bool:
         # todo plan może przyjść w foormacie słownika na nie tylko stringa
         parsed_plan = self._parse_plan(raw_plan)
         if parsed_plan is None:
             logger.error(f'Plan is wrong. Check the syntax.')
-            return
+            return False
         if not overwrite and plan_id in self._plans:
             logger.warning(f"Plan with given id already exists.")
-            return
+            return False
         if self._running_plan_id == plan_id:
             logger.warning(f"Can not update plan witch id: {plan_id} because is actually running")
-            return
-        np = PlanManager.from_dict(parsed_plan, access_resource_manager=self._acs_res_mngr, loop=self._loop)
+            return False
+        try:
+            np = PlanManager.from_dict(parsed_plan, access_resource_manager=self._acs_res_mngr, loop=self._loop)
+        except PlanBuildError as e:
+            logger.warning(f"Can not create plan witch id: {plan_id} because plan data is corrupted. error "
+                           f"message: {e.msg}")
+            return False
         self._plans[plan_id] = np
+        try:
+            await self._a_init_plan(plan_id)
+        except PlanBuildError as e:
+            logger.warning(f"Can not initiate plan witch id: {plan_id} because plan data is corrupted. error "
+                           f"message: {e.msg}")
+            return False
+        return True
 
     @classmethod
     def from_dict(cls, dic: dict, access_resource_manager, loop=None):
+        """
+        Method create observation plan structure from given dictionary.
+
+        :param dic: dictionary representing observation plans
+        :param access_resource_manager: resource manager
+        :param loop: async loop
+        :raise PlanBuildError: if dict data is corrupted or can not create plan for other reasons
+        :return: plan structure
+        """
         # to jest metoda startowa każda klasa command będzie miała takąsamą u siebie w sierodku
 
         # ------------ część do usunięcia gdy parser zostanie poprawiony ------------
@@ -62,8 +81,11 @@ class PlanManager:
         # ---------------------------------------------------------------------------
         # todo przerobić jakoś ten parser żeby zwracał standardowe klucze dla wszystkich poleciń. Dla SEQUENCE też:
         #  zamiast 'all_commands':[] to albo w argsach albo 'subcomands':[]
-        plans = Command.build_command(dic=dic, plan_data=PlanData(access_resource_manager=access_resource_manager),
-                                      id_=None, previous_command=None, loop=loop)
+        try:
+            plans = Command.build_command(dic=dic, plan_data=PlanData(access_resource_manager=access_resource_manager),
+                                          id_=None, previous_command=None, loop=loop)
+        except PlanBuildError:
+            raise
         return plans
 
     def get_plan_structure(self, id_: str) -> Optional[Command]:
@@ -126,3 +148,18 @@ class PlanManager:
     async def _main(self, plan: Command, step_id):
         # todo dorobić mechanizm uruchamiania od konkretnego kroku
         await plan.run()
+
+    async def _a_init_plan(self, plan_id):
+        """
+
+        :param plan_id:
+        :raise PlanBuildError:
+        :return:
+        """
+        ps = self.get_plan_structure(plan_id)
+        if ps is None:
+            raise PlanBuildError(msg=f"Something is wrong, the plan witch id {plan_id} not exists")
+        try:
+            await ps.a_init()
+        except PlanBuildError:
+            raise

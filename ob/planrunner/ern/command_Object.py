@@ -1,10 +1,13 @@
 import asyncio
 import logging
-from typing import List, Tuple
+from typing import Optional
 
 from ob.data_colection.resource_manager.errors import ResourceCommandError
 from ob.planrunner.ern.command import Command
-from ob.planrunner.ern.errors import ResourceError
+from ob.planrunner.ern.errors import ResourceError, PlanBuildError
+from ob.planrunner.ern.moves.custom_moves.mount_slew_alt_az import MountSlewAltAz
+from ob.planrunner.ern.moves.custom_moves.mount_slew_ra_dec import MountSlewRaDec
+from ob.planrunner.ern.moves.move import Move
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -20,10 +23,11 @@ class CommandObject(Command):
         self._mapped_args: dict = {"ra": None, "dec": None, "object_name": None, "filter": None, "repetitions": None}
         self._read_args(self.get_args())
         # todo dodać metodę build wywoływaną jak __init__ w którym się zbuduje wszystko np tak jak przy asynchronicznych metodach taki acync init
-        self._create_modules_from_args()
-        self._needed_modules: List[Tuple[str, int]] = []
         # ------ subcommands ------
-        self._move_mount = None
+        self._move_mount: Optional[Move] = None
+
+        # ------ build subcommands ------
+        self._create_modules_from_args()
 
     def _read_args(self, args: list):
         if len(args) > 2:
@@ -32,16 +36,23 @@ class CommandObject(Command):
         # todo uzupełnić
 
     def _create_modules_from_args(self):
-        mount = self._get_res(self.res_mngr.MOUNT, nr=0)
-        self._move_mount = mount.build_go_to_position(ra=self._mapped_args.get('ra', None),
-                                                      dec=self._mapped_args.get('dec', None),
-                                                      alt=self._mapped_args.get('alt', None),
-                                                      az=self._mapped_args.get('az', None),
-                                                      api=4)
+        """
 
-        # todo uzupełnić, utworzyć obiekty, coś w stylu _write_object() z dawnego runera
-        some_module = (self.res_mngr.MOUNT, 0)
-        self._needed_modules.append(some_module)
+        :raise PlanBuildError:
+        :return:
+        """
+        try:
+            if self._arg("alt") and self._arg("az"):
+                self._move_mount = MountSlewAltAz(api=4, resource_nr=0, alt_az=(self._arg("alt"), self._arg("az")),
+                                                  plan_data=self._plan_data)
+            else:
+                self._move_mount = MountSlewRaDec(api=4, resource_nr=0, ra_dec=(self._arg("ra"), self._arg("dec")),
+                                                  plan_data=self._plan_data)
+        except PlanBuildError:
+            raise
+
+    def _arg(self, name):
+        return self._mapped_args.get(name, None)
 
     def _get_res(self, name: str, nr: int):
         m = self.res_mngr.get_resource(name=name, nr=nr)
@@ -105,3 +116,8 @@ class CommandObject(Command):
             self._unlock_next_command()  # unlock in the end. This is set again in run() method
             self._set_self_finish()  # command finished - this should be last code line. This is set again in run()
             print('e')
+
+    async def a_init(self):
+        await super().a_init()
+        if self._move_mount is not None:
+            await self._move_mount.a_init()

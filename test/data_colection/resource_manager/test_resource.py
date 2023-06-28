@@ -7,8 +7,8 @@ from ob.comunication.internal_client_api import InternalClientAPI
 from ob.comunication.request_solver import RequestSolver
 from ob.data_colection.resource_manager.errors import ResourceCommandError
 from ob.data_colection.resource_manager.resource import DomeAlpaca
-from ob.data_colection.resource_manager.moves.move import Move
-from ob.data_colection.resource_manager.moves.position import Position
+from ob.planrunner.ern.moves.move import Move
+from ob.planrunner.ern.moves.position import Position
 from ob.data_colection.specialistic_components.tree_alpaca import TreeAlpacaObservatory
 from ob.data_colection.specialistic_components.tree_cache_observatory import TreeCache
 from ob.data_colection.specialistic_components.tree_conditional_freezer import TreeConditionalFreezer

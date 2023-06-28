@@ -2,11 +2,13 @@ import asyncio
 import logging
 from abc import ABC, abstractmethod
 from typing import Optional
+from ob.planrunner.ern.base_command import BaseCommand
+from ob.planrunner.ern.errors import PlanBuildError
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
-class Command(ABC):
+class Command(BaseCommand, ABC):
     _NAME = "DEFAULT"
     # --- arg keys ---
     _NAME_KEY = "command_name"
@@ -16,8 +18,8 @@ class Command(ABC):
     def __init__(self, command_dict: dict, plan_data, previous_command, id_: str = None,
                  loop: asyncio.AbstractEventLoop = None,
                  **kwargs):
+        super().__init__(plan_data=plan_data)
         self._loop = loop
-        self._plan_data = plan_data
         if id_ is None:
             id_ = plan_data.generate_next_id()
         self._id = id_
@@ -29,25 +31,8 @@ class Command(ABC):
         self._finish_locking: Optional[asyncio.Future] = None
         self._finish: Optional[asyncio.Future] = None
 
-    @property
-    def res_mngr(self):
-        return self._plan_data.access_resource_manager
-
-    @property
-    def plan_log(self) -> logging.Logger:
-        return self._plan_data.plan_log
-
-    @property
-    def tsk_mngr(self):
-        return self._plan_data.task_mngr
-
-    @classmethod
-    def get_name(cls) -> str:
-        """Method returning a command name"""
-        return cls._NAME
-
     def log(self, msg, lvl: Optional[int] = None):
-        lvl = logging.DEBUG if lvl in None else lvl
+        lvl = logging.DEBUG if lvl is None else lvl
         self.plan_log.log(msg=f"[{self._id}][{self.get_name()}] {msg}", level=lvl)
 
     def get_id(self):
@@ -62,12 +47,17 @@ class Command(ABC):
         return self._command_dict.get(self._ARGS_KEY, {})
 
     async def a_init(self):
+        """
+        Async version innit method, Should run always after normal init.
+
+        :raise PlanBuildError:
+        :return:
+        """
         if self._loop is None:
             try:
                 self._loop = asyncio.get_running_loop()
             except RuntimeError:
-                logger.error(f"Can not find running async loop.")
-                raise  # todo może jakiś inny błąd?
+                raise PlanBuildError("Can not find running async loop")
         self._finish_locking = self._loop.create_future()
         self._finish = self._loop.create_future()
 
@@ -119,10 +109,6 @@ class Command(ABC):
 
     async def run(self):
         try:
-            await self.a_init()
-            if self._loop is None:
-                # todo  ustawić status na skończony
-                return
             await self._run_body()
         finally:
             self._unlock_next_command()  # unlock in the end
@@ -130,4 +116,4 @@ class Command(ABC):
 
     @abstractmethod
     async def _run_body(self):
-        pass
+        raise NotImplementedError
