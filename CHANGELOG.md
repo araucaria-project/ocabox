@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 - CCTV method asubscribe_ir
 - ocaboxapi.__init__ CCTV
+- planrunner.command tracking=off or on or default
 
 
 ## [1.0.14] - 2023-06-26
