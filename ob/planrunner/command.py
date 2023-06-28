@@ -242,6 +242,24 @@ class Command(AbstractSequence):
         return ['OBJECT', 'SNAP']
 
     @property
+    def tracking(self) -> bool:
+        TRAKING = ['on', 'off']
+        DEFAULT_TRACKING_ON = ['SKYFLAT', 'OBJECT', 'SNAP', 'FOCUS']
+
+        if 'tracking' in self.kwargs.keys():
+            if self.kwargs['tracking'] in TRAKING:
+                return self.kwargs['tracking']
+            else:
+                logger.warning(f'Wrong tracking value')
+                self.info_callback['stream_1'](f'{self.id} Wrong tracking value, set to off')
+                return False
+        else:
+            if self.command_name in DEFAULT_TRACKING_ON:
+                return True
+            else:
+                return False
+
+    @property
     def object_name(self) -> str:
         if not self.plan_object_name:
             if self.command_name == 'SKYFLAT':
@@ -283,7 +301,7 @@ class Command(AbstractSequence):
                                            obj_name=self.object_name,
                                            alt=self.domeflat_mount_alt,
                                            az=self.domeflat_mount_az,
-                                           tracking=False,
+                                           tracking=self.tracking,
                                            epoch=self.epoch,
                                            uobi=self.uobi
                                            ), id_next=id_next)
@@ -358,6 +376,7 @@ class Command(AbstractSequence):
                                                    obj_name=self.object_name,
                                                    ra=self.plan_ra,
                                                    dec=self.plan_dec,
+                                                   tracking=self.tracking,
                                                    epoch=self.epoch,
                                                    uobi=self.uobi), id_next=id_next)
         # Mount slewing altaz
@@ -367,7 +386,7 @@ class Command(AbstractSequence):
                                                obj_name=self.object_name,
                                                alt=self.plan_alt,
                                                az=self.plan_az,
-                                               tracking=True,
+                                               tracking=self.tracking,
                                                epoch=self.epoch,
                                                uobi=self.uobi), id_next=id_next)
         # No coordinates - no slewing
@@ -418,6 +437,7 @@ class Command(AbstractSequence):
                                                            obj_name=self.object_name,
                                                            ra=seq_data.ra_dither,
                                                            dec=seq_data.dec_dither,
+                                                           tracking=self.tracking,
                                                            epoch=self.epoch,
                                                            uobi=self.uobi), id_next=id_next)
 
