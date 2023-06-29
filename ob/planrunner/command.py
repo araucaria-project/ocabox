@@ -10,6 +10,7 @@ from ob.planrunner.subcommands.sub_dome_screenlight import DomeScreenLight
 from ob.planrunner.subcommands.sub_focusing import Focusing
 from ob.planrunner.subcommands.sub_stop import Stop
 from ob.planrunner.subcommands.sub_wait import Wait
+from ob.planrunner.cycle_time_calc.cycle_time_calc import  CycleTimeCalc
 from pyaraucaria.coordinates import az_alt_2_ra_dec, ra_to_decimal, dec_to_decimal, deg_to_decimal_deg
 import random
 from ob.planrunner.subcommand import SubCommand
@@ -36,6 +37,7 @@ class Command(AbstractSequence):
         self.telescope = parent.telescope
         self.param = param
         self.info_callback = parent.info_callback
+        self._cycle_time_calc = CycleTimeCalc(self.telescope.observatory)
         super().__init__(self.id, self.command_name, self.info_callback,
                          observatory=self.parent.observatory, c_type='command', kwargs=self.kwargs)
         self._write_subcommands()
@@ -541,6 +543,14 @@ class Command(AbstractSequence):
     async def arun(self, step_id: str or None = None) -> int:
         self.info_callback['stream_1'](f'Command {self.id} {self.command_name} started')
         logger.info(f'{self.id} {self.command_name} {self.args} {self.kwargs} started')
+        d = self.telescope.get_dome()
+        m = self.telescope.get_mount()
+        self._cycle_time_calc.insert_data(name='dome_az_begin', value=await d.aget_az())
+        self._cycle_time_calc.insert_data(name='mount_az_begin', value=await m.aget_az())
+        self._cycle_time_calc.insert_data(name='mount_alt_begin', value=await m.aget_alt())
+        self._cycle_time_calc.insert_data(name='telescope', value=self.telescope.id)
+        self._cycle_time_calc.insert_data_dict(self.sequence_dict)
+        self._cycle_time_calc.save_to_log()
         skip = await self._arun(self.subcomponents, step_id=step_id)
         self.info_callback['stream_5'](f'{self.id}')
         logger.info(f'{self.id} done')
