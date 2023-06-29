@@ -7,6 +7,8 @@ All notable changes to this project will be documented in this file.
 - ocaboxapi.__init__ CCTV
 - planrunner.command tracking=off or on or default
 
+### Fixed
+- Fixed getting values from config in method `get_app_cfg()` form `Observatory` object
 
 ## [1.0.14] - 2023-06-26
 ### Added
