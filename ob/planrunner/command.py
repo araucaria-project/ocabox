@@ -10,9 +10,9 @@ from ob.planrunner.subcommands.sub_dome_screenlight import DomeScreenLight
 from ob.planrunner.subcommands.sub_focusing import Focusing
 from ob.planrunner.subcommands.sub_stop import Stop
 from ob.planrunner.subcommands.sub_wait import Wait
-from ob.planrunner.cycle_time_calc.cycle_time_calc import  CycleTimeCalc
+from ob.planrunner.cycle_time_calc.cycle_time_data_build import  CycleTimeDataBuild
 from pyaraucaria.coordinates import az_alt_2_ra_dec, ra_to_decimal, dec_to_decimal, deg_to_decimal_deg
-import random
+from ob.planrunner.seq import Seq
 from ob.planrunner.subcommand import SubCommand
 from ob.planrunner.coded_error import SequenceTreeError
 
@@ -37,7 +37,7 @@ class Command(AbstractSequence):
         self.telescope = parent.telescope
         self.param = param
         self.info_callback = parent.info_callback
-        self._cycle_time_calc = CycleTimeCalc(self.telescope.observatory)
+        self._cycle_time_data_build = CycleTimeDataBuild(self.telescope.observatory)
         super().__init__(self.id, self.command_name, self.info_callback,
                          observatory=self.parent.observatory, c_type='command', kwargs=self.kwargs)
         self._write_subcommands()
@@ -545,264 +545,22 @@ class Command(AbstractSequence):
         logger.info(f'{self.id} {self.command_name} {self.args} {self.kwargs} started')
         d = self.telescope.get_dome()
         m = self.telescope.get_mount()
-        self._cycle_time_calc.insert_data(name='dome_az_begin', value=await d.aget_az())
-        self._cycle_time_calc.insert_data(name='mount_az_begin', value=await m.aget_az())
-        self._cycle_time_calc.insert_data(name='mount_alt_begin', value=await m.aget_alt())
-        self._cycle_time_calc.insert_data(name='telescope', value=self.telescope.id)
-        self._cycle_time_calc.insert_data_dict(self.sequence_dict)
-        self._cycle_time_calc.save_to_log()
+        self._cycle_time_data_build.insert_data(name='dome_az_begin', value=await d.aget_az())
+        self._cycle_time_data_build.insert_data(name='mount_az_begin', value=await m.aget_az())
+        self._cycle_time_data_build.insert_data(name='mount_alt_begin', value=await m.aget_alt())
+        self._cycle_time_data_build.insert_data(name='telescope', value=self.telescope.id)
+        self._cycle_time_data_build.insert_data(name='id', value=self.id)
+        self._cycle_time_data_build.insert_data(name='started', value=True)
+        self._cycle_time_data_build.insert_data_dict(self.sequence_dict)
+        self._cycle_time_data_build.save_to_log()
         skip = await self._arun(self.subcomponents, step_id=step_id)
+        self._cycle_time_data_build.insert_data(name='done', value=self.done)
+        self._cycle_time_data_build.insert_data(name='skipped', value=self.skipped)
+        self._cycle_time_data_build.save_to_log()
         self.info_callback['stream_5'](f'{self.id}')
         logger.info(f'{self.id} done')
         return skip
 
 
-class Seq:
-
-    """
-    Class representing camera single sequence parameters
-    """
-
-    def __init__(self, seq: str, parent: Command):
-        self._seq: str = seq
-        self._focus_id: int or None = None
-        self.parent_kwargs: Dict = parent.kwargs
-        self.parent: Command = parent
-        self.set_focus_id()
-
-    @property
-    def site_coo(self) -> Dict[str, float]:
-        # TODO Take this from settings
-        return {'latitude': -24.598056, 'longitude': -70.196389, 'elevation': 2817}
-
-    @property
-    def if_radec(self) -> bool:
-        if self.parent.plan_ra and self.parent.plan_dec:
-            return True
-        else:
-            return False
-
-    def if_altaz(self) -> bool:
-        if self.parent.plan_az and self.parent.plan_alt:
-            return True
-        else:
-            return False
-
-    @staticmethod
-    def ra_random_dither(ra: float, dith_val: float, mode: str = 'basic') -> float:
-        # TODO dith_val = dith_val / cos(dec) ?
-        if mode == 'basic':
-            return ra + random.uniform(-dith_val / 60, dith_val / 60)
-
-    @staticmethod
-    def dec_random_dither(dec: float, dith_val: float, mode: str = 'basic') -> float:
-        if mode == 'basic':
-            return dec + random.uniform(-dith_val / 60, dith_val / 60)
-
-    @property
-    def ra_dither(self) -> float or None:
-        if self.dither_on:
-            if self.if_radec:
-                return self.ra_random_dither(ra=self.parent.plan_ra,
-                                             dith_val=self.dither_distance,
-                                             mode=self.dither_mode)
-            elif self.if_altaz:
-                ra, _ = az_alt_2_ra_dec(alt=self.parent.plan_alt,
-                                        az=self.parent.plan_az,
-                                        latitude=self.site_coo['latitude'],
-                                        longitude=self.site_coo['longitude'],
-                                        elevation=self.site_coo['elevation'])
-                return self.ra_random_dither(ra=ra,
-                                             dith_val=self.dither_distance,
-                                             mode=self.dither_mode)
-            else:
-                return None
-        else:
-            return None
-
-    @property
-    def dec_dither(self) -> float or None:
-        if self.dither_on:
-            if self.if_radec:
-                return self.dec_random_dither(dec=self.parent.plan_dec,
-                                              dith_val=self.dither_distance,
-                                              mode=self.dither_mode)
-            elif self.if_altaz:
-                _, dec = az_alt_2_ra_dec(alt=self.parent.plan_alt,
-                                         az=self.parent.plan_az,
-                                         latitude=self.site_coo['latitude'],
-                                         longitude=self.site_coo['longitude'],
-                                         elevation=self.site_coo['elevation'])
-                return self.dec_random_dither(dec=dec,
-                                              dith_val=self.dither_distance,
-                                              mode=self.dither_mode)
-            else:
-                return None
-        else:
-            return None
-
-    @property
-    def ra_final(self) -> float:
-        if self.dither_on:
-            return self.ra_dither
-        else:
-            return self.parent.plan_ra
-
-    @property
-    def dec_final(self) -> float:
-        if self.dither_on:
-            return self.dec_dither
-        else:
-            return self.parent.plan_dec
-
-    @property
-    def focus_id(self) -> int or None:
-        return self._focus_id
-
-    def set_focus_id(self):
-        self._focus_id = random.randrange(0, 100000)
-
-    @property
-    def focus_list(self) -> List[str] or None:
-        """
-        Input format focus_target/focus_step
-        :return: [focus_target/focus_step]
-        """
-        if 'pos' in self.parent_kwargs.keys():
-            return list(self.parent_kwargs['pos'].split('/'))
-        else:
-            return None
-
-    @property
-    def focus_target(self) -> int or None:
-        if self.focus_list:
-            return int(self.focus_list[0])
-        else:
-            return None
-
-    def focus_position(self, exp_no: int) -> float or None:
-        if self.focus_values_list:
-            return self.focus_values_list[exp_no - 1]
-        else:
-            return None
-
-    @property
-    def focus_min(self) -> int or None:
-        if self.focus_list:
-            return int(round(self.focus_target - (self.focus_step * ((self.exp_no - 1) / 2))))
-        else:
-            return None
-
-    @property
-    def focus_step(self) -> int or None:
-        if self.focus_list:
-            return int(self.focus_list[1])
-        else:
-            return None
-
-    @property
-    def focus_values_list(self) -> List[str] or None:
-        if self.focus_list:
-            f = []
-            for n in range(0, self.exp_no):
-                f.append(self.focus_min + (self.focus_step * n))
-            return f
-        else:
-            return None
-
-    @property
-    def seq_list(self) -> List[str]:
-        return list(self._seq.split('/'))
-
-    @property
-    def exp_no(self) -> int:
-        return int(self.seq_list[0])
-
-    @property
-    def filter(self) -> str or int:
-        return self.seq_list[1]
-
-    @property
-    def exp_time(self) -> float or None:
-        try:
-            return float(self.seq_list[2])
-        except ValueError:
-            return None
-
-    @property
-    def auto_exposure(self) -> bool:
-        if self.seq_list[2] == 'a':
-            return True
-        else:
-            return False
-
-    @property
-    def dither_list(self) -> List[str] or None:
-        # [dither_mode, dither_every_sub, dither_distance]
-        if 'dither' in self.parent_kwargs.keys():
-            if self.parent_kwargs['dither'] == 'none':
-                return None
-            else:
-                return list(self.parent_kwargs['dither'].split('/'))
-        else:
-            return None
-
-    @property
-    def dither_mode(self) -> str:
-        if self.dither_list:
-            return str(self.dither_list[0])
-        else:
-            # TODO get from settings
-            return 'basic'
-
-    @property
-    def dither_every_sub(self) -> int:
-        if self.dither_list:
-            return int(self.dither_list[1])
-        else:
-            # TODO get from settings
-            return 1
-
-    @property
-    def dither_distance(self) -> float:
-        if self.dither_list:
-            return float(self.dither_list[2])
-        else:
-            # TODO get from settings
-            return 1.0
-
-    @property
-    def dither_on(self) -> bool:
-        """
-        Do dithering or not.
-        :return: bool
-        """
-        if self.parent.command_name == 'SKYFLAT':
-            if 'dither' not in self.parent_kwargs.keys():
-                return True
-            elif 'dither' in self.parent_kwargs.keys() and self.parent_kwargs['dither'] != 'none':
-                return True
-            elif 'dither' in self.parent_kwargs.keys() and self.parent_kwargs['dither'] =='none':
-                return False
-            else:
-                return False
-
-        elif self.parent.command_name == self.parent.possible_dither:
-            if 'dither' not in self.parent_kwargs.keys():
-                return False
-            elif 'dither' in self.parent_kwargs.keys() and self.parent_kwargs['dither'] != 'none':
-                return True
-            elif 'dither' in self.parent_kwargs.keys() and self.parent_kwargs['dither'] == 'none':
-                return False
-            else:
-                return False
-        else:
-            return False
-
-    def dither_this_exp(self, ex: int) -> bool:
-        if (ex % self.dither_every_sub == 0) and self.dither_on and (ex > 1):
-            return True
-        else:
-            return False
 
 
