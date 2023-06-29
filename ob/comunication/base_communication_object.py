@@ -1,4 +1,6 @@
 import logging
+from typing import List
+
 import confuse
 from abc import ABC
 from ob.comunication.comunication_error import CommunicationTimeoutError
@@ -14,13 +16,42 @@ class BaseCommunicationObject(ABC):
 
     def __init__(self, name: str = None, **kwargs):
         self.name = name if name else self.DEFAULT_NAME
-        self.default_timeout = self._get_cfg('timeout')
+        self.default_timeout = self.get_cfg('timeout')
         if self.default_timeout is None:
             logger.error(f"Can not find timeout value in settings")
             raise RuntimeError
 
     def get_cfg(self, name_cfg: str, default=None, use_default_settings=True):
         return self._get_cfg(name_cfg, default, use_default_settings)
+
+    def get_cfg_deep(self, name_cfg: List[str], default=None, use_default_settings=True):
+        return self._get_cfg_deep(name_cfg, default, use_default_settings)
+
+    def _get_cfg_deep(self, name_cfg: List[str], default=None, use_default_settings=True):
+        """
+        The method looks deep for a value in the configuration file and returns it.
+
+        :param name_cfg: list of names in dist config value
+        :param default: default value if key not exist in config
+        :param use_default_settings: use default settings if default value is None and can not get settings
+        :return: config value or None if method can't find it
+        """
+        def build_request(name):
+            c = SingletonConfig.get_config()[self.TYPE][name]
+            for n in name_cfg:
+                c = c[n]
+            return c
+        try:
+            value = build_request(self.name).get()
+        except confuse.exceptions.NotFoundError:
+            if default is None and use_default_settings:
+                try:
+                    value = build_request(self.DEFAULT_NAME).get()
+                except confuse.exceptions.NotFoundError:
+                    value = default
+            else:
+                value = default
+        return value
 
     def _get_cfg(self, name_cfg: str, default=None, use_default_settings=True):
         """
@@ -31,17 +62,7 @@ class BaseCommunicationObject(ABC):
         :param use_default_settings: use default settings if default value is None and can not get settings
         :return: config value or None if method can't find it
         """
-        try:
-            value = SingletonConfig.get_config()[self.TYPE][self.name][name_cfg].get()
-        except confuse.exceptions.NotFoundError:
-            if default is None and use_default_settings:
-                try:
-                    value = SingletonConfig.get_config()[self.TYPE][self.DEFAULT_NAME][name_cfg].get()
-                except confuse.exceptions.NotFoundError:
-                    value = default
-            else:
-                value = default
-        return value
+        return self._get_cfg_deep(name_cfg=[name_cfg], default=default, use_default_settings=use_default_settings)
 
     def _get_time_to_expire(self, ms: MultipartStructure, use_default=False):
         """

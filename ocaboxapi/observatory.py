@@ -26,7 +26,7 @@ logger = logging.getLogger("observatory")
 class Observatory():
     """The Observatory maintains connection to the single observatory server using `ocabox.Client`"""
 
-    def __init__(self, client_name = 'DefaultClient', software_id = None) -> None:
+    def __init__(self, client_name='DefaultClient', software_id=None) -> None:
         self._client = None
         self.client_name = client_name
         self.software_id = software_id
@@ -35,22 +35,12 @@ class Observatory():
         self._subscribers = []
         super().__init__()
 
-    def get_app_cfg(self, key: str, default = None):
-            clc = None
-            try:
-                clc = SingletonConfig.get_config()['client'][self.client_name]
-            except (LookupError, confuse.NotFoundError):
-                try:
-                    clc = SingletonConfig.get_config()['client']['DefaultClient']
-                except (LookupError, confuse.NotFoundError):
-                    pass
-            if clc is not None:
-                try:
-                    return clc['app'][key].get()
-                except (LookupError, confuse.NotFoundError):
-                    pass
-            return default
-
+    def get_app_cfg(self, key: str, default=None):
+        proper_client = self.client.get_client()
+        value = proper_client.get_cfg_deep(["app", key])  # no use default option because we need a different order
+        if value is None:
+            value = default
+        return value
 
     # def get_client_config(self, client_cfg: Optional[str] = None):
     #     """
@@ -67,13 +57,13 @@ class Observatory():
     #             client_cfg = 'DefaultClient'
     #     return ClientAPI.client_config()['client'][client_cfg]
 
-
-    def connect(self, client: ClientAPI|None = None):
+    def connect(self, client: ClientAPI | None = None):
         if client is None:
             host = socket.gethostname()
             user = pwd.getpwuid(os.getuid())[0]
             self._client = ClientAPI(name=self.client_name,
-                                     user_name=f'{user}@{host}'+ (f' [{self.software_id}]' if self.software_id else ''))
+                                     user_name=f'{user}@{host}' + (
+                                         f' [{self.software_id}]' if self.software_id else ''))
         else:
             self._client = client
 
@@ -145,12 +135,11 @@ class Observatory():
             raise OcaboxServerError(f'Value error on {address}: {res.error}', e)
         return ret
 
-
     async def get_async(self, address: str,
-                  time_of_data: float or None = None,
-                  time_of_data_tolerance: float or None = None,
-                  request_timeout: float or None = None,
-                  parameters_dict: dict = None):
+                        time_of_data: float or None = None,
+                        time_of_data_tolerance: float or None = None,
+                        request_timeout: float or None = None,
+                        parameters_dict: dict = None):
         """Gets value from specified address
         @param address: Address of requested value
         @param time_of_data:
@@ -194,7 +183,7 @@ class Observatory():
                               parameters_dict: dict = None,
                               callback_method=None,
                               async_callback_method=None
-                             ):
+                              ):
         """Subscribes to specified address
         Blocks!
         @param address: Address of requested value
@@ -213,11 +202,11 @@ class Observatory():
             max_missed_msg = self.client.get_cfg('max_missed_msg', default=None)
 
         cq = await self.client.subscribe_with_callback(address,
-                                                       time_of_data_tolerance = time_of_data_tolerance,
-                                                       delay = delay,
-                                                       parameters_dict = parameters_dict,
-                                                       name = name,
-                                                       max_missed_msg = max_missed_msg,
+                                                       time_of_data_tolerance=time_of_data_tolerance,
+                                                       delay=delay,
+                                                       parameters_dict=parameters_dict,
+                                                       name=name,
+                                                       max_missed_msg=max_missed_msg,
                                                        callback_method=callback_method,
                                                        async_callback_method=async_callback_method
                                                        )
@@ -258,14 +247,12 @@ class Observatory():
         """
         return await self.client.server_is_alive(request_timeout=request_timeout)
 
-
-
     async def subscribe_async_old(self, address: str, callback,
-                              time_of_data_tolerance: float | None = None,
-                              delay: float | None = None,
-                              name: str | None = None,
-                              max_missed_msg: int | None = None,
-                              parameters_dict: dict = None):
+                                  time_of_data_tolerance: float | None = None,
+                                  delay: float | None = None,
+                                  name: str | None = None,
+                                  max_missed_msg: int | None = None,
+                                  parameters_dict: dict = None):
         """Subscribes to specified address
         Blocks!
         @param address: Address of requested value
@@ -284,11 +271,11 @@ class Observatory():
             max_missed_msg = self.client.get_cfg('max_missed_msg', default=None)
 
         cq = await self.client.subscribe(address,
-                                         time_of_data_tolerance = time_of_data_tolerance,
-                                         delay = delay,
-                                         parameters_dict = parameters_dict,
-                                         name = name,
-                                         max_missed_msg = max_missed_msg
+                                         time_of_data_tolerance=time_of_data_tolerance,
+                                         delay=delay,
+                                         parameters_dict=parameters_dict,
+                                         name=name,
+                                         max_missed_msg=max_missed_msg
                                          )
         cq.start()
         try:
@@ -303,13 +290,11 @@ class Observatory():
             logger.info(f'Stopping {address} subscription...')
             cq.stop()
 
-
-
     def get(self, address: str,
-                  time_of_data: float or None = None,
-                  time_of_data_tolerance: float or None = None,
-                  request_timeout: float or None = None,
-                  parameters_dict: dict = None):
+            time_of_data: float or None = None,
+            time_of_data_tolerance: float or None = None,
+            request_timeout: float or None = None,
+            parameters_dict: dict = None):
         """Gets value from specified address
         @param address: Address of requested value (without the telescope)
         @param time_of_data:
@@ -330,12 +315,11 @@ class Observatory():
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             future = asyncio.run(self.get_async(address,
-                                                                      time_of_data=time_of_data,
-                                                                      time_of_data_tolerance=time_of_data_tolerance,
-                                                                      request_timeout=request_timeout,
-                                                                      parameters_dict=parameters_dict))
+                                                time_of_data=time_of_data,
+                                                time_of_data_tolerance=time_of_data_tolerance,
+                                                request_timeout=request_timeout,
+                                                parameters_dict=parameters_dict))
             ret = future.result()
-
 
             # loop = asyncio.get_event_loop()
             # tsk  = loop.create_task(self.get_async(address,
@@ -350,4 +334,3 @@ class Observatory():
         finally:
             asyncio.set_event_loop(oldloop)
         return ret
-
