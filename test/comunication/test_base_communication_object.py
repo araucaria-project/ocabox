@@ -9,7 +9,7 @@ from ob.comunication.multipart_structure import MultipartStructure
 
 class BaseCommunicationObjectTest(unittest.TestCase):
     class SampleBaseCommunicationObject(BaseCommunicationObject):
-        DEFAULT_NAME = 'SampleBaseCommunicationObject'
+        DEFAULT_NAME = 'DefaultClient'
         TYPE = 'client'
 
     def test__get_time_to_expire(self):
@@ -35,6 +35,27 @@ class BaseCommunicationObjectTest(unittest.TestCase):
         # message hasn't timeout value and try to get default value
         time_to_expire = bco._get_time_to_expire(ms=ms, use_default=True)
         self.assertTrue(time_to_expire == bco.default_timeout)
+
+    def test_get_cfg(self):
+        """Test method get_cfg()"""
+        bco = self.SampleBaseCommunicationObject(name='SampleTestClient')
+        self.assertEqual(bco.get_cfg("protocol"), "tcp")
+        self.assertIsNone(bco.get_cfg("not_exist"))
+        # test get default config
+        self.assertEqual(bco.get_cfg("time_of_data_tolerance"), 0.5)
+
+    def test_get_cfg_deep(self):
+        """Test method get_cfg_deep()"""
+        bco = self.SampleBaseCommunicationObject(name='SampleTestClient')
+        # one lvl deep
+        self.assertEqual(bco.get_cfg_deep(["protocol"]), "tcp")
+        self.assertIsNone(bco.get_cfg_deep(["not_exist"]))
+        # many lvl deep
+        self.assertEqual(bco.get_cfg_deep(["app", "base_fits_dir_test_default"]), "test_dir22")
+        self.assertIsNone(bco.get_cfg_deep(["app", "not_exist"]))
+        self.assertIsNone(bco.get_cfg_deep(["not_exist_lvl_1", "not_exist"]))
+        # test get default config
+        self.assertEqual(bco.get_cfg_deep(["time_of_data_tolerance"]), 0.5)
 
 
 if __name__ == '__main__':

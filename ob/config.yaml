@@ -51,6 +51,8 @@ client:
     url: localhost
     protocol: tcp
     timeout: 1
+    app:
+      base_fits_dir_test_default: test_dir22
 
 comunication:
   ConditionalCycleQuery:
