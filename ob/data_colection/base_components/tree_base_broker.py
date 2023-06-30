@@ -130,3 +130,9 @@ class TreeBaseBroker(TreeComponent):
             r = p.get_resources()
             out.extend(r)
         return out
+
+    def get_configuration(self) -> dict:
+        out = self._get_self_configuration()
+        for p in self.get_list_providers():
+            out.get(self.get_name()).get("child").update(p.get_configuration())
+        return out

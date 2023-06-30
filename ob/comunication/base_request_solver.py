@@ -109,3 +109,11 @@ class BaseRequestSolver(ABC):
             re = ResponseError(4002, '', repr(self), ResponseError.SEVERITY_CRITICAL)
             v_response = ValueResponse(v_request.address, None, False, re)
         return v_response
+
+    def get_tree_configuration(self) -> dict:
+        """
+        Method return dictionary witch tree structure and configuration every single block in tree.
+
+        :return: dictionary
+        """
+        return self.data_provider.get_configuration()

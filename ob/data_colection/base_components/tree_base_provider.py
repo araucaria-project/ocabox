@@ -113,3 +113,9 @@ class TreeBaseProvider(TreeComponent, ABC):
         if self._subcontractor is not None:
             return self._subcontractor.get_resources()
         return []
+
+    def get_configuration(self) -> dict:
+        out = self._get_self_configuration()
+        if self._subcontractor:
+            out.get(self.get_name()).get("child").update(self._subcontractor.get_configuration())
+        return out

@@ -22,6 +22,8 @@ class TreeBroker(TreeBaseBroker, AddressDispatcher):
         AddressedResponderProtocol
     """
 
+    COMPONENT_DEFAULT_NAME: str = 'TreeBroker'
+
     def __init__(self, component_name: str, source_name: str, list_providers: List[AddressedResponderProtocol] = None,
                  **kwargs):
         super().__init__(component_name=component_name, list_providers=list_providers, source_name=source_name,
