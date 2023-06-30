@@ -37,7 +37,7 @@ class Command(AbstractSequence):
         self.telescope = parent.telescope
         self.param = param
         self.info_callback = parent.info_callback
-        self._cycle_time_data_build = CycleTimeDataBuild(self.telescope.observatory)
+        self._cycle_time_data_build = CycleTimeDataBuild(self.telescope.id)
         super().__init__(self.id, self.command_name, self.info_callback,
                          observatory=self.parent.observatory, c_type='command', kwargs=self.kwargs)
         self._write_subcommands()

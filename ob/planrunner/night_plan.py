@@ -22,7 +22,7 @@ class NightPlan(AbstractSequence):
         self.kwargs = {}
         self._r_id: int
         self.parent_kwargs = self.parent.kwargs | self.parent.parent_kwargs
-        self._cycle_time_data_build = CycleTimeDataBuild(self.telescope.observatory)
+        self._cycle_time_data_build = CycleTimeDataBuild(self.telescope.id)
         super().__init__(id=self.id, name=self.name, info_callback=self.info_callback,
                          observatory=self.parent.observatory, c_type='night_plan', kwargs=self.kwargs)
         self.info = {}

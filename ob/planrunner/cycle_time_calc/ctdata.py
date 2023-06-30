@@ -13,8 +13,8 @@ class CTData:
         self.container_name = container_name
         super().__init__()
 
-    def insert_single_data(self, name: str, value: Any):
-        self._data[name] = value
+    def insert_single_data(self, name: str, value: str):
+        self._data[name] = str(value)
 
     def insert_data_from_dict(self, dict: Dict[str, Any]):
         self._data = self._data | dict
