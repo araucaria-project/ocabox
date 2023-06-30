@@ -1,12 +1,13 @@
 from typing import Dict, Any
-from ob.planrunner.cycle_time_calc.ctdata import CTData
+from .ctdata import CTData
+from .abstract_cycle_time import AbstractCycleTime
 import logging
-
+from ocaboxapi.observatory import Observatory
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
-class CycleTimeDataClean:
+class CycleTimeDataClean(AbstractCycleTime):
     """
     This class represent cycle time data cleaner
     """
