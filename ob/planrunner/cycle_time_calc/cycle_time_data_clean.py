@@ -55,6 +55,7 @@ class CycleTimeDataClean(AbstractCycleTime):
         first = self.data_list[line_start]
         second = self.data_list[line_start + 1]
         third = self.data_list[line_start + 2]
+        # TODO temember about 0,1
         dat = OrderedDict({
             'command_name': first['command_name'],
             'cycle_time': float(third['utc_time_stamp']) - float(first['utc_time_stamp']),
