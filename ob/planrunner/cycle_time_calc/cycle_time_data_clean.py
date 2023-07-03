@@ -2,6 +2,10 @@ from typing import Dict, Any, List
 from ob.planrunner.cycle_time_calc.abstract_cycle_time import AbstractCycleTime
 import logging
 from collections import OrderedDict
+import math
+import numpy as np
+
+
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
@@ -40,50 +44,96 @@ class CycleTimeDataClean(AbstractCycleTime):
                     if q['command_name'] not in self.commands_data.keys():
                         self.commands_data[q['command_name']] = []
                     if 'done' not in q.keys():
-                        self.commands_data[q['command_name']].append(self._build_command_data(line_start=p))
+                        self.commands_data[q['command_name']].append(self._build_command_data(night_id=n, line_start=p))
 
-    def _build_command_data(self, line_start: int):
-        if 'dome_az_end' in self.data_list[line_start + 2].keys():
+    def _build_command_data(self, night_id: str, line_start: int):
+        first = self.data_list[line_start]
+        second = self.data_list[line_start + 1]
+        third = self.data_list[line_start + 2]
+
+        if 'dome_az_end' in third.keys():
             index_dome = 'dome_az_end'
         else:
             index_dome = 'dome_az_begin'
-        if 'mount_alt_end' in self.data_list[line_start + 2].keys():
+
+        if 'mount_alt_end' in third.keys():
             index_mount_alt = 'mount_alt_end'
         else:
             index_mount_alt = 'mount_alt_begin'
 
-        first = self.data_list[line_start]
-        second = self.data_list[line_start + 1]
-        third = self.data_list[line_start + 2]
-        # TODO temember about 0,1
-        dat = OrderedDict({
-            'command_name': first['command_name'],
-            'cycle_time': float(third['utc_time_stamp']) - float(first['utc_time_stamp']),
-            'dome_az_distance': CycleTimeDataClean._dome_az_distance(start=float(first['dome_az_begin']),
-                                                                     end=float(third[index_dome])),
+        if 'mount_az_end' in third.keys():
+            index_mount_az = 'mount_az_end'
+        else:
+            index_mount_az = 'mount_az_begin'
 
-            'mount_alt_distance': CycleTimeDataClean._mount_alt_az_distance(start_alt=1,
-                                                                            end_alt=1,
-                                                                            start_az=1,
-                                                                            end_az=1)
+
+        # TODO remember about 0,1
+        dat = OrderedDict({
+            'night_id': night_id,
+            'command_name': first['command_name'],
+            'start_utc_date_stamp': first['utc_date_stamp'],
+            'cycle_time': float(third['utc_time_stamp']) - float(first['utc_time_stamp']),
+            'dome_distance': CycleTimeDataClean.az_distance(start=float(first['dome_az_begin']),
+                                                                     end=float(third[index_dome])),
+            'mount_distance': CycleTimeDataClean.alt_az_distance(start_alt=float(first['mount_alt_begin']),
+                                                                     end_alt=float(third[index_mount_alt]),
+                                                                     start_az=float(first['mount_az_begin']),
+                                                                     end_az=float(third[index_mount_az])),
+            
         })
         return dat
 
     @staticmethod
-    def _dome_az_distance(start: float, end: float) -> float:
-        # TODO
-        return start - end
+    def az_distance(start: float, end: float) -> float:
+        """
+        Method giving back shortest distance in azimuth
+        :param start: start position of azimuth
+        :param end: end position of azimuth
+        :return: shortest distance in degrees
+        """
+        if abs(start - end) > 180.0:
+            if start > end:
+                ret = abs(start - (end + 360.0))
+            else:
+                ret = abs(end - (start + 360.0))
+        else:
+            ret = abs(start - end)
+        return ret
 
     @staticmethod
-    def _mount_alt_az_distance(start_alt: float, end_alt: float,  start_az: float, end_az: float) -> float:
-        # TODO
-        return 0
+    def vector(alt: float, az: float) -> np.array:
+        """
+
+        :param alt: alt degrees
+        :param az: az degrees
+        :return: numpy vector
+        """
+        az = math.radians(az)
+        alt = math.radians(alt)
+        x = math.cos(az) * math.cos(alt)
+        z = math.sin(az) * math.cos(alt)
+        y = math.sin(alt)
+        return np.array([x, y, z])
+
+    @staticmethod
+    def alt_az_distance(start_alt: float, end_alt: float,  start_az: float, end_az: float) -> float:
+        """
+        Method calculate angle between altaz positions
+        :param start_alt: start alt degrees
+        :param end_alt: end alt degrees
+        :param start_az: start az degrees
+        :param end_az: end az degrees
+        :return: distance in degrees
+        """
+        v1 = CycleTimeDataClean.vector(alt=start_alt, az=start_az)
+        v2 = CycleTimeDataClean.vector(alt=end_alt, az=end_az)
+        return math.degrees(math.acos(np.dot(v1, v2)))
 
 
 if __name__ == '__main__':
     c = CycleTimeDataClean('dev')
     c.parse_data()
-    c.print_data_list()
+    #c.print_data_list()
     c.find_full_nights_id()
     c.build_commands_data()
     print(c.full_nights_id)
