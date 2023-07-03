@@ -12,7 +12,7 @@ class AbstractCycleTime(ABC):
     This class represent abstract time data
     """
 
-    FILE_NAMES = {'raw_data': 'rdata.txt', 'clean_data': 'cdata.txt'}
+    FILE_NAMES = {'raw_data': 'raw_data.txt', 'clean_data': 'clean_data.txt'}
     BASE_FOLDER_NAME = os.path.expanduser('~/.oca/cycle_time_calc')
 
 
@@ -26,6 +26,10 @@ class AbstractCycleTime(ABC):
     @property
     def raw_file_name(self, ) -> str:
         return f'{self.telescope_name}_{self.FILE_NAMES["raw_data"]}'
+
+    @property
+    def clean_data_file_name(self, ) -> str:
+        return f'{self.telescope_name}_{self.FILE_NAMES["clean_data"]}'
 
     @abstractmethod
     def read_data_from_file(self):

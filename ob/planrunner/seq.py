@@ -48,7 +48,7 @@ class Seq:
 
     @property
     def ra_dither(self) -> float or None:
-        if self.dither_on:
+        if self.parent.dither_on:
             if self.if_radec:
                 return self.ra_random_dither(ra=self.parent.plan_ra,
                                              dith_val=self.dither_distance,
@@ -69,7 +69,7 @@ class Seq:
 
     @property
     def dec_dither(self) -> float or None:
-        if self.dither_on:
+        if self.parent.dither_on:
             if self.if_radec:
                 return self.dec_random_dither(dec=self.parent.plan_dec,
                                               dith_val=self.dither_distance,
@@ -90,14 +90,14 @@ class Seq:
 
     @property
     def ra_final(self) -> float:
-        if self.dither_on:
+        if self.parent.dither_on:
             return self.ra_dither
         else:
             return self.parent.plan_ra
 
     @property
     def dec_final(self) -> float:
-        if self.dither_on:
+        if self.parent.dither_on:
             return self.dec_dither
         else:
             return self.parent.plan_dec
@@ -218,36 +218,10 @@ class Seq:
             # TODO get from settings
             return 1.0
 
-    @property
-    def dither_on(self) -> bool:
-        """
-        Do dithering or not.
-        :return: bool
-        """
-        if self.parent.command_name == 'SKYFLAT':
-            if 'dither' not in self.parent_kwargs.keys():
-                return True
-            elif 'dither' in self.parent_kwargs.keys() and self.parent_kwargs['dither'] != 'none':
-                return True
-            elif 'dither' in self.parent_kwargs.keys() and self.parent_kwargs['dither'] =='none':
-                return False
-            else:
-                return False
 
-        elif self.parent.command_name == self.parent.possible_dither:
-            if 'dither' not in self.parent_kwargs.keys():
-                return False
-            elif 'dither' in self.parent_kwargs.keys() and self.parent_kwargs['dither'] != 'none':
-                return True
-            elif 'dither' in self.parent_kwargs.keys() and self.parent_kwargs['dither'] == 'none':
-                return False
-            else:
-                return False
-        else:
-            return False
 
     def dither_this_exp(self, ex: int) -> bool:
-        if (ex % self.dither_every_sub == 0) and self.dither_on and (ex > 1):
+        if (ex % self.dither_every_sub == 0) and self.parent.dither_on and (ex > 1):
             return True
         else:
             return False

@@ -81,13 +81,22 @@ class CycleTimeDataClean(AbstractCycleTime):
                                                                      end_az=float(third[index_mount_az])),
             'exposure_time_sum': CycleTimeDataClean.exposure_time_sum(first),
             'seq_number': CycleTimeDataClean.seq_number(first),
-            'filter_changes': '',
-            'mirror_cover_on': '',
-            'focus_distance': ''
+            'filter_changes': CycleTimeDataClean.filter_changes(first),
+            #'mirror_cover_on': '',
+            'focus_distance': '',
+            'dome_follow': '',
+            'dither': CycleTimeDataClean.dither(first),
 
 
         })
         return dat
+
+    @staticmethod
+    def dither(record: Dict[str, Any]) -> int:
+        if record['dither'] == 'True':
+            return 1
+        else:
+            return 0
 
     @staticmethod
     def az_distance(start: float, end: float) -> float:
@@ -154,6 +163,20 @@ class CycleTimeDataClean(AbstractCycleTime):
                 s = record['kwargs']['seq'].split(',')
                 for n in s:
                     ret += 1
+        return ret
+
+    @staticmethod
+    def filter_changes(record: Dict[str, Any]) -> int:
+        ret = 0
+        f = record['filter_pos']
+        if 'kwargs' in record.keys():
+            if 'seq' in record['kwargs']:
+                s = record['kwargs']['seq'].split(',')
+                for n in s:
+                    z = n.split('/')
+                    if f != z[1]:
+                        ret += 1
+                    f = z[1]
         return ret
 
 

@@ -113,6 +113,34 @@ class Command(AbstractSequence):
             return f'2000'
 
     @property
+    def dither_on(self) -> bool:
+        """
+        Do dithering or not.
+        :return: bool
+        """
+        if self.command_name == 'SKYFLAT':
+            if 'dither' not in self.kwargs.keys():
+                return True
+            elif 'dither' in self.kwargs.keys() and self.kwargs['dither'] != 'none':
+                return True
+            elif 'dither' in self.kwargs.keys() and self.kwargs['dither'] == 'none':
+                return False
+            else:
+                return False
+
+        elif self.command_name == self.possible_dither:
+            if 'dither' not in self.kwargs.keys():
+                return False
+            elif 'dither' in self.kwargs.keys() and self.kwargs['dither'] != 'none':
+                return True
+            elif 'dither' in self.kwargs.keys() and self.kwargs['dither'] == 'none':
+                return False
+            else:
+                return False
+        else:
+            return False
+
+    @property
     def mirror_cover_mode(self):
         modes = ['auto', 'open', 'close']
         if 'mirror_cover' in self.kwargs.keys():
@@ -546,6 +574,15 @@ class Command(AbstractSequence):
         d = self.telescope.get_dome()
         m = self.telescope.get_mount()
         c = self.telescope.get_camera()
+        f = self.telescope.get_filterwheel()
+        f_names = await f.aget_names()
+        f_n = []
+        for n in f_names.keys():
+            f_n.append(str(n))
+        f_pos = await f.aget_position()
+        f_p = f_n[f_pos]
+        self._cycle_time_data_build.insert_data(name='dither', value=self.dither_on)
+        self._cycle_time_data_build.insert_data(name='filter_pos', value=f_p)
         self._cycle_time_data_build.insert_data(name='dome_az_begin', value=await d.aget_az())
         self._cycle_time_data_build.insert_data(name='mount_az_begin', value=await m.aget_az())
         self._cycle_time_data_build.insert_data(name='mount_alt_begin', value=await m.aget_alt())
