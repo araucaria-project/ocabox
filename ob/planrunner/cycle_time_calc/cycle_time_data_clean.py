@@ -43,12 +43,12 @@ class CycleTimeDataClean(AbstractCycleTime):
                 if m['started'] < p < m['ended']:
                     if q['command_name'] not in self.commands_data.keys():
                         self.commands_data[q['command_name']] = []
-                    if 'done' not in q.keys():
+                    if 'done' not in q.keys() and self.data_list[p + 1]['skipped'] == 'False':
                         self.commands_data[q['command_name']].append(self._build_command_data(night_id=n, line_start=p))
 
     def _build_command_data(self, night_id: str, line_start: int):
         first = self.data_list[line_start]
-        second = self.data_list[line_start + 1]
+        # second = self.data_list[line_start + 1]
         third = self.data_list[line_start + 2]
 
         if 'dome_az_end' in third.keys():
@@ -79,7 +79,13 @@ class CycleTimeDataClean(AbstractCycleTime):
                                                                      end_alt=float(third[index_mount_alt]),
                                                                      start_az=float(first['mount_az_begin']),
                                                                      end_az=float(third[index_mount_az])),
-            
+            'exposure_time_sum': CycleTimeDataClean.exposure_time_sum(first),
+            'seq_number': CycleTimeDataClean.seq_number(first),
+            'filter_changes': '',
+            'mirror_cover_on': '',
+            'focus_distance': ''
+
+
         })
         return dat
 
@@ -129,11 +135,32 @@ class CycleTimeDataClean(AbstractCycleTime):
         v2 = CycleTimeDataClean.vector(alt=end_alt, az=end_az)
         return math.degrees(math.acos(np.dot(v1, v2)))
 
+    @staticmethod
+    def exposure_time_sum(record: Dict[str, Any]) -> float:
+        ret = 0
+        if 'kwargs' in record.keys():
+            if 'seq' in record['kwargs']:
+                s = record['kwargs']['seq'].split(',')
+                for n in s:
+                    z = n.split('/')
+                    ret += int(z[0])*float(z[2])
+        return ret
+
+    @staticmethod
+    def seq_number(record: Dict[str, Any]) -> int:
+        ret = 0
+        if 'kwargs' in record.keys():
+            if 'seq' in record['kwargs']:
+                s = record['kwargs']['seq'].split(',')
+                for n in s:
+                    ret += 1
+        return ret
+
 
 if __name__ == '__main__':
     c = CycleTimeDataClean('dev')
     c.parse_data()
-    #c.print_data_list()
+    c.print_data_list()
     c.find_full_nights_id()
     c.build_commands_data()
     print(c.full_nights_id)
