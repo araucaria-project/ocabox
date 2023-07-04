@@ -2,10 +2,14 @@ import logging
 from abc import ABC, abstractmethod
 import os
 from typing import Dict, Any, List
-import json
 import datetime
+import math
+import numpy as np
+import json
+
+
 logger = logging.getLogger(__name__.rsplit('.')[-1])
-#from ocaboxapi.observatory import Observatory
+
 
 class AbstractCycleTime(ABC):
     """
@@ -82,3 +86,95 @@ class AbstractCycleTime(ABC):
     @staticmethod
     def timestamp() -> datetime:
         return datetime.datetime.utcnow()
+
+    @staticmethod
+    def rm_mode(record: Dict[str, Any]) -> str:
+        return str(record['readoutmode'])
+
+    @staticmethod
+    def dither(record: Dict[str, Any]) -> str:
+        if record['dither'] == 'True':
+            return '1'
+        else:
+            return '0'
+
+    @staticmethod
+    def az_distance(start: float, end: float) -> float:
+        """
+        Method giving back shortest distance in azimuth
+        :param start: start position of azimuth
+        :param end: end position of azimuth
+        :return: shortest distance in degrees
+        """
+        if abs(start - end) > 180.0:
+            if start > end:
+                ret = abs(start - (end + 360.0))
+            else:
+                ret = abs(end - (start + 360.0))
+        else:
+            ret = abs(start - end)
+        return ret
+
+    @staticmethod
+    def vector(alt: float, az: float) -> np.array:
+        """
+        Method builds vector from alt az
+        :param alt: alt degrees
+        :param az: az degrees
+        :return: numpy vector
+        """
+        az = math.radians(az)
+        alt = math.radians(alt)
+        x = math.cos(az) * math.cos(alt)
+        z = math.sin(az) * math.cos(alt)
+        y = math.sin(alt)
+        return np.array([x, y, z])
+
+    @staticmethod
+    def alt_az_distance(start_alt: float, end_alt: float, start_az: float, end_az: float) -> float:
+        """
+        Method calculate angle between altaz positions
+        :param start_alt: start alt degrees
+        :param end_alt: end alt degrees
+        :param start_az: start az degrees
+        :param end_az: end az degrees
+        :return: distance in degrees
+        """
+        v1 = AbstractCycleTime.vector(alt=start_alt, az=start_az)
+        v2 = AbstractCycleTime.vector(alt=end_alt, az=end_az)
+        return math.degrees(math.acos(np.dot(v1, v2)))
+
+    @staticmethod
+    def exposure_time_sum(record: Dict[str, Any]) -> float:
+        ret = 0
+        if 'kwargs' in record.keys():
+            if 'seq' in record['kwargs']:
+                s = record['kwargs']['seq'].split(',')
+                for n in s:
+                    z = n.split('/')
+                    ret += int(z[0]) * float(z[2])
+        return ret
+
+    @staticmethod
+    def seq_number(record: Dict[str, Any]) -> int:
+        ret = 0
+        if 'kwargs' in record.keys():
+            if 'seq' in record['kwargs']:
+                s = record['kwargs']['seq'].split(',')
+                for n in s:
+                    ret += 1
+        return ret
+
+    @staticmethod
+    def filter_changes(record: Dict[str, Any]) -> int:
+        ret = 0
+        f = record['filter_pos']
+        if 'kwargs' in record.keys():
+            if 'seq' in record['kwargs']:
+                s = record['kwargs']['seq'].split(',')
+                for n in s:
+                    z = n.split('/')
+                    if f != z[1]:
+                        ret += 1
+                    f = z[1]
+        return ret
