@@ -4,6 +4,7 @@ import logging
 from collections import OrderedDict
 import math
 import numpy as np
+import json
 
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -22,10 +23,6 @@ class CycleTimeDataClean(AbstractCycleTime):
     def read_data_from_file(self):
         self._data = self.read_file(self.base_folder, self.raw_file_name)
 
-    def print_data_list(self):
-        for n in self.data_list:
-            print(n)
-
     def find_full_nights_id(self):
         random_id = ''
         line_started = None
@@ -35,7 +32,9 @@ class CycleTimeDataClean(AbstractCycleTime):
                 line_started = n
             if m['command_name'] =='Night plan' and 'done' in m.keys() and random_id == m['random_id']:
                 line_ended = n
-                self.full_nights_id[random_id] = {'started': line_started, 'ended':line_ended}
+                self.full_nights_id[random_id] = {'started': line_started,
+                                                  'ended':line_ended,
+                                                  'utc_time_stamp': m["utc_time_stamp"]}
 
     def build_commands_data(self):
         for n, m in self.full_nights_id.items():
@@ -46,9 +45,36 @@ class CycleTimeDataClean(AbstractCycleTime):
                     if 'done' not in q.keys() and self.data_list[p + 1]['skipped'] == 'False':
                         self.commands_data[q['command_name']].append(self._build_command_data(night_id=n, line_start=p))
 
+    def verify_nights(self):
+        f = self.read_file(folder=self.base_folder, file_name=self.night_verf_file_name)
+        if f:
+            l = f.split('\n')
+            for n in l:
+                if len(n) > 1:
+                    d = self.decode_data(n)
+                    if d['random_id'] in self.full_nights_id.keys():
+                        if d['utc_time_stamp'] == self.full_nights_id[d['random_id']]['utc_time_stamp']:
+                            self.full_nights_id.pop(d['random_id'])
+
+    def save_commands_data_to_files(self):
+
+        for n in self.commands_data.keys():
+            for m in self.commands_data[n]:
+                self.add_to_file(data=self.encode_data(m),
+                                 folder=self.base_folder,
+                                 file_name=self.clean_data_file_name(n))
+        for p, q in self.full_nights_id.items():
+            dat = OrderedDict({
+                'random_id': p,
+                'utc_time_stamp': q['utc_time_stamp'],
+            })
+            self.add_to_file(data=self.encode_data(data=dat),
+                             folder=self.base_folder,
+                             file_name=self.night_verf_file_name)
+
     def _build_command_data(self, night_id: str, line_start: int):
         first = self.data_list[line_start]
-        # second = self.data_list[line_start + 1]
+        second = self.data_list[line_start + 1]
         third = self.data_list[line_start + 2]
 
         if 'dome_az_end' in third.keys():
@@ -66,7 +92,6 @@ class CycleTimeDataClean(AbstractCycleTime):
         else:
             index_mount_az = 'mount_az_begin'
 
-
         # TODO remember about 0,1
         dat = OrderedDict({
             'night_id': night_id,
@@ -82,21 +107,26 @@ class CycleTimeDataClean(AbstractCycleTime):
             'exposure_time_sum': CycleTimeDataClean.exposure_time_sum(first),
             'seq_number': CycleTimeDataClean.seq_number(first),
             'filter_changes': CycleTimeDataClean.filter_changes(first),
-            #'mirror_cover_on': '',
-            'focus_distance': '',
-            'dome_follow': '',
+            'rm_mode': CycleTimeDataClean.rm_mode(second),
             'dither': CycleTimeDataClean.dither(first),
-
+            # 'dome_follow': '',
+            # 'focus_distance': '',
+            # 'mirror_cover_on': '',
+            # 'focusing': '',
 
         })
         return dat
 
     @staticmethod
-    def dither(record: Dict[str, Any]) -> int:
+    def rm_mode(record: Dict[str, Any]) -> str:
+        return str(record['readoutmode'])
+
+    @staticmethod
+    def dither(record: Dict[str, Any]) -> str:
         if record['dither'] == 'True':
-            return 1
+            return '1'
         else:
-            return 0
+            return '0'
 
     @staticmethod
     def az_distance(start: float, end: float) -> float:
@@ -118,7 +148,7 @@ class CycleTimeDataClean(AbstractCycleTime):
     @staticmethod
     def vector(alt: float, az: float) -> np.array:
         """
-
+        Method builds vector from alt az
         :param alt: alt degrees
         :param az: az degrees
         :return: numpy vector
@@ -183,8 +213,9 @@ class CycleTimeDataClean(AbstractCycleTime):
 if __name__ == '__main__':
     c = CycleTimeDataClean('dev')
     c.parse_data()
-    c.print_data_list()
     c.find_full_nights_id()
+    c.verify_nights()
     c.build_commands_data()
+    c.save_commands_data_to_files()
     print(c.full_nights_id)
     print(c.commands_data)

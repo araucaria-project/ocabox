@@ -31,7 +31,7 @@ class NightPlan(AbstractSequence):
         self._set_r_id()
 
     def _set_r_id(self) -> None:
-        self._r_id =  random.randint(0, 100000)
+        self._r_id =  random.randint(0, 1000000)
 
     def _set_callb(self) -> None:
         self.info_callback['c_subcommands'] = self._build_nightplan_info_subcommands

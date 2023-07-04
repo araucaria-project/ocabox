@@ -12,7 +12,7 @@ class AbstractCycleTime(ABC):
     This class represent abstract time data
     """
 
-    FILE_NAMES = {'raw_data': 'raw_data.txt', 'clean_data': 'clean_data.txt'}
+    FILE_NAMES = {'raw_data': 'raw_data.txt', 'clean_data': 'clean_data.txt', 'night_verif': 'night_verif.txt'}
     BASE_FOLDER_NAME = os.path.expanduser('~/.oca/cycle_time_calc')
 
 
@@ -23,13 +23,24 @@ class AbstractCycleTime(ABC):
         self._mk_dirs()
         super().__init__()
 
+    @staticmethod
+    def encode_data(data: Dict or List) -> str:
+        return json.dumps(data)
+
+    @staticmethod
+    def decode_data(data: str) -> Dict or List:
+        return json.loads(data)
+
     @property
-    def raw_file_name(self, ) -> str:
+    def raw_file_name(self) -> str:
         return f'{self.telescope_name}_{self.FILE_NAMES["raw_data"]}'
 
     @property
-    def clean_data_file_name(self, ) -> str:
-        return f'{self.telescope_name}_{self.FILE_NAMES["clean_data"]}'
+    def night_verf_file_name(self) -> str:
+        return f'{self.telescope_name}_{self.FILE_NAMES["night_verif"]}'
+
+    def clean_data_file_name(self, command: str) -> str:
+        return f'{self.telescope_name}_{command}_{self.FILE_NAMES["clean_data"]}'
 
     @abstractmethod
     def read_data_from_file(self):
@@ -37,11 +48,10 @@ class AbstractCycleTime(ABC):
 
     def parse_data(self):
         self.read_data_from_file()
-        self._data = self._data.replace("'", '"')
         s = self._data.split('\n')
         for n in s:
             if len(n) > 1:
-                self.data_list.append(json.loads(n))
+                self.data_list.append(self.decode_data(n))
 
     @property
     def base_folder(self):
@@ -59,14 +69,15 @@ class AbstractCycleTime(ABC):
         f.close()
 
     @staticmethod
-    def read_file(folder: str, file_name: str) -> str:
+    def read_file(folder: str, file_name: str) -> str or None:
         try:
             f = open(os.path.join(folder, file_name), "r", encoding='utf-8')
             dat = f.read()
             f.close()
             return dat
-        except FileExistsError:
+        except (FileExistsError, FileNotFoundError):
             logger.error(f'File {file_name} do not exists')
+            return None
 
     @staticmethod
     def timestamp() -> datetime:

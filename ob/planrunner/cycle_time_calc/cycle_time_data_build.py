@@ -37,4 +37,4 @@ class CycleTimeDataBuild(AbstractCycleTime):
         else:
             self._data_cont[container_name].insert_single_data('utc_date_stamp', str(self.timestamp().isoformat()))
             self._data_cont[container_name].insert_single_data('utc_time_stamp', str(self.timestamp().timestamp()))
-            self.add_to_file(self._data_cont[container_name].data, self.base_folder, self.raw_file_name)
+            self.add_to_file(self.encode_data(self._data_cont[container_name].data), self.base_folder, self.raw_file_name)
