@@ -1,5 +1,6 @@
 from typing import Dict, Any
-from ob.planrunner.cycle_time_calc.ctdata import CTData
+
+
 import logging
 
 

@@ -78,6 +78,7 @@ class AbstractCycleTime(ABC):
             f = open(os.path.join(folder, file_name), "r", encoding='utf-8')
             dat = f.read()
             f.close()
+            logger.debug(f'File read')
             return dat
         except (FileExistsError, FileNotFoundError):
             logger.error(f'File {file_name} do not exists')
@@ -113,6 +114,7 @@ class AbstractCycleTime(ABC):
                 ret = abs(end - (start + 360.0))
         else:
             ret = abs(start - end)
+        logger.debug(f'Az_start:{start}, az_end:{end}, az_distance:{ret}')
         return ret
 
     @staticmethod
@@ -128,7 +130,9 @@ class AbstractCycleTime(ABC):
         x = math.cos(az) * math.cos(alt)
         z = math.sin(az) * math.cos(alt)
         y = math.sin(alt)
-        return np.array([x, y, z])
+        ret = np.array([x, y, z])
+        logger.debug(f'Alt:{alt}, az:{az}, vector:{ret}')
+        return ret
 
     @staticmethod
     def alt_az_distance(start_alt: float, end_alt: float, start_az: float, end_az: float) -> float:
@@ -142,7 +146,10 @@ class AbstractCycleTime(ABC):
         """
         v1 = AbstractCycleTime.vector(alt=start_alt, az=start_az)
         v2 = AbstractCycleTime.vector(alt=end_alt, az=end_az)
-        return math.degrees(math.acos(np.dot(v1, v2)))
+        ret = math.degrees(math.acos(np.dot(v1, v2)))
+        logger.debug(f'Alt_start:{start_alt}, alt_end:{end_alt}, az_start:{start_az},'
+                     f' az_end:{end_az}, altaz_distance:{ret}')
+        return ret
 
     @staticmethod
     def exposure_time_sum(record: Dict[str, Any]) -> float:
@@ -153,6 +160,7 @@ class AbstractCycleTime(ABC):
                 for n in s:
                     z = n.split('/')
                     ret += int(z[0]) * float(z[2])
+        logger.debug(f'Record:{record}, exposure_time_sum:{ret}')
         return ret
 
     @staticmethod
@@ -163,6 +171,7 @@ class AbstractCycleTime(ABC):
                 s = record['kwargs']['seq'].split(',')
                 for n in s:
                     ret += 1
+        logger.debug(f'Record:{record}, seq_number:{ret}')
         return ret
 
     @staticmethod
@@ -177,4 +186,5 @@ class AbstractCycleTime(ABC):
                     if f != z[1]:
                         ret += 1
                     f = z[1]
+        logger.debug(f'Record:{record}, filter_changes:{ret}')
         return ret

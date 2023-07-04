@@ -124,6 +124,7 @@ class CycleTimeDataClean(AbstractCycleTime):
         self.verify_nights()
         self.build_commands_data()
         self.save_commands_data_to_files()
+        # remove raw data ?
 
 
 if __name__ == '__main__':
