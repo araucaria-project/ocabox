@@ -18,12 +18,15 @@ class AbstractCycleTime(ABC):
 
     FILE_NAMES = {'raw_data': 'raw_data.txt', 'clean_data': 'clean_data.txt', 'night_verif': 'night_verif.txt'}
     BASE_FOLDER_NAME = os.path.expanduser('~/.oca/cycle_time_calc')
+    DATA_CLEAN_ORDER = ['night_id', 'command_name', 'start_utc_date_stamp', 'cycle_time', 'dome_distance',
+                        'mount_distance', 'exposure_time_sum', 'filter_changes', 'rmmode_expno', 'dither_expno']
 
 
     def __init__(self, telescope_name: str):
         self.telescope_name = telescope_name
         self._data: str = ''
         self.data_list: List[Dict[str, str]] = []
+
         self._mk_dirs()
         super().__init__()
 
@@ -47,11 +50,10 @@ class AbstractCycleTime(ABC):
         return f'{self.telescope_name}_{command}_{self.FILE_NAMES["clean_data"]}'
 
     @abstractmethod
-    def read_data_from_file(self):
+    def read_data_from_file(self, command: str or None = None):
         raise NotImplementedError
 
     def parse_data(self):
-        self.read_data_from_file()
         s = self._data.split('\n')
         for n in s:
             if len(n) > 1:
@@ -89,15 +91,16 @@ class AbstractCycleTime(ABC):
         return datetime.datetime.utcnow()
 
     @staticmethod
-    def rm_mode(record: Dict[str, Any]) -> str:
-        return str(record['readoutmode'])
+    def rm_mode(record: Dict[str, Any]) -> int:
+        # TODO rethink this
+        return int(record['readoutmode']) + 1
 
     @staticmethod
-    def dither(record: Dict[str, Any]) -> str:
+    def dither(record: Dict[str, Any]) -> int:
         if record['dither'] == 'True':
-            return '1'
+            return 1
         else:
-            return '0'
+            return 0
 
     @staticmethod
     def az_distance(start: float, end: float) -> float:
@@ -171,6 +174,17 @@ class AbstractCycleTime(ABC):
                 s = record['kwargs']['seq'].split(',')
                 for n in s:
                     ret += 1
+        logger.debug(f'Record:{record}, seq_number:{ret}')
+        return ret
+
+    @staticmethod
+    def exposure_number(record: Dict[str, Any]) -> int:
+        ret = 0
+        if 'kwargs' in record.keys():
+            if 'seq' in record['kwargs']:
+                s = record['kwargs']['seq'].split(',')
+                for n in s:
+                    ret += int(n[0])
         logger.debug(f'Record:{record}, seq_number:{ret}')
         return ret
 

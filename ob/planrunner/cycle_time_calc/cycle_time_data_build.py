@@ -27,7 +27,7 @@ class CycleTimeDataBuild(AbstractCycleTime):
             self._data_cont[container_name] = CTData(container_name=container_name)
         self._data_cont[container_name].insert_data_from_dict(dict=dict)
 
-    def read_data_from_file(self):
+    def read_data_from_file(self, command: str or None = None):
         pass
 
     def save_to_log(self, container_name: str = 'default'):

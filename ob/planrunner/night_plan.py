@@ -65,6 +65,7 @@ class NightPlan(AbstractSequence):
         logger.info(f'Night plan {self.id} started')
         self._cycle_time_data_build.insert_data(name='command_name', value=self.name)
         self._cycle_time_data_build.insert_data(name='telescope', value=self.telescope.id)
+        self._set_r_id()
         self._cycle_time_data_build.insert_data(name='random_id', value=self._r_id)
         self._cycle_time_data_build.insert_data(name='started', value=True)
         self._cycle_time_data_build.save_to_log()

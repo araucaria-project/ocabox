@@ -123,16 +123,19 @@ class CameraExposure(SubCommand):
         return target_folder
 
     async def _camera_aget_imagearray(self) -> List[Any]:
-        try:
-            array = await self.camera.aget_imagearray()
-            return array
-        except:
-            try:
-                logger.warning(f'1-st _camera_aget_imagearray failed')
-                array = await self.camera.aget_imagearray()
-                return array
-            except:
-                logger.error(f'2-nd _camera_aget_imagearray failed')
+        array = await self.camera.aget_imagearray()
+        if array:
+            if isinstance(array, list):
+                if len(array) > 1:
+                    return array
+                else:
+                    r = 'list has 0 lenght'
+            else:
+                r = 'not list'
+        else:
+            r = array
+        logger.warning(f'Camera aget_imagearray failed')
+        self.info_callback['stream_1'](f'Error: {self.id} {self.name} aget_imagearray failed: {r}')
 
     async def _wait_for_save_fits(self, sub: int, sub_time: float) -> None:
         logger.info(f'_wait_for_save_fits started')
@@ -151,6 +154,16 @@ class CameraExposure(SubCommand):
         readoutmode = self.indexing_value(readoutmode, readoutmodes)
          # offset = indexing_value(offset, offsets)
 
+        if self.kwargs["req_ra"] is None:
+            req_ra = 'None'
+        else:
+            req_ra = self.kwargs["req_ra"]
+
+        if self.kwargs["req_dec"] is None:
+            req_dec = 'None'
+        else:
+            req_dec = self.kwargs["req_dec"]
+
         # TODO This OCA should be taken from settings
         OCA = {'latitude': -24.598056, 'longitude': -70.196389, 'elevation': 2817}
         header = fits_header(
@@ -162,25 +175,25 @@ class CameraExposure(SubCommand):
             tel_id=str(self.telescope.id),
             utc_now=str(self.exp_time_start.isoformat(sep='T', timespec='auto')),
             jd=jd,
-            req_ra=self.kwargs["req_ra"],
-            req_dec=self.kwargs["req_dec"],
+            req_ra=req_ra,
+            req_dec=req_dec,
             epoch=self.kwargs["epoch"],
-            tel_ra=self.mount.rightascension,
-            tel_dec=self.mount.declination,
-            tel_alt=self.mount.altitude,
-            tel_az=self.mount.azimuth,
-            focus=self.focuser.position,
-            rotator_pos=self.rotator.position,
+            tel_ra=await self.mount.aget_ra(),
+            tel_dec=await self.mount.aget_dec(),
+            tel_alt=await self.mount.aget_alt(),
+            tel_az=await self.mount.aget_az(),
+            focus=await self.focuser.aget_position(),
+            rotator_pos=await self.rotator.aget_position(),
             obs_type=str(self.kwargs['type']),
             object=str(self.kwargs["obj_name"]),
             filter=str(self.kwargs["filter"]),
             observer=str(self.kwargs['observer']),
             req_exp=sub_time,
             cam_exp=sub_time,
-            ccd_name=str(self.camera.sensorname),
-            ccd_temp=self.camera.ccdtemperature,
-            ccd_binx=self.camera.binx,
-            ccd_biny=self.camera.biny,
+            ccd_name=await str(self.camera.aget_sensorname()),
+            ccd_temp=await self.camera.aget_ccdtemperature(),
+            ccd_binx=await self.camera.aget_binx(),
+            ccd_biny=await self.camera.aget_biny(),
             read_mod=str(readoutmode),
             gain=str(gain)
         )

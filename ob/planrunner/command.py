@@ -128,7 +128,7 @@ class Command(AbstractSequence):
             else:
                 return False
 
-        elif self.command_name == self.possible_dither:
+        elif self.command_name in self.possible_dither:
             if 'dither' not in self.kwargs.keys():
                 return False
             elif 'dither' in self.kwargs.keys() and self.kwargs['dither'] != 'none':
@@ -461,6 +461,7 @@ class Command(AbstractSequence):
                     # Dithering
                     if seq_data.dither_this_exp(ex=ex):
 
+                        # TODO WRONG-> cannot calculate ra, dec from alt az before dithering
                         # Mount slew dithering
                         id_next = self._add_comp(MountSlew(id=self._op_id(id_next=id_next),
                                                            parent=self,
@@ -487,8 +488,8 @@ class Command(AbstractSequence):
                                                             type=self.exp_type,
                                                             light=True,
                                                             obj_name=self.object_name,
-                                                            req_ra=seq_data.ra_final,
-                                                            req_dec=seq_data.dec_final,
+                                                            req_ra=self.plan_ra,
+                                                            req_dec=self.plan_dec,
                                                             epoch=self.epoch,
                                                             filter=seq_data.filter,
                                                             focus_id=seq_data.focus_id,
