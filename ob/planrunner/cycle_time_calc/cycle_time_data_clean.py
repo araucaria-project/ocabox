@@ -36,7 +36,6 @@ class CycleTimeDataClean(AbstractCycleTime):
 
     def build_commands_data(self):
         for n_id, m_dict in self.full_nights_id.items():
-            print(self.full_nights_id)
             for p_no, q_data in enumerate(self.data_list):
                 if m_dict['started'] < p_no < m_dict['ended']:
                     if q_data['command_name'] not in self.commands_data.keys():
@@ -75,9 +74,7 @@ class CycleTimeDataClean(AbstractCycleTime):
 
     def _build_command_data(self, night_id: str, line_start: int):
         first = self.data_list[line_start]
-        print(self.data_list[line_start], line_start)
         second = self.data_list[line_start + 1]
-        print(self.data_list[line_start + 1], line_start + 1)
         third = self.data_list[line_start + 2]
 
         if 'dome_az_end' in third.keys():

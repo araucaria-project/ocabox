@@ -66,16 +66,19 @@ class CycleTimeTrain(AbstractCycleTime):
         model.fit(x_train, y_train)
         y_pred = model.predict(x_test)
         self.r2 = r2_score(y_test, y_pred)
-        self.coef = model.coef_
-        self.intercept = model.intercept_
+        self.coef = model.coef_[0]
+        self.intercept = model.intercept_[0]
+
+    def save_training_data_to_file(self):
+        pass
 
 
 if __name__ == '__main__':
     c = CycleTimeTrain('dev', )
     c.train_data_comm('OBJECT')
-    print(c.data_list)
-    print(c.data_x)
-    print(c.data_y)
+    #print(c.data_list)
+    #print(c.data_x)
+    #print(c.data_y)
     print(c.r2)
     print(c.coef)
     print(c.intercept)
