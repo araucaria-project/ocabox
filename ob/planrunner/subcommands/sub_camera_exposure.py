@@ -190,7 +190,7 @@ class CameraExposure(SubCommand):
             observer=str(self.kwargs['observer']),
             req_exp=sub_time,
             cam_exp=sub_time,
-            ccd_name=await str(self.camera.aget_sensorname()),
+            ccd_name=str(await self.camera.aget_sensorname()),
             ccd_temp=await self.camera.aget_ccdtemperature(),
             ccd_binx=await self.camera.aget_binx(),
             ccd_biny=await self.camera.aget_biny(),

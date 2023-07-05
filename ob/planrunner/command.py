@@ -11,7 +11,7 @@ from ob.planrunner.subcommands.sub_focusing import Focusing
 from ob.planrunner.subcommands.sub_stop import Stop
 from ob.planrunner.subcommands.sub_wait import Wait
 from ob.planrunner.cycle_time_calc.cycle_time_data_build import  CycleTimeDataBuild
-from pyaraucaria.coordinates import az_alt_2_ra_dec, ra_to_decimal, dec_to_decimal, deg_to_decimal_deg
+from pyaraucaria.coordinates import ra_to_decimal, dec_to_decimal, deg_to_decimal_deg
 from ob.planrunner.seq import Seq
 from ob.planrunner.subcommand import SubCommand
 from ob.planrunner.coded_error import SequenceTreeError
@@ -208,7 +208,7 @@ class Command(AbstractSequence):
 
     @property
     def plan_az(self) -> float or None:
-        if 'alt' and 'az' in self.kwargs.keys():
+        if 'az' in self.kwargs.keys():
             try:
                 return float(self.kwargs['az'])
             except ValueError:
@@ -221,7 +221,7 @@ class Command(AbstractSequence):
 
     @property
     def plan_alt(self) -> float or None:
-        if 'alt' and 'az' in self.kwargs.keys():
+        if 'alt' in self.kwargs.keys():
             try:
                 return float(self.kwargs['alt'])
             except ValueError:
@@ -400,7 +400,7 @@ class Command(AbstractSequence):
         id_next = 0
 
         # Mount slewing radec
-        if self.plan_ra and self.plan_dec:
+        if (self.plan_ra and self.plan_dec) is not None and (self.plan_az and self.plan_alt) is None:
             id_next = self._add_comp(MountSlew(id=self._op_id(id_next=id_next),
                                                    parent=self,
                                                    obj_name=self.object_name,
@@ -410,7 +410,7 @@ class Command(AbstractSequence):
                                                    epoch=self.epoch,
                                                    uobi=self.uobi), id_next=id_next)
         # Mount slewing altaz
-        elif self.plan_az and self.plan_alt:
+        if (self.plan_ra and self.plan_dec) is None and (self.plan_az and self.plan_alt) is not None:
             id_next = self._add_comp(MountSlew(id=self._op_id(id_next=id_next),
                                                parent=self,
                                                obj_name=self.object_name,
@@ -461,13 +461,13 @@ class Command(AbstractSequence):
                     # Dithering
                     if seq_data.dither_this_exp(ex=ex):
 
-                        # TODO WRONG-> cannot calculate ra, dec from alt az before dithering
                         # Mount slew dithering
                         id_next = self._add_comp(MountSlew(id=self._op_id(id_next=id_next),
                                                            parent=self,
                                                            obj_name=self.object_name,
-                                                           ra=seq_data.ra_dither,
-                                                           dec=seq_data.dec_dither,
+                                                           dither=True,
+                                                           dither_distance=seq_data.dither_distance,
+                                                           dither_mode=seq_data.dither_mode,
                                                            tracking=self.tracking,
                                                            epoch=self.epoch,
                                                            uobi=self.uobi), id_next=id_next)
