@@ -24,6 +24,7 @@ class AbstractCycleTime(ABC):
                         'mount_distance', 'exposure_time_sum', 'filter_changes', 'rmmode_expno', 'dither_expno']
     X_COLUMNS = DATA_CLEAN_ORDER[4:]
     Y_COLUMN = DATA_CLEAN_ORDER[3]
+    POSSIBLE_DITHER = ['OBJECT', 'SNAP']
 
     @staticmethod
     def get_list_telesc(file_type: str) -> List[str]:
@@ -101,7 +102,7 @@ class AbstractCycleTime(ABC):
             return None
 
     @staticmethod
-    def timestamp() -> datetime:
+    def time_stamp() -> datetime:
         return datetime.datetime.utcnow()
 
     @staticmethod
@@ -216,3 +217,35 @@ class AbstractCycleTime(ABC):
                     f = z[1]
         logger.debug(f'Record:{record}, filter_changes:{ret}')
         return ret
+
+    @staticmethod
+    def dither_on(command_dict: Dict[str, Any]) -> int:
+        """
+        Do dithering or not.
+        :return: bool
+        """
+        if 'kwargs' in command_dict.keys():
+            kw = command_dict['kwargs']
+        else:
+            kw = {}
+        if command_dict['command_name'] == 'SKYFLAT':
+            if 'dither' not in kw.keys():
+                return 1
+            elif 'dither' in kw.keys() and kw['dither'] != 'none':
+                return 1
+            elif 'dither' in kw.keys() and kw['dither'] == 'none':
+                return 0
+            else:
+                return 0
+
+        elif command_dict['command_name'] in AbstractCycleTime.POSSIBLE_DITHER:
+            if 'dither' not in kw.keys():
+                return 0
+            elif 'dither' in kw.keys() and kw['dither'] != 'none':
+                return 1
+            elif 'dither' in kw.keys() and kw['dither'] == 'none':
+                return 0
+            else:
+                return 0
+        else:
+            return 1

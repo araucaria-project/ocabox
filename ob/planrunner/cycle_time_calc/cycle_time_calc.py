@@ -1,6 +1,8 @@
 from typing import Dict, Any, List
 import logging
 from ob.planrunner.cycle_time_calc.abstract_cycle_time import AbstractCycleTime
+import datetime
+from pyaraucaria.coordinates import ra_to_decimal, dec_to_decimal
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -12,12 +14,14 @@ class CycleTimeCalc(AbstractCycleTime):
 
     def __init__(self, telescope: str):
         self.available_param: Dict[str, Dict[str, Any]] = {}
-        self._complete_time: float = 0.0
         self._rmode: int = 0
-        self._alt_mount: float = 0.0
+        self._current_filter: str = ''
+        self._alt_mount: float = 70.0
         self._az_mount: float = 0.0
         self._az_dome: float = 0.0
         self.telescope = telescope
+        self._time_length: float = 0.0
+        self._start_time: datetime.datetime or None = None
         super().__init__()
         self._get_params()
 
@@ -51,8 +55,18 @@ class CycleTimeCalc(AbstractCycleTime):
     def set_start_rmode(self, rmode):
         self._rmode = rmode
 
-    #TODO change _rmode along operations
+    def set_start_time(self, utc_time_stamp: datetime.datetime or None = None):
+        if utc_time_stamp is None:
+            self._start_time = CycleTimeCalc.time_stamp().timestamp()
+        else:
+            self._start_time = utc_time_stamp
 
+    def set_telescope_start_az_alt(self, az: float, alt: float):
+        self._alt_mount = alt
+        self._az_mount = az
+
+    def set_dome_start_az(self, az: float):
+        self._az_dome = az
 
     z = ['command_name''dome_distance','mount_distance', 'exposure_time_sum',
          'filter_changes', 'rmmode_expno', 'dither_expno']
@@ -61,8 +75,12 @@ class CycleTimeCalc(AbstractCycleTime):
      "cycle_time": 25.262605905532837, "dome_distance": 0.0, "mount_distance": 0.10341941737077996,
      "exposure_time_sum": 15.0, "filter_changes": 2, "rmmode_expno": 7, "dither_expno": 0}
 
+
+
     # TODO get first rm from telescope
     # TODO rest read from data
+    # TODO mount distane calculate from ra, dec (no matter if ra dec or altaz - calculate same)
+    # TODO dome distane calculate from ra change?
 
     const = ['rmode', ]
     """
@@ -91,19 +109,88 @@ class CycleTimeCalc(AbstractCycleTime):
     CycleTimeDataClean.DATA_CLEAN_ORDER[9]:
     CycleTimeDataClean.dither(first) * CycleTimeDataClean.exposure_number(first),"""
 
+    def _mount_altaz_target(self, command_dict: Dict[str, Any]) -> Dict[str, float] or None:
+        altaz = None
+        if 'args' in command_dict.keys():
+            if len(command_dict['args']) == 2:
+                ra = command_dict['args'][0]
+                dec = command_dict['args'][1]
+            elif len(command_dict['args']) == 3:
+                ra = command_dict['args'][1]
+                dec = command_dict['args'][2]
+            else:
+                ra = None
+                dec = None
+            if (self._start_time is None) and (ra is not None) and (dec is not None):
+                altaz = {'az': ra_to_decimal(ra), 'alt': dec_to_decimal(dec)}
+            else:
+                raise NotImplementedError
+        else:
+            pass
+        if 'kwargs' in command_dict.keys():
+            if ('az' and 'alt') in command_dict.keys():
+                az = command_dict['kwargs']['az']
+                alt = command_dict['kwargs']['alt']
+                altaz = {'az': az, 'alt': alt}
+        return altaz
 
-    def calc_time(self, command_str: Dict[str, Any]) -> float or None:
 
-        if command_str['command_name'] in self.avialable_param_telesc_commands:
-            time = 0
+    def calc_time(self, command_dict: Dict[str, Any]) -> float or None:
 
-
-            return time
+        if command_dict['command_name'] in self.avialable_param_telesc_commands:
+            azalt = self._mount_altaz_target(command_dict=command_dict)
+            if azalt is not None:
+                mount_alt_az_dist = CycleTimeCalc.alt_az_distance(start_alt=self._alt_mount,
+                                                                  end_alt=azalt['alt'],
+                                                                  start_az=self._az_mount,
+                                                                  end_az=azalt['az'])
+                dome_az_dist = CycleTimeCalc.az_distance(start=self._az_dome, end=azalt['az'])
+            else:
+                mount_alt_az_dist = 0.0
+                dome_az_dist = 0.0
+            command_dict_param = {}
+            exp_no = CycleTimeCalc.exposure_number(command_dict)
+            dither = CycleTimeCalc.dither_on(command_dict=command_dict)
+            command_dict['filter_pos'] = self._current_filter
+            command_dict_param['dome_distance'] = dome_az_dist
+            command_dict_param['mount_distance'] = mount_alt_az_dist
+            command_dict_param['exposure_time_sum'] = CycleTimeCalc.exposure_time_sum(command_dict)
+            command_dict_param['filter_changes'] = CycleTimeCalc.filter_changes(command_dict)
+            # TODO make func to leave filter on right position
+            command_dict_param['rmmode_expno'] = (self._rmode + 1) * exp_no
+            command_dict_param['dither_expno'] = dither * exp_no
+            self._alt_mount = azalt['alt']
+            self._az_mount = azalt['az']
+            self._az_dome = azalt['az']
+            tc = self.time_calc(command_name=command_dict['command_name'], command_dict_param=command_dict_param)
+            if tc:
+                comm_time = tc
+            else:
+                comm_time = 0.0
+            return comm_time
         else:
             logger.debug(f'Cannot calculate time, lack of params')
+            return 0.0
+
+    def time_calc(self, command_name: str, command_dict_param: Dict[str, Any]) -> float or None:
+        no_error = True
+        param = self.available_param[self.telescope][command_name]
+        for n, m in command_dict_param.items():
+            if n not in param['coef'].keys():
+                no_error = False
+        if no_error:
+            ret = 0
+            for n, m in command_dict_param.items():
+                ret += (m * param['coef'][n])
+            ret += param['intercept']
+            return ret
+        else:
             return None
+
 
 if __name__ == '__main__':
     c = CycleTimeCalc('dev')
     print(c.avialable_param_telesc)
     print(c.avialable_param_telesc_commands)
+    d = {'command_name': 'OBJECT', 'args': ['FF_Aql', '18:58:14.75', '17:21:39.29'], 'kwargs': {'seq': '5/I/60,5/V/70'}}
+    print(c.calc_time(command_dict=d))

@@ -53,7 +53,7 @@ class CycleTimeTrain(AbstractCycleTime):
         for n, m in enumerate(CycleTimeTrain.X_COLUMNS, start=0):
             c[m] = param['coef'][n]
         dat = OrderedDict({
-            'train_utc_time_stamp': str(CycleTimeTrain.timestamp().isoformat()),
+            'train_utc_time_stamp': str(CycleTimeTrain.time_stamp().isoformat()),
             'coef': c,
             'intercept': param['intercept'],
             'r2': param['r2']
