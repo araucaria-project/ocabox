@@ -68,46 +68,10 @@ class CycleTimeCalc(AbstractCycleTime):
     def set_dome_start_az(self, az: float):
         self._az_dome = az
 
-    z = ['command_name''dome_distance','mount_distance', 'exposure_time_sum',
-         'filter_changes', 'rmmode_expno', 'dither_expno']
-
-    u = {"night_id": "326777", "command_name": "OBJECT", "start_utc_date_stamp": "2023-07-05T13:33:56.870223",
-     "cycle_time": 25.262605905532837, "dome_distance": 0.0, "mount_distance": 0.10341941737077996,
-     "exposure_time_sum": 15.0, "filter_changes": 2, "rmmode_expno": 7, "dither_expno": 0}
-
-
-
     # TODO get first rm from telescope
     # TODO rest read from data
-    # TODO mount distane calculate from ra, dec (no matter if ra dec or altaz - calculate same)
-    # TODO dome distane calculate from ra change?
-
-    const = ['rmode', ]
-    """
-    ['command_name'],
-
-
-    CycleTimeDataClean.DATA_CLEAN_ORDER[1]:
-    first['command_name'],"""
-
-
-    """
-    CycleTimeDataClean.DATA_CLEAN_ORDER[4]:
-    CycleTimeDataClean.az_distance(start=float(first['dome_az_begin']),
-                   end=float(third[index_dome])),
-    CycleTimeDataClean.DATA_CLEAN_ORDER[5]:
-    CycleTimeDataClean.alt_az_distance(start_alt=float(first['mount_alt_begin']),
-                       end_alt=float(third[index_mount_alt]),
-                       start_az=float(first['mount_az_begin']),
-                       end_az=float(third[index_mount_az])),
-    CycleTimeDataClean.DATA_CLEAN_ORDER[6]:
-    CycleTimeDataClean.exposure_time_sum(first),
-    CycleTimeDataClean.DATA_CLEAN_ORDER[7]:
-    CycleTimeDataClean.filter_changes(first),
-    CycleTimeDataClean.DATA_CLEAN_ORDER[8]:
-    CycleTimeDataClean.rm_mode(second) * CycleTimeDataClean.exposure_number(first),
-    CycleTimeDataClean.DATA_CLEAN_ORDER[9]:
-    CycleTimeDataClean.dither(first) * CycleTimeDataClean.exposure_number(first),"""
+    # TODO mount distance calculate from ra, dec (no matter if ra dec or altaz - calculate same)
+    # TODO dome distance calculate from ra change?
 
     def _mount_altaz_target(self, command_dict: Dict[str, Any]) -> Dict[str, float] or None:
         altaz = None
@@ -124,13 +88,14 @@ class CycleTimeCalc(AbstractCycleTime):
             if (self._start_time is None) and (ra is not None) and (dec is not None):
                 altaz = {'az': ra_to_decimal(ra), 'alt': dec_to_decimal(dec)}
             else:
-                raise NotImplementedError
+                # TODO DO START TIME FOR CALC AND EVENTUALLY SKIPPING OPERATIONS ZERO TIME
+                pass
         else:
             pass
         if 'kwargs' in command_dict.keys():
-            if ('az' and 'alt') in command_dict.keys():
-                az = command_dict['kwargs']['az']
-                alt = command_dict['kwargs']['alt']
+            if ('az' and 'alt') in command_dict['kwargs'].keys():
+                az = float(command_dict['kwargs']['az'])
+                alt = float(command_dict['kwargs']['alt'])
                 altaz = {'az': az, 'alt': alt}
         return altaz
 
@@ -162,11 +127,13 @@ class CycleTimeCalc(AbstractCycleTime):
             self._alt_mount = azalt['alt']
             self._az_mount = azalt['az']
             self._az_dome = azalt['az']
+            print(command_dict_param)
             tc = self.time_calc(command_name=command_dict['command_name'], command_dict_param=command_dict_param)
             if tc:
                 comm_time = tc
             else:
                 comm_time = 0.0
+            self._time_length += comm_time
             return comm_time
         else:
             logger.debug(f'Cannot calculate time, lack of params')
@@ -192,5 +159,6 @@ if __name__ == '__main__':
     c = CycleTimeCalc('dev')
     print(c.avialable_param_telesc)
     print(c.avialable_param_telesc_commands)
-    d = {'command_name': 'OBJECT', 'args': ['FF_Aql', '18:58:14.75', '17:21:39.29'], 'kwargs': {'seq': '5/I/60,5/V/70'}}
+    d = {'command_name': 'OBJECT', 'kwargs': {'seq': '12/Red/1,3/Green/3,2/Blue/5', 'az': 12.0, 'alt':70.0}}
     print(c.calc_time(command_dict=d))
+    print(c._time_length)

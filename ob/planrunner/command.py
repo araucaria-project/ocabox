@@ -11,6 +11,7 @@ from ob.planrunner.subcommands.sub_focusing import Focusing
 from ob.planrunner.subcommands.sub_stop import Stop
 from ob.planrunner.subcommands.sub_wait import Wait
 from ob.planrunner.cycle_time_calc.cycle_time_data_build import  CycleTimeDataBuild
+from ob.planrunner.cycle_time_calc.cycle_time_calc import CycleTimeCalc
 from pyaraucaria.coordinates import ra_to_decimal, dec_to_decimal, deg_to_decimal_deg
 from ob.planrunner.seq import Seq
 from ob.planrunner.subcommand import SubCommand
@@ -38,6 +39,7 @@ class Command(AbstractSequence):
         self.param = param
         self.info_callback = parent.info_callback
         self._cycle_time_data_build = CycleTimeDataBuild(self.telescope.id)
+        self.cycle_time = CycleTimeCalc(self.telescope.id)
         super().__init__(self.id, self.command_name, self.info_callback,
                          observatory=self.parent.observatory, c_type='command', kwargs=self.kwargs)
         self._write_subcommands()
@@ -50,7 +52,10 @@ class Command(AbstractSequence):
             kw = f'{kw} {n}={self.kwargs[n]}'
         for n in self.parent_kwargs.keys():
             kw = f'{kw} {n}={self.parent_kwargs[n]}'
-        self.info_callback['c_commands'](f'{self.id};{self.command_name};{kw}')
+        # TODO Rethink how to pass self.cycle_time through
+        self.info_callback['c_commands'](f'{self.id};'
+                                         f'{self.command_name};'
+                                         f' {self.cycle_time.calc_time(command_dict=self.sequence_dict)}') #{kw}')
         logger.info(f'{self.id} {self.command_name} {self.args} {self.kwargs} is written')
 
     def _write_subcommands(self) -> None:

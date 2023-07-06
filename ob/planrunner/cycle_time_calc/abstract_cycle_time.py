@@ -199,7 +199,7 @@ class AbstractCycleTime(ABC):
             if 'seq' in record['kwargs']:
                 s = record['kwargs']['seq'].split(',')
                 for n in s:
-                    ret += int(n[0])
+                    ret += int(n.split('/')[0])
         logger.debug(f'Record:{record}, seq_number:{ret}')
         return ret
 
