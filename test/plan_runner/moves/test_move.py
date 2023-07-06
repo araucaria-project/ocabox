@@ -13,7 +13,7 @@ from ob.planrunner.ern.plan_data import PlanData
 from test.data_colection.base_async_test import BaseAsyncTest
 
 
-class ResourceTest(unittest.TestCase, BaseAsyncTest):
+class MoveTest(unittest.TestCase, BaseAsyncTest):
     OBSERVATORY_NAME = 'test_observatory'
 
     def setUp(self):
@@ -34,7 +34,7 @@ class ResourceTest(unittest.TestCase, BaseAsyncTest):
         """Test method `progress` from Move object"""
 
         async def coro():
-            plan_data = PlanData(access_resource_manager=await self.tao.get_res_manager())
+            plan_data = PlanData(access_resource_manager=await self.tao.get_res_manager(), client_api=self.api_test)
             await self.tree_freezer.run()
             position_ra = random.randint(170, 190)
             rm = await self.tao.get_res_manager()

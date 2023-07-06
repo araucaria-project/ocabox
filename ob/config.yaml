@@ -135,6 +135,16 @@ tree:
         dome:
           kind: dome
           device_number: 0
+        filterwheel:
+          kind: filterwheel
+          device_number: 0
+          filters: {} # optional
+        filterwheel2:  # second filterwheel but in alpaca is the same
+          kind: filterwheel
+          device_number: 1
+          filters: # optional
+            a: 1
+            b: 2
   test_observatory_down:
     observatory:
       comment: Simulated observatory for tests

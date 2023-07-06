@@ -1,8 +1,7 @@
 import logging
-from functools import cached_property
 
-from ob.planrunner.ern.command_Sequence import CommandSequence
-from ob.planrunner.ern.command_Zero import CommandZero
+from ob.planrunner.ern.commands.command_Sequence import CommandSequence
+from ob.planrunner.ern.commands.command_Zero import CommandZero
 
 logger = logging.getLogger(__name__)
 

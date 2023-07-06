@@ -19,7 +19,7 @@ class Position:
         self.task = None
         self._address = address
         self._finish_fut = None
-        self.timeout = timeout if timeout is not None else 20
+        self.timeout = timeout if timeout is not None else 5
         self.order = order
         self._start_tmstp = 0
         self._finish_tmstp = 0
@@ -113,10 +113,11 @@ class Position:
     @property
     def progress(self) -> float:
         """
-            Method count progress changing value
+        Method count progress changing value
 
-            :return: progress in float format from 0 to 1
-            """
+        :return: progress in float format from 0 to 1
+        """
+        # todo zrobić z tego Param - urzyć tej biblioteki Param i ze wszystkich innych wartości też
         if self.done():
             return float(1)
         # one of values not loaded
@@ -142,7 +143,6 @@ class Position:
         # wait for your turn
         for o in self._wait_for_others:
             await o.get_finish_future()
-        # todo dodać jeszcze timeouty
         CQ = await api.subscribe(address=self._address,
                                  time_of_data_tolerance=0.3, delay=0.1)
         CQ.start()
@@ -179,6 +179,10 @@ class Position:
                     self.error = True
                     self._finish_fut.set_result(False)
                     return
+        except (asyncio.CancelledError, asyncio.TimeoutError):
+            self._finish_fut.set_result(False)
+            self.error = True
+            self.error_content = "Waiting for the target to be reached has been interrupted"
         finally:
             self._finish_tmstp = time.time()
             if not self._finish_fut.done():

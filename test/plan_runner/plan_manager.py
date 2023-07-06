@@ -1,10 +1,8 @@
-import asyncio
 import logging
-import time
 import unittest
 
-from ob.planrunner.ern.command_Object import CommandObject
-from ob.planrunner.ern.command_Sequence import CommandSequence
+from ob.planrunner.ern.commands.command_Object import CommandObject
+from ob.planrunner.ern.commands.command_Sequence import CommandSequence
 from ob.planrunner.ern.plan_manager import PlanManager
 from test.data_colection.base_async_test import BaseAsyncTest
 

@@ -1,8 +1,9 @@
 import dataclasses
 import logging
 import typing
-import ob.planrunner.ern.command_Object
-import ob.planrunner.ern.command_Sequence
+import ob.planrunner.ern.commands.command_Object
+import ob.planrunner.ern.commands.command_Sequence
+from ob.comunication.internal_client_api import InternalClientAPI
 from ob.data_colection.resource_manager.resource_manager import ResourceManager
 from ob.planrunner.ern.plan_task_manager import PlanTaskManager
 from ob.planrunner.ern.plan_task_manager_protocol import PlanTaskManagerProtocol
@@ -14,9 +15,10 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class PlanData:
 
     access_resource_manager: ResourceManager
+    client_api: InternalClientAPI
     DEFAULT_MAP_COMMANDS: typing.ClassVar[dict] = {
-        "SEQUENCE": ob.planrunner.ern.command_Sequence.CommandSequence,
-        "OBJECT": ob.planrunner.ern.command_Object.CommandObject,
+        "SEQUENCE": ob.planrunner.ern.commands.command_Sequence.CommandSequence,
+        "OBJECT": ob.planrunner.ern.commands.command_Object.CommandObject,
     }
     task_mngr: PlanTaskManagerProtocol = None
     plan_log: logging.Logger = logging.getLogger(name="ObsPlanLog")

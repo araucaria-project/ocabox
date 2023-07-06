@@ -7,17 +7,28 @@ from ob.planrunner.ern.base_command import BaseCommand
 class Move(BaseCommand):
     _NAME = "MOVE"
 
-    def __init__(self, api, plan_data):
+    def __init__(self, plan_data):
         super().__init__(plan_data=plan_data)
-        self.error = False
-        self.error_content = None
         self.positions = []
-        self._api = api
         self._actn = None
 
     async def watch(self):
         for p in self.positions:
-            await p.run(api=self._api)
+            await p.run(api=self.api)
+
+    @property
+    def error(self):
+        for p in self.positions:
+            if p.error:
+                return p.error
+        return False
+
+    @property
+    def error_content(self):
+        for p in self.positions:
+            if p.error:
+                return p.error_content
+        return ""
 
     @property
     def progress(self):

@@ -2,6 +2,8 @@ import asyncio
 import logging
 from typing import Optional, Dict
 from pyaraucaria.obs_plan.obs_plan_parser import ObsPlanParser
+
+from ob.comunication.internal_client_api import InternalClientAPI
 from ob.data_colection.resource_manager.resource_manager import ResourceManager
 from ob.planrunner.ern.command import Command
 from ob.planrunner.ern.errors import PlanBuildError
@@ -11,17 +13,18 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class PlanManager:
-    def __init__(self, acs_res_mngr: ResourceManager, loop: asyncio.AbstractEventLoop = None, **kwargs):
+    def __init__(self, acs_res_mngr: ResourceManager, api: InternalClientAPI, loop: asyncio.AbstractEventLoop = None,
+                 **kwargs):
         super().__init__(**kwargs)
         self._loop = loop
         self._set_loop()
-        self._acs_res_mngr = acs_res_mngr
+        self._acs_res_mngr: ResourceManager = acs_res_mngr
         if not isinstance(self._acs_res_mngr, ResourceManager):
             raise RuntimeError
         self._plans: Dict[str, Command] = {}
         self._plan_runner_task = asyncio.Task = None
         self._running_plan_id: str = ""
-        self._clientAPI = None
+        self._clientAPI: InternalClientAPI = api
 
     @staticmethod
     def _parse_plan(raw_plan: str):
@@ -49,7 +52,8 @@ class PlanManager:
             logger.warning(f"Can not update plan witch id: {plan_id} because is actually running")
             return False
         try:
-            np = PlanManager.from_dict(parsed_plan, access_resource_manager=self._acs_res_mngr, loop=self._loop)
+            np = PlanManager.from_dict(parsed_plan, access_resource_manager=self._acs_res_mngr, api=self._clientAPI,
+                                       loop=self._loop)
         except PlanBuildError as e:
             logger.warning(f"Can not create plan witch id: {plan_id} because plan data is corrupted. error "
                            f"message: {e.msg}")
@@ -64,13 +68,14 @@ class PlanManager:
         return True
 
     @classmethod
-    def from_dict(cls, dic: dict, access_resource_manager, loop=None):
+    def from_dict(cls, dic: dict, access_resource_manager, api, loop=None):
         """
         Method create observation plan structure from given dictionary.
 
         :param dic: dictionary representing observation plans
         :param access_resource_manager: resource manager
         :param loop: async loop
+        :param api: requesting api
         :raise PlanBuildError: if dict data is corrupted or can not create plan for other reasons
         :return: plan structure
         """
@@ -82,7 +87,8 @@ class PlanManager:
         # todo przerobić jakoś ten parser żeby zwracał standardowe klucze dla wszystkich poleciń. Dla SEQUENCE też:
         #  zamiast 'all_commands':[] to albo w argsach albo 'subcomands':[]
         try:
-            plans = Command.build_command(dic=dic, plan_data=PlanData(access_resource_manager=access_resource_manager),
+            plans = Command.build_command(dic=dic, plan_data=PlanData(access_resource_manager=access_resource_manager,
+                                                                      client_api=api),
                                           id_=None, previous_command=None, loop=loop)
         except PlanBuildError:
             raise

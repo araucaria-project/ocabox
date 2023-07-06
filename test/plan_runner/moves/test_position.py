@@ -11,7 +11,7 @@ from ob.data_colection.specialistic_components.tree_conditional_freezer import T
 from test.data_colection.base_async_test import BaseAsyncTest
 
 
-class ResourceTest(unittest.TestCase, BaseAsyncTest):
+class PsitionTest(unittest.TestCase, BaseAsyncTest):
     OBSERVATORY_NAME = 'test_observatory'
 
     def setUp(self):

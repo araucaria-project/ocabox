@@ -40,6 +40,7 @@ tree:
         filterwheel:
           kind: filterwheel
           device_number: 0
+          filters: {}  # optional
         switch:
           kind: switch
           device_number: 0
@@ -83,6 +84,7 @@ tree:
         filterwheel:
           kind: filterwheel
           device_number: 0
+          filters : {u: 0, g: 1, r: 2, i: 3, z: 4, B: 5, V: 6, Ic: 7}  # optional
         switch:
           kind: switch
           device_number: 0
@@ -126,6 +128,7 @@ tree:
         filterwheel:
           kind: filterwheel
           device_number: 0
+          filters: {Empty: 0, u SG: 1, b SG: 2, v SG: 3, y SG: 4, Hb_w: 5, Hb_n: 6, Ha_w: 7, Ha_n: 8, u: 9, g: 10, r: 11, i: 12, z: 13, B: 14, V: 15, iC: 16}  # optional
         switch:
           kind: switch
           device_number: 0
@@ -166,6 +169,7 @@ tree:
         filterwheel:
           kind: filterwheel
           device_number: 0
+          filters: {}  # optional
         switch:
           kind: switch
           device_number: 0
@@ -205,6 +209,7 @@ tree:
         filterwheel:
           kind: filterwheel
           device_number: 0
+          filters: {}  # optional
         switch:
           kind: switch
           device_number: 0
@@ -242,6 +247,7 @@ tree:
         filterwheel:
           kind: filterwheel
           device_number: 0
+          filters: {}  # optional
         switch:
           kind: switch
           device_number: 0
@@ -279,6 +285,7 @@ tree:
         filterwheel:
           kind: filterwheel
           device_number: 0
+          filters: {}  # optional
         switch:
           kind: switch
           device_number: 0

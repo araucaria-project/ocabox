@@ -29,6 +29,7 @@ tree:
         filterwheel:
           kind: filterwheel
           device_number: 0
+          filters: {}  # optional
         switch:
           kind: switch
           device_number: 0

@@ -41,3 +41,14 @@ class InternalClientAPI(BaseClientAPI):
         if resp is None:
             return None
         return resp
+
+    async def server_is_alive(self, request_timeout: float = None):
+        return True
+
+    def get_cfg(self, name_cfg: str, default=None, use_default_settings=True):
+        # todo Mikołaj coś trzeba zrobić z tym configiem żeby twoje api było kompatybilne na serverze !!!
+        return default
+
+    def get_cfg_deep(self, name_cfg: List[str], default=None, use_default_settings=True):
+        # todo Mikołaj coś trzeba zrobić z tym configiem żeby twoje api było kompatybilne na serverze !!!
+        return default

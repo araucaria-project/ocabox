@@ -1,5 +1,6 @@
 from pyaraucaria.coordinates import ra_to_decimal, dec_to_decimal, ra_dec_epoch, ra_dec_2_az_alt
 
+from ob.comunication.comunication_error import CommunicationTimeoutError, CommunicationRuntimeError
 from ob.data_colection.resource_manager.resource_manager import ResourceManager
 from ob.planrunner.ern.errors import PlanBuildError
 from ob.planrunner.ern.moves.move import Move
@@ -10,8 +11,8 @@ from ob.data_colection.resource_manager.errors import ResourceCommandError
 class MountSlewRaDec(Move):
     _USED_RESOURCE = ResourceManager.MOUNT
 
-    def __init__(self, api, ra_dec, plan_data, resource_nr=0):
-        super().__init__(api=api, plan_data=plan_data)
+    def __init__(self, ra_dec, plan_data, resource_nr=0):
+        super().__init__(plan_data=plan_data)
         self._resource_nr = resource_nr
         self._resource_content = self.res_mngr.get_resource(self._USED_RESOURCE, nr=self._resource_nr)
         self._ra = ra_dec[0]
@@ -57,15 +58,21 @@ class MountSlewRaDec(Move):
             raise ResourceCommandError(f"Altitude is lover then min altitude")
 
         # ----------------- set tracking -----------------
-        result = await self._api.put_async(address=f"{self._resource_content.adr}.tracking",
-                                           parameters_dict={"Tracking": True}, no_wait=False)
+        try:
+            result = await self.api.put_async(address=f"{self._resource_content.adr}.tracking",
+                                              parameters_dict={"Tracking": True}, no_wait=False)
+        except (CommunicationRuntimeError, CommunicationTimeoutError) as e:  # probably newer happened
+            raise ResourceCommandError(f"Action has error {str(e)}")
         if not result.status:
             raise ResourceCommandError(f"Action has error status in response {result.error}")
         # ----------------- move mount -----------------
-        result = await self._api.put_async(address=f"{self._resource_content.adr}.slewtocoordinatesasync",
-                                           parameters_dict={"RightAscension": self._real_ra,
-                                                            "Declination": self._real_dec},
-                                           no_wait=False)
+        try:
+            result = await self.api.put_async(address=f"{self._resource_content.adr}.slewtocoordinatesasync",
+                                              parameters_dict={"RightAscension": self._real_ra,
+                                                               "Declination": self._real_dec},
+                                              no_wait=False)
+        except (CommunicationRuntimeError, CommunicationTimeoutError) as e:  # probably newer happened
+            raise ResourceCommandError(f"Action has error {str(e)}")
         if not result.status:
             raise ResourceCommandError("Action has error status in response")
         await self.watch()

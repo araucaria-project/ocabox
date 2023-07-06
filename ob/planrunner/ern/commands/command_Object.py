@@ -22,7 +22,6 @@ class CommandObject(Command):
         # --- --- --- --- --- --- --- --- --- --- ---
         self._mapped_args: dict = {"ra": None, "dec": None, "object_name": None, "filter": None, "repetitions": None}
         self._read_args(self.get_args())
-        # todo dodać metodę build wywoływaną jak __init__ w którym się zbuduje wszystko np tak jak przy asynchronicznych metodach taki acync init
         # ------ subcommands ------
         self._move_mount: Optional[Move] = None
 
@@ -43,10 +42,10 @@ class CommandObject(Command):
         """
         try:
             if self._arg("alt") and self._arg("az"):
-                self._move_mount = MountSlewAltAz(api=4, resource_nr=0, alt_az=(self._arg("alt"), self._arg("az")),
+                self._move_mount = MountSlewAltAz(resource_nr=0, alt_az=(self._arg("alt"), self._arg("az")),
                                                   plan_data=self._plan_data)
             else:
-                self._move_mount = MountSlewRaDec(api=4, resource_nr=0, ra_dec=(self._arg("ra"), self._arg("dec")),
+                self._move_mount = MountSlewRaDec(resource_nr=0, ra_dec=(self._arg("ra"), self._arg("dec")),
                                                   plan_data=self._plan_data)
         except PlanBuildError:
             raise

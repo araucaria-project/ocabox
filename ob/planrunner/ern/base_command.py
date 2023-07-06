@@ -1,6 +1,7 @@
 import logging
 from abc import ABC, abstractmethod
 
+from ob.comunication.internal_client_api import InternalClientAPI
 from ob.data_colection.resource_manager.resource_manager import ResourceManager
 from ob.planrunner.ern.plan_task_manager_protocol import PlanTaskManagerProtocol
 
@@ -29,6 +30,10 @@ class BaseCommand(ABC):
     @property
     def tsk_mngr(self) -> PlanTaskManagerProtocol:
         return self._plan_data.task_mngr
+
+    @property
+    def api(self) -> InternalClientAPI:
+        return self._plan_data.client_api
 
     @abstractmethod
     async def a_init(self):
