@@ -13,11 +13,6 @@ class CycleTimeDataClean(AbstractCycleTime):
     """
 
     @staticmethod
-    def read_data_from_file(telescope: str) -> str:
-        return CycleTimeDataClean.read_file(CycleTimeDataClean.BASE_FOLDER_NAME,
-                                            CycleTimeDataClean.raw_file_name(telescope=telescope))
-
-    @staticmethod
     def find_full_nights_id(data: List[Any]) -> Dict[str, Dict[str, Any]]:
         random_id = ''
         full_nights_id = {}
@@ -143,7 +138,8 @@ class CycleTimeDataClean(AbstractCycleTime):
         """
         Method reading and cleaning only data from full nights (i.e. complete program) and only new data
         """
-        str_dat = CycleTimeDataClean.read_data_from_file(telescope=telescope)
+        str_dat = CycleTimeDataClean.read_file(CycleTimeDataClean.BASE_FOLDER_NAME,
+                                            CycleTimeDataClean.raw_file_name(telescope=telescope))
         parsed_data = CycleTimeDataClean.parse_data(str_dat)
         full_nights_id = CycleTimeDataClean.find_full_nights_id(parsed_data)
         full_nights_id = CycleTimeDataClean.verify_nights(full_nights_id=full_nights_id, telescope=telescope)

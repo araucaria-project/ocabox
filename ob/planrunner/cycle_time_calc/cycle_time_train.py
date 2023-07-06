@@ -17,11 +17,6 @@ class CycleTimeTrain(AbstractCycleTime):
     """
 
     @staticmethod
-    def read_data_from_file(telescope: str, command: str) -> str:
-        return CycleTimeTrain.read_file(CycleTimeTrain.BASE_FOLDER_NAME,
-                                        CycleTimeTrain.clean_data_file_name(telescope=telescope, command=command))
-
-    @staticmethod
     def build_array(data: List[Dict[str, Any]], xory: str) -> np.array or None:
 
         if xory == 'x':
@@ -43,7 +38,8 @@ class CycleTimeTrain(AbstractCycleTime):
     @staticmethod
     def train_data_command(telescope: str, command: str):
         min_record_to_train = 10
-        data = CycleTimeTrain.read_data_from_file(telescope=telescope, command=command)
+        data = CycleTimeTrain.read_file(CycleTimeTrain.BASE_FOLDER_NAME,
+                                        CycleTimeTrain.clean_data_file_name(telescope=telescope, command=command))
         parsed_data = CycleTimeTrain.parse_data(data=data)
         data_x = CycleTimeTrain.build_array(data=parsed_data, xory='x')
         data_y = CycleTimeTrain.build_array(data=parsed_data, xory='y')
