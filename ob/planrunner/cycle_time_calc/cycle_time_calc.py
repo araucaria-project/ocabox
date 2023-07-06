@@ -139,6 +139,14 @@ class CycleTimeCalc(AbstractCycleTime):
             logger.debug(f'Cannot calculate time, lack of params')
             return 0.0
 
+    @property
+    def time_lenght_sec(self) -> float:
+        return self._time_length
+
+    @property
+    def time_lenght_min(self) -> float:
+        return round(self._time_length/60, 1)
+
     def time_calc(self, command_name: str, command_dict_param: Dict[str, Any]) -> float or None:
         no_error = True
         param = self.available_param[self.telescope][command_name]
