@@ -4,6 +4,8 @@ from ob.planrunner.abstract_sequence import AbstractSequence
 from ob.planrunner.sequence import Sequence
 from ob.planrunner.cycle_time_calc.cycle_time_data_build import  CycleTimeDataBuild
 import random
+from ob.planrunner.cycle_time_calc.cycle_time_calc import CycleTimeCalc
+
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
@@ -18,11 +20,15 @@ class NightPlan(AbstractSequence):
         self.telescope = parent.telescope
         self.info_callback = parent.info_callback
         self.param = param
+        self.mount = self.telescope.get_mount()
+        self.param['cycle_time'] = CycleTimeCalc(self.telescope.id)
+        self.param['cycle_time'].set_telescope_start_az_alt(az=self.mount.azimuth, alt=self.mount.altitude)
         self.args = []
         self.kwargs = {}
         self._r_id: int
         self.parent_kwargs = self.parent.kwargs | self.parent.parent_kwargs
         self._cycle_time_data_build = CycleTimeDataBuild(self.telescope.id)
+
         super().__init__(id=self.id, name=self.name, info_callback=self.info_callback,
                          observatory=self.parent.observatory, c_type='night_plan', kwargs=self.kwargs)
         self.info = {}

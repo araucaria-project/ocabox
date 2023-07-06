@@ -88,7 +88,7 @@ class CycleTimeCalc(AbstractCycleTime):
             if (self._start_time is None) and (ra is not None) and (dec is not None):
                 altaz = {'az': ra_to_decimal(ra), 'alt': dec_to_decimal(dec)}
             else:
-                # TODO DO START TIME FOR CALC AND EVENTUALLY SKIPPING OPERATIONS ZERO TIME
+                # ++++++TODO DO START TIME FOR CALC AND EVENTUALLY SKIPPING OPERATIONS ZERO TIME++++++
                 pass
         else:
             pass
