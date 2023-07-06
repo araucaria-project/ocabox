@@ -1,5 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
+
 import os
 from typing import Dict, Any, List
 import datetime
@@ -16,19 +17,31 @@ class AbstractCycleTime(ABC):
     This class represent abstract time data
     """
 
-    FILE_NAMES = {'raw_data': 'raw_data.txt', 'clean_data': 'clean_data.txt', 'night_verif': 'night_verif.txt'}
+    FILE_NAMES = {'raw_data': 'raw_data.txt', 'clean_data': 'clean_data.txt',
+                  'night_verif': 'night_verif.txt', 'train_param': 'train_param.txt'}
     BASE_FOLDER_NAME = os.path.expanduser('~/.oca/cycle_time_calc')
     DATA_CLEAN_ORDER = ['night_id', 'command_name', 'start_utc_date_stamp', 'cycle_time', 'dome_distance',
                         'mount_distance', 'exposure_time_sum', 'filter_changes', 'rmmode_expno', 'dither_expno']
+    X_COLUMNS = DATA_CLEAN_ORDER[4:]
+    Y_COLUMN = DATA_CLEAN_ORDER[3]
 
+    @staticmethod
+    def get_list_telesc(file_type: str) -> List[str]:
+        l_dir = os.listdir(AbstractCycleTime.BASE_FOLDER_NAME)
+        tel_lst = []
+        for n in l_dir:
+            if AbstractCycleTime.FILE_NAMES[file_type] in n:
+                tel_lst.append(n.split('_')[0])
+        return tel_lst
 
-    def __init__(self, telescope_name: str):
-        self.telescope_name = telescope_name
-        self._data: str = ''
-        self.data_list: List[Dict[str, str]] = []
-
-        self._mk_dirs()
-        super().__init__()
+    @staticmethod
+    def get_list_commands(telescope: str, file_type: str) -> List[str]:
+        l_dir = os.listdir(AbstractCycleTime.BASE_FOLDER_NAME)
+        com_lst = []
+        for n in l_dir:
+            if (AbstractCycleTime.FILE_NAMES[file_type] in n) and (telescope in n):
+                com_lst.append(n.split('_')[1])
+        return com_lst
 
     @staticmethod
     def encode_data(data: Dict or List) -> str:
@@ -38,34 +51,35 @@ class AbstractCycleTime(ABC):
     def decode_data(data: str) -> Dict or List:
         return json.loads(data)
 
-    @property
-    def raw_file_name(self) -> str:
-        return f'{self.telescope_name}_{self.FILE_NAMES["raw_data"]}'
+    @staticmethod
+    def raw_file_name(telescope: str) -> str:
+        return f'{telescope}_{AbstractCycleTime.FILE_NAMES["raw_data"]}'
 
-    @property
-    def night_verf_file_name(self) -> str:
-        return f'{self.telescope_name}_{self.FILE_NAMES["night_verif"]}'
+    @staticmethod
+    def night_verf_file_name(telescope: str)  -> str:
+        return f'{telescope}_{AbstractCycleTime.FILE_NAMES["night_verif"]}'
 
-    def clean_data_file_name(self, command: str) -> str:
-        return f'{self.telescope_name}_{command}_{self.FILE_NAMES["clean_data"]}'
+    @staticmethod
+    def clean_data_file_name(telescope: str , command: str) -> str:
+        return f'{telescope}_{command}_{AbstractCycleTime.FILE_NAMES["clean_data"]}'
 
-    @abstractmethod
-    def read_data_from_file(self, command: str or None = None):
-        raise NotImplementedError
+    @staticmethod
+    def train_param_file_name(telescope: str, command: str) -> str:
+        return f'{telescope}_{command}_{AbstractCycleTime.FILE_NAMES["train_param"]}'
 
-    def parse_data(self):
-        s = self._data.split('\n')
+    @staticmethod
+    def parse_data(data: str) -> List[Dict[str, Any]]:
+        ret = []
+        s = data.split('\n')
         for n in s:
             if len(n) > 1:
-                self.data_list.append(self.decode_data(n))
+                ret.append(AbstractCycleTime.decode_data(n))
+        return ret
 
-    @property
-    def base_folder(self):
-        return self.BASE_FOLDER_NAME
-
-    def _mk_dirs(self):
-        if not os.path.exists(self.base_folder):
-            os.makedirs(self.base_folder, exist_ok=True)
+    @staticmethod
+    def _mk_dirs() -> None:
+        if not os.path.exists(AbstractCycleTime.BASE_FOLDER_NAME):
+            os.makedirs(AbstractCycleTime.BASE_FOLDER_NAME, exist_ok=True)
 
     @staticmethod
     def add_to_file(data: str, folder: str, file_name: str) -> None:
@@ -92,7 +106,7 @@ class AbstractCycleTime(ABC):
 
     @staticmethod
     def rm_mode(record: Dict[str, Any]) -> int:
-        # TODO rethink this
+        # TODO maybe rethink this
         return int(record['readoutmode']) + 1
 
     @staticmethod

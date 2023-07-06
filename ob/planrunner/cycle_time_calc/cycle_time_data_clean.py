@@ -4,7 +4,6 @@ import logging
 from collections import OrderedDict
 
 
-
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
@@ -13,69 +12,82 @@ class CycleTimeDataClean(AbstractCycleTime):
     This class represent cycle time data cleaner
     """
 
-    def __init__(self, telescope_name: str):
-        self.full_nights_id: Dict[str, Dict[str, int]] = {}
-        self.commands_data: Dict[str, List[Dict[str, Any]]] = {}
-        super().__init__(telescope_name=telescope_name)
+    @staticmethod
+    def read_data_from_file(telescope: str) -> str:
+        return CycleTimeDataClean.read_file(CycleTimeDataClean.BASE_FOLDER_NAME,
+                                            CycleTimeDataClean.raw_file_name(telescope=telescope))
 
-    def read_data_from_file(self, command: str or None = None):
-        self._data = self.read_file(self.base_folder, self.raw_file_name)
-
-    def find_full_nights_id(self):
+    @staticmethod
+    def find_full_nights_id(data: List[Any]) -> Dict[str, Dict[str, Any]]:
         random_id = ''
+        full_nights_id = {}
         line_started = None
-        for n, m in enumerate(self.data_list, start=0):
+        for n, m in enumerate(data, start=0):
             if m['command_name'] =='Night plan' and 'done' not in m.keys():
                 random_id = m['random_id']
                 line_started = n
             if m['command_name'] =='Night plan' and 'done' in m.keys() and random_id == m['random_id']:
                 line_ended = n
-                self.full_nights_id[random_id] = {'started': line_started,
-                                                  'ended':line_ended,
-                                                  'utc_time_stamp': m["utc_time_stamp"]}
+                full_nights_id[random_id] = {'started': line_started,
+                                             'ended':line_ended,
+                                             'utc_time_stamp': m["utc_time_stamp"]}
+        return full_nights_id
 
-    def build_commands_data(self):
-        for n_id, m_dict in self.full_nights_id.items():
-            for p_no, q_data in enumerate(self.data_list):
+    @staticmethod
+    def build_commands_data(data: List[Dict[str, Any]], full_nights_id: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+        commands_data = {}
+        for n_id, m_dict in full_nights_id.items():
+            for p_no, q_data in enumerate(data, start=0):
                 if m_dict['started'] < p_no < m_dict['ended']:
-                    if q_data['command_name'] not in self.commands_data.keys():
-                        self.commands_data[q_data['command_name']] = []
+                    if q_data['command_name'] not in commands_data.keys():
+                        commands_data[q_data['command_name']] = []
                     if 'done' not in q_data.keys():
-                        if self.data_list[p_no + 1]['skipped'] == 'False':
-                            self.commands_data[q_data['command_name']].append(self._build_command_data(night_id=n_id,
-                                                                                                       line_start=p_no))
+                        if data[p_no + 1]['skipped'] == 'False':
+                            commands_data[q_data['command_name']].append(CycleTimeDataClean._build_command_data(
+                                data=data,
+                                night_id=n_id,
+                                line_start=p_no))
+        return commands_data
 
-    def verify_nights(self):
-        f = self.read_file(folder=self.base_folder, file_name=self.night_verf_file_name)
+    @staticmethod
+    def verify_nights(full_nights_id: Dict[str, Dict[str, Any]], telescope: str):
+        f = CycleTimeDataClean.read_file(folder=CycleTimeDataClean.BASE_FOLDER_NAME,
+                                         file_name=CycleTimeDataClean.night_verf_file_name(telescope=telescope))
         if f:
             l = f.split('\n')
             for n in l:
                 if len(n) > 1:
-                    d = self.decode_data(n)
-                    if d['random_id'] in self.full_nights_id.keys():
-                        if d['utc_time_stamp'] == self.full_nights_id[d['random_id']]['utc_time_stamp']:
-                            self.full_nights_id.pop(d['random_id'])
+                    d = CycleTimeDataClean.decode_data(n)
+                    if d['random_id'] in full_nights_id.keys():
+                        if d['utc_time_stamp'] == full_nights_id[d['random_id']]['utc_time_stamp']:
+                            full_nights_id.pop(d['random_id'])
+        return full_nights_id
 
-    def save_commands_data_to_files(self):
+    @staticmethod
+    def save_commands_data_to_files(commands_data: Dict[str, Any],
+                                    full_nights_id: Dict[str, Dict[str, Any]], telescope: str) -> None:
 
-        for n in self.commands_data.keys():
-            for m in self.commands_data[n]:
-                self.add_to_file(data=self.encode_data(m),
-                                 folder=self.base_folder,
-                                 file_name=self.clean_data_file_name(n))
-        for p, q in self.full_nights_id.items():
+        for n in commands_data.keys():
+            for m in commands_data[n]:
+                CycleTimeDataClean.add_to_file(
+                    data=CycleTimeDataClean.encode_data(m),
+                    folder=CycleTimeDataClean.BASE_FOLDER_NAME,
+                    file_name=CycleTimeDataClean.clean_data_file_name(telescope=telescope, command=n))
+        for p, q in full_nights_id.items():
             dat = OrderedDict({
                 'random_id': p,
                 'utc_time_stamp': q['utc_time_stamp'],
             })
-            self.add_to_file(data=self.encode_data(data=dat),
-                             folder=self.base_folder,
-                             file_name=self.night_verf_file_name)
+            CycleTimeDataClean.add_to_file(
+                data=CycleTimeDataClean.encode_data(data=dat),
+                folder=CycleTimeDataClean.BASE_FOLDER_NAME,
+                file_name=CycleTimeDataClean.night_verf_file_name(telescope=telescope))
 
-    def _build_command_data(self, night_id: str, line_start: int):
-        first = self.data_list[line_start]
-        second = self.data_list[line_start + 1]
-        third = self.data_list[line_start + 2]
+    @staticmethod
+    def _build_command_data(data: List[Dict[str, Any]], night_id: str, line_start: int) -> Dict[str, Any]:
+        first = data[line_start]
+        second = data[line_start + 1]
+        third = data[line_start + 2]
 
         if 'dome_az_end' in third.keys():
             index_dome = 'dome_az_end'
@@ -94,20 +106,30 @@ class CycleTimeDataClean(AbstractCycleTime):
 
         # TODO remember about 0,1
         dat = OrderedDict({
-            self.DATA_CLEAN_ORDER[0]: night_id,
-            self.DATA_CLEAN_ORDER[1]: first['command_name'],
-            self.DATA_CLEAN_ORDER[2]: first['utc_date_stamp'],
-            self.DATA_CLEAN_ORDER[3]: float(third['utc_time_stamp']) - float(first['utc_time_stamp']),
-            self.DATA_CLEAN_ORDER[4]: CycleTimeDataClean.az_distance(start=float(first['dome_az_begin']),
+            CycleTimeDataClean.DATA_CLEAN_ORDER[0]:
+                night_id,
+            CycleTimeDataClean.DATA_CLEAN_ORDER[1]:
+                first['command_name'],
+            CycleTimeDataClean.DATA_CLEAN_ORDER[2]:
+                first['utc_date_stamp'],
+            CycleTimeDataClean.DATA_CLEAN_ORDER[3]:
+                float(third['utc_time_stamp']) - float(first['utc_time_stamp']),
+            CycleTimeDataClean.DATA_CLEAN_ORDER[4]:
+                CycleTimeDataClean.az_distance(start=float(first['dome_az_begin']),
                                                                      end=float(third[index_dome])),
-            self.DATA_CLEAN_ORDER[5]: CycleTimeDataClean.alt_az_distance(start_alt=float(first['mount_alt_begin']),
+            CycleTimeDataClean.DATA_CLEAN_ORDER[5]:
+                CycleTimeDataClean.alt_az_distance(start_alt=float(first['mount_alt_begin']),
                                                                      end_alt=float(third[index_mount_alt]),
                                                                      start_az=float(first['mount_az_begin']),
                                                                      end_az=float(third[index_mount_az])),
-            self.DATA_CLEAN_ORDER[6]: CycleTimeDataClean.exposure_time_sum(first),
-            self.DATA_CLEAN_ORDER[7]: CycleTimeDataClean.filter_changes(first),
-            self.DATA_CLEAN_ORDER[8]: CycleTimeDataClean.rm_mode(second)*CycleTimeDataClean.exposure_number(first),
-            self.DATA_CLEAN_ORDER[9]: CycleTimeDataClean.dither(first)*CycleTimeDataClean.exposure_number(first),
+            CycleTimeDataClean.DATA_CLEAN_ORDER[6]:
+                CycleTimeDataClean.exposure_time_sum(first),
+            CycleTimeDataClean.DATA_CLEAN_ORDER[7]:
+                CycleTimeDataClean.filter_changes(first),
+            CycleTimeDataClean.DATA_CLEAN_ORDER[8]:
+                CycleTimeDataClean.rm_mode(second)*CycleTimeDataClean.exposure_number(first),
+            CycleTimeDataClean.DATA_CLEAN_ORDER[9]:
+                CycleTimeDataClean.dither(first)*CycleTimeDataClean.exposure_number(first),
             # 'dome_follow': '',
             # 'focus_distance': '',
             # 'mirror_cover_on': '',
@@ -116,20 +138,26 @@ class CycleTimeDataClean(AbstractCycleTime):
         })
         return dat
 
-    def data_clean(self):
+    @staticmethod
+    def data_clean(telescope: str):
         """
         Method reading and cleaning only data from full nights (i.e. complete program) and only new data
         """
-        self.read_data_from_file()
-        self.parse_data()
-        self.find_full_nights_id()
-        self.verify_nights()
-        self.build_commands_data()
-        print(self.commands_data)
-        self.save_commands_data_to_files()
-        # remove raw data ?
+        str_dat = CycleTimeDataClean.read_data_from_file(telescope=telescope)
+        parsed_data = CycleTimeDataClean.parse_data(str_dat)
+        full_nights_id = CycleTimeDataClean.find_full_nights_id(parsed_data)
+        full_nights_id = CycleTimeDataClean.verify_nights(full_nights_id=full_nights_id, telescope=telescope)
+        commands_data = CycleTimeDataClean.build_commands_data(data=parsed_data, full_nights_id=full_nights_id)
+        CycleTimeDataClean.save_commands_data_to_files(commands_data=commands_data,
+                                                       full_nights_id=full_nights_id,
+                                                       telescope=telescope)
+
+    @staticmethod
+    def data_clean_all():
+        tel = CycleTimeDataClean.get_list_telesc(file_type='raw_data')
+        for t in tel:
+            CycleTimeDataClean.data_clean(telescope=t)
 
 
 if __name__ == '__main__':
-    c = CycleTimeDataClean('dev')
-    c.data_clean()
+    CycleTimeDataClean.data_clean_all()
