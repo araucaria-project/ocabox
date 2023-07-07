@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 - CCTV method asubscribe_ir
 - ocaboxapi.__init__ CCTV
 - planrunner.command tracking=off or on or default
+- Added custom `CoverCalibrator` alpaca module which has correctly working methods `opencover` and `closecover`
 
 ### Fixed
 - Fixed getting values from config in method `get_app_cfg()` form `Observatory` object

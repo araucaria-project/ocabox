@@ -14,9 +14,10 @@ class Component:
     """
     Base class for all elements of device tree
     """
+    KIND = "component"
 
     def __init__(self, sys_id: str, parent: Union['Component', None]) -> None:
-        self.kind = type(self).__name__.lower()
+        self.kind = self.KIND
         self.sys_id: str = sys_id
         self.parent: Component = parent
         self.component_options = {}
@@ -114,6 +115,7 @@ class Observatory(Component):
               ./ocabox.configuration.config.yaml
             Later overwrites former
     """
+    KIND = "observatory"
 
     def __init__(self):
         configuration = SingletonConfig.get_config()
@@ -152,6 +154,7 @@ class Device(Component):
         sys_id (str): system ID of device
         parent (Component): The parent component in devices tree
     """
+    KIND = "device"
     CURRENT = 0
     PREVIOUS = 1
     READ_TIME = 2
@@ -165,7 +168,7 @@ class Device(Component):
         self._process_response_get = {}
         self._process_response_put = {}
 
-    def _get(self, attribute: str, **data) -> Coroutine:
+    def _get(self, attribute: str, kind=None, **data) -> Coroutine:
         """Send request and check response for errors.
 
         Args:
@@ -173,9 +176,9 @@ class Device(Component):
             **data: Data to send with request.
 
         """
-        return self.connector.get(self, attribute, **data)
+        return self.connector.get(self, attribute, kind=kind, **data)
 
-    def _put(self, attribute: str, **data) -> Coroutine:
+    def _put(self, attribute: str, kind=None, **data) -> Coroutine:
         """
         Send an HTTP PUT request to an Alpaca server and check response for errors.
 
@@ -184,7 +187,7 @@ class Device(Component):
             **data: Data to send with request.
 
         """
-        return self.connector.put(self, attribute, **data)
+        return self.connector.put(self, attribute, kind=kind, **data)
 
     def _find_attribute(self, attribute):
         try:
@@ -233,22 +236,22 @@ class Device(Component):
         else:
             return ret
 
-    async def get(self, attribute: str, **data):
+    async def get(self, attribute: str, kind=None, **data):
         params = self._process_alpaca_get_parameters(attribute, **data)
         method = self._find_attribute(attribute)
         if method and callable(method):
             ret = await method(**params)
         else:
-            ret = await self._get(attribute, **params)
+            ret = await self._get(attribute, kind=kind, **params)
         return self._process_alpaca_get_result(attribute, ret)
 
-    async def put(self, attribute: str, **data):
+    async def put(self, attribute: str, kind=None, **data):
         params = self._process_alpaca_put_parameters(attribute, **data)
         method = self._find_attribute(attribute+'_put')
         if method and callable(method):
             ret = await method(**params)
         else:
-            ret = await self._put(attribute, **params)
+            ret = await self._put(attribute, kind=kind, **params)
         return self._process_alpaca_put_result(attribute, ret)
 
     # async def get(self, attribute: str, **data):
@@ -270,30 +273,37 @@ class Device(Component):
 
 class Switch(Device):
     """Switch specific methods."""
+    KIND = "switch"
 
 
 class CoverCalibrator(Device):
     """CoverCalibrator specific methods."""
+    KIND = "covercalibrator"
 
 
 class SafetyMonitor(Device):
     """Safety monitor specific methods."""
+    KIND = "safetymonitor"
 
 
 class Dome(Device):
     """Dome specific methods."""
+    KIND = "dome"
 
 
 class Camera(Device):
     """Camera specific methods."""
+    KIND = "camera"
 
 
 class FilterWheel(Device):
     """Filter wheel specific methods."""
+    KIND = "filterwheel"
 
 
 class Telescope(Device):
     """Telescope specific methods."""
+    KIND = "telescope"
 
     def __init__(self, sys_id: str, parent: Union['Component', None]) -> None:
         super().__init__(sys_id=sys_id, parent=parent)
@@ -390,6 +400,7 @@ class Telescope(Device):
 
 class Focuser(Device):
     """Focuser specific methods."""
+    KIND = "focuser"
 
     async def fansturnon_put(self, **kwargs):
         return await self._put("action", Action="fansturnon", Parameters="")
@@ -403,16 +414,28 @@ class Focuser(Device):
 
 class Rotator(Device):
     """Rotator specific methods."""
+    KIND = "rotator"
+
+
+class CoverCalibratorOCA(CoverCalibrator):
+    """CoverCalibrator OCA specific methods."""
+
+    async def closecover_put(self, **kwargs):
+        return await self._put("action", kind=Telescope.KIND, Action='telescope:closecover', Parameters='')
+
+    async def opencover_put(self, **kwargs):
+        return await self._put("action", kind=Telescope.KIND, Action='telescope:opencover', Parameters='')
 
 
 _component_classes = {
-    'telescope': Telescope,
-    'dome': Dome,
-    'camera': Camera,
-    'filterwheel': FilterWheel,
-    'focuser': Focuser,
-    'rotator': Rotator,
-    'switch': Switch,
-    'safetymonitor': SafetyMonitor,
-    'covercalibrator': CoverCalibrator,
+    Telescope.KIND: Telescope,
+    Dome.KIND: Dome,
+    Camera.KIND: Camera,
+    FilterWheel.KIND: FilterWheel,
+    Focuser.KIND: Focuser,
+    Rotator.KIND: Rotator,
+    Switch.KIND: Switch,
+    SafetyMonitor.KIND: SafetyMonitor,
+    CoverCalibrator.KIND: CoverCalibrator,
+    'covercalibratorOCA': CoverCalibratorOCA,  # here is a custom key !
 }
