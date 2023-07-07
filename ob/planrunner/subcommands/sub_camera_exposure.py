@@ -243,11 +243,11 @@ class CameraExposure(SubCommand):
         logger.info(f'_wait_for_subexposure started')
         # TODO In final version, i.e. on server-side exposures, I would avoid asyncio.sleep and subscibe on imagerady
         #  and camerastate. (exposures may be aborted earlier, no imagerady then)
-        if sub_time >= 0.5:
+        if sub_time >= 0.6:
             sub_t = sub_time
         else:
-            sub_t = 0.5
-        await asyncio.sleep(int(sub_t))
+            sub_t = 1.0
+        await asyncio.sleep(float(sub_t))
         while True:
             # subexposure_done = self.camera.imageready
             subexposure_done = await self.camera.aget_imageready()
