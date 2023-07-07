@@ -67,3 +67,17 @@ class CoverCalibrator(TelescopeComponent):
         """
         logger.debug(f'Putting opencover on to {self.tel_addr}')
         await self.aput_value('opencover')
+
+    async def aput_closecover(self) -> None:
+        """
+        Note: this method works only for dev telescope
+        """
+        logger.debug(f'Putting closecover on to {self.tel_addr}')
+        await self.aput_value('closecover')
+
+    async def aput_opencover(self) -> None:
+        """
+        Note: this method works only for dev telescope
+        """
+        logger.debug(f'Putting opencover on to {self.tel_addr}')
+        await self.aput_value('opencover')

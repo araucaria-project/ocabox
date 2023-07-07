@@ -16,10 +16,10 @@ class Connector:
         connector = _connector_classes[protocol](*args, **kwargs)
         return connector
 
-    async def get(self, component: 'Component', variable: str, **data):
+    async def get(self, component: 'Component', variable: str, kind=None, **data):
         raise NotImplementedError
 
-    async def put(self, component: 'Component', variable: str, **data):
+    async def put(self, component: 'Component', variable: str, kind=None, **data):
         raise NotImplementedError
 
     async def call(self, component: 'Component', function: str, **data):
@@ -207,12 +207,13 @@ class AlpacaConnector(Connector):
             raise RequestConnectionError from exc
         return resp.get("Value", None)
 
-    async def get(self, component: 'Component', variable: str, **data):
+    async def get(self, component: 'Component', variable: str, kind=None, **data):
         """
         Send an HTTP GET request to an Alpaca server and check response for errors.
 
         :param component: Calling component
         :param variable: Attribute to get from server
+        :param kind: Different kind of component if needed
         :raise AlpacaHttp400Error: if server alpaca return 400 error
         :raise AlpacaHttp500Error: if server alpaca return 500 error
         :raise AlpacaContentTypeError: if server alpaca return data in wrong format
@@ -221,15 +222,16 @@ class AlpacaConnector(Connector):
         :raise RequestConnectionError: when can not connect to alpaca
         :return: requested value or none
         """
-        url = self._url(component=component, variable=variable)
+        url = self._url(component=component, variable=variable, kind=kind)
         return await self._get(url, **data)
 
-    async def put(self, component: 'Component', variable: str, **data):
+    async def put(self, component: 'Component', variable: str, kind=None, **data):
         """
         Send an HTTP PUT request to an Alpaca server and check response for errors.
 
         :param component: Calling component
         :param variable: Attribute to get from server
+        :param kind: Different kind of component if needed
         :raise AlpacaHttp400Error: if server alpaca return 400 error
         :raise AlpacaHttp500Error: if server alpaca return 500 error
         :raise AlpacaContentTypeError: if server alpaca return data in wrong format
@@ -238,7 +240,7 @@ class AlpacaConnector(Connector):
         :raise RequestConnectionError: when can not connect to alpaca
         :return: response or none
         """
-        url = self._url(component=component, variable=variable)
+        url = self._url(component=component, variable=variable, kind=kind)
         return await self._put(url, **data)
 
     async def _put(self, url, **data):
@@ -287,13 +289,14 @@ class AlpacaConnector(Connector):
         }
 
     @staticmethod
-    def _url(component: 'Component', variable: str):
+    def _url(component: 'Component', variable: str, kind=None):
         url = '/'.join([
             component.get_option_recursive('address'),
-            component.component_options['kind'],
+            kind if kind else component.component_options['kind'],
             str(component.device_nr),
             variable
         ])
+        print(url)
         return url
 
     @staticmethod
