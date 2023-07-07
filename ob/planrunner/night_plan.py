@@ -57,7 +57,7 @@ class NightPlan(AbstractSequence):
         sub = Sequence(f'{self.numb(seq_id)}', self.sequence_dict, self, param=self.param)
         self.subcomponents[f'{self.numb(seq_id)}'] = sub
         self.info_callback['stream_1'](f'Nightplan {self.id}'
-                                       f' time lenght: {self.param["cycle_time"].time_lenght_min}min')
+                                       f' estimated time lenght: {self.param["cycle_time"].time_lenght_min}min')
 
     async def arun(self, step_id: str or None = None) -> int:
         self.info_callback['stream_1'](f'Night plan {self.id} started')
