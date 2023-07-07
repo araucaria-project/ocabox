@@ -36,7 +36,7 @@ class CycleTimeTrain(AbstractCycleTime):
         return np.asarray(l1)
 
     @staticmethod
-    def train_data_command(telescope: str, command: str):
+    def train_data_command(telescope: str, command: str) -> None:
         min_record_to_train = 10
         data = CycleTimeTrain.read_file(CycleTimeTrain.BASE_FOLDER_NAME,
                                         CycleTimeTrain.clean_data_file_name(telescope=telescope, command=command))
@@ -48,7 +48,7 @@ class CycleTimeTrain(AbstractCycleTime):
             CycleTimeTrain.save_train_param_to_file(param=param, telescope=telescope, command=command)
 
     @staticmethod
-    def save_train_param_to_file(param: Dict[str, Any], telescope: str, command: str):
+    def save_train_param_to_file(param: Dict[str, Any], telescope: str, command: str) -> None:
         c = {}
         for n, m in enumerate(CycleTimeTrain.X_COLUMNS, start=0):
             c[m] = param['coef'][n]
@@ -77,7 +77,7 @@ class CycleTimeTrain(AbstractCycleTime):
         return param
 
     @staticmethod
-    def train_all_telesc_all_commands():
+    def train_all_telesc_all_commands() -> None:
         for t in CycleTimeTrain.get_list_telesc(file_type='clean_data'):
             for c in CycleTimeTrain.get_list_commands(telescope=t, file_type='clean_data'):
                 CycleTimeTrain.train_data_command(telescope=t, command=c)

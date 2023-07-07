@@ -8,15 +8,15 @@ class CTData:
     This class represent cycle time data
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._str_data: str = ''
         self._data: Dict[str, Any] = {}
         super().__init__()
 
-    def insert_single_data(self, name: str, value: Any):
+    def insert_single_data(self, name: str, value: Any) -> None:
         self._data[name] = str(value)
 
-    def insert_data_from_dict(self, dict: Dict[str, Any]):
+    def insert_data_from_dict(self, dict: Dict[str, Any]) -> None:
         self._data = self._data | dict
 
     def insert_str_data(self, value: str) -> None:

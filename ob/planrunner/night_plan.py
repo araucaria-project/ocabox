@@ -21,8 +21,10 @@ class NightPlan(AbstractSequence):
         self.info_callback = parent.info_callback
         self.param = param
         self.mount = self.telescope.get_mount()
+        self.camera = self.telescope.get_camera()
         self.param['cycle_time'] = CycleTimeCalc(self.telescope.id)
         self.param['cycle_time'].set_telescope_start_az_alt(az=self.mount.azimuth, alt=self.mount.altitude)
+        self.param['cycle_time'].set_start_rmode(rmode=self.camera.readoutmode)
         self.args = []
         self.kwargs = {}
         self._r_id: int

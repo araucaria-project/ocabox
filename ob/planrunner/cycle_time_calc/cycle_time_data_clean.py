@@ -99,7 +99,6 @@ class CycleTimeDataClean(AbstractCycleTime):
         else:
             index_mount_az = 'mount_az_begin'
 
-        # TODO remember about 0,1
         dat = OrderedDict({
             CycleTimeDataClean.DATA_CLEAN_ORDER[0]:
                 night_id,
@@ -129,12 +128,11 @@ class CycleTimeDataClean(AbstractCycleTime):
             # 'focus_distance': '',
             # 'mirror_cover_on': '',
             # 'focusing': '',
-
         })
         return dat
 
     @staticmethod
-    def data_clean(telescope: str):
+    def data_clean(telescope: str) -> None:
         """
         Method reading and cleaning only data from full nights (i.e. complete program) and only new data
         """
@@ -149,7 +147,7 @@ class CycleTimeDataClean(AbstractCycleTime):
                                                        telescope=telescope)
 
     @staticmethod
-    def data_clean_all():
+    def data_clean_all() -> None:
         tel = CycleTimeDataClean.get_list_telesc(file_type='raw_data')
         for t in tel:
             CycleTimeDataClean.data_clean(telescope=t)

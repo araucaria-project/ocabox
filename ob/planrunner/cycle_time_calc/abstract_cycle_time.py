@@ -204,6 +204,20 @@ class AbstractCycleTime(ABC):
         return ret
 
     @staticmethod
+    def last_filter(record: Dict[str, Any]) -> str:
+        ret = 0
+        if 'kwargs' in record.keys():
+            if 'seq' in record['kwargs']:
+                s = record['kwargs']['seq'].split(',')
+                len_s = len(s)
+                for w, n in enumerate(s, start=1):
+                    if w == len(s):
+                        z = n.split('/')
+                        ret = z[1]
+        logger.debug(f'Record:{record}, last filter is:{ret}')
+        return ret
+
+    @staticmethod
     def filter_changes(record: Dict[str, Any]) -> int:
         ret = 0
         f = record['filter_pos']

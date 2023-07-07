@@ -11,7 +11,7 @@ class CycleTimeDataBuild(AbstractCycleTime):
     """
     This class represent cycle time data builder (collector)
     """
-    def __init__(self, telescope: str):
+    def __init__(self, telescope: str) -> None:
         self.telescope = telescope
         self._data: CTData = CTData()
         super().__init__()
@@ -26,7 +26,7 @@ class CycleTimeDataBuild(AbstractCycleTime):
         logger.debug(f'Data inserted from dict: {dict}')
         self._data.insert_data_from_dict(dict=dict)
 
-    def save_to_log(self):
+    def save_to_log(self) -> None:
         logger.debug(f'Data {self.telescope} saved to log')
         self._data.insert_single_data('utc_date_stamp', str(self.time_stamp().isoformat()))
         self._data.insert_single_data('utc_time_stamp', str(self.time_stamp().timestamp()))

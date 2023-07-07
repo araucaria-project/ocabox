@@ -52,10 +52,9 @@ class Command(AbstractSequence):
             kw = f'{kw} {n}={self.kwargs[n]}'
         for n in self.parent_kwargs.keys():
             kw = f'{kw} {n}={self.parent_kwargs[n]}'
-        # TODO Rethink how to pass self.cycle_time through
-        self.info_callback['c_commands'](f'{self.id};'
-                                         f'{self.command_name};'
-                                         f' {self.param["cycle_time"].calc_time(command_dict=self.sequence_dict)}') #{kw}')
+        self.info_callback['c_commands'](
+            f'{self.id};'f'{self.command_name};'
+            f' {round(self.param["cycle_time"].calc_time(command_dict=self.sequence_dict))}s;{kw}')
         logger.info(f'{self.id} {self.command_name} {self.args} {self.kwargs} is written')
 
     def _write_subcommands(self) -> None:
