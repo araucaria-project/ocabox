@@ -19,7 +19,7 @@ class Position:
         self.task = None
         self._address = address
         self._finish_fut = None
-        self.timeout = timeout if timeout is not None else 5
+        self.timeout = timeout if timeout is not None else 20
         self.order = order
         self._start_tmstp = 0
         self._finish_tmstp = 0

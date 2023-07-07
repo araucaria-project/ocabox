@@ -1,3 +1,5 @@
+from typing import Tuple
+
 from pyaraucaria.coordinates import deg_to_decimal_deg
 
 from ob.comunication.comunication_error import CommunicationRuntimeError, CommunicationTimeoutError
@@ -11,7 +13,7 @@ from ob.planrunner.ern.moves.position import Position
 class MountSlewAltAz(Move):
     _USED_RESOURCE = ResourceManager.MOUNT
 
-    def __init__(self, alt_az, plan_data, resource_nr=0):
+    def __init__(self, alt_az: Tuple, plan_data, resource_nr=0):
         super().__init__(plan_data=plan_data)
         self._resource_nr = resource_nr
         self._resource_content = self.res_mngr.get_resource(self._USED_RESOURCE, nr=self._resource_nr)
@@ -27,7 +29,7 @@ class MountSlewAltAz(Move):
         try:
             self._real_alt = deg_to_decimal_deg(self._alt)
             self._real_az = deg_to_decimal_deg(self._az)
-        except ValueError:
+        except (ValueError, TypeError):
             raise PlanBuildError(f"Wrong az alt format")
 
         self.add_position(

@@ -5,14 +5,10 @@ import unittest
 
 from ob.comunication.internal_client_api import InternalClientAPI
 from ob.comunication.request_solver import RequestSolver
-from ob.data_colection.resource_manager.errors import ResourceCommandError
-from ob.planrunner.ern.moves.custom_moves.filter_wheel import FilterWheel
-from ob.planrunner.ern.moves.custom_moves.mount_slew_alt_az import MountSlewAltAz
-from ob.planrunner.ern.moves.move import Move
-from ob.planrunner.ern.moves.position import Position
 from ob.data_colection.specialistic_components.tree_alpaca import TreeAlpacaObservatory
 from ob.data_colection.specialistic_components.tree_cache_observatory import TreeCache
 from ob.data_colection.specialistic_components.tree_conditional_freezer import TreeConditionalFreezer
+from ob.planrunner.ern.moves.custom_moves.filter_wheel import FilterWheel
 from ob.planrunner.ern.plan_data import PlanData
 from test.data_colection.base_async_test import BaseAsyncTest
 

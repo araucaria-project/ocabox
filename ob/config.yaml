@@ -145,6 +145,13 @@ tree:
           filters: # optional
             a: 1
             b: 2
+        covercalibrator:
+          kind: covercalibrator
+          device_number: 0
+        camera:
+          kind: camera
+          device_number: 0
+
   test_observatory_down:
     observatory:
       comment: Simulated observatory for tests

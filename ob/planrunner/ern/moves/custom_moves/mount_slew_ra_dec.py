@@ -1,5 +1,5 @@
+from typing import Tuple
 from pyaraucaria.coordinates import ra_to_decimal, dec_to_decimal, ra_dec_epoch, ra_dec_2_az_alt
-
 from ob.comunication.comunication_error import CommunicationTimeoutError, CommunicationRuntimeError
 from ob.data_colection.resource_manager.resource_manager import ResourceManager
 from ob.planrunner.ern.errors import PlanBuildError
@@ -11,7 +11,7 @@ from ob.data_colection.resource_manager.errors import ResourceCommandError
 class MountSlewRaDec(Move):
     _USED_RESOURCE = ResourceManager.MOUNT
 
-    def __init__(self, ra_dec, plan_data, resource_nr=0):
+    def __init__(self, ra_dec: Tuple, plan_data, resource_nr=0):
         super().__init__(plan_data=plan_data)
         self._resource_nr = resource_nr
         self._resource_content = self.res_mngr.get_resource(self._USED_RESOURCE, nr=self._resource_nr)
