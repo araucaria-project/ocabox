@@ -1,10 +1,14 @@
+import datetime
 import logging
 from typing import List, Any, Dict
 from ob.planrunner.abstract_sequence import AbstractSequence
 from ob.planrunner.sequence import Sequence
-from ob.planrunner.cycle_time_calc.cycle_time_data_build import  CycleTimeDataBuild
-import random
+from ob.planrunner.cycle_time_calc.cycle_time_data_build import CycleTimeDataBuild
 from ob.planrunner.cycle_time_calc.cycle_time_calc import CycleTimeCalc
+from ob.planrunner.cycle_time_calc.cycle_time_data_clean import CycleTimeDataClean
+from ob.planrunner.cycle_time_calc.cycle_time_train import CycleTimeTrain
+import random
+
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -34,26 +38,11 @@ class NightPlan(AbstractSequence):
         super().__init__(id=self.id, name=self.name, info_callback=self.info_callback,
                          observatory=self.parent.observatory, c_type='night_plan', kwargs=self.kwargs)
         self.info = {}
-        #self._set_callb()
         self._write_subcomponents()
         self._set_r_id()
 
     def _set_r_id(self) -> None:
         self._r_id =  random.randint(0, 1000000)
-
-    def _set_callb(self) -> None:
-        self.info_callback['c_subcommands'] = self._build_nightplan_info_subcommands
-        self.info_callback['c_commands'] = self._build_nightplan_info_commands
-        self.info_callback['c_sequences'] = self._build_nightplan_info_sequences
-
-    def _build_nightplan_info_subcommands(self, value: str) -> None:
-        self._build_info_seq('subcommands', value)
-
-    def _build_nightplan_info_commands(self, value: str) -> None:
-        self._build_info_seq('commands', value)
-
-    def _build_nightplan_info_sequences(self, value: str) -> None:
-        self._build_info_seq('sequences', value)
 
     def _build_info_seq(self, name: str, value: str):
         if name in self.info.keys():
@@ -73,9 +62,10 @@ class NightPlan(AbstractSequence):
     async def arun(self, step_id: str or None = None) -> int:
         self.info_callback['stream_1'](f'Night plan {self.id} started')
         logger.info(f'Night plan {self.id} started')
+        self.info_callback['time_end'](f'{self.param["cycle_time"].finnish_time_from_now_utc()}')
+        self._set_r_id()
         self._cycle_time_data_build.insert_data(name='command_name', value=self.name)
         self._cycle_time_data_build.insert_data(name='telescope', value=self.telescope.id)
-        self._set_r_id()
         self._cycle_time_data_build.insert_data(name='random_id', value=self._r_id)
         self._cycle_time_data_build.insert_data(name='started', value=True)
         self._cycle_time_data_build.save_to_log()
@@ -89,8 +79,11 @@ class NightPlan(AbstractSequence):
         self._cycle_time_data_build.insert_data(name='mount_alt_end', value=await m.aget_alt())
         self._cycle_time_data_build.save_to_log()
         self.info_callback['stream_5'](f'{self.id}')
-        self.info_callback['stream_1'](f'Night plan {self.id} completed')
+        self.info_callback['stream_1'](f'Night plan {self.id} completed at: {str(datetime.datetime.utcnow())}')
         logger.info(f'Night plan {self.id} completed')
+        if skip == 0:
+            CycleTimeDataClean.data_clean_all()
+            CycleTimeTrain.train_all_telesc_all_commands()
         return skip
 
     def __del__(self):

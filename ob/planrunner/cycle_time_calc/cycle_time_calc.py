@@ -21,7 +21,7 @@ class CycleTimeCalc(AbstractCycleTime):
         self._az_dome: float = 0.0
         self.telescope = telescope
         self._time_length: float = 0.0
-        self._start_time: datetime.datetime =  datetime.datetime.utcnow()
+        self._start_time: datetime.datetime = datetime.datetime.utcnow()
         super().__init__()
         self._get_params()
 
@@ -42,14 +42,14 @@ class CycleTimeCalc(AbstractCycleTime):
     def _get_params(self) -> None:
         for t in CycleTimeCalc.get_list_telesc(file_type='train_param'):
             self.available_param[t] = {}
-            for c in CycleTimeCalc.get_list_commands(telescope=t, file_type='train_param'):
-                data = CycleTimeCalc.get_last_param(telescope=t, command=c)
-                self.available_param[t][c] = data
+            for co in CycleTimeCalc.get_list_commands(telescope=t, file_type='train_param'):
+                data = CycleTimeCalc.get_last_param(telescope=t, command=co)
+                self.available_param[t][co] = data
 
     @staticmethod
     def get_last_param(telescope: str, command: str) -> Dict[str, Any]:
         data = CycleTimeCalc.read_file(CycleTimeCalc.BASE_FOLDER_NAME,
-                                        CycleTimeCalc.train_param_file_name(telescope=telescope, command=command))
+                                       CycleTimeCalc.train_param_file_name(telescope=telescope, command=command))
         return CycleTimeCalc.parse_data(data=data)[-1]
 
     def set_start_rmode(self, rmode: int) -> None:
@@ -69,7 +69,7 @@ class CycleTimeCalc(AbstractCycleTime):
         altaz = None
         # ++++++TODO DO VENTUALLY SKIPPING OPERATIONS ZERO TIME ?++++++
         # TODO This OCA should be taken from settings
-        OCA = {'latitude': -24.598056, 'longitude': -70.196389, 'elevation': 2817}
+        oca = {'latitude': -24.598056, 'longitude': -70.196389, 'elevation': 2817}
         if 'args' in command_dict.keys():
             if len(command_dict['args']) == 2:
                 ra = command_dict['args'][0]
@@ -87,9 +87,9 @@ class CycleTimeCalc(AbstractCycleTime):
         if (ra is not None) and (dec is not None):
             az, alt = ra_dec_2_az_alt(ra=ra_to_decimal(ra),
                                       dec=dec_to_decimal(dec),
-                                      longitude=OCA['longitude'],
-                                      latitude=OCA['latitude'],
-                                      elevation=OCA['elevation'],
+                                      longitude=oca['longitude'],
+                                      latitude=oca['latitude'],
+                                      elevation=oca['elevation'],
                                       epoch='2000',
                                       time=self._start_time)
             altaz = {'az': az, 'alt': alt}
@@ -110,6 +110,9 @@ class CycleTimeCalc(AbstractCycleTime):
                                                                   start_az=self._az_mount,
                                                                   end_az=azalt['az'])
                 dome_az_dist = CycleTimeCalc.az_distance(start=self._az_dome, end=azalt['az'])
+                self._alt_mount = azalt['alt']
+                self._az_mount = azalt['az']
+                self._az_dome = azalt['az']
             else:
                 mount_alt_az_dist = 0.0
                 dome_az_dist = 0.0
@@ -123,9 +126,6 @@ class CycleTimeCalc(AbstractCycleTime):
             command_dict_param['filter_changes'] = CycleTimeCalc.filter_changes(command_dict)
             command_dict_param['rmmode_expno'] = (self._rmode + 1) * exp_no
             command_dict_param['dither_expno'] = dither * exp_no
-            self._alt_mount = azalt['alt']
-            self._az_mount = azalt['az']
-            self._az_dome = azalt['az']
             self._current_filter = CycleTimeCalc.last_filter(command_dict)
             tc = self.time_calc(command_name=command_dict['command_name'], command_dict_param=command_dict_param)
             if tc:
@@ -146,6 +146,9 @@ class CycleTimeCalc(AbstractCycleTime):
     def time_lenght_min(self) -> float:
         return round(self._time_length/60, 1)
 
+    def finnish_time_from_now_utc(self) -> str:
+        return str(datetime.datetime.utcnow() + datetime.timedelta(seconds=self._time_length))
+
     def time_calc(self, command_name: str, command_dict_param: Dict[str, Any]) -> float or None:
         no_error = True
         param = self.available_param[self.telescope][command_name]
@@ -164,6 +167,7 @@ class CycleTimeCalc(AbstractCycleTime):
 
 if __name__ == '__main__':
     c = CycleTimeCalc('dev')
-    d = {'command_name': 'OBJECT', 'kwargs': {'seq': '12/Red/1,3/Green/3,2/Blue/5', 'az': 12.0, 'alt':70.0}}
-    print(c.calc_time(command_dict=d))
-    print(c._time_length)
+    # d = {'command_name': 'OBJECT', 'kwargs': {'seq': '12/Red/1,3/Green/3,2/Blue/5', 'az': 12.0, 'alt':70.0}}
+    # print(c.calc_time(command_dict=d))
+    # print(c._time_length)
+    # print(c.finnish_time_from_now_utc)

@@ -164,7 +164,10 @@ class AbstractCycleTime(ABC):
         """
         v1 = AbstractCycleTime.vector(alt=start_alt, az=start_az)
         v2 = AbstractCycleTime.vector(alt=end_alt, az=end_az)
-        ret = math.degrees(math.acos(np.dot(v1, v2)))
+        if v1.all() == v2.all():
+            ret = 0.0
+        else:
+            ret = math.degrees(math.acos(np.dot(v1, v2)))
         logger.debug(f'Alt_start:{start_alt}, alt_end:{end_alt}, az_start:{start_az},'
                      f' az_end:{end_az}, altaz_distance:{ret}')
         return ret

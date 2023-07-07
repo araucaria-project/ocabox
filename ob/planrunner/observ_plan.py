@@ -69,6 +69,10 @@ class ObservPlan:
         for calb in self.callbacks_dict['exec_json']:
             calb(value)
 
+    def time_end_callback(self, value):
+        for calb in self.callbacks_dict['time_end']:
+            calb(value)
+
     def add_callbacks(self) -> None:
         """
         Method set callback for plan runner information stream.
@@ -88,6 +92,7 @@ class ObservPlan:
         self.info_callback['c_commands'] = self.c_commands_callback
         self.info_callback['c_sequences'] = self.c_sequences_callback
         self.info_callback['exec_json'] = self.exec_json_callback
+        self.info_callback['time_end'] = self.time_end_callback
 
     def delete_nightplan(self, nightplan_id: str) -> None:
         """
