@@ -22,8 +22,9 @@ class CycleTimeCalc(AbstractCycleTime):
         self.telescope = telescope
         self._time_length: float = 0.0
         self._start_time: datetime.datetime = datetime.datetime.utcnow()
-        super().__init__()
+        self._mk_dirs()
         self._get_params()
+        super().__init__()
 
     @property
     def avialable_param_telesc(self) -> Dict[str, Any] or None:
@@ -35,8 +36,9 @@ class CycleTimeCalc(AbstractCycleTime):
     @property
     def avialable_param_telesc_commands(self) -> List[str]:
         li = []
-        for ke, val in self.avialable_param_telesc.items():
-            li.append(ke)
+        if self.avialable_param_telesc:
+            for ke, val in self.avialable_param_telesc.items():
+                li.append(ke)
         return li
 
     def _get_params(self) -> None:
