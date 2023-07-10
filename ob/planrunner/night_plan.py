@@ -62,7 +62,7 @@ class NightPlan(AbstractSequence):
     async def arun(self, step_id: str or None = None) -> int:
         self.info_callback['stream_1'](f'Night plan {self.id} started')
         logger.info(f'Night plan {self.id} started')
-        self.info_callback['time_end'](f'{self.param["cycle_time"].finnish_time_from_now_utc()}')
+        self.info_callback['time_end'](f'{self.param["cycle_time"].finnish_time_utc()}')
         self._set_r_id()
         self._cycle_time_data_build.insert_data(name='command_name', value=self.name)
         self._cycle_time_data_build.insert_data(name='telescope', value=self.telescope.id)

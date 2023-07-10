@@ -10,7 +10,37 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class CycleTimeCalc(AbstractCycleTime):
     """
-    This class represent cycle time calculator
+    This class represent cycle time calculator (CTC).
+    CTC base on machine learning module.
+    To prepare proper parameters, CTC need steps:
+    1. CycleTimeDataBuild is implemented inside planrunner, mostly in Command and NightPlan classes, to get all need
+     info a parameters values. After collection it save data to files (every telescope in different file).
+    2. CycleTimeDataClean is run at end of night program (not skipped program) to select, clean, and distributed to
+     separate files. Module separate commands and telescopes to different files, and it is taking only data from
+     complete programs (nights) to prevent some error and incomplete data. It also has mechanism to do not take
+     data from same nights, to do not double operations.
+    3. CycleTimeTrain is also run at end of night program (not skipped program). It is machine learning module built
+     on linear regression. Parameters used to training are selected with care and supported by analyses. To aloud to
+     train data, it has to be at least 10 records. If there is more data, the parameters will be more accurate.
+    4. CycleTimeCalc is main class, used to calculate cycle time. Calculator use trained parameters prepared from
+     previous observations. If there is no parameters to use, calculator backs 0.0 time length. For WAIT command
+     calculator backs time strait, without any other calc. Calculator sets start_time at time when instance is call,
+     but it can be changed by set_start_time. This parameter is important, because it will be taken to calculate
+     telescope position from ra and dec coordinates. To make calculation more accurate, please also use
+     set_observatory_location (default is oca), set_epoch (default is 2000), set_start_rmode (default is 0),
+     set_telescope_start_az_alt (default is 0 70) and set_dome_start_az (default is 0). If You want to calculate
+     if operations are below alt limit (and get 0.0 time because of skipping) please set set_skipping to True.
+     You can also change alt limit by alt_limit method (default is set to 15.0).
+     Example:
+         c = CycleTimeCalc('dev')
+         c.set_telescope_start_az_alt(az=120.0, alt=60.0)
+         c.set_skipping(skipping=True)
+         com_1 = {'command_name': 'OBJECT', 'kwargs': {'seq': '12/Red/1,3/Green/3,2/Blue/5', 'az': 12.0, 'alt':70.0}}
+         c.calc_time(command_dict=com_1) --> you get time for com_1
+         com_2 = {'command_name': 'WAIT', 'kwargs': {'wait': 40}}
+         c.calc_time(command_dict=com_2) --> you get time for com_2
+         c.time_lenght_min() --> you get time lenght for all operations (full cycle) in minutes
+         c.finnish_time_utc() --> you get utc date_time when program will finish
     """
 
     def __init__(self, telescope: str) -> None:
@@ -41,6 +71,10 @@ class CycleTimeCalc(AbstractCycleTime):
         self._observatory_location = location
 
     def set_epoch(self, epoch: str) -> None:
+        """
+        Set epoch for ra dec coordinates, default: '2000'
+        :param epoch: epoch in str format, example: '2000'
+        """
         self._epoch = epoch
 
     def set_alt_limit(self, alt_limit: float) -> None:
@@ -95,8 +129,8 @@ class CycleTimeCalc(AbstractCycleTime):
 
     def _mount_altaz_target(self, command_dict: Dict[str, Any]) -> Dict[str, float] or None:
         """
-        Method calculate alt az from command dict
-        :param command_dict: command dict
+        Method calculate alt az from command dictionary
+        :param command_dict: command dict parsed by pyaraucaria obs_plan_parser
         :return: calculated alt az
         """
         altaz = None
@@ -206,8 +240,8 @@ class CycleTimeCalc(AbstractCycleTime):
     def time_lenght_min(self) -> float:
         return round(self._time_length/60, 1)
 
-    def finnish_time_from_now_utc(self) -> str:
-        return str(datetime.datetime.utcnow() + datetime.timedelta(seconds=self._time_length))
+    def finnish_time_utc(self) -> str:
+        return str(self._start_time + datetime.timedelta(seconds=self._time_length))
 
     def _calc_time(self, command_name: str, command_dict_param: Dict[str, Any]) -> float or None:
         no_error = True
@@ -227,7 +261,8 @@ class CycleTimeCalc(AbstractCycleTime):
 
 if __name__ == '__main__':
     c = CycleTimeCalc('dev')
-    d = {'command_name': 'OBJECT', 'kwargs': {'seq': '12/Red/1,3/Green/3,2/Blue/5', 'az': 12.0, 'alt':70.0}}
+    #d = {'command_name': 'WAIT', 'kwargs': {'seq': '12/Red/1,3/Green/3,2/Blue/5', 'az': 12.0, 'alt':70.0}}
+    d = {'command_name': 'WAIT', 'kwargs': {'ut': '08:48:00'}}
     print(c.calc_time(command_dict=d))
     # print(c._time_length)
     # print(c.finnish_time_from_now_utc)
