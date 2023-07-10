@@ -273,6 +273,7 @@ tree:
         focuser:
           kind: focuser
           device_number: 0
+          focus_tolerance: 5  # optional
         dome:
           kind: dome
           device_number: 0

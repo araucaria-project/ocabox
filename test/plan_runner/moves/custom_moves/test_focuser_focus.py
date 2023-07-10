@@ -38,7 +38,7 @@ class FocuserFocusTest(unittest.TestCase, BaseAsyncTest):
             await self.tree_freezer.run()
             rm = await self.tao.get_res_manager()
             plan_data = PlanData(access_resource_manager=rm, client_api=self.api_test)
-            target = random.randint(18000, 20000)
+            target = random.randint(18000, 20000) + 0.2  # check is correctly cast to int
             fw = FocuserFocus(focus=target, plan_data=plan_data)
             await fw.a_init()
             # main method to make move
@@ -48,7 +48,7 @@ class FocuserFocusTest(unittest.TestCase, BaseAsyncTest):
             await fw.wait()
             self.assertFalse(fw.error)  # finish witch no errors
             result = await self.api_test.get_async(f"{rm.get_resource(rm.FOCUSER).adr}.position")
-            self.assertEqual(result.value.v, target)
+            self.assertEqual(result.value.v, int(target))
             self.assertEqual(fw.progress, 1)
             await self.tree_freezer.stop()
 

@@ -189,6 +189,12 @@ class FilterwheelAlpaca(Resource):
 class FocuserAlpaca(Resource):
     RESOURCE_NAME = StandardTelescopeComponents.FOCUSER
 
+    def __init__(self, source_name: str, resource_name: str, nr: int, target_request, properties: dict = None,
+                 address_path: str = "", **kwargs) -> None:
+        super().__init__(source_name=source_name, resource_name=resource_name, nr=nr, target_request=target_request,
+                         properties=properties, address_path=address_path, **kwargs)
+        self.focus_tolerance: float = self._properties.get("focus_tolerance", 5)
+
 
 class RotatorAlpaca(Resource):
     RESOURCE_NAME = StandardTelescopeComponents.ROTATOR

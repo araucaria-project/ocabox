@@ -26,9 +26,10 @@ class FocuserFocus(Move):
             self._target_focus = int(self._focus)
         except ValueError:
             raise PlanBuildError(f"Wrong focus. Can not read focus value - wrong format")
+        tolerance = self._resource_content.focus_tolerance
         # here position has random value in target, it will be updated in a_init() method
         self.add_position(
-            Position(f"{self._resource_content.adr}.position", t=self._target_focus))
+            Position(f"{self._resource_content.adr}.position", t=self._target_focus, bounds=(tolerance, tolerance)))
 
     async def _action(self):
         # ----------------- set position focus -----------------

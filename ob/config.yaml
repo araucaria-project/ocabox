@@ -154,6 +154,7 @@ tree:
         focuser:
           kind: focuser
           device_number: 0
+          focus_tolerance: 5  # optional
 
   test_observatory_down:
     observatory:
