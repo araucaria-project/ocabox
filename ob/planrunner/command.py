@@ -413,6 +413,7 @@ class Command(AbstractSequence):
                                                    tracking=self.tracking,
                                                    epoch=self.epoch,
                                                    uobi=self.uobi), id_next=id_next)
+
         # Mount slewing altaz
         if (self.plan_ra and self.plan_dec) is None and (self.plan_az and self.plan_alt) is not None:
             id_next = self._add_comp(MountSlew(id=self._op_id(id_next=id_next),

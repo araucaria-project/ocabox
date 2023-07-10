@@ -4,6 +4,7 @@ from ob.planrunner.cycle_time_calc.abstract_cycle_time import AbstractCycleTime
 import datetime
 from pyaraucaria.coordinates import ra_dec_2_az_alt, ra_to_decimal, dec_to_decimal
 
+
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
@@ -21,10 +22,32 @@ class CycleTimeCalc(AbstractCycleTime):
         self._az_dome: float = 0.0
         self.telescope = telescope
         self._time_length: float = 0.0
+        self._epoch: str = '2000'
+        self._skipping: bool = False
+        self._alt_limit: float = 15.0
+        self._observatory_location: Dict[str, Any] = {'latitude': -24.598056,
+                                                      'longitude': -70.196389,
+                                                      'elevation': 2817}
         self._start_time: datetime.datetime = datetime.datetime.utcnow()
         self._mk_dirs()
         self._get_params()
         super().__init__()
+
+    def set_observatory_location(self, location: Dict[str, Any]) -> None:
+        """
+        Set observatory location, default is oca location
+        :param location: dict of location, like: {'latitude': -24.598056, 'longitude': -70.196389, 'elevation': 2817}
+        """
+        self._observatory_location = location
+
+    def set_epoch(self, epoch: str) -> None:
+        self._epoch = epoch
+
+    def set_alt_limit(self, alt_limit: float) -> None:
+        self._alt_limit = alt_limit
+
+    def set_skipping(self, skipping: bool) -> None:
+        self._skipping = skipping
 
     @property
     def avialable_param_telesc(self) -> Dict[str, Any] or None:
@@ -68,10 +91,12 @@ class CycleTimeCalc(AbstractCycleTime):
         self._az_dome = az
 
     def _mount_altaz_target(self, command_dict: Dict[str, Any]) -> Dict[str, float] or None:
+        """
+        Method calculate alt az from command dict
+        :param command_dict: command dict
+        :return: calculated alt az
+        """
         altaz = None
-        # ++++++TODO DO VENTUALLY SKIPPING OPERATIONS ZERO TIME ?++++++
-        # TODO This OCA should be taken from settings
-        oca = {'latitude': -24.598056, 'longitude': -70.196389, 'elevation': 2817}
         if 'args' in command_dict.keys():
             if len(command_dict['args']) == 2:
                 ra = command_dict['args'][0]
@@ -89,11 +114,11 @@ class CycleTimeCalc(AbstractCycleTime):
         if (ra is not None) and (dec is not None):
             az, alt = ra_dec_2_az_alt(ra=ra_to_decimal(ra),
                                       dec=dec_to_decimal(dec),
-                                      longitude=oca['longitude'],
-                                      latitude=oca['latitude'],
-                                      elevation=oca['elevation'],
-                                      epoch='2000',
-                                      time=self._start_time)
+                                      longitude=self._observatory_location['longitude'],
+                                      latitude=self._observatory_location['latitude'],
+                                      elevation=self._observatory_location['elevation'],
+                                      epoch=self._epoch,
+                                      time=self._start_time.timestamp() + self._time_length)
             altaz = {'az': az, 'alt': alt}
         if 'kwargs' in command_dict.keys() and (ra is None) and (dec is None):
             if ('az' and 'alt') in command_dict['kwargs'].keys():
@@ -107,14 +132,19 @@ class CycleTimeCalc(AbstractCycleTime):
         if command_dict['command_name'] in self.avialable_param_telesc_commands:
             azalt = self._mount_altaz_target(command_dict=command_dict)
             if azalt is not None:
-                mount_alt_az_dist = CycleTimeCalc.alt_az_distance(start_alt=self._alt_mount,
-                                                                  end_alt=azalt['alt'],
-                                                                  start_az=self._az_mount,
-                                                                  end_az=azalt['az'])
-                dome_az_dist = CycleTimeCalc.az_distance(start=self._az_dome, end=azalt['az'])
-                self._alt_mount = azalt['alt']
-                self._az_mount = azalt['az']
-                self._az_dome = azalt['az']
+                if (azalt['alt'] >= self._alt_limit and self._skipping == True) or\
+                        (azalt['alt'] < self._alt_limit and self._skipping == False):
+                    mount_alt_az_dist = CycleTimeCalc.alt_az_distance(start_alt=self._alt_mount,
+                                                                      end_alt=azalt['alt'],
+                                                                      start_az=self._az_mount,
+                                                                      end_az=azalt['az'])
+                    dome_az_dist = CycleTimeCalc.az_distance(start=self._az_dome, end=azalt['az'])
+                    self._alt_mount = azalt['alt']
+                    self._az_mount = azalt['az']
+                    self._az_dome = azalt['az']
+                else:
+                    logger.debug(f'Alt is under lower limit, no time calculation')
+                    return 0.0
             else:
                 mount_alt_az_dist = 0.0
                 dome_az_dist = 0.0
@@ -129,9 +159,9 @@ class CycleTimeCalc(AbstractCycleTime):
             command_dict_param['rmmode_expno'] = (self._rmode + 1) * exp_no
             command_dict_param['dither_expno'] = dither * exp_no
             self._current_filter = CycleTimeCalc.last_filter(command_dict)
-            tc = self.time_calc(command_name=command_dict['command_name'], command_dict_param=command_dict_param)
-            if tc:
-                comm_time = tc
+            time_cal = self._calc_time(command_name=command_dict['command_name'], command_dict_param=command_dict_param)
+            if time_cal:
+                comm_time = time_cal
             else:
                 comm_time = 0.0
             self._time_length += comm_time
@@ -151,7 +181,7 @@ class CycleTimeCalc(AbstractCycleTime):
     def finnish_time_from_now_utc(self) -> str:
         return str(datetime.datetime.utcnow() + datetime.timedelta(seconds=self._time_length))
 
-    def time_calc(self, command_name: str, command_dict_param: Dict[str, Any]) -> float or None:
+    def _calc_time(self, command_name: str, command_dict_param: Dict[str, Any]) -> float or None:
         no_error = True
         param = self.available_param[self.telescope][command_name]
         for n, m in command_dict_param.items():
