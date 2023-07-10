@@ -25,6 +25,7 @@ class AbstractCycleTime(ABC):
     X_COLUMNS = DATA_CLEAN_ORDER[4:]
     Y_COLUMN = DATA_CLEAN_ORDER[3]
     POSSIBLE_DITHER = ['OBJECT', 'SNAP']
+    NO_TRAIN_COMMANDS = ['WAIT']
 
     @staticmethod
     def get_list_telesc(file_type: str) -> List[str]:

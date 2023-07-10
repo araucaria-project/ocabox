@@ -3,7 +3,7 @@ import logging
 from ob.planrunner.cycle_time_calc.abstract_cycle_time import AbstractCycleTime
 import datetime
 from pyaraucaria.coordinates import ra_dec_2_az_alt, ra_to_decimal, dec_to_decimal
-
+import time
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -62,6 +62,9 @@ class CycleTimeCalc(AbstractCycleTime):
         if self.avialable_param_telesc:
             for ke, val in self.avialable_param_telesc.items():
                 li.append(ke)
+        for n in CycleTimeCalc.NO_TRAIN_COMMANDS:
+            if n in li:
+                li.remove(n)
         return li
 
     def _get_params(self) -> None:
@@ -132,8 +135,7 @@ class CycleTimeCalc(AbstractCycleTime):
         if command_dict['command_name'] in self.avialable_param_telesc_commands:
             azalt = self._mount_altaz_target(command_dict=command_dict)
             if azalt is not None:
-                if (azalt['alt'] >= self._alt_limit and self._skipping == True) or\
-                        (azalt['alt'] < self._alt_limit and self._skipping == False):
+                if (azalt['alt'] >= self._alt_limit) or (azalt['alt'] < self._alt_limit and self._skipping == False):
                     mount_alt_az_dist = CycleTimeCalc.alt_az_distance(start_alt=self._alt_mount,
                                                                       end_alt=azalt['alt'],
                                                                       start_az=self._az_mount,
@@ -166,6 +168,32 @@ class CycleTimeCalc(AbstractCycleTime):
                 comm_time = 0.0
             self._time_length += comm_time
             return comm_time
+        elif command_dict['command_name'] in CycleTimeCalc.NO_TRAIN_COMMANDS:
+            if command_dict['command_name'] == 'WAIT':
+                if 'kwargs' in command_dict.keys():
+                    if 'wait' in command_dict['kwargs'].keys():
+                        t = float(command_dict['kwargs']['wait'])
+                        self._time_length += t
+                        return t
+                    if 'ut' in command_dict['kwargs'].keys():
+                        myDate = f"{datetime.datetime.today().strftime('%Y-%m-%d')} {str(command_dict['kwargs']['ut'])}"
+                        target_t = time.mktime(datetime.datetime.strptime(myDate, "%Y-%m-%d %H:%M:%S").timetuple())
+                        if target_t >= (self._start_time.timestamp() + self._time_length):
+                            t = float(target_t - (self._start_time.timestamp() + self._time_length))
+                            self._time_length += t
+                            return t
+                        else:
+                            logger.debug(f'Cannot calculate time, time in past')
+                            return 0.0
+                    else:
+                        logger.debug(f'Cannot calculate time, no kwarg')
+                        return 0.0
+                else:
+                    logger.debug(f'Cannot calculate time, no kwargs')
+                    return 0.0
+            else:
+                logger.debug(f'Cannot calculate time, command not recognized')
+                return 0.0
         else:
             logger.debug(f'Cannot calculate time, lack of params')
             return 0.0
@@ -199,7 +227,7 @@ class CycleTimeCalc(AbstractCycleTime):
 
 if __name__ == '__main__':
     c = CycleTimeCalc('dev')
-    # d = {'command_name': 'OBJECT', 'kwargs': {'seq': '12/Red/1,3/Green/3,2/Blue/5', 'az': 12.0, 'alt':70.0}}
-    # print(c.calc_time(command_dict=d))
+    d = {'command_name': 'OBJECT', 'kwargs': {'seq': '12/Red/1,3/Green/3,2/Blue/5', 'az': 12.0, 'alt':70.0}}
+    print(c.calc_time(command_dict=d))
     # print(c._time_length)
     # print(c.finnish_time_from_now_utc)
