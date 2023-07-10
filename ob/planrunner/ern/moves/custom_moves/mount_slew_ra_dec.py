@@ -1,3 +1,4 @@
+import logging
 from typing import Tuple
 from pyaraucaria.coordinates import ra_to_decimal, dec_to_decimal, ra_dec_epoch, ra_dec_2_az_alt
 from ob.comunication.comunication_error import CommunicationTimeoutError, CommunicationRuntimeError
@@ -6,6 +7,8 @@ from ob.planrunner.ern.errors import PlanBuildError
 from ob.planrunner.ern.moves.move import Move
 from ob.planrunner.ern.moves.position import Position
 from ob.data_colection.resource_manager.errors import ResourceCommandError
+
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class MountSlewRaDec(Move):

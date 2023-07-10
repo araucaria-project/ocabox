@@ -151,6 +151,9 @@ tree:
         camera:
           kind: camera
           device_number: 0
+        focuser:
+          kind: focuser
+          device_number: 0
 
   test_observatory_down:
     observatory:

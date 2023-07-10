@@ -1,0 +1,42 @@
+import logging
+
+from ob.comunication.comunication_error import CommunicationTimeoutError, CommunicationRuntimeError
+from ob.data_colection.resource_manager.errors import ResourceCommandError
+from ob.data_colection.resource_manager.resource_manager import ResourceManager
+from ob.planrunner.ern.errors import PlanBuildError
+from ob.planrunner.ern.moves.move import Move
+from ob.planrunner.ern.moves.position import Position
+
+logger = logging.getLogger(__name__.rsplit('.')[-1])
+
+
+class FocuserFocus(Move):
+    _USED_RESOURCE = ResourceManager.FOCUSER
+
+    def __init__(self, focus: int, plan_data, resource_nr=0):
+        super().__init__(plan_data=plan_data)
+        self._resource_nr = resource_nr
+        self._resource_content = self.res_mngr.get_resource(self._USED_RESOURCE, nr=self._resource_nr)
+        self._focus = focus  # rare focus value
+        self._target_focus = None  # filter nr
+        self._build()
+
+    def _build(self):
+        try:
+            self._target_focus = int(self._focus)
+        except ValueError:
+            raise PlanBuildError(f"Wrong focus. Can not read focus value - wrong format")
+        # here position has random value in target, it will be updated in a_init() method
+        self.add_position(
+            Position(f"{self._resource_content.adr}.position", t=self._target_focus))
+
+    async def _action(self):
+        # ----------------- set position focus -----------------
+        try:
+            result = await self.api.put_async(address=f"{self._resource_content.adr}.move",
+                                              parameters_dict={"Position": self._target_focus}, no_wait=False)
+        except (CommunicationRuntimeError, CommunicationTimeoutError) as e:
+            raise ResourceCommandError(f"Action has error {str(e)}")
+        if not result.status:
+            raise ResourceCommandError(f"Action has error status in response {result.error}")
+        await self.watch()

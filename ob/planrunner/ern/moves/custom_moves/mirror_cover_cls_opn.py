@@ -1,11 +1,12 @@
-from pyaraucaria.coordinates import deg_to_decimal_deg
+import logging
 
 from ob.comunication.comunication_error import CommunicationRuntimeError, CommunicationTimeoutError
 from ob.data_colection.resource_manager.errors import ResourceCommandError
 from ob.data_colection.resource_manager.resource_manager import ResourceManager
-from ob.planrunner.ern.errors import PlanBuildError
 from ob.planrunner.ern.moves.move import Move
 from ob.planrunner.ern.moves.position import Position
+
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class MirrorCoverClsOpn(Move):
