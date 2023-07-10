@@ -130,7 +130,7 @@ class CycleTimeCalc(AbstractCycleTime):
     def _mount_altaz_target(self, command_dict: Dict[str, Any]) -> Dict[str, float] or None:
         """
         Method calculate alt az from command dictionary
-        :param command_dict: command dict parsed by pyaraucaria obs_plan_parser
+        :param command_dict: command dict
         :return: calculated alt az
         """
         altaz = None
@@ -164,73 +164,96 @@ class CycleTimeCalc(AbstractCycleTime):
                 altaz = {'az': az, 'alt': alt}
         return altaz
 
-    def calc_time(self, command_dict: Dict[str, Any]) -> float or None:
+    def _calc_time_no_wait_commands(self, command_dict: Dict[str, Any]) -> float or None:
+        azalt = self._mount_altaz_target(command_dict=command_dict)
+        if azalt is not None:
+            if (azalt['alt'] >= self._alt_limit) or (azalt['alt'] < self._alt_limit and self._skipping == False):
+                mount_alt_az_dist = CycleTimeCalc.alt_az_distance(start_alt=self._alt_mount,
+                                                                  end_alt=azalt['alt'],
+                                                                  start_az=self._az_mount,
+                                                                  end_az=azalt['az'])
+                dome_az_dist = CycleTimeCalc.az_distance(start=self._az_dome, end=azalt['az'])
+                self._alt_mount = azalt['alt']
+                self._az_mount = azalt['az']
+                self._az_dome = azalt['az']
+            else:
+                logger.debug(f'Alt is under lower limit, no time calculation')
+                return 0.0
+        else:
+            mount_alt_az_dist = 0.0
+            dome_az_dist = 0.0
+        command_dict_param = {}
+        exp_no = CycleTimeCalc.exposure_number(command_dict)
+        dither = CycleTimeCalc.dither_on(command_dict=command_dict)
+        command_dict['filter_pos'] = self._current_filter
+        command_dict_param['dome_distance'] = dome_az_dist
+        command_dict_param['mount_distance'] = mount_alt_az_dist
+        command_dict_param['exposure_time_sum'] = CycleTimeCalc.exposure_time_sum(command_dict)
+        command_dict_param['filter_changes'] = CycleTimeCalc.filter_changes(command_dict)
+        command_dict_param['rmmode_expno'] = (self._rmode + 1) * exp_no
+        command_dict_param['dither_expno'] = dither * exp_no
+        self._current_filter = CycleTimeCalc.last_filter(command_dict)
+        time_cal = self._calc_time(command_name=command_dict['command_name'], command_dict_param=command_dict_param)
+        if time_cal:
+            comm_time = time_cal
+        else:
+            comm_time = 0.0
+        self._time_length += comm_time
+        return comm_time
 
-        if command_dict['command_name'] in self.avialable_param_telesc_commands:
-            azalt = self._mount_altaz_target(command_dict=command_dict)
-            if azalt is not None:
-                if (azalt['alt'] >= self._alt_limit) or (azalt['alt'] < self._alt_limit and self._skipping == False):
-                    mount_alt_az_dist = CycleTimeCalc.alt_az_distance(start_alt=self._alt_mount,
-                                                                      end_alt=azalt['alt'],
-                                                                      start_az=self._az_mount,
-                                                                      end_az=azalt['az'])
-                    dome_az_dist = CycleTimeCalc.az_distance(start=self._az_dome, end=azalt['az'])
-                    self._alt_mount = azalt['alt']
-                    self._az_mount = azalt['az']
-                    self._az_dome = azalt['az']
-                else:
-                    logger.debug(f'Alt is under lower limit, no time calculation')
-                    return 0.0
-            else:
-                mount_alt_az_dist = 0.0
-                dome_az_dist = 0.0
-            command_dict_param = {}
-            exp_no = CycleTimeCalc.exposure_number(command_dict)
-            dither = CycleTimeCalc.dither_on(command_dict=command_dict)
-            command_dict['filter_pos'] = self._current_filter
-            command_dict_param['dome_distance'] = dome_az_dist
-            command_dict_param['mount_distance'] = mount_alt_az_dist
-            command_dict_param['exposure_time_sum'] = CycleTimeCalc.exposure_time_sum(command_dict)
-            command_dict_param['filter_changes'] = CycleTimeCalc.filter_changes(command_dict)
-            command_dict_param['rmmode_expno'] = (self._rmode + 1) * exp_no
-            command_dict_param['dither_expno'] = dither * exp_no
-            self._current_filter = CycleTimeCalc.last_filter(command_dict)
-            time_cal = self._calc_time(command_name=command_dict['command_name'], command_dict_param=command_dict_param)
-            if time_cal:
-                comm_time = time_cal
-            else:
-                comm_time = 0.0
-            self._time_length += comm_time
-            return comm_time
-        elif command_dict['command_name'] in CycleTimeCalc.NO_TRAIN_COMMANDS:
-            if command_dict['command_name'] == 'WAIT':
-                if 'kwargs' in command_dict.keys():
-                    if 'wait' in command_dict['kwargs'].keys():
-                        t = float(command_dict['kwargs']['wait'])
+    def _calc_time_wait_command(self, command_dict: Dict[str, Any]) -> float or None:
+        if command_dict['command_name'] == 'WAIT':
+            if 'kwargs' in command_dict.keys():
+                if 'wait' in command_dict['kwargs'].keys():
+                    t = float(command_dict['kwargs']['wait'])
+                    self._time_length += t
+                    return t
+                if 'ut' in command_dict['kwargs'].keys():
+                    dat_0 = self._start_time.timestamp() + self._time_length
+                    target_t = self._that_day_time(date_time_stamp=dat_0, time_str=command_dict['kwargs']['ut'])
+                    if target_t >= (self._start_time.timestamp() + self._time_length):
+                        t = float(target_t - (self._start_time.timestamp() + self._time_length))
                         self._time_length += t
                         return t
-                    if 'ut' in command_dict['kwargs'].keys():
-                        d = datetime.datetime.fromtimestamp(self._start_time.timestamp() + self._time_length).strftime(
-                            '%Y-%m-%d')
-                        myDate = f"{d} {str(command_dict['kwargs']['ut'])}"
-                        target_t = time.mktime(datetime.datetime.strptime(myDate, "%Y-%m-%d %H:%M:%S").timetuple())
-                        if target_t >= (self._start_time.timestamp() + self._time_length):
-                            t = float(target_t - (self._start_time.timestamp() + self._time_length))
-                            self._time_length += t
-                            return t
-                        else:
-
-                            logger.debug(f'Cannot calculate time, time in past')
-                            return 0.0
                     else:
-                        logger.debug(f'Cannot calculate time, no kwarg')
-                        return 0.0
+                        dat_1 = self._start_time.timestamp() + self._time_length +\
+                                datetime.timedelta(days=1).total_seconds()
+                        target_t = self._that_day_time(date_time_stamp=dat_1, time_str=command_dict['kwargs']['ut'])
+                        t = float(target_t - (self._start_time.timestamp() + self._time_length))
+                        self._time_length += t
+                        return t
                 else:
-                    logger.debug(f'Cannot calculate time, no kwargs')
+                    logger.debug(f'Cannot calculate time, no kwarg')
                     return 0.0
             else:
-                logger.debug(f'Cannot calculate time, command not recognized')
+                logger.debug(f'Cannot calculate time, no kwargs')
                 return 0.0
+        else:
+            logger.debug(f'Cannot calculate time, command not recognized')
+            return 0.0
+
+    def _that_day_time(self, date_time_stamp: float, time_str: str) -> float:
+        """
+        Metgod gives time of time_str for day given by date_time_stamp (no matter what time in this date_time_stamp)
+        :param date_time_stamp: day red from this timestamp
+        :param time_str: time in str format
+        :return: timestamp of date(date_time_stamp) and time(time_str)
+        """
+        dat_ts_0 = datetime.datetime.fromtimestamp(date_time_stamp)
+        d = dat_ts_0.strftime('%Y-%m-%d')
+        myDate = f"{d} {time_str}"
+        return time.mktime(datetime.datetime.strptime(myDate, "%Y-%m-%d %H:%M:%S").timetuple())
+
+    def calc_time(self, command_dict: Dict[str, Any]) -> float or None:
+        """
+        Method calculate time for command and adds it to self._time_length
+        :param command_dict: command_dict parsed by pyaraucaria obs_plan_parser
+        :return: operation time in float
+        """
+        if command_dict['command_name'] in self.avialable_param_telesc_commands:
+            return self._calc_time_no_wait_commands(command_dict=command_dict)
+        elif command_dict['command_name'] in CycleTimeCalc.NO_TRAIN_COMMANDS:
+            return self._calc_time_wait_command(command_dict=command_dict)
         else:
             logger.debug(f'Cannot calculate time, lack of params')
             return 0.0
