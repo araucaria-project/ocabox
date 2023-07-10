@@ -210,13 +210,16 @@ class CycleTimeCalc(AbstractCycleTime):
                         self._time_length += t
                         return t
                     if 'ut' in command_dict['kwargs'].keys():
-                        myDate = f"{datetime.datetime.today().strftime('%Y-%m-%d')} {str(command_dict['kwargs']['ut'])}"
+                        d = datetime.datetime.fromtimestamp(self._start_time.timestamp() + self._time_length).strftime(
+                            '%Y-%m-%d')
+                        myDate = f"{d} {str(command_dict['kwargs']['ut'])}"
                         target_t = time.mktime(datetime.datetime.strptime(myDate, "%Y-%m-%d %H:%M:%S").timetuple())
                         if target_t >= (self._start_time.timestamp() + self._time_length):
                             t = float(target_t - (self._start_time.timestamp() + self._time_length))
                             self._time_length += t
                             return t
                         else:
+
                             logger.debug(f'Cannot calculate time, time in past')
                             return 0.0
                     else:
