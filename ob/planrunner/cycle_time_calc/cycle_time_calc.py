@@ -59,6 +59,7 @@ class CycleTimeCalc(AbstractCycleTime):
                                                       'longitude': -70.196389,
                                                       'elevation': 2817}
         self._start_time: datetime.datetime = datetime.datetime.utcnow()
+        self._time_length_list: List[float] = []
         self._mk_dirs()
         self._get_params()
         super().__init__()
@@ -105,11 +106,11 @@ class CycleTimeCalc(AbstractCycleTime):
         for t in CycleTimeCalc.get_list_telesc(file_type='train_param'):
             self.available_param[t] = {}
             for co in CycleTimeCalc.get_list_commands(telescope=t, file_type='train_param'):
-                data = CycleTimeCalc.get_last_param(telescope=t, command=co)
+                data = CycleTimeCalc.get_last_params(telescope=t, command=co)
                 self.available_param[t][co] = data
 
     @staticmethod
-    def get_last_param(telescope: str, command: str) -> Dict[str, Any]:
+    def get_last_params(telescope: str, command: str) -> Dict[str, Any]:
         data = CycleTimeCalc.read_file(CycleTimeCalc.BASE_FOLDER_NAME,
                                        CycleTimeCalc.train_param_file_name(telescope=telescope, command=command))
         return CycleTimeCalc.parse_data(data=data)[-1]
@@ -251,13 +252,15 @@ class CycleTimeCalc(AbstractCycleTime):
         :param command_dict: command_dict parsed by pyaraucaria obs_plan_parser
         :return: operation time in float
         """
+        tim = 0.0
         if command_dict['command_name'] in self.avialable_param_telesc_commands:
-            return self._calc_time_no_wait_commands(command_dict=command_dict)
+            tim = self._calc_time_no_wait_commands(command_dict=command_dict)
         elif command_dict['command_name'] in CycleTimeCalc.NO_TRAIN_COMMANDS:
-            return self._calc_time_wait_command(command_dict=command_dict)
+            tim = self._calc_time_wait_command(command_dict=command_dict)
         else:
             logger.debug(f'Cannot calculate time, lack of params')
-            return 0.0
+        self._time_length_list.append(tim)
+        return tim
 
     @property
     def time_lenght_sec(self) -> float:
@@ -267,8 +270,13 @@ class CycleTimeCalc(AbstractCycleTime):
     def time_lenght_min(self) -> float:
         return round(self._time_length/60, 1)
 
+    @property
     def finnish_time_utc(self) -> str:
         return str(self._start_time + datetime.timedelta(seconds=self._time_length))
+
+    @property
+    def time_list(self) -> List[float]:
+        return self._time_length_list
 
     def _calc_time(self, command_name: str, command_dict_param: Dict[str, Any]) -> float or None:
         no_error = True
@@ -288,8 +296,10 @@ class CycleTimeCalc(AbstractCycleTime):
 
 if __name__ == '__main__':
     c = CycleTimeCalc('dev')
-    # d = {'command_name': 'WAIT', 'kwargs': {'seq': '12/Red/1,3/Green/3,2/Blue/5', 'az': 12.0, 'alt':70.0}}
-    d = {'command_name': 'WAIT', 'kwargs': {'ut': '08:48:00'}}
+    d = {'command_name': 'OBJECT', 'kwargs': {'seq': '12/Red/1,3/Green/3,2/Blue/5', 'az': 12.0, 'alt':70.0}}
     print(c.calc_time(command_dict=d))
+    d = {'command_name': 'WAIT', 'kwargs': {'ut': '12:48:00'}}
+    print(c.calc_time(command_dict=d))
+    print(c.time_list)
     # print(c._time_length)
     # print(c.finnish_time_from_now_utc)
