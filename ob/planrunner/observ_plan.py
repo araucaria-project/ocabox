@@ -198,6 +198,10 @@ class ObservPlan:
         if self.get_nightplan(nightplan_id):
             if self.tsk is None:
                 self.running_nightplan = nightplan_id
+                if self.running_nightplan in self.subcomponents.keys():
+                    self.subcomponents[self.running_nightplan].started = True
+                    self.subcomponents[self.running_nightplan].skipped = False
+                    self.subcomponents[self.running_nightplan].done = False
                 loop = self.get_loop()
                 if loop:
                     self.tsk = loop.create_task(self.arun_night(nightplan_id, step_id=step_id))
