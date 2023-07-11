@@ -167,7 +167,7 @@ class CycleTimeCalc(AbstractCycleTime):
     def _calc_time_no_wait_commands(self, command_dict: Dict[str, Any]) -> float or None:
         azalt = self._mount_altaz_target(command_dict=command_dict)
         if azalt is not None:
-            if (azalt['alt'] >= self._alt_limit) or (azalt['alt'] < self._alt_limit and self._skipping == False):
+            if (azalt['alt'] >= self._alt_limit) or (azalt['alt'] < self._alt_limit and self._skipping is False):
                 mount_alt_az_dist = CycleTimeCalc.alt_az_distance(start_alt=self._alt_mount,
                                                                   end_alt=azalt['alt'],
                                                                   start_az=self._az_mount,
@@ -232,7 +232,8 @@ class CycleTimeCalc(AbstractCycleTime):
             logger.debug(f'Cannot calculate time, command not recognized')
             return 0.0
 
-    def _that_day_time(self, date_time_stamp: float, time_str: str) -> float:
+    @staticmethod
+    def _that_day_time(date_time_stamp: float, time_str: str) -> float:
         """
         Metgod gives time of time_str for day given by date_time_stamp (no matter what time in this date_time_stamp)
         :param date_time_stamp: day red from this timestamp
@@ -240,9 +241,9 @@ class CycleTimeCalc(AbstractCycleTime):
         :return: timestamp of date(date_time_stamp) and time(time_str)
         """
         dat_ts_0 = datetime.datetime.fromtimestamp(date_time_stamp)
-        d = dat_ts_0.strftime('%Y-%m-%d')
-        myDate = f"{d} {time_str}"
-        return time.mktime(datetime.datetime.strptime(myDate, "%Y-%m-%d %H:%M:%S").timetuple())
+        day = dat_ts_0.strftime('%Y-%m-%d')
+        mydate = f"{day} {time_str}"
+        return time.mktime(datetime.datetime.strptime(mydate, "%Y-%m-%d %H:%M:%S").timetuple())
 
     def calc_time(self, command_dict: Dict[str, Any]) -> float or None:
         """
@@ -287,7 +288,7 @@ class CycleTimeCalc(AbstractCycleTime):
 
 if __name__ == '__main__':
     c = CycleTimeCalc('dev')
-    #d = {'command_name': 'WAIT', 'kwargs': {'seq': '12/Red/1,3/Green/3,2/Blue/5', 'az': 12.0, 'alt':70.0}}
+    # d = {'command_name': 'WAIT', 'kwargs': {'seq': '12/Red/1,3/Green/3,2/Blue/5', 'az': 12.0, 'alt':70.0}}
     d = {'command_name': 'WAIT', 'kwargs': {'ut': '08:48:00'}}
     print(c.calc_time(command_dict=d))
     # print(c._time_length)
