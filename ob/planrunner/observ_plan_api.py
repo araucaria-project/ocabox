@@ -45,7 +45,8 @@ class ObservPlanApi:
     async def astop_nightplan(self) -> None:
         await self.observ_plan.astop_nightplan()
 
-
+    def is_nightplan_running(self, nightplan_id: str) -> bool:
+        return self.observ_plan.is_nightplan_running(nightplan_id=nightplan_id)
 
 
 

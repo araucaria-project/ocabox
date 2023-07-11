@@ -216,6 +216,8 @@ class ObservPlan:
             self.info_callback['stream_1'](f'Night plan stopped')
             self.tsk = None
         self.tsk = None
+        if self.running_nightplan in self.subcomponents.keys():
+            self.subcomponents[self.running_nightplan].skipped = True
         self.running_nightplan = None
 
     async def arun_night(self, nightplan_id: str, step_id: str or None = None) -> None:
@@ -223,3 +225,12 @@ class ObservPlan:
 
     async def stop(self):
         await self.astop_nightplan()
+
+    def is_nightplan_running(self, nightplan_id: str) -> bool:
+        if nightplan_id in self.subcomponents.keys():
+            if self.subcomponents[nightplan_id].started is True:
+                if self.subcomponents[nightplan_id].done is True or self.subcomponents[nightplan_id].skipped is True:
+                    return False
+                else:
+                    return True
+        return False
