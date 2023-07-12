@@ -35,3 +35,6 @@ tree:
         safetymonitor:
           kind: safetymonitor
           device_number: 0
+        covercalibrator2:
+          kind: covercalibratorOCA
+          device_number: 0
