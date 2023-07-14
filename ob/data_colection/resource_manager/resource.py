@@ -23,6 +23,7 @@ class Resource(ABC):
         self._resource_name: str = resource_name
         self._nr: int = nr
         self._properties: dict = properties  # properties, from settings and more
+        self._telescope_id = self._properties.get("observatory_name", "ID_UNDEFINED")  # telescope id/unique name
         self._lock = asyncio.Lock()
         if address_path:
             a = ".".join([address_path, self.source_name])
@@ -32,6 +33,10 @@ class Resource(ABC):
         self._target = target_request
         self._correctly_load_data = True
         super().__init__(**kwargs)
+
+    @property
+    def telescope_id(self):
+        return self._telescope_id
 
     @property
     def nr(self) -> int:

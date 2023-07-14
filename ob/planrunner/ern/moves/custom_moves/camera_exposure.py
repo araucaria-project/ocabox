@@ -29,8 +29,9 @@ class CameraExposure(Move):
 
     def _build(self):
         # here position has random value in target, it will be updated in a_init() method
+        # todo przekazać timeout do metody tylko najpierw ustalić jak duży ma być, na razie jet to 2x czas ekspozycji
         self.add_position(
-            Position(f"{self._resource_content.adr}.imageready", t=True))
+            Position(f"{self._resource_content.adr}.imageready", t=True, timeout=self._exposure_time*2))
 
     async def _action(self):
 

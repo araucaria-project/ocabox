@@ -7,7 +7,6 @@ from ob.data_colection.resource_manager.resource import DomeAlpaca
 from ob.data_colection.specialistic_components.tree_alpaca import TreeAlpacaObservatory
 from ob.data_colection.specialistic_components.tree_cache_observatory import TreeCache
 from ob.data_colection.specialistic_components.tree_conditional_freezer import TreeConditionalFreezer
-from ob.ob_config import SingletonConfig
 from test.data_colection.base_async_test import BaseAsyncTest
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -72,6 +71,17 @@ class MountAlpacaTest(unittest.TestCase, BaseAsyncTest):
     def tearDown(self) -> None:
         self._tearDownLoop()
         super().tearDown()
+
+    def test_get_telescope_name(self):
+        """Test getting telescope unique name from parameters"""
+
+        async def coro():
+            rm = await self.tao.get_res_manager()
+            # get from config
+            mount = rm.get_resource(name=rm.MOUNT, nr=0)
+            self.assertEqual(self.OBSERVATORY_NAME, mount.telescope_id)
+
+        asyncio.run(coro())
 
 
 class FilterwheelAlpacaTest(unittest.TestCase, BaseAsyncTest):

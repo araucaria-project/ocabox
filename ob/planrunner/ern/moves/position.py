@@ -1,74 +1,25 @@
 import asyncio
+import logging
 import time
 from typing import Tuple, Optional, Callable
-
 from ob.comunication.comunication_error import CommunicationRuntimeError
+from ob.planrunner.ern.moves.part_move import PartMove
 from ob.util_functions.asyncio_util_functions import wait_for_psce
+
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 # todo Position do zmiany nazwy
-class Position:
+class Position(PartMove):
     def __init__(self, address, t=None, s=None, c=None, timeout=None,
                  bounds: Tuple[Optional[float], Optional[float]] = (None, None), order: int = 1, name: str = ""):
-        self._target = t
-        self._start = s
-        self._current = c
+        super().__init__(address=address, timeout=timeout, order=order, name=name)
         self.custom_end_condition: Optional[Callable] = None
-        self.error = False
-        self.error_content = None
-        self.task = None
-        self._address = address
-        self._finish_fut = None
-        self.timeout = timeout if timeout is not None else 20
-        self.order = order
-        self._start_tmstp = 0
-        self._finish_tmstp = 0
+        self.start = s
+        self.current = c
+        self.target = t
         # ------ optional -------
         self.bounds: Tuple[Optional[float], Optional[float]] = bounds
-        self._wait_for_others: list = []
-        self._name: str = name
-
-    def get_name(self) -> str:
-        return self._name
-
-    @property
-    def start(self):
-        return self._start
-
-    @start.setter
-    def start(self, s):
-        self._start = s
-
-    @property
-    def current(self):
-        return self._current
-
-    @current.setter
-    def current(self, c):
-        self._current = c
-
-    @property
-    def target(self):
-        return self._target
-
-    @target.setter
-    def target(self, t):
-        self._target = t
-
-    @property
-    def start_timestamp(self):
-        return self._start_tmstp
-
-    @start_timestamp.setter
-    def start_timestamp(self, s):
-        self._start_tmstp = s
-
-    @property
-    def finish_timestamp(self):
-        return self._finish_tmstp
-
-    def get_finish_future(self):
-        return self._finish_fut
 
     def _check_finish(self):
         """
@@ -105,18 +56,8 @@ class Position:
         else:
             return False
 
-    def done(self):
-        if self._finish_fut is None:
-            return False  # false because position even wasn't start so not done
-        return self._finish_fut.done()
-
     @property
     def progress(self) -> float:
-        """
-        Method count progress changing value
-
-        :return: progress in float format from 0 to 1
-        """
         # todo zrobić z tego Param - urzyć tej biblioteki Param i ze wszystkich innych wartości też
         if self.done():
             return float(1)
@@ -189,16 +130,8 @@ class Position:
                 self._finish_fut.set_result(False)
             await CQ.stop_and_wait()
 
-    async def wait(self):
-        # todo może powinien zwracać błąd gdy czekamy a nie zostało uruchomione
-        if self._finish_fut is not None:
-            await self._finish_fut
-
     async def run(self, api):
         if self.task:
             self.task.cancel()
         self._finish_fut = asyncio.get_running_loop().create_future()
         self.task = asyncio.create_task(wait_for_psce(self._coro(api=api), timeout=self.timeout))
-
-    def add_more_important_position(self, position):
-        self._wait_for_others.append(position)
