@@ -24,10 +24,25 @@ class Wait(SubCommand):
     async def _wait_exec(self, value: float) -> None:
         await asyncio.sleep(value)
 
+    def _that_day_time(self, date: datetime, time_str: str) -> float:
+        """
+        Metgod gives time of time_str for day given by date_time_stamp (no matter what time in this date_time_stamp)
+        :param date_time_stamp: day red from this timestamp
+        :param time_str: time in str format
+        :return: timestamp of date(date_time_stamp) and time(time_str)
+        """
+        d = date.strftime('%Y-%m-%d')
+        myDate = f"{d} {time_str}"
+        return time.mktime(datetime.datetime.strptime(myDate, "%Y-%m-%d %H:%M:%S").timetuple())
+
     async def _ut_exec(self, value: str) -> None:
+        today = datetime.datetime.utcnow()
+        target_t = self._that_day_time(date=today, time_str=value)
+        now_t = time.mktime(datetime.datetime.utcnow().timetuple())
+        if now_t >= target_t:
+            tomorow = today + datetime.timedelta(days=1)
+            target_t = self._that_day_time(date=tomorow, time_str=value)
         while True:
-            myDate = f"{datetime.datetime.today().strftime('%Y-%m-%d')} {value}"
-            target_t = time.mktime(datetime.datetime.strptime(myDate, "%Y-%m-%d %H:%M:%S").timetuple())
             now_t = time.mktime(datetime.datetime.utcnow().timetuple())
             if now_t >= target_t:
                 break

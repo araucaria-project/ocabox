@@ -4,12 +4,17 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 ### Added
 - CCTV method asubscribe_ir
-- ocaboxapi.__init__ CCTV
+- `ocaboxapi.__init__` CCTV
 - planrunner.command tracking=off or on or default
 - Added custom `CoverCalibrator` alpaca module which has correctly working methods `opencover` and `closecover`
+- Module `cycle_time_calc` added and implemented into `planrunner`
+- `planrunner` get is running info
 
 ### Fixed
 - Fixed getting values from config in method `get_app_cfg()` form `Observatory` object
+- Fixed `WAIT` ut after midnight
+- Fixed `ZERO` exposition time (extended to 1s)
+- `planrunner` fixed altaz dithering
 
 ## [1.0.14] - 2023-06-26
 ### Added

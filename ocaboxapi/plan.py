@@ -44,3 +44,6 @@ class ObservationPlan:
     def get_status(self, nightplan_id: str) -> Dict[Any, Any]:
         pass
 
+    def is_nightplan_running(self, nightplan_id: str) -> bool:
+        return self.observ.is_nightplan_running(nightplan_id=nightplan_id)
+
