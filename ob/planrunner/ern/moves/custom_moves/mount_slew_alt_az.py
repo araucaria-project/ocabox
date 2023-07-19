@@ -34,6 +34,9 @@ class MountSlewAltAz(Move):
             self._real_az = deg_to_decimal_deg(self._az)
         except (ValueError, TypeError):
             raise PlanBuildError(f"Wrong az alt format")
+            # check min alt
+        if self._real_alt <= self._resource_content.min_alt:
+            raise PlanBuildError(f"Altitude is lover then min altitude")
 
         self.add_position(
             Position(f"{self._resource_content.adr}.altitude", t=self._real_alt, bounds=(0.5, 0.5),
@@ -45,10 +48,6 @@ class MountSlewAltAz(Move):
         self.add_position(Position(f"{self._resource_content.adr}.slewing", t=False, order=2))
 
     async def _action(self):
-        # check min alt
-        if self._real_alt <= self._resource_content.min_alt:
-            raise ResourceCommandError(f"Altitude is lover then min altitude")
-
         # todo zacząć uzywać głównego API a nie RARE API
         # ----------------- set tracking -----------------
         try:
