@@ -2,7 +2,7 @@ import asyncio
 import logging
 from abc import ABC
 
-from pyaraucaria.coordinates import deg_str_to_deg
+from pyaraucaria.coordinates import deg_to_decimal_deg
 
 from ob.comunication.comunication_error import CommunicationRuntimeError, CommunicationTimeoutError
 from ob.comunication.internal_client_api import InternalClientAPI
@@ -99,14 +99,10 @@ class Resource(ABC):
         az_ = None
         if alt is not None and az is not None:
             try:
-                az_ = float(az)
-                alt_ = float(alt)
+                az_ = deg_to_decimal_deg(az)
+                alt_ = deg_to_decimal_deg(alt)
             except ValueError:
-                try:
-                    az_ = deg_str_to_deg(az)
-                    alt_ = deg_str_to_deg(alt)
-                except ValueError:
-                    raise ValueError
+                raise ValueError
         return alt_, az_
 
     async def a_init(self):
