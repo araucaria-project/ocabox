@@ -48,6 +48,7 @@ class MountSlewRaDec(Move):
         self.add_position(Position(f"{self._resource_content.adr}.slewing", t=False, order=2))
 
     async def _action(self):
+        # todo podpytać czy ra_dec_2_az_alt napewno musi być przeliczane w momęcie wykonania
         try:
             az, alt = ra_dec_2_az_alt(ra=self._real_ra,
                                       dec=self._real_dec,

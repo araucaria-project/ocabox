@@ -4,7 +4,9 @@ from typing import Optional
 
 from ob.data_colection.resource_manager.errors import ResourceCommandError
 from ob.planrunner.ern.command import Command
+from ob.planrunner.ern.commands.commands_args_map import CommandArgsMap
 from ob.planrunner.ern.errors import ResourceError, PlanBuildError
+from ob.planrunner.ern.moves.custom_moves.dome_slew import DomeSlew
 from ob.planrunner.ern.moves.custom_moves.mount_slew_alt_az import MountSlewAltAz
 from ob.planrunner.ern.moves.custom_moves.mount_slew_ra_dec import MountSlewRaDec
 from ob.planrunner.ern.moves.move import Move
@@ -20,19 +22,54 @@ class CommandObject(Command):
         super().__init__(command_dict=command_dict, plan_data=plan_data, id_=id_, previous_command=previous_command,
                          loop=loop, **kwargs)
         # --- --- --- --- --- --- --- --- --- --- ---
-        self._mapped_args: dict = {"ra": None, "dec": None, "object_name": None, "filter": None, "repetitions": None}
-        self._read_args(self.get_args())
+        self._mapped_args: dict = {CommandArgsMap.RA: None,
+                                   CommandArgsMap.DEC: None,
+                                   CommandArgsMap.OBJ_NAME: CommandArgsMap.OBJ_NAME.val(),
+                                   "filter": None,
+                                   "alt": None,
+                                   "az": None,
+                                   "epoch": None,
+                                   CommandArgsMap.TRACKING: CommandArgsMap.TRACKING.ON.val()}
+
+        self._read_arguments(self.get_args(), self.get_kwargs())
         # ------ subcommands ------
         self._move_mount: Optional[Move] = None
+        self._move_dome: Optional[Move] = None
+        self._camera_exposure: Optional[Move] = None
+        self._camera_read_pic: Optional[Move] = None
+        self._filter: Optional[Move] = None
+        self._focuser = Optional[Move] = None
+        self.filter_wheel = Optional[Move] = None
 
         # ------ build subcommands ------
         self._create_modules_from_args()
 
-    def _read_args(self, args: list):
-        if len(args) > 2:
-            self._mapped_args['ra'] = args[1]
-            self._mapped_args['dec'] = args[2]
-        # todo uzupełnić
+    def _read_arguments(self, args: list, kwargs: dict):
+        # ------- read args ----------
+        # ==== object name ====
+        if len(args) < 1:  # wrong number of args
+            pass  # todo raise error
+        else:  # object name have to be always
+            if not isinstance(args[0], str):
+                pass  # todo raise error
+            self._mapped_args[CommandArgsMap.OBJ_NAME] = args[0]
+        # ==== ra dec ====
+        if len(args) >= 3:
+            self._mapped_args[CommandArgsMap.RA] = args[1]
+            self._mapped_args[CommandArgsMap.DEC] = args[2]
+
+        # ------- read kwargs --------
+        # ==== tracking ====
+        v = kwargs.get(CommandArgsMap.TRACKING, None)
+        if v is not None:
+            if CommandArgsMap.TRACKING.has_item(v):
+                self._mapped_args[CommandArgsMap.TRACKING] = CommandArgsMap.TRACKING.get_item(v).val()
+            else:
+                self.log(f"unexpected state of {CommandArgsMap.TRACKING} = {v}")
+        # ==== epoch ====
+        v = kwargs.get(CommandArgsMap.EPOCH, None)
+        if v is not None:
+            self._mapped_args[CommandArgsMap.EPOCH] = str(v)
 
     def _create_modules_from_args(self):
         """
@@ -41,12 +78,17 @@ class CommandObject(Command):
         :return:
         """
         try:
-            if self._arg("alt") and self._arg("az"):
-                self._move_mount = MountSlewAltAz(resource_nr=0, alt_az=(self._arg("alt"), self._arg("az")),
+            if self._arg(CommandArgsMap.ALT) and self._arg(CommandArgsMap.AZ):
+                self._move_mount = MountSlewAltAz(resource_nr=0, alt_az=(self._arg(CommandArgsMap.ALT),
+                                                                         self._arg(CommandArgsMap.AZ)),
                                                   plan_data=self._plan_data)
             else:
-                self._move_mount = MountSlewRaDec(resource_nr=0, ra_dec=(self._arg("ra"), self._arg("dec")),
+                self._move_mount = MountSlewRaDec(resource_nr=0, ra_dec=(self._arg(CommandArgsMap.RA),
+                                                                         self._arg(CommandArgsMap.DEC)),
                                                   plan_data=self._plan_data)
+
+            self._move_dome = DomeSlew(resource_nr=0, plan_data=self._plan_data,
+                                       az='')
         except PlanBuildError:
             raise
 

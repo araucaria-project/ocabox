@@ -28,9 +28,8 @@ class PlanManager:
 
     @staticmethod
     def _parse_plan(raw_plan: str):
-        parser = ObsPlanParser()  # todo w przyszłości nie będzie instancji tego
         try:
-            parsed_plan = parser.convert_from_string(raw_plan)
+            parsed_plan = ObsPlanParser.convert_from_string(raw_plan)
             logger.debug(f'Parsed: {parsed_plan}')
             return parsed_plan
         except asyncio.CancelledError:
@@ -79,13 +78,6 @@ class PlanManager:
         :raise PlanBuildError: if dict data is corrupted or can not create plan for other reasons
         :return: plan structure
         """
-        # to jest metoda startowa każda klasa command będzie miała takąsamą u siebie w sierodku
-
-        # ------------ część do usunięcia gdy parser zostanie poprawiony ------------
-        dic = {"command_name": "SEQUENCE", "subcommands": dic[0].get("all_commands")}
-        # ---------------------------------------------------------------------------
-        # todo przerobić jakoś ten parser żeby zwracał standardowe klucze dla wszystkich poleciń. Dla SEQUENCE też:
-        #  zamiast 'all_commands':[] to albo w argsach albo 'subcomands':[]
         try:
             plans = Command.build_command(dic=dic, plan_data=PlanData(access_resource_manager=access_resource_manager,
                                                                       client_api=api),
