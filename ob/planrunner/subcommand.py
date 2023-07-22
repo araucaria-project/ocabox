@@ -34,7 +34,7 @@ class SubCommand(BaseCommand):
                 kw = f'{kw} {n}={self.kwargs[n]}'
                 w+=1
                 #if w > 3: break
-        self.info_callback['c_subcommands'](f'{self.id};{self.subcommand_name};{kw}')
+        self.info_callback['c_subcommands'](f'{self.id};{self.subcommand_name};;{kw}')
         logger.debug(f'{self.id} is written')
 
     async def arun(self) -> int:

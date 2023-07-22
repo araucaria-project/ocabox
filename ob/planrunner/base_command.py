@@ -48,7 +48,7 @@ class BaseCommand(ABC):
 
     @property
     def log_night_folder(self):
-        return os.path.expanduser(self.observatory.get_app_cfg('base_log_dir', f'~/.oca'))
+        return os.path.expanduser(self.observatory.get_app_cfg('base_log_night_dir', f'~/.oca/log_night'))
 
     @staticmethod
     def get_jd_now() -> float:

@@ -70,7 +70,7 @@ class AbstractSequence(BaseCommand):
                 self.skipped = True
                 self.info_callback['exec_json'](self.exec_json())
                 return 2
-        self.info_callback['stream_1'](f'{self.name} {self.id} done')
+        # self.info_callback['stream_1'](f'{self.name} {self.id} done')
         self.done = True
         self.info_callback['exec_json'](self.exec_json())
         return 0

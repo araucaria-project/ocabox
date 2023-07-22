@@ -2,6 +2,7 @@ import asyncio
 import logging
 from ob.planrunner.subcommand import SubCommand
 from pyaraucaria.coordinates import ra_dec_epoch, ra_dec_2_az_alt, deg_to_decimal_deg
+import random
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -49,6 +50,17 @@ class MountSlew(SubCommand):
                 await self.mount.aput_tracking(False)
                 break
             await asyncio.sleep(0.1)
+
+    @staticmethod
+    def ra_random_dither(ra: float, dith_val: float, mode: str = 'basic') -> float:
+        # TODO dith_val = dith_val / cos(dec) ?
+        if mode == 'basic':
+            return ra + random.uniform(-dith_val / 60, dith_val / 60)
+
+    @staticmethod
+    def dec_random_dither(dec: float, dith_val: float, mode: str = 'basic') -> float:
+        if mode == 'basic':
+            return dec + random.uniform(-dith_val / 60, dith_val / 60)
 
     async def arun(self, step_id: str or None = None) -> int:
         self.started = True
@@ -114,7 +126,7 @@ class MountSlew(SubCommand):
                                       epoch=self.kwargs['epoch'])
             logger.info(f'{self.id} alt:{alt}')
             if alt > mount_min_alt:
-                await self.mount.aput_tracking(True)
+                await self.mount.aput_tracking(self.kwargs["tracking"])
                 await self.mount.aput_slewtocoo_async(ra=float(self.ra_now), dec=float(self.dec_now))
                 await self._wait_to_slew_coo(ra_in=float(self.ra_now), dec_in=float(self.dec_now))
                 logger.info(f'{self.id} done')
@@ -130,6 +142,25 @@ class MountSlew(SubCommand):
                 self.info_callback['exec_json'](self.exec_json())
                 logger.info(f'{self.id} target is below allowed alt:{alt}, skipping')
                 return 1
+
+        elif 'dither' in self.kwargs.keys() and ('ra' and 'dec' and 'ra' and 'dec' not in self.kwargs.keys()):
+            logger.debug(f'{self.id} started --> dither')
+            ra_d = self.ra_random_dither(ra=await self.mount.aget_ra(),
+                                         dith_val=self.kwargs["dither_distance"],
+                                         mode=self.kwargs["dither_mode"])
+            dec_d = self.dec_random_dither(dec=await self.mount.aget_dec(),
+                                           dith_val=self.kwargs["dither_distance"],
+                                           mode=self.kwargs["dither_mode"])
+            await self.mount.aput_tracking(self.kwargs["tracking"])
+            await self.mount.aput_slewtocoo_async(ra=ra_d, dec=dec_d)
+            await self._wait_to_slew_coo(ra_in=ra_d, dec_in=dec_d)
+            logger.info(f'{self.id} done')
+            self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
+            self.info_callback['stream_5'](f'{self.id}')
+            self.done = True
+            self.info_callback['exec_json'](self.exec_json())
+            return 0
+
         else:
             self.info_callback['stream_1'](f'{self.id} no coordinates, skipping')
             self.info_callback['stream_5'](f'{self.id}')
