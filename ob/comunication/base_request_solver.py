@@ -68,13 +68,13 @@ class BaseRequestSolver(ABC):
             if isinstance(r, ValueResponse):
                 response.append(r)
             elif isinstance(r, BaseException):
-                logger.error(f"CRITICAL One of the sub-tasks raise some unresolved exception - {r}.")
+                logger.error(f"CRITICAL One of the sub-tasks raise some unresolved exception - {type(r)}: {r}.")
                 re = ResponseError(4001, 'There were unexpected problems trying to respond to the request', repr(self),
                                    ResponseError.SEVERITY_CRITICAL)
                 v_response = ValueResponse('', None, False, re)
                 response.append(v_response)
             else:
-                logger.error(f"CRITICAL One of the sub-tasks return not supported type response - {r}.")
+                logger.error(f"CRITICAL One of the sub-tasks return not supported type response - {type(r)}: {r}.")
                 re = ResponseError(4001, 'There were unexpected problems trying to respond to the request', repr(self),
                                    ResponseError.SEVERITY_CRITICAL)
                 v_response = ValueResponse('', None, False, re)
