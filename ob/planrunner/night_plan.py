@@ -23,12 +23,12 @@ class NightPlan(AbstractSequence):
         self.subcomponents = {}
         self.telescope = parent.telescope
         self.info_callback = parent.info_callback
-        self.param = param
+        self.param = param if param is not None else {}
         self.mount = self.telescope.get_mount()
         self.camera = self.telescope.get_camera()
         self.param['cycle_time'] = CycleTimeCalc(self.telescope.id)
-        self.param['cycle_time'].set_telescope_start_az_alt(az=self.mount.azimuth, alt=self.mount.altitude)
-        self.param['cycle_time'].set_start_rmode(rmode=self.camera.readoutmode)
+        self._get_rm_mode()
+        self._get_altaz()
         self.args = []
         self.kwargs = {}
         self._r_id: int
@@ -40,6 +40,21 @@ class NightPlan(AbstractSequence):
         self.info = {}
         self._write_subcomponents()
         self._set_r_id()
+
+    def _get_rm_mode(self):
+        crm = self.camera.readoutmode
+        if not isinstance(crm, int):
+            crm = 0
+        self.param['cycle_time'].set_start_rmode(rmode=crm)
+
+    def _get_altaz(self):
+        az = self.mount.azimuth
+        alt = self.mount.altitude
+        if not isinstance(az, float):
+            az = 0.0
+        if not isinstance(alt, float):
+            alt = 45.0
+        self.param['cycle_time'].set_telescope_start_az_alt(az=az, alt=alt)
 
     def _set_r_id(self) -> None:
         self._r_id =  random.randint(0, 1000000)
