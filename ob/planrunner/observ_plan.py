@@ -35,6 +35,7 @@ class ObservPlan:
         self.callbacks_dict['c_commands'] = [self.empty_callback]
         self.callbacks_dict['c_sequences'] = [self.empty_callback]
         self.callbacks_dict['exec_json'] = [self.empty_callback]
+        self.callbacks_dict['time_end'] = [self.empty_callback]
 
     def empty_callback(self, value):
         pass
