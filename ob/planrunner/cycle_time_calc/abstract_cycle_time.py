@@ -165,7 +165,7 @@ class AbstractCycleTime(ABC):
         """
         v1 = AbstractCycleTime.vector(alt=start_alt, az=start_az)
         v2 = AbstractCycleTime.vector(alt=end_alt, az=end_az)
-        if v1.all() == v2.all():
+        if np.array_equal(v1, v2):
             ret = 0.0
         else:
             ret = math.degrees(math.acos(np.dot(v1, v2)))
