@@ -30,6 +30,30 @@ class BaseCommand(ABC):
     def user(self):
         return pwd.getpwuid(os.getuid())[0]
 
+    async def _value_proof_get(self, name, awaitab, expect_type):
+        try:
+            res = await awaitab
+            if isinstance(res, expect_type):
+                logger.info(f"Get {name} value done: {res}")
+                return res
+            else:
+                logger.warning(f"Can't get {name} value, result is {res}")
+                return None
+        except Exception as e:
+            logger.warning(f"Can't get {name} value: {e}")
+            return None
+
+    async def value_proof_get(self, name, awaitab, expect_type, n_times=3):
+        n = 0
+        for n in range(1, n_times+1):
+            res = await self._value_proof_get(name=name, awaitab=awaitab, expect_type=expect_type)
+            if res is not None:
+                return res
+            else:
+                logger.warning(f"Can't get {name}, (is None)")
+            if n == n_times:
+                return None
+
     @staticmethod
     def _mk_folder(folder: str):
         if not os.path.exists(folder):
