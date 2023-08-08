@@ -67,7 +67,9 @@ class ChangeFilter(SubCommand):
             self.skipped = True
             self.info_callback['exec_json'](self.exec_json())
             return 1
-        fit_pos = await self.get_value_position()
+        fit_pos = await self.value_proof_get(name='fitsh_tel_alt',
+                                                 awaitab=self.filterwheel.aget_position,
+                                                 expect_type=int)
         if pos==fit_pos:
             self.info_callback['stream_1'](f'No need to change filter, skipping')
             self.info_callback['stream_5'](f'{self.id}')
