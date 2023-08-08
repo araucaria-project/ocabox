@@ -23,11 +23,13 @@ class ChangeFilter(SubCommand):
                          started=self.started, done=self.done, skipped=self.skipped, **kwargs)
 
     async def _wait_to_move(self, pos: int) -> None:
+        logger.info('Wait to move...')
         while True:
             await asyncio.sleep(0.5)
             fit_pos = await self.get_value_position()
             if isinstance(fit_pos, int) and fit_pos>-1:
                 if fit_pos==pos:
+                    logger.info('Wait to move done')
                     break
 
     async def get_value_position(self):
