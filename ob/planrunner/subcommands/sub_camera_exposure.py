@@ -269,8 +269,9 @@ class CameraExposure(SubCommand):
             sub_t = 1.0
         await asyncio.sleep(float(sub_t))
         while True:
-            # subexposure_done = self.camera.imageready
-            subexposure_done = await self.camera.aget_imageready()
+            subexposure_done = await self.value_proof_get(name='wait_subexp',
+                                                          awaitab=self.camera.aget_imageready,
+                                                          expect_type=bool)
             if subexposure_done is True:
                 logger.info(f'_wait_for_subexposure subexposure_done is True')
                 break
