@@ -192,7 +192,7 @@ class CameraExposure(SubCommand):
             tel_az=await self.value_proof_get(name='fitsh_tel_az', awaitab=self.mount.aget_az(), expect_type=float),
             focus=await self.value_proof_get(name='fitsh_focus_pos',
                                              awaitab=self.focuser.aget_position(),
-                                             expect_type=float),
+                                             expect_type=int),
             rotator_pos=await self.value_proof_get(name='fitsh_rot_pos',
                                                    awaitab=self.rotator.aget_position(),
                                                    expect_type=float),
@@ -208,8 +208,12 @@ class CameraExposure(SubCommand):
             ccd_temp=await self.value_proof_get(name='fitsh_cam_temp',
                                               awaitab=self.camera.aget_ccdtemperature(),
                                               expect_type=float),
-            ccd_binx=await self.value_proof_get(name='fitsh_cam_binx', awaitab=self.camera.aget_binx(), expect_type=int),
-            ccd_biny=await self.value_proof_get(name='fitsh_cam_biny', awaitab=self.camera.aget_biny(), expect_type=int),
+            ccd_binx=await self.value_proof_get(name='fitsh_cam_binx',
+                                                awaitab=self.camera.aget_binx(),
+                                                expect_type=int),
+            ccd_biny=await self.value_proof_get(name='fitsh_cam_biny',
+                                                awaitab=self.camera.aget_biny(),
+                                                expect_type=int),
             read_mod=str(readoutmode),
             gain=str(gain)
         )

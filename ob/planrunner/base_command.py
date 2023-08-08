@@ -44,15 +44,14 @@ class BaseCommand(ABC):
             return None
 
     async def value_proof_get(self, name, awaitab, expect_type, n_times=3):
-        n = 0
-        for n in range(1, n_times+1):
-            res = await self._value_proof_get(name=name, awaitab=awaitab, expect_type=expect_type)
-            if res is not None:
-                return res
-            else:
-                logger.warning(f"Can't get {name}, (is None)")
-            if n == n_times:
-                return None
+        #for n in range(1, n_times+1):
+        res = await self._value_proof_get(name=name, awaitab=awaitab, expect_type=expect_type)
+        if res is not None:
+            return res
+        else:
+            logger.warning(f"Can't get {name}, (is None)")
+        # if n == n_times:
+        #       return None
 
     @staticmethod
     def _mk_folder(folder: str):
