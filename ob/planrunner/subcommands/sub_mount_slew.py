@@ -28,9 +28,9 @@ class MountSlew(SubCommand):
     async def _wait_to_slew_coo(self, ra_in: float, dec_in: float) -> None:
         await asyncio.sleep(0.5)
         while True:
-            ra = await self.mount.aget_ra()
-            dec = await self.mount.aget_dec()
-            slew = await self.mount.aget_slewing()
+            ra = await self.value_proof_get(name='mount_ra', awaitab=self.mount.aget_ra, expect_type=float)
+            dec = await self.value_proof_get(name='mount_dec', awaitab=self.mount.aget_dec, expect_type=float)
+            slew = await self.value_proof_get(name='mount_slew', awaitab=self.mount.aget_slewing, expect_type=bool)
             await asyncio.sleep(0.5)
             if (abs(ra - ra_in) > 359.95 or (abs(ra - ra_in) < 0.05))\
                     and (abs(dec - dec_in) < 0.05) and (slew == False):
@@ -39,9 +39,9 @@ class MountSlew(SubCommand):
     async def _wait_to_slew_alt_az(self, az_in: float, alt_in: float) -> None:
         await asyncio.sleep(0.5)
         while True:
-            az = await self.mount.aget_az()
-            alt = await self.mount.aget_alt()
-            slew = await self.mount.aget_slewing()
+            az = await self.value_proof_get(name='mount_az', awaitab=self.mount.aget_az, expect_type=float)
+            alt = await self.value_proof_get(name='mount_alt', awaitab=self.mount.aget_alt, expect_type=float)
+            slew = await self.value_proof_get(name='mount_slew', awaitab=self.mount.aget_slewing, expect_type=bool)
 
             if ((abs(az - az_in) > 359.0) or (abs(az - az_in)<1.0)) and (abs(alt - alt_in)<1.0) and (slew == False):
                 await self.mount.aput_tracking(False)
@@ -145,10 +145,13 @@ class MountSlew(SubCommand):
 
         elif 'dither' in self.kwargs.keys() and ('ra' and 'dec' and 'ra' and 'dec' not in self.kwargs.keys()):
             logger.debug(f'{self.id} started --> dither')
-            ra_d = self.ra_random_dither(ra=await self.mount.aget_ra(),
+            ra_t = await self.value_proof_get(name='mount_ra', awaitab=self.mount.aget_ra, expect_type=float)
+            dec_t = await self.value_proof_get(name='mount_dec', awaitab=self.mount.aget_dec, expect_type=float)
+            ra_d = self.ra_random_dither(ra=ra_t,
                                          dith_val=self.kwargs["dither_distance"],
                                          mode=self.kwargs["dither_mode"])
-            dec_d = self.dec_random_dither(dec=await self.mount.aget_dec(),
+
+            dec_d = self.dec_random_dither(dec=dec_t,
                                            dith_val=self.kwargs["dither_distance"],
                                            mode=self.kwargs["dither_mode"])
             await self.mount.aput_tracking(self.kwargs["tracking"])

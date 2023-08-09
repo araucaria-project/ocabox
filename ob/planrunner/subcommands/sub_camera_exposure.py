@@ -139,7 +139,7 @@ class CameraExposure(SubCommand):
 
     async def _wait_for_save_fits(self, sub: int, sub_time: float) -> None:
         logger.info(f'_wait_for_save_fits started')
-        array = await self._camera_aget_imagearray()
+        array = await self.value_proof_get(name='fits_get_array', awaitab=self.camera.aget_imagearray, expect_type=list)
         jd = self.get_julian_date(self.exp_time_start)
         jd_oca = f"{self.get_oca_date(jd):010.5f}"
         logger.info(f'_wait_for_save_fits aget_imagearray done')
@@ -306,8 +306,9 @@ class CameraExposure(SubCommand):
                 logger.info(f'{self.id} starting test exposure')
                 await self.camera.aput_startexposure(test_exposure_time, self.kwargs["light"])
                 await self._wait_for_subexposure(test_exposure_time)
-                mean = fits_stat(await self.camera.aget_imagearray(), size=100,
-                                 median=False, std=False, min=False, max=False)['mean']
+                arr = await self.value_proof_get(name='autoexp_get_array', awaitab=self.camera.aget_imagearray,
+                                             expect_type=list)
+                mean = fits_stat(arr, size=100, median=False, std=False, min=False, max=False)['mean']
                 # TODO take zero_level from settings
                 zero_level = 290.0
                 if mean > zero_level:
