@@ -26,7 +26,7 @@ class ChangeFilter(SubCommand):
         logger.info('Wait to move...')
         while True:
             await asyncio.sleep(0.2)
-            fit_pos = await self.value_proof_get(name='fitsh_tel_alt',
+            fit_pos = await self.value_proof_get(name='fw_pos',
                                                  awaitab=self.filterwheel.aget_position,
                                                  expect_type=int)
             if isinstance(fit_pos, int) and fit_pos > -1:
@@ -67,9 +67,9 @@ class ChangeFilter(SubCommand):
             self.skipped = True
             self.info_callback['exec_json'](self.exec_json())
             return 1
-        fit_pos = await self.value_proof_get(name='fitsh_tel_alt',
-                                                 awaitab=self.filterwheel.aget_position,
-                                                 expect_type=int)
+        fit_pos = await self.value_proof_get(name='fw_pos',
+                                             awaitab=self.filterwheel.aget_position,
+                                             expect_type=int)
         if pos==fit_pos:
             self.info_callback['stream_1'](f'No need to change filter, skipping')
             self.info_callback['stream_5'](f'{self.id}')
