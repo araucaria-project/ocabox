@@ -583,7 +583,7 @@ class Command(AbstractSequence):
         f = self.telescope.get_filterwheel()
         f_names = await self.value_proof_get(name='command_fw_names',
                                              awaitab=f.aget_names,
-                                             expect_type=list)
+                                             expect_type=dict)
         f_n = []
         for n in f_names.keys():
             f_n.append(str(n))

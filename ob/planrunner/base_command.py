@@ -33,9 +33,14 @@ class BaseCommand(ABC):
     def user(self):
         return pwd.getpwuid(os.getuid())[0]
 
-    async def _value_proof_get(self, name: str, awaitab: Callable, expect_type: type) -> Any:
+    async def _value_proof_get(self, name: str, awaitab: Callable, expect_type) -> Any:
         try:
             res = await awaitab()
+            if expect_type==float and isinstance(res, int):
+                try:
+                    res = float(res)
+                except ValueError:
+                    pass
             if isinstance(res, expect_type):
                 logger.debug(f"Get {name} value done: {res}")
                 return res

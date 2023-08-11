@@ -108,8 +108,8 @@ class DomeSlew(SubCommand):
     async def _wait_to_slew(self, azimuth) -> None:
 
         while True:
-            dome_az = await self.value_proof_get(name='dome_az', awaitab=self.dome.aget_az, expect_type=float)
-            dome_slewing = await self.value_proof_get(name='dome_slew',
+            dome_az = await self.value_proof_get(name='sub_dome_az', awaitab=self.dome.aget_az, expect_type=float)
+            dome_slewing = await self.value_proof_get(name='sub_dome_slew',
                                                       awaitab=self.dome.aget_slewing,
                                                       expect_type=bool)
             await asyncio.sleep(0.5)
@@ -127,7 +127,7 @@ class DomeSlew(SubCommand):
             az = self.kwargs['az']
         elif 'follow_tol' in self.kwargs.keys():
             mount_az = await self.value_proof_get(name='mount_az', awaitab=self.mount.aget_az, expect_type=float)
-            dome_az = await self.value_proof_get(name='dome_az', awaitab=self.dome.aget_az, expect_type=float)
+            dome_az = await self.value_proof_get(name='sub_dome_az', awaitab=self.dome.aget_az, expect_type=float)
             if self.kwargs['follow_tol']<abs(mount_az - dome_az):
                 az = mount_az
             else:
@@ -174,4 +174,3 @@ class DomeSlew(SubCommand):
         self.done = True
         self.info_callback['exec_json'](self.exec_json())
         return 0
-
