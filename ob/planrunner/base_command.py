@@ -15,7 +15,7 @@ class BaseCommand(ABC):
 
     COMMAND_NAMES = ['SKYFLAT', 'FOCUS', 'DOMEFLAT', 'DARK', 'ZERO', 'OBJECT', 'WAIT', 'STOP', 'SNAP', 'SEQUENCE']
     KWARGS = ['uobi', 'dome_follow', 'epoch', 'mirror_cover', 'observer', 'screen_light', 'az', 'alt', 'seq',
-              'pos', 'dither', 'wait', 'ut']
+              'pos', 'dither', 'wait', 'ut', 'tracking']
 
     def __init__(self, id: str, name: str, info_callback: Dict[str, Callable], observatory, c_type, kwargs) -> None:
         self.id = id

@@ -143,7 +143,7 @@ class MountSlew(SubCommand):
                 logger.info(f'{self.id} target is below allowed alt:{alt}, skipping')
                 return 1
 
-        elif 'dither' in self.kwargs.keys() and ('ra' and 'dec' and 'ra' and 'dec' not in self.kwargs.keys()):
+        elif 'dither' in self.kwargs.keys() and ('ra' and 'dec' not in self.kwargs.keys()):
             logger.debug(f'{self.id} started --> dither')
             ra_t = await self.value_proof_get(name='mount_ra', awaitab=self.mount.aget_ra, expect_type=float)
             dec_t = await self.value_proof_get(name='mount_dec', awaitab=self.mount.aget_dec, expect_type=float)

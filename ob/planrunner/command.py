@@ -277,18 +277,18 @@ class Command(AbstractSequence):
 
     @property
     def tracking(self) -> bool:
-        TRAKING = ['on', 'off']
-        DEFAULT_TRACKING_ON = ['SKYFLAT', 'OBJECT', 'SNAP', 'FOCUS']
+        tracking = ['on', 'off']
+        default_tracking_on = ['SKYFLAT', 'OBJECT', 'SNAP', 'FOCUS']
 
         if 'tracking' in self.kwargs.keys():
-            if self.kwargs['tracking'] in TRAKING:
+            if self.kwargs['tracking'] in tracking:
                 return self.kwargs['tracking']
             else:
                 logger.warning(f'Wrong tracking value')
                 self.info_callback['stream_1'](f'{self.id} Wrong tracking value, set to off')
                 return False
         else:
-            if self.command_name in DEFAULT_TRACKING_ON:
+            if self.command_name in default_tracking_on:
                 return True
             else:
                 return False
@@ -621,7 +621,3 @@ class Command(AbstractSequence):
         self.info_callback['stream_5'](f'{self.id}')
         logger.info(f'{self.id} done')
         return skip
-
-
-
-
