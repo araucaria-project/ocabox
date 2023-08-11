@@ -15,7 +15,7 @@ class BaseCommand(ABC):
 
     COMMAND_NAMES = ['SKYFLAT', 'FOCUS', 'DOMEFLAT', 'DARK', 'ZERO', 'OBJECT', 'WAIT', 'STOP', 'SNAP', 'SEQUENCE']
     KWARGS = ['uobi', 'dome_follow', 'epoch', 'mirror_cover', 'observer', 'screen_light', 'az', 'alt', 'seq',
-              'pos', 'dither', 'wait', 'ut']
+              'pos', 'dither', 'wait', 'ut', 'tracking']
 
     def __init__(self, id: str, name: str, info_callback: Dict[str, Callable], observatory, c_type, kwargs) -> None:
         self.id = id
@@ -33,9 +33,14 @@ class BaseCommand(ABC):
     def user(self):
         return pwd.getpwuid(os.getuid())[0]
 
-    async def _value_proof_get(self, name: str, awaitab: Callable, expect_type: type) -> Any:
+    async def _value_proof_get(self, name: str, awaitab: Callable, expect_type) -> Any:
         try:
             res = await awaitab()
+            if expect_type==float and isinstance(res, int):
+                try:
+                    res = float(res)
+                except ValueError:
+                    pass
             if isinstance(res, expect_type):
                 logger.debug(f"Get {name} value done: {res}")
                 return res
