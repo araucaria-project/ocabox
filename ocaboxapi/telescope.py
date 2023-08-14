@@ -138,7 +138,7 @@ class Telescope(AbstractTelescope):
         await m.aput_tracking(False)
         await m.aput_closecover()
         while True:
-            current = await c.aget_calibratorstate()
+            current = await c.aget_coverstate()
             if current == 1:
                 await d.aput_closeshutter()
                 break
@@ -167,7 +167,7 @@ class Telescope(AbstractTelescope):
         await m.aput_park()
         await m.aput_closecover()
         while True:
-            current = await c.aget_calibratorstate()
+            current = await c.aget_coverstate()
             if current == 1:
                 await d.aput_closeshutter()
                 break
@@ -181,6 +181,8 @@ class Telescope(AbstractTelescope):
         await a.aput_break_control()
         await a.aput_take_control(600)
         await m.aput_tracking(False)
-        await m.aput_abortslew()
+        if await m.aget_slewing():
+            await m.aput_abortslew()
         await m.aput_motoroff()
-        await d.aput_abortslew()
+        if await d.aget_slewing():
+            await d.aput_abortslew()
