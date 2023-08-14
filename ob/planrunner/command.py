@@ -282,7 +282,12 @@ class Command(AbstractSequence):
 
         if 'tracking' in self.kwargs.keys():
             if self.kwargs['tracking'] in tracking:
-                return self.kwargs['tracking']
+                if self.kwargs['tracking'] == 'on':
+                    return True
+                elif self.kwargs['tracking'] == 'off':
+                    return False
+                else:
+                    return False
             else:
                 logger.warning(f'Wrong tracking value')
                 self.info_callback['stream_1'](f'{self.id} Wrong tracking value, set to off')

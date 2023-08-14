@@ -86,7 +86,6 @@ class NightPlan(AbstractSequence):
         self._cycle_time_data_build.save_to_log()
         d = self.telescope.get_dome()
         m = self.telescope.get_mount()
-        await m.aput_unpark()
         skip = await self._arun(self.subcomponents, step_id=step_id)
         self._cycle_time_data_build.insert_data(name='done', value=self.done)
         self._cycle_time_data_build.insert_data(name='skipped', value=self.skipped)
