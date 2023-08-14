@@ -144,13 +144,9 @@ class Telescope(AbstractTelescope):
                 break
             await asyncio.sleep(0.1)
         await m.aput_park()
-        while True:
-            current = await m.aget_atpark()
-            if current is True:
-                await m.aput_motoroff()
-                break
-            await asyncio.sleep(0.1)
         await d.aput_park()
+        await asyncio.sleep(30)
+        await m.aput_motoroff()
 
     async def weather_stop(self):
         m = self.get_mount()
