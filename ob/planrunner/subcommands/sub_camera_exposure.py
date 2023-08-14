@@ -302,14 +302,24 @@ class CameraExposure(SubCommand):
             test_min_max_adu = (20000, 30000)
             test_min_max_time_exp = (5, 40)
             mean_diff = None
+            auto_exp_sub_no = 0
             while True:
                 logger.info(f'{self.id} starting test exposure')
+                auto_exp_sub_no += 1
+                self.info_callback['exec_json'](self.exec_json(auto_exp_start=True,
+                                                               auto_exp_finnished=False,
+                                                               auto_exp_sub_no = auto_exp_sub_no,
+                                                               auto_exp_time=test_exposure_time))
                 await self.camera.aput_startexposure(test_exposure_time, self.kwargs["light"])
                 await self._wait_for_subexposure(test_exposure_time)
                 arr = await self.value_proof_get(name='autoexp_get_array', awaitab=self.camera.aget_imagearray,
                                              expect_type=list)
                 mean = fits_stat(arr, size=100, median=False, std=False, min=False, max=False)['mean']
                 # TODO take zero_level from settings
+                self.info_callback['exec_json'](self.exec_json(auto_exp_start=True,
+                                                               auto_exp_finnished=True,
+                                                               auto_exp_sub_no=auto_exp_sub_no,
+                                                               auto_exp_time=test_exposure_time))
                 zero_level = 290.0
                 if mean > zero_level:
                     mean = mean - zero_level
@@ -372,7 +382,7 @@ class CameraExposure(SubCommand):
                                                        readout_time=self.readout_time,
                                                        n_exp=self.subexp_no,
                                                        exp_time=exposure_time))
-        await self._wait_for_save_fits(self.subexp_no, float(exposure_time))
+        await self._wait_for_save_fits(sub=self.subexp_no, sub_time=float(exposure_time))
         self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
         self.info_callback['stream_5'](f'{self.id}')
         logger.info(f'{self.id} done')
