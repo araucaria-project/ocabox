@@ -124,24 +124,6 @@ class Telescope(AbstractTelescope):
         except (CommunicationTimeoutError, CommunicationRuntimeError, OcaboxServerError):
             return {'alpaca': False}
 
-    async def waiting_for_value(self, current, target, tolerance, execute):
-        while True:
-            c = await current()
-            if isinstance(target, bool):
-                if bool(c) == target:
-                    await execute()
-                    break
-            elif isinstance(target, int):
-                if abs(int(c) - target) == tolerance:
-                    await execute()
-                    break
-            elif  isinstance(target, float):
-                if abs(float(c) - target) <= tolerance:
-                    await execute()
-                    break
-            else:
-                break
-
     async def shutdown(self):
         m = self.get_mount()
         d = self.get_dome()
@@ -149,15 +131,25 @@ class Telescope(AbstractTelescope):
         a = self.get_access_grantor()
         await a.aput_break_control()
         await a.aput_take_control(600)
-        await m.aput_abortslew()
-        await d.aput_abortslew()
+        if await m.aget_slewing():
+            await m.aput_abortslew()
+        if await d.aget_slewing():
+            await d.aput_abortslew()
         await m.aput_tracking(False)
         await m.aput_closecover()
+        while True:
+            current = await c.aget_calibratorstate()
+            if current == 1:
+                await d.aput_closeshutter()
+                break
+            await asyncio.sleep(0.1)
         await m.aput_park()
-        await self.waiting_for_value(current=m.aget_atpark,
-                                    target=True, tolerance=None, execute=m.aput_motoroff)
-        await self.waiting_for_value(current=c.aget_calibratorstate,
-                                     target=1, tolerance=0, execute=d.aput_closeshutter)
+        while True:
+            current = await m.aget_atpark()
+            if current is True:
+                await m.aput_motoroff()
+                break
+            await asyncio.sleep(0.1)
         await d.aput_park()
 
     async def weather_stop(self):
@@ -167,13 +159,19 @@ class Telescope(AbstractTelescope):
         a = self.get_access_grantor()
         await a.aput_break_control()
         await a.aput_take_control(600)
-        await m.aput_abortslew()
-        await d.aput_abortslew()
+        if await m.aget_slewing():
+            await m.aput_abortslew()
+        if await d.aget_slewing():
+            await d.aput_abortslew()
         await m.aput_tracking(False)
-        await m.aput_closecover()
         await m.aput_park()
-        await self.waiting_for_value(current=c.aget_calibratorstate,
-                                     target=1, tolerance=0, execute=d.aput_closeshutter)
+        await m.aput_closecover()
+        while True:
+            current = await c.aget_calibratorstate()
+            if current == 1:
+                await d.aput_closeshutter()
+                break
+            await asyncio.sleep(0.1)
         await d.aput_park()
 
     async def emergency_stop(self):
