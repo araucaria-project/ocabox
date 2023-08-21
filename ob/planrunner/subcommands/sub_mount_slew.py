@@ -89,6 +89,7 @@ class MountSlew(SubCommand):
                     return 1
             if self.alt > mount_min_alt:
                 logger.info(f'{self.id} alt:{self.alt}')
+                await self.mount.aput_unpark()
                 await self.mount.aput_tracking(False)
                 await self.mount.aput_slewtoaltaz_async(az=self.az, alt=self.alt)
                 await self.mount.aput_tracking(False)

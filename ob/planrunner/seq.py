@@ -152,7 +152,7 @@ class Seq:
             return 1.0
 
     def dither_this_exp(self, ex: int) -> bool:
-        if (ex % self.dither_every_sub == 0) and self.parent.dither_on and (ex > 1):
+        if (ex % self.dither_every_sub == 0) and self.parent.dither_on and (ex > 0):
             return True
         else:
             return False
