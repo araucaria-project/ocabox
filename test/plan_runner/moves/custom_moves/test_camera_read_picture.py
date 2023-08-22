@@ -60,7 +60,6 @@ class CameraReadPictureTest(unittest.TestCase, BaseAsyncTest):
                 await fw.run()
                 self.assertTrue(time.time() - start_time < 0.5)  # method run() should make immediately
                 await fw.wait()
-                print(fw.error_content)
                 self.assertFalse(fw.error)  # finish witch no errors
                 result = await self.api_test.get_async(f"{rm.get_resource(rm.CAMERA).adr}.imageready")
                 self.assertEqual(result.value.v, True)

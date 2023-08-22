@@ -4,12 +4,13 @@ from typing import List
 from ob.planrunner.ern.command import Command
 from ob.planrunner.ern.command_error import CriticalCommandError, NormalCommandError
 from ob.planrunner.ern.errors import PlanBuildError
+from ob.planrunner.ern.commands.commands_names import CommandsNames
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class CommandSequence(Command):
-    _NAME = "SEQUENCE"
+    _NAME = CommandsNames.SEQUENCE
     # --- arg keys ---
     _SUBCOMMANDS_KEY = "subcommands"
 

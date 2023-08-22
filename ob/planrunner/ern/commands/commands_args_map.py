@@ -25,7 +25,7 @@ class _DomeFollow(str, BaseArgsMap):
 
 class CommandArgsMap(BaseArgsMap):
     TRACKING: _TrackingOptions = _TrackingOptions("traking")
-    OBJ_NAME = StrVal("object_name", "undefined")
+    OBJ_NAME = StrVal("object_name", "")
     RA = StrVal("ra", None)
     DEC = StrVal("dec", None)
     EPOCH = StrVal("epoch", "2000")
@@ -36,4 +36,6 @@ class CommandArgsMap(BaseArgsMap):
     SCREEN_LIGHT: _ScreenLight = _ScreenLight("screen_light_mode")
     MIRROR_COVER: _MirrorCover = _MirrorCover("mirror_cover")
     DOME_FOLLOW: _DomeFollow = _DomeFollow("dome_follow")
-    SEQ = StrVal("seq", None)
+    SEQ = StrVal("seq", "")
+    FOCUSING = StrVal("focus_pos", "")
+    FOCUSING_OFFSET = StrVal("defocus", 0)

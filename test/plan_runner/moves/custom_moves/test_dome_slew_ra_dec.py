@@ -11,7 +11,6 @@ from ob.data_colection.specialistic_components.tree_alpaca import TreeAlpacaObse
 from ob.data_colection.specialistic_components.tree_cache_observatory import TreeCache
 from ob.data_colection.specialistic_components.tree_conditional_freezer import TreeConditionalFreezer
 from ob.planrunner.ern.errors import PlanBuildError
-from ob.planrunner.ern.moves.custom_moves.dome_slew import DomeSlew
 from ob.planrunner.ern.moves.custom_moves.dome_slew_ra_dec import DomeSlewRaDec
 from ob.planrunner.ern.plan_data import PlanData
 from test.data_colection.base_async_test import BaseAsyncTest
@@ -63,19 +62,19 @@ class DomeSlewRaDecTest(unittest.TestCase, BaseAsyncTest):
                 await self.tree_freezer.stop()
 
         asyncio.run(coro())
-    #
-    # def test_go_to_position_wrong_params(self):
-    #     """Test slew mount to position wrong position format"""
-    #
-    #     async def coro():
-    #         try:
-    #             await self.tree_freezer.run()
-    #             rm = await self.tao.get_res_manager()
-    #             plan_data = PlanData(access_resource_manager=rm, client_api=self.api_test)
-    #             position_alt = random.randint(30, 50)
-    #             with self.assertRaises(PlanBuildError):
-    #                 fw = DomeSlewRaDec(az=None, plan_data=plan_data)
-    #         finally:
-    #             await self.tree_freezer.stop()
-    #
-    #     asyncio.run(coro())
+
+    def test_go_to_position_wrong_params(self):
+        """Test slew dome to position wrong position format"""
+
+        async def coro():
+            try:
+                await self.tree_freezer.run()
+                rm = await self.tao.get_res_manager()
+                plan_data = PlanData(access_resource_manager=rm, client_api=self.api_test)
+                position_dec = random.randint(30, 50)
+                with self.assertRaises(PlanBuildError):
+                    fw = DomeSlewRaDec(ra_dec=(None, position_dec), plan_data=plan_data)
+            finally:
+                await self.tree_freezer.stop()
+
+        asyncio.run(coro())

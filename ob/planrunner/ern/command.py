@@ -3,12 +3,13 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Optional
 from ob.planrunner.ern.base_command import BaseCommand
+from ob.planrunner.ern.command_args_reader import CommandArgsReader
 from ob.planrunner.ern.errors import PlanBuildError
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
-class Command(BaseCommand, ABC):
+class Command(BaseCommand, CommandArgsReader, ABC):
     _NAME = "DEFAULT"
     # --- arg keys ---
     _NAME_KEY = "command_name"
@@ -16,10 +17,10 @@ class Command(BaseCommand, ABC):
     _KWARGS_KEY = "kwargs"
 
     def __init__(self, command_dict: dict, plan_data, previous_command, id_: str = None,
-                 loop: asyncio.AbstractEventLoop = None,
-                 **kwargs):
-        super().__init__(plan_data=plan_data)
+                 loop: asyncio.AbstractEventLoop = None, **kwargs):
+        super().__init__(plan_data=plan_data, arg=self.get_args(), kwarg=self.get_kwargs(), **kwargs)
         self._loop = loop
+        print('ok2')
         if id_ is None:
             id_ = plan_data.generate_next_id()
         self._id = id_

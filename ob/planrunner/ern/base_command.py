@@ -11,7 +11,8 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class BaseCommand(ABC):
     _NAME = "BASECOMMAND"
 
-    def __init__(self, plan_data):
+    def __init__(self, plan_data, **kwargs):
+        super().__init__(**kwargs)
         self._plan_data = plan_data
 
     @classmethod
