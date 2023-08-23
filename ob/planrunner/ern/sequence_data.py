@@ -30,6 +30,9 @@ class SequenceData:
         except ValueError:
             raise PlanBuildError(f"Wrong first value in sequence, can't cast to int")
 
+        if int(self._seq[0]) <= 0:
+            raise PlanBuildError(f"Wrong first value in sequence, can't be 0 or lover")
+
         if self._seq[2] != 'a':
             try:
                 float(self._seq[2])

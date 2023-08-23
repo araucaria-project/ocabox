@@ -20,6 +20,7 @@ class MountSlewRaDec(Move):
         self._resource_content = self.res_mngr.get_resource(self._USED_RESOURCE, nr=self._resource_nr)
         self._ra = ra_dec[0]
         self._dec = ra_dec[1]
+        self._virtual_move = False
         self._position_ra_name = "ra"
         self._position_dec_name = "dec"
         self._real_ra = None
@@ -27,6 +28,12 @@ class MountSlewRaDec(Move):
         self._build()
 
     def _build(self):
+        # ---- virtual move ----
+        if self._ra is None and self._dec is None:
+            self._virtual_move = True
+        if self._virtual_move:
+            return
+
         try:
             ra_f = ra_to_decimal(self._ra)
             dec_f = dec_to_decimal(self._dec)

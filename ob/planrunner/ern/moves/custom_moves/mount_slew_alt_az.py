@@ -22,6 +22,7 @@ class MountSlewAltAz(Move):
         self._resource_content = self.res_mngr.get_resource(self._USED_RESOURCE, nr=self._resource_nr)
         self._alt = alt_az[0]
         self._az = alt_az[1]
+        self._virtual_move = False
         self._position_alt_name = "alt"
         self._position_az_name = "az"
         self._real_alt = None
@@ -29,6 +30,12 @@ class MountSlewAltAz(Move):
         self._build()
 
     def _build(self):
+        # ---- virtual move ----
+        if self._alt is None and self._az is None:
+            self._virtual_move = True
+        if self._virtual_move:
+            return
+
         try:
             self._real_alt = deg_to_decimal_deg(self._alt)
             self._real_az = deg_to_decimal_deg(self._az)

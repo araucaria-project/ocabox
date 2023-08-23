@@ -11,6 +11,7 @@ class Move(BaseCommand):
         super().__init__(plan_data=plan_data)
         self.positions = []
         self._actn = None
+        self._virtual_move = False
 
     async def watch(self):
         for p in self.positions:
@@ -38,6 +39,9 @@ class Move(BaseCommand):
         :raise ValueError
         :return:
         """
+        # virtual move is always done
+        if self._virtual_move:
+            return 1
         # todo dodać możliwośc subskrypcji na progres, przemyśleć dodanie Param klasy albo jakieś Eventy
         suma = 0
         for p in self.positions:
@@ -75,6 +79,8 @@ class Move(BaseCommand):
         # set start timestamp
         for p in self.positions:
             p.start_timestamp = ts
+        if self._virtual_move:
+            return
         try:
             if self._actn is not None:
                 await self._actn

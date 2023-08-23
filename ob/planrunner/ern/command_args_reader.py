@@ -146,11 +146,11 @@ class CommandArgsReader(ABC):
 
     @property
     def plan_ra(self) -> Optional[float]:
-        return self._mapped_args.get(CommandArgsMap.RA)
+        return self._mapped_args.get(CommandArgsMap.RA, CommandArgsMap.RA.val())
 
     @property
     def plan_dec(self) -> Optional[float]:
-        return self._mapped_args.get(CommandArgsMap.DEC)
+        return self._mapped_args.get(CommandArgsMap.DEC, CommandArgsMap.DEC.val())
 
     @property
     def plan_az(self) -> Optional[float]:

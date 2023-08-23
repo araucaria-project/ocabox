@@ -19,11 +19,18 @@ class DomeSlewRaDec(DomeSlew):
         self._dec = ra_dec[1]
         self._real_ra = None
         self._real_dec = None
-        super().__init__(plan_data=plan_data, resource_nr=resource_nr, az=0)
+        super().__init__(plan_data=plan_data, resource_nr=resource_nr, az=0)  # az should not be None here
 
     def _build(self):
+        # ---- virtual move ----
+        if self._ra is None and self._dec is None:
+            self._virtual_move = True
         # get mount context - here because _build method is call in __init__ method of inherit class
         self._mount_resource_content = self.res_mngr.get_resource(ResourceManager.MOUNT, nr=self._mount_resource_nr)
+
+        super()._build()
+
+    def _prepare_real_coordinates(self):
         # prepare ra dec values to convert for alt az
         try:
             ra_f = ra_to_decimal(self._ra)
@@ -35,8 +42,6 @@ class DomeSlewRaDec(DomeSlew):
             self._real_dec = dec_now
         except Exception as e:
             raise PlanBuildError(f"Error when converting RA DEC values. {str(e)}")
-
-        super()._build()
 
     async def _action(self):
         # todo podpytać czy ra_dec_2_az_alt napewno musi być przeliczane w momęcie wykonania
