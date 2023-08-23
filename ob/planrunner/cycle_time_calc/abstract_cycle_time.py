@@ -20,6 +20,11 @@ class AbstractCycleTime(ABC):
     FILE_NAMES = {'raw_data': 'raw_data.txt', 'clean_data': 'clean_data.txt',
                   'night_verif': 'night_verif.txt', 'train_param': 'train_param.txt'}
     BASE_FOLDER_NAME = os.path.expanduser('~/.oca/cycle_time_calc')
+    RM_MODES_MHZ = {"zb08": [5, 3, 1, 0.05],
+                    "jk15": [1, 1, 1, 1, 1, 1, 1],
+                    "wk06": [5, 3, 1, 0.05],
+                    "dev": [1, 1, 1, 1, 1, 1, 1],
+                    "sim": [1, 1, 1, 1, 1, 1, 1]}
     DATA_CLEAN_ORDER = ['night_id', 'command_name', 'start_utc_date_stamp', 'cycle_time', 'dome_distance',
                         'mount_distance', 'exposure_time_sum', 'filter_changes', 'rmmode_expno', 'dither_expno']
     X_COLUMNS = DATA_CLEAN_ORDER[4:]
@@ -66,11 +71,15 @@ class AbstractCycleTime(ABC):
         return f'{telescope}_{command}_{AbstractCycleTime.FILE_NAMES["clean_data"]}'
 
     @staticmethod
+    def rm_modes_file_name() -> str:
+        return f'{AbstractCycleTime.FILE_NAMES["rm_modes"]}'
+
+    @staticmethod
     def train_param_file_name(telescope: str, command: str) -> str:
         return f'{telescope}_{command}_{AbstractCycleTime.FILE_NAMES["train_param"]}'
 
     @staticmethod
-    def parse_data(data: str) -> List[Dict[str, Any]]:
+    def parse_data(data: str) -> List:
         ret = []
         s = data.split('\n')
         for n in s:
@@ -108,8 +117,27 @@ class AbstractCycleTime(ABC):
 
     @staticmethod
     def rm_mode(record: Dict[str, Any]) -> int:
-        # TODO maybe rethink this
-        return int(record['readoutmode']) + 1
+        return int(record['readoutmode'])
+
+    @staticmethod
+    def rm_mode_inverse_mhz(rm_mode: int, telescope: str) -> float or int or None:
+        dat = AbstractCycleTime.RM_MODES_MHZ
+        if dat is not None:
+            if telescope in dat.keys():
+                if len(dat[telescope]) - 1 >= rm_mode:
+                    try:
+                        rm_mode_val = dat[telescope][rm_mode]
+                        return 1/rm_mode_val
+                    except IndexError:
+                        logger.warning('Readoutmodes not match readoutmode - rm mode returned')
+                        return rm_mode
+                    except ZeroDivisionError:
+                        logger.warning('Readoutmode value not right - rm mode returned')
+                        return rm_mode
+        else:
+            logger.warning('Can not read readoutmode inverse MHz - rm mode returned')
+            return rm_mode
+
 
     @staticmethod
     def dither(record: Dict[str, Any]) -> int:

@@ -118,6 +118,10 @@ class CycleTimeCalc(AbstractCycleTime):
     def set_start_rmode(self, rmode: int) -> None:
         self._rmode = rmode
 
+    @property
+    def rm_mode_inv_mhz(self) -> float:
+        return CycleTimeCalc.rm_mode_inverse_mhz(rm_mode=self._rmode, telescope=self.telescope)
+
     def set_start_time(self, utc_time_stamp: datetime.datetime) -> None:
         self._start_time = utc_time_stamp
 
@@ -191,7 +195,7 @@ class CycleTimeCalc(AbstractCycleTime):
         command_dict_param['mount_distance'] = mount_alt_az_dist
         command_dict_param['exposure_time_sum'] = CycleTimeCalc.exposure_time_sum(command_dict)
         command_dict_param['filter_changes'] = CycleTimeCalc.filter_changes(command_dict)
-        command_dict_param['rmmode_expno'] = (self._rmode + 1) * exp_no
+        command_dict_param['rmmode_expno'] = self.rm_mode_inv_mhz * exp_no
         command_dict_param['dither_expno'] = dither * exp_no
         self._current_filter = CycleTimeCalc.last_filter(command_dict)
         time_cal = self._calc_time(command_name=command_dict['command_name'], command_dict_param=command_dict_param)
@@ -293,7 +297,7 @@ class CycleTimeCalc(AbstractCycleTime):
         else:
             return None
 
-
+"""
 if __name__ == '__main__':
     c = CycleTimeCalc('dev')
     d = {'command_name': 'OBJECT', 'kwargs': {'seq': '12/Red/1,3/Green/3,2/Blue/5', 'az': 12.0, 'alt':70.0}}
@@ -302,4 +306,4 @@ if __name__ == '__main__':
     print(c.calc_time(command_dict=d))
     print(c.time_list)
     # print(c._time_length)
-    # print(c.finnish_time_from_now_utc)
+    # print(c.finnish_time_from_now_utc)"""
