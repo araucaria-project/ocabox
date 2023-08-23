@@ -49,8 +49,8 @@ class CycleTimeDataClean(AbstractCycleTime):
     @staticmethod
     def verify_nights(full_nights_id: Dict[str, Dict[str, Any]], telescope: str):
         f = CycleTimeDataClean.read_file(folder=CycleTimeDataClean.BASE_FOLDER_NAME,
-                                         file_name=CycleTimeDataClean.night_verf_file_name(telescope=telescope))
-        if f:
+                                         file_name=CycleTimeDataClean.night_verif_file_name(telescope=telescope))
+        if f is not None:
             l = f.split('\n')
             for n in l:
                 if len(n) > 1:
@@ -58,6 +58,8 @@ class CycleTimeDataClean(AbstractCycleTime):
                     if d['random_id'] in full_nights_id.keys():
                         if d['utc_time_stamp'] == full_nights_id[d['random_id']]['utc_time_stamp']:
                             full_nights_id.pop(d['random_id'])
+        else:
+            pass
         return full_nights_id
 
     @staticmethod
@@ -78,7 +80,7 @@ class CycleTimeDataClean(AbstractCycleTime):
             CycleTimeDataClean.add_to_file(
                 data=CycleTimeDataClean.encode_data(data=dat),
                 folder=CycleTimeDataClean.BASE_FOLDER_NAME,
-                file_name=CycleTimeDataClean.night_verf_file_name(telescope=telescope))
+                file_name=CycleTimeDataClean.night_verif_file_name(telescope=telescope))
 
     @staticmethod
     def _build_command_data(data: List[Dict[str, Any]], telescope: str, night_id: str, line_start: int) -> Dict[str, Any]:

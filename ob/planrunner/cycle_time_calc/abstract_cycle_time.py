@@ -64,7 +64,7 @@ class AbstractCycleTime(ABC):
         return f'{telescope}_{AbstractCycleTime.FILE_NAMES["raw_data"]}'
 
     @staticmethod
-    def night_verf_file_name(telescope: str)  -> str:
+    def night_verif_file_name(telescope: str)  -> str:
         return f'{telescope}_{AbstractCycleTime.FILE_NAMES["night_verif"]}'
 
     @staticmethod
@@ -216,7 +216,11 @@ class AbstractCycleTime(ABC):
                 s = record['kwargs']['seq'].split(',')
                 for n in s:
                     z = n.split('/')
-                    ret += int(z[0]) * float(z[2])
+                    if z[2] == 'a':
+                        t = 5
+                    else:
+                        t = z[2]
+                    ret += int(z[0]) * float(t)
         logger.debug(f'Record:{record}, exposure_time_sum:{ret}')
         return ret
 
