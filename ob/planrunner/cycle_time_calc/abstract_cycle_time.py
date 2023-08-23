@@ -72,10 +72,6 @@ class AbstractCycleTime(ABC):
         return f'{telescope}_{command}_{AbstractCycleTime.FILE_NAMES["clean_data"]}'
 
     @staticmethod
-    def rm_modes_file_name() -> str:
-        return f'{AbstractCycleTime.FILE_NAMES["rm_modes"]}'
-
-    @staticmethod
     def train_param_file_name(telescope: str, command: str) -> str:
         return f'{telescope}_{command}_{AbstractCycleTime.FILE_NAMES["train_param"]}'
 
