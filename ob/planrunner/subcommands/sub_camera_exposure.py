@@ -299,8 +299,8 @@ class CameraExposure(SubCommand):
             mean_list = []
             test_exposure_time = 1.0
             test_time_interval = 0.0
-            test_min_max_adu = (20000, 30000)
-            test_min_max_time_exp = (5, 30)
+            test_min_max_adu = (20000, 25000)
+            test_min_max_time_exp = (2, 30)
             mean_diff = None
             auto_exp_sub_no = 0
             while True:
