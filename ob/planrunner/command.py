@@ -277,18 +277,23 @@ class Command(AbstractSequence):
 
     @property
     def tracking(self) -> bool:
-        TRAKING = ['on', 'off']
-        DEFAULT_TRACKING_ON = ['SKYFLAT', 'OBJECT', 'SNAP', 'FOCUS']
+        tracking = ['on', 'off']
+        default_tracking_on = ['SKYFLAT', 'OBJECT', 'SNAP', 'FOCUS']
 
         if 'tracking' in self.kwargs.keys():
-            if self.kwargs['tracking'] in TRAKING:
-                return self.kwargs['tracking']
+            if self.kwargs['tracking'] in tracking:
+                if self.kwargs['tracking'] == 'on':
+                    return True
+                elif self.kwargs['tracking'] == 'off':
+                    return False
+                else:
+                    return False
             else:
                 logger.warning(f'Wrong tracking value')
                 self.info_callback['stream_1'](f'{self.id} Wrong tracking value, set to off')
                 return False
         else:
-            if self.command_name in DEFAULT_TRACKING_ON:
+            if self.command_name in default_tracking_on:
                 return True
             else:
                 return False
@@ -581,17 +586,30 @@ class Command(AbstractSequence):
         m = self.telescope.get_mount()
         c = self.telescope.get_camera()
         f = self.telescope.get_filterwheel()
-        f_names = await f.aget_names()
+        f_names = await self.value_proof_get(name='command_fw_names',
+                                             awaitab=f.aget_names,
+                                             expect_type=dict)
         f_n = []
         for n in f_names.keys():
             f_n.append(str(n))
-        f_pos = await f.aget_position()
+        f_pos = await self.value_proof_get(name='command_fw_pos',
+                                           awaitab=f.aget_position,
+                                           expect_type=int)
         f_p = f_n[f_pos]
         self._cycle_time_data_build.insert_data(name='dither', value=self.dither_on)
         self._cycle_time_data_build.insert_data(name='filter_pos', value=f_p)
-        self._cycle_time_data_build.insert_data(name='dome_az_begin', value=await d.aget_az())
-        self._cycle_time_data_build.insert_data(name='mount_az_begin', value=await m.aget_az())
-        self._cycle_time_data_build.insert_data(name='mount_alt_begin', value=await m.aget_alt())
+        d_az = await self.value_proof_get(name='command_dome_az',
+                                          awaitab=d.aget_az,
+                                          expect_type=float)
+        self._cycle_time_data_build.insert_data(name='dome_az_begin', value=d_az)
+        m_az = await self.value_proof_get(name='command_mount_az',
+                                          awaitab=m.aget_az,
+                                          expect_type=float)
+        self._cycle_time_data_build.insert_data(name='mount_az_begin', value=m_az)
+        m_alt = await self.value_proof_get(name='command_mount_alt',
+                                           awaitab=m.aget_alt,
+                                           expect_type=float)
+        self._cycle_time_data_build.insert_data(name='mount_alt_begin', value=m_alt)
         self._cycle_time_data_build.insert_data(name='telescope', value=self.telescope.id)
         self._cycle_time_data_build.insert_data(name='id', value=self.id)
         self._cycle_time_data_build.insert_data(name='started', value=True)
@@ -600,12 +618,11 @@ class Command(AbstractSequence):
         skip = await self._arun(self.subcomponents, step_id=step_id)
         self._cycle_time_data_build.insert_data(name='done', value=self.done)
         self._cycle_time_data_build.insert_data(name='skipped', value=self.skipped)
-        self._cycle_time_data_build.insert_data(name='readoutmode', value=await c.aget_readoutmode())
+        rm1 = await self.value_proof_get(name='command_cam_rm',
+                                         awaitab=c.aget_readoutmode,
+                                         expect_type=int)
+        self._cycle_time_data_build.insert_data(name='readoutmode', value=rm1)
         self._cycle_time_data_build.save_to_log()
         self.info_callback['stream_5'](f'{self.id}')
         logger.info(f'{self.id} done')
         return skip
-
-
-
-

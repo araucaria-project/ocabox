@@ -23,12 +23,12 @@ class NightPlan(AbstractSequence):
         self.subcomponents = {}
         self.telescope = parent.telescope
         self.info_callback = parent.info_callback
-        self.param = param
+        self.param = param if param is not None else {}
         self.mount = self.telescope.get_mount()
         self.camera = self.telescope.get_camera()
         self.param['cycle_time'] = CycleTimeCalc(self.telescope.id)
-        self.param['cycle_time'].set_telescope_start_az_alt(az=self.mount.azimuth, alt=self.mount.altitude)
-        self.param['cycle_time'].set_start_rmode(rmode=self.camera.readoutmode)
+        self._get_rm_mode()
+        self._get_altaz()
         self.args = []
         self.kwargs = {}
         self._r_id: int
@@ -40,6 +40,21 @@ class NightPlan(AbstractSequence):
         self.info = {}
         self._write_subcomponents()
         self._set_r_id()
+
+    def _get_rm_mode(self):
+        crm = self.camera.readoutmode
+        if not isinstance(crm, int):
+            crm = 0
+        self.param['cycle_time'].set_start_rmode(rmode=crm)
+
+    def _get_altaz(self):
+        az = self.mount.azimuth
+        alt = self.mount.altitude
+        if not isinstance(az, float):
+            az = 0.0
+        if not isinstance(alt, float):
+            alt = 45.0
+        self.param['cycle_time'].set_telescope_start_az_alt(az=az, alt=alt)
 
     def _set_r_id(self) -> None:
         self._r_id =  random.randint(0, 1000000)
@@ -69,14 +84,17 @@ class NightPlan(AbstractSequence):
         self._cycle_time_data_build.insert_data(name='random_id', value=self._r_id)
         self._cycle_time_data_build.insert_data(name='started', value=True)
         self._cycle_time_data_build.save_to_log()
-        skip = await self._arun(self.subcomponents, step_id=step_id)
         d = self.telescope.get_dome()
         m = self.telescope.get_mount()
+        skip = await self._arun(self.subcomponents, step_id=step_id)
         self._cycle_time_data_build.insert_data(name='done', value=self.done)
         self._cycle_time_data_build.insert_data(name='skipped', value=self.skipped)
-        self._cycle_time_data_build.insert_data(name='dome_az_end', value=await d.aget_az())
-        self._cycle_time_data_build.insert_data(name='mount_az_end', value=await m.aget_az())
-        self._cycle_time_data_build.insert_data(name='mount_alt_end', value=await m.aget_alt())
+        dome_az = await self.value_proof_get(name='dome_az', awaitab=d.aget_az, expect_type=float)
+        mount_az = await self.value_proof_get(name='mount_az', awaitab=m.aget_az, expect_type=float)
+        mount_alt = await self.value_proof_get(name='mount_alt', awaitab=m.aget_alt, expect_type=float)
+        self._cycle_time_data_build.insert_data(name='dome_az_end', value=dome_az)
+        self._cycle_time_data_build.insert_data(name='mount_az_end', value=mount_az)
+        self._cycle_time_data_build.insert_data(name='mount_alt_end', value=mount_alt)
         self._cycle_time_data_build.save_to_log()
         self.info_callback['stream_5'](f'{self.id}')
         self.info_callback['stream_1'](f'Night plan {self.id} completed at: {str(datetime.datetime.utcnow())}')

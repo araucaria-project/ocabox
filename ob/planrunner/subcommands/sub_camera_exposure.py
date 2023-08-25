@@ -48,7 +48,7 @@ class CameraExposure(SubCommand):
     def _mk_symlink(target: str, symlink: str):
         os.symlink(src=target, dst=symlink, dir_fd = None)
 
-    def indexing_value(self, value: int, values: List[str]) -> int or str:
+    def indexing_value(self, value, values):
         if isinstance(value, int) and isinstance(values, list):
             data = values[value]
         else:
@@ -139,16 +139,24 @@ class CameraExposure(SubCommand):
 
     async def _wait_for_save_fits(self, sub: int, sub_time: float) -> None:
         logger.info(f'_wait_for_save_fits started')
-        array = await self._camera_aget_imagearray()
+        array = await self.value_proof_get(name='fits_get_array', awaitab=self.camera.aget_imagearray, expect_type=list)
         jd = self.get_julian_date(self.exp_time_start)
         jd_oca = f"{self.get_oca_date(jd):010.5f}"
         logger.info(f'_wait_for_save_fits aget_imagearray done')
 
-        gains = await self.camera.aget_gains()
-        readoutmodes = await self.camera.aget_readoutmodes()
+        gains = await self.value_proof_get(name='fitsh_cam_gains',
+                                           awaitab=self.camera.aget_gains,
+                                           expect_type=list),
+        readoutmodes = await self.value_proof_get(name='fitsh_cam_rms',
+                                                  awaitab=self.camera.aget_readoutmodes,
+                                                  expect_type=list),
         # offsets = await self.camera.aget_offsets()
-        gain = await self.camera.aget_gain()
-        readoutmode = await self.camera.aget_readoutmode()
+        gain = await self.value_proof_get(name='fitsh_cam_gain',
+                                          awaitab=self.camera.aget_gain,
+                                          expect_type=int),
+        readoutmode = await self.value_proof_get(name='fitsh_cam_rm',
+                                                 awaitab=self.camera.aget_readoutmode,
+                                                 expect_type=int),
         # offset = await self.camera.aget_offset()
         gain = self.indexing_value(gain, gains)
         readoutmode = self.indexing_value(readoutmode, readoutmodes)
@@ -178,22 +186,34 @@ class CameraExposure(SubCommand):
             req_ra=req_ra,
             req_dec=req_dec,
             epoch=self.kwargs["epoch"],
-            tel_ra=await self.mount.aget_ra(),
-            tel_dec=await self.mount.aget_dec(),
-            tel_alt=await self.mount.aget_alt(),
-            tel_az=await self.mount.aget_az(),
-            focus=await self.focuser.aget_position(),
-            rotator_pos=await self.rotator.aget_position(),
+            tel_ra=await self.value_proof_get(name='fitsh_tel_ra', awaitab=self.mount.aget_ra, expect_type=float),
+            tel_dec=await self.value_proof_get(name='fitsh_tel_dec', awaitab=self.mount.aget_dec, expect_type=float),
+            tel_alt=await self.value_proof_get(name='fitsh_tel_alt', awaitab=self.mount.aget_alt, expect_type=float),
+            tel_az=await self.value_proof_get(name='fitsh_tel_az', awaitab=self.mount.aget_az, expect_type=float),
+            focus=await self.value_proof_get(name='fitsh_focus_pos',
+                                             awaitab=self.focuser.aget_position,
+                                             expect_type=int),
+            rotator_pos=await self.value_proof_get(name='fitsh_rot_pos',
+                                                   awaitab=self.rotator.aget_position,
+                                                   expect_type=float),
             obs_type=str(self.kwargs['type']),
             object=str(self.kwargs["obj_name"]),
             filter=str(self.kwargs["filter"]),
             observer=str(self.kwargs['observer']),
             req_exp=sub_time,
             cam_exp=sub_time,
-            ccd_name=str(await self.camera.aget_sensorname()),
-            ccd_temp=await self.camera.aget_ccdtemperature(),
-            ccd_binx=await self.camera.aget_binx(),
-            ccd_biny=await self.camera.aget_biny(),
+            ccd_name=str(await self.value_proof_get(name='fitsh_cam_sens_name',
+                                                    awaitab=self.camera.aget_sensorname,
+                                                    expect_type=str)),
+            ccd_temp=await self.value_proof_get(name='fitsh_cam_temp',
+                                                awaitab=self.camera.aget_ccdtemperature,
+                                                expect_type=float),
+            ccd_binx=await self.value_proof_get(name='fitsh_cam_binx',
+                                                awaitab=self.camera.aget_binx,
+                                                expect_type=int),
+            ccd_biny=await self.value_proof_get(name='fitsh_cam_biny',
+                                                awaitab=self.camera.aget_biny,
+                                                expect_type=int),
             read_mod=str(readoutmode),
             gain=str(gain)
         )
@@ -249,8 +269,9 @@ class CameraExposure(SubCommand):
             sub_t = 1.0
         await asyncio.sleep(float(sub_t))
         while True:
-            # subexposure_done = self.camera.imageready
-            subexposure_done = await self.camera.aget_imageready()
+            subexposure_done = await self.value_proof_get(name='wait_subexp',
+                                                          awaitab=self.camera.aget_imageready,
+                                                          expect_type=bool)
             if subexposure_done is True:
                 logger.info(f'_wait_for_subexposure subexposure_done is True')
                 break
@@ -278,16 +299,27 @@ class CameraExposure(SubCommand):
             mean_list = []
             test_exposure_time = 1.0
             test_time_interval = 0.0
-            test_min_max_adu = (20000, 30000)
-            test_min_max_time_exp = (5, 40)
+            test_min_max_adu = (20000, 25000)
+            test_min_max_time_exp = (2, 30)
             mean_diff = None
+            auto_exp_sub_no = 0
             while True:
                 logger.info(f'{self.id} starting test exposure')
+                auto_exp_sub_no += 1
+                self.info_callback['exec_json'](self.exec_json(auto_exp_start=True,
+                                                               auto_exp_finnished=False,
+                                                               auto_exp_sub_no = auto_exp_sub_no,
+                                                               auto_exp_time=test_exposure_time))
                 await self.camera.aput_startexposure(test_exposure_time, self.kwargs["light"])
                 await self._wait_for_subexposure(test_exposure_time)
-                mean = fits_stat(await self.camera.aget_imagearray(), size=100,
-                                 median=False, std=False, min=False, max=False)['mean']
+                arr = await self.value_proof_get(name='autoexp_get_array', awaitab=self.camera.aget_imagearray,
+                                             expect_type=list)
+                mean = fits_stat(arr, size=100, median=False, std=False, min=False, max=False)['mean']
                 # TODO take zero_level from settings
+                self.info_callback['exec_json'](self.exec_json(auto_exp_start=True,
+                                                               auto_exp_finnished=True,
+                                                               auto_exp_sub_no=auto_exp_sub_no,
+                                                               auto_exp_time=test_exposure_time))
                 zero_level = 290.0
                 if mean > zero_level:
                     mean = mean - zero_level
@@ -350,7 +382,7 @@ class CameraExposure(SubCommand):
                                                        readout_time=self.readout_time,
                                                        n_exp=self.subexp_no,
                                                        exp_time=exposure_time))
-        await self._wait_for_save_fits(self.subexp_no, float(exposure_time))
+        await self._wait_for_save_fits(sub=self.subexp_no, sub_time=float(exposure_time))
         self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
         self.info_callback['stream_5'](f'{self.id}')
         logger.info(f'{self.id} done')

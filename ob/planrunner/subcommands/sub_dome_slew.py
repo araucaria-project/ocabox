@@ -108,8 +108,10 @@ class DomeSlew(SubCommand):
     async def _wait_to_slew(self, azimuth) -> None:
 
         while True:
-            dome_az = await self.dome.aget_az()
-            dome_slewing = await self.dome.aget_slewing()
+            dome_az = await self.value_proof_get(name='sub_dome_az', awaitab=self.dome.aget_az, expect_type=float)
+            dome_slewing = await self.value_proof_get(name='sub_dome_slew',
+                                                      awaitab=self.dome.aget_slewing,
+                                                      expect_type=bool)
             await asyncio.sleep(0.5)
             if dome_az is not None and dome_slewing==False:
                 if (abs(azimuth - float(dome_az)))<2.0 or (abs(azimuth - float(dome_az)))>358.0:
@@ -124,8 +126,10 @@ class DomeSlew(SubCommand):
         if 'az' in self.kwargs.keys():
             az = self.kwargs['az']
         elif 'follow_tol' in self.kwargs.keys():
-            if self.kwargs['follow_tol']<abs(self.mount.azimuth - self.dome.azimuth):
-                az = self.mount.azimuth
+            mount_az = await self.value_proof_get(name='mount_az', awaitab=self.mount.aget_az, expect_type=float)
+            dome_az = await self.value_proof_get(name='sub_dome_az', awaitab=self.dome.aget_az, expect_type=float)
+            if self.kwargs['follow_tol']<abs(mount_az - dome_az):
+                az = mount_az
             else:
                 self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} dome in position tolerance, skipping')
                 self.info_callback['stream_5'](f'{self.id}')
@@ -134,14 +138,15 @@ class DomeSlew(SubCommand):
                 self.info_callback['exec_json'](self.exec_json())
                 return 0
         else:
-            az = self.mount.azimuth
+            az = await self.value_proof_get(name='mount_az', awaitab=self.mount.aget_az, expect_type=float)
 
         # TODO config? At lest in final server-side version...
         if self.telescope.id == 'wk06':
         #if self.telescope.id=='dev':
             OCA = {'latitude': -24.598056, 'longitude': -70.196389, 'elevation': 2817}
-            ra = self.mount.rightascension
-            dec = self.mount.declination
+
+            ra = await self.value_proof_get(name='mount_ra', awaitab=self.mount.aget_ra, expect_type=float)
+            dec = await self.value_proof_get(name='mount_dec', awaitab=self.mount.aget_dec, expect_type=float)
             logger.info(f'Dome_eq_azimuth for ra:{ra} dec:{dec}')
             r_dome = 3500.0
             spx = -250.0
@@ -169,4 +174,3 @@ class DomeSlew(SubCommand):
         self.done = True
         self.info_callback['exec_json'](self.exec_json())
         return 0
-

@@ -25,7 +25,9 @@ class MirrorCover(SubCommand):
 
     async def _wait_for_move(self, expected_status: str):
         while True:
-            cover_status = await self.cover.aget_coverstate()
+            cover_status = await self.value_proof_get(name='coverstate',
+                                                      awaitab=self.cover.aget_coverstate,
+                                                      expect_type=bool)
             if str(cover_status) == expected_status:
                 break
             await asyncio.sleep(0.5)
@@ -34,7 +36,9 @@ class MirrorCover(SubCommand):
         self.started = True
         self.info_callback['exec_json'](self.exec_json())
         logger.info(f'{self.id} started')
-        cover_status = await self.cover.aget_coverstate()
+        cover_status = await self.value_proof_get(name='coverstate',
+                                                  awaitab=self.cover.aget_coverstate,
+                                                  expect_type=bool)
         if 'open' in self.kwargs.keys():
             # {"3": "success", "1": "off", "2": "warning"})
             if self.kwargs['open']==True and str(cover_status) == "1":

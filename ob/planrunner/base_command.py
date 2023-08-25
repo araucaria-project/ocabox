@@ -3,16 +3,19 @@ from abc import ABC
 from typing import Dict, List, Any, Callable
 import pwd
 import os
-logger = logging.getLogger(__name__.rsplit('.')[-1])
 from pyaraucaria.date import datetime_to_julian
 from datetime import datetime
 import math
+
+
+logger = logging.getLogger(__name__.rsplit('.')[-1])
+
 
 class BaseCommand(ABC):
 
     COMMAND_NAMES = ['SKYFLAT', 'FOCUS', 'DOMEFLAT', 'DARK', 'ZERO', 'OBJECT', 'WAIT', 'STOP', 'SNAP', 'SEQUENCE']
     KWARGS = ['uobi', 'dome_follow', 'epoch', 'mirror_cover', 'observer', 'screen_light', 'az', 'alt', 'seq',
-              'pos', 'dither', 'wait', 'ut']
+              'pos', 'dither', 'wait', 'ut', 'tracking']
 
     def __init__(self, id: str, name: str, info_callback: Dict[str, Callable], observatory, c_type, kwargs) -> None:
         self.id = id
@@ -29,6 +32,34 @@ class BaseCommand(ABC):
     @property
     def user(self):
         return pwd.getpwuid(os.getuid())[0]
+
+    async def _value_proof_get(self, name: str, awaitab: Callable, expect_type) -> Any:
+        try:
+            res = await awaitab()
+            if expect_type==float and isinstance(res, int):
+                try:
+                    res = float(res)
+                except ValueError:
+                    pass
+            if isinstance(res, expect_type):
+                logger.debug(f"Get {name} value done: {res}")
+                return res
+            else:
+                logger.warning(f"Can't get {name} value, result is {res}")
+                return None
+        except Exception as e:
+            logger.warning(f"Can't get {name} value: {e}")
+            return None
+
+    async def value_proof_get(self, name: str, awaitab: Callable, expect_type: type, n_times: int = 5) -> Any:
+        for n in range(1, n_times+1):
+            res = await self._value_proof_get(name=name, awaitab=awaitab, expect_type=expect_type)
+            if res is not None:
+                return res
+            else:
+                logger.warning(f"Can't get {name}, (is None)")
+            if n == n_times:
+                return None
 
     @staticmethod
     def _mk_folder(folder: str):
