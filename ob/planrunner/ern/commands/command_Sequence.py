@@ -21,6 +21,10 @@ class CommandSequence(Command):
         self._subcommands: List[Command] = []
         self._create_subcommands_objects(self._command_dict.get(self._SUBCOMMANDS_KEY, []))
 
+    def validate(self):
+        # nothing args to validate, because Sequence command not take args and kwargs
+        pass
+
     def _create_subcommands_objects(self, subcommands: list):
         """
 

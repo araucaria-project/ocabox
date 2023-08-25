@@ -48,6 +48,14 @@ class CommandObject(Command):
         # ------ build subcommands ------
         self._create_modules_from_args()
 
+    def validate(self):
+        if not (len(self._args) == 1 or len(self._args) == 3):
+            raise PlanBuildError(f"Wrong number of args")
+        try:
+            int(self.defocus)
+        except ValueError:
+            raise PlanBuildError(f"Wrong 'defocuser' value, can't cast to int")
+
     def _create_modules_from_args(self):
         """
 
@@ -138,8 +146,6 @@ class CommandObject(Command):
                 await self._move_dome.wait()
                 if self._mirror_open:
                     await self._mirror_open.wait()
-            # TODO  tą logikę można jeszcze skomplikować takżeby filtr się zmieniał podczas ruchu kopuły ale njpierw
-            #  pokazać to mikołajowi - MIKOŁAJ
 
             #  ---------  second step ----------
             async with self.res_mngr.get_resource(self.res_mngr.CAMERA), \

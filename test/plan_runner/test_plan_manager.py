@@ -28,7 +28,7 @@ class TestPlanManager(unittest.TestCase, BaseAsyncTest):
         self.api_test = InternalClientAPI(request_solver=self.rs, user_name=f"DefaultTest")
 
         self.rm = self.loop.run_until_complete(self.tao.get_res_manager())
-        self.pm = PlanManager(acs_res_mngr=self.rm, api=self.api_test,loop=self.loop)
+        self.pm = PlanManager(acs_res_mngr=self.rm, api=self.api_test, loop=self.loop)
 
     def tearDown(self) -> None:
         self._tearDownLoop()
@@ -37,11 +37,11 @@ class TestPlanManager(unittest.TestCase, BaseAsyncTest):
     def test_from_dict(self):
         """Test method from_dict()"""
         var = {'command_name': 'SEQUENCE', 'subcommands': [
-            {'command_name': 'OBJECT', 'args': ['NGC6871', '18.157', '-29.351', 'V', '10'], 'kwargs': {'clamp': '5'}},
-            {'command_name': 'OBJECT', 'args': ['NGC6871', '18.157', '-29.351', 'V', '10'], 'kwargs': {'clamp': '5'}}
+            {'command_name': 'OBJECT', 'args': ['NGC6871', '18.157', '-29.351'], 'kwargs': {'clamp': '5'}},
+            {'command_name': 'OBJECT', 'args': ['NGC6871', '18.157', '-29.351'], 'kwargs': {'clamp': '5'}}
         ]
                 }
-        plan = self.pm.from_dict(dic=var,access_resource_manager=self.rm, api=self.api_test)
+        plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test)
         self.assertIsInstance(plan, CommandSequence)
         self.assertEqual(len(plan.get_subcommands()), 2)
         for s in plan.get_subcommands():

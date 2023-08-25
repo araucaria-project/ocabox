@@ -18,14 +18,13 @@ class Command(BaseCommand, CommandArgsReader, ABC):
 
     def __init__(self, command_dict: dict, plan_data, previous_command, id_: str = None,
                  loop: asyncio.AbstractEventLoop = None, **kwargs):
-        super().__init__(plan_data=plan_data, arg=self.get_args(), kwarg=self.get_kwargs(), **kwargs)
+        self._command_dict: dict = command_dict
+        self.previous_command = previous_command
         self._loop = loop
-        print('ok2')
         if id_ is None:
             id_ = plan_data.generate_next_id()
         self._id = id_
-        self.previous_command = previous_command
-        self._command_dict: dict = command_dict
+        super().__init__(plan_data=plan_data, arg=self.get_args(), kwarg=self.get_kwargs(), **kwargs)
 
         # --- --- --- --- --- --- --- --- --- --- ---
         self._needed_modules = []
@@ -45,7 +44,7 @@ class Command(BaseCommand, CommandArgsReader, ABC):
 
     def get_args(self) -> list:
         """Method returns loaded args"""
-        return self._command_dict.get(self._ARGS_KEY, {})
+        return self._command_dict.get(self._ARGS_KEY, [])
 
     async def a_init(self):
         """

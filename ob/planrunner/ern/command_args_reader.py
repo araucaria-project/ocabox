@@ -1,4 +1,4 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 from typing import Optional, List, Tuple
 
 from pyaraucaria.coordinates import ra_to_decimal, dec_to_decimal
@@ -32,18 +32,15 @@ class CommandArgsReader(ABC):
             self._mapped_args[CommandArgsMap.RA] = ra_to_decimal(self._args[1])
             self._mapped_args[CommandArgsMap.DEC] = dec_to_decimal(self._args[2])
 
+    @abstractmethod
     def validate(self):
         """
+        Method validate command arguments
 
         :raise PlanBuildError
         :return:
         """
-        if not (len(self._args) == 1 or len(self._args) == 3):
-            raise PlanBuildError(f"Wrong number of args")
-        try:
-            int(self.defocus)
-        except ValueError:
-            raise PlanBuildError(f"Wrong 'defocuser' value, can't cast to int")
+        raise NotImplementedError
 
     def _create_seq_list(self) -> List[Tuple[SequenceData, FocusingData]]:
         """
