@@ -21,9 +21,13 @@ class CCTV(TelescopeComponent):
         await self.aput_value('ir', state=on)
 
     async def aget_ir(self) -> bool:
-        logger.debug(f'Getting cctv ir to {on}')
+        logger.debug(f'Getting cctv ir status')
         ret =  await self.aget_value('ir')
         return ret
+
+    async def asubscribe_ir(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
+        logger.debug(f'Subscribing cctv ir status {self.tel_addr}')
+        return await self.subscribe('ir', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
     async def aget_snapshot(self):
         logger.debug(f'Getting snapshot from {self.tel_addr}')

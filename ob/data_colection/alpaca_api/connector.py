@@ -296,7 +296,6 @@ class AlpacaConnector(Connector):
             str(component.device_nr),
             variable
         ])
-        print(url)
         return url
 
     @staticmethod

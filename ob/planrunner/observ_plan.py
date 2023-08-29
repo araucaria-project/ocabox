@@ -35,6 +35,7 @@ class ObservPlan:
         self.callbacks_dict['c_commands'] = [self.empty_callback]
         self.callbacks_dict['c_sequences'] = [self.empty_callback]
         self.callbacks_dict['exec_json'] = [self.empty_callback]
+        self.callbacks_dict['time_end'] = [self.empty_callback]
 
     def empty_callback(self, value):
         pass
@@ -69,6 +70,10 @@ class ObservPlan:
         for calb in self.callbacks_dict['exec_json']:
             calb(value)
 
+    def time_end_callback(self, value):
+        for calb in self.callbacks_dict['time_end']:
+            calb(value)
+
     def add_callbacks(self) -> None:
         """
         Method set callback for plan runner information stream.
@@ -88,6 +93,7 @@ class ObservPlan:
         self.info_callback['c_commands'] = self.c_commands_callback
         self.info_callback['c_sequences'] = self.c_sequences_callback
         self.info_callback['exec_json'] = self.exec_json_callback
+        self.info_callback['time_end'] = self.time_end_callback
 
     def delete_nightplan(self, nightplan_id: str) -> None:
         """
@@ -144,9 +150,8 @@ class ObservPlan:
 
     def _parse_plan(self) -> None:
         if self.plan_string:
-            parser = ObsPlanParser()
             try:
-                self.parsed_plan = parser.convert_from_string(self.plan_string)
+                self.parsed_plan = ObsPlanParser.convert_from_string(self.plan_string)
                 logger.debug(f'Parsed: {self.parsed_plan}')
             except Exception as e:
                 logger.error(f'Cannot parse plan - please check the syntax')
@@ -194,6 +199,10 @@ class ObservPlan:
         if self.get_nightplan(nightplan_id):
             if self.tsk is None:
                 self.running_nightplan = nightplan_id
+                if self.running_nightplan in self.subcomponents.keys():
+                    self.subcomponents[self.running_nightplan].started = True
+                    self.subcomponents[self.running_nightplan].skipped = False
+                    self.subcomponents[self.running_nightplan].done = False
                 loop = self.get_loop()
                 if loop:
                     self.tsk = loop.create_task(self.arun_night(nightplan_id, step_id=step_id))
@@ -212,6 +221,8 @@ class ObservPlan:
             self.info_callback['stream_1'](f'Night plan stopped')
             self.tsk = None
         self.tsk = None
+        if self.running_nightplan in self.subcomponents.keys():
+            self.subcomponents[self.running_nightplan].skipped = True
         self.running_nightplan = None
 
     async def arun_night(self, nightplan_id: str, step_id: str or None = None) -> None:
@@ -219,3 +230,12 @@ class ObservPlan:
 
     async def stop(self):
         await self.astop_nightplan()
+
+    def is_nightplan_running(self, nightplan_id: str) -> bool:
+        if nightplan_id in self.subcomponents.keys():
+            if self.subcomponents[nightplan_id].started is True:
+                if self.subcomponents[nightplan_id].done is True or self.subcomponents[nightplan_id].skipped is True:
+                    return False
+                else:
+                    return True
+        return False

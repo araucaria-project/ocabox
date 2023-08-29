@@ -27,7 +27,9 @@ class Focusing(SubCommand):
         focuser_value = 5
         while True:
             await asyncio.sleep(0.5)
-            foc_position = await self.focuser.aget_position()
+            foc_position = await self.value_proof_get(name='focus_pos',
+                                                      awaitab=self.focuser.aget_position,
+                                                      expect_type=int)
             if foc_position is not None:
                 if (abs(int(foc_position) - int(position))) < focuser_value:
                     break

@@ -23,19 +23,16 @@ class ChangeFilter(SubCommand):
                          started=self.started, done=self.done, skipped=self.skipped, **kwargs)
 
     async def _wait_to_move(self, pos: int) -> None:
+        logger.info('Wait to move...')
         while True:
-            await asyncio.sleep(0.5)
-            fit_pos = await self.get_value_position()
-            if isinstance(fit_pos, int) and fit_pos>-1:
+            await asyncio.sleep(0.2)
+            fit_pos = await self.value_proof_get(name='fw_pos',
+                                                 awaitab=self.filterwheel.aget_position,
+                                                 expect_type=int)
+            if isinstance(fit_pos, int) and fit_pos > -1:
                 if fit_pos==pos:
+                    logger.info('Wait to move done')
                     break
-
-    async def get_value_position(self):
-        while True:
-            val = self.filterwheel.position
-            if isinstance(val, int):
-                return val
-            await asyncio.sleep(0.1)
 
     async def change_filter_pos_proof(self, pos: int) -> None or int:
         t = datetime.datetime.now()
@@ -70,7 +67,9 @@ class ChangeFilter(SubCommand):
             self.skipped = True
             self.info_callback['exec_json'](self.exec_json())
             return 1
-        fit_pos = await self.get_value_position()
+        fit_pos = await self.value_proof_get(name='fw_pos',
+                                             awaitab=self.filterwheel.aget_position,
+                                             expect_type=int)
         if pos==fit_pos:
             self.info_callback['stream_1'](f'No need to change filter, skipping')
             self.info_callback['stream_5'](f'{self.id}')
