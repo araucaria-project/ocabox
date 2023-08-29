@@ -298,9 +298,12 @@ class CameraExposure(SubCommand):
             self.info_callback['stream_1'](f'{self.id} auto skyflat procedure started')
             mean_list = []
             test_exposure_time = 1.0
-            test_time_interval = 0.0
+            test_time_interval = 0.5
             test_min_max_adu = (20000, 25000)
             test_min_max_time_exp = (2, 30)
+            # TODO take zero_level from settings or make some zero
+            zero_level = 290.0
+            evening_factor = 1.11
             mean_diff = None
             auto_exp_sub_no = 0
             while True:
@@ -315,12 +318,11 @@ class CameraExposure(SubCommand):
                 arr = await self.value_proof_get(name='autoexp_get_array', awaitab=self.camera.aget_imagearray,
                                              expect_type=list)
                 mean = fits_stat(arr, size=100, median=False, std=False, min=False, max=False)['mean']
-                # TODO take zero_level from settings
+
                 self.info_callback['exec_json'](self.exec_json(auto_exp_start=True,
                                                                auto_exp_finnished=True,
                                                                auto_exp_sub_no=auto_exp_sub_no,
                                                                auto_exp_time=test_exposure_time))
-                zero_level = 290.0
                 if mean > zero_level:
                     mean = mean - zero_level
                 logger.info(f'{self.id} test_frame time:{test_exposure_time}s mean-zero:{mean}')
@@ -345,17 +347,20 @@ class CameraExposure(SubCommand):
                         self.skipped = True
                         self.info_callback['exec_json'](self.exec_json())
                         return 1
-
+                if datetime.utcnow().hour > 14:
+                    ev_fact = evening_factor
+                else:
+                    ev_fact = 1
                 # Check if it's ready to calculate exposure time
                 if test_min_max_adu[0] - mean_min_max[1] < 0 < test_min_max_adu[1] - mean_min_max[0]:
                     if mean_min_max[0] < test_min_max_adu[0]:
-                        exposure_time = test_min_max_adu[0] / mean
+                        exposure_time = (test_min_max_adu[0] / mean) * ev_fact
                         self.info_callback['stream_1'](f"{self.id} calc_exp_time:{exposure_time},"
                                                        f" expect_adu:{exposure_time * mean}")
                         logger.info(f"{self.id} calc_exp_time:{exposure_time}, expect_adu:{exposure_time * mean}")
                         break
                     else:
-                        exposure_time = mean_min_max[0] / mean
+                        exposure_time = (mean_min_max[0] / mean) * ev_fact
                         self.info_callback['stream_1'](f"{self.id} calc_exp_time:{exposure_time},"
                                                        f" expect_adu:{exposure_time * mean}")
                         logger.info(f"{self.id} calc_exp_time:{exposure_time}, expect_adu:{exposure_time * mean}")
