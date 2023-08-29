@@ -128,7 +128,7 @@ class CommandObject(Command):
                     self.res_mngr.get_resource(self.res_mngr.CAMERA) is None or \
                     self.res_mngr.get_resource(self.res_mngr.COVERCALIBRATOR) is None or \
                     self.res_mngr.get_resource(self.res_mngr.FOCUSER) is None or \
-                    self.res_mngr.get_resource(self.res_mngr.FILTERWHEEL):
+                    self.res_mngr.get_resource(self.res_mngr.FILTERWHEEL) is None:
                 self.log("Some of the required resource is not available")
                 return
 
@@ -171,7 +171,8 @@ class CommandObject(Command):
                         await self._mirror_close.run()
                         await self._mirror_close.wait()
 
-        except ResourceCommandError:
+        except ResourceCommandError as e:
+            print(e)
             self.log("Command have error")
 
     async def a_init(self):

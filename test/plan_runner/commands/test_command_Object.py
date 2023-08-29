@@ -1,0 +1,78 @@
+import asyncio
+import random
+import unittest
+
+from pyaraucaria.coordinates import az_alt_2_ra_dec, ra_dec_epoch
+
+from ob.comunication.internal_client_api import InternalClientAPI
+from ob.comunication.request_solver import RequestSolver
+from ob.data_colection.specialistic_components.tree_alpaca import TreeAlpacaObservatory
+from ob.data_colection.specialistic_components.tree_cache_observatory import TreeCache
+from ob.data_colection.specialistic_components.tree_conditional_freezer import TreeConditionalFreezer
+from ob.planrunner.ern.command import Command
+from ob.planrunner.ern.commands.command_Object import CommandObject
+from ob.planrunner.ern.errors import PlanBuildError
+from ob.planrunner.ern.plan_manager import PlanManager
+from test.data_colection.base_async_test import BaseAsyncTest
+
+
+class CommandObjectTest(unittest.TestCase, BaseAsyncTest):
+    OBSERVATORY_NAME = 'test_observatory'
+
+    def setUp(self):
+        super().setUp()
+        self._setUpLoop()
+        self.tao = TreeAlpacaObservatory(component_name='sample_component', observatory_name=self.OBSERVATORY_NAME)
+        self.tree_cache = TreeCache('sample_name_cache', self.tao)
+        self.tree_freezer = TreeConditionalFreezer('sample_freezer', self.tree_cache)
+        self.rs = RequestSolver(self.tree_freezer)
+        self.tao.target_requests = self.rs
+        self.api_test = InternalClientAPI(request_solver=self.rs, user_name=f"DefaultTest")
+
+        self.rm = self.loop.run_until_complete(self.tao.get_res_manager())
+        self.pm = PlanManager(acs_res_mngr=self.rm, api=self.api_test, loop=self.loop)
+
+    def tearDown(self) -> None:
+        self._tearDownLoop()
+        super().tearDown()
+
+    def test_build_command_object(self):
+        """Test build command Object witch validate arguments"""
+        # ------------------------ positive ------------------------
+        var = {'command_name': 'OBJECT', 'args': ['NGC6871', '18.157', '-29.351'], 'kwargs': {'clamp': '5'}}
+        plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test)
+        self.assertIsInstance(plan, CommandObject)
+
+        # -------------------- validate args --------------------
+        var = {'command_name': 'OBJECT', 'args': ['NGC6871'], 'kwargs': {'clamp': '5'}}
+        plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test)
+        self.assertIsInstance(plan, CommandObject)
+        # ----------------------------------------
+        var = {'command_name': 'OBJECT', 'args': ['18.157', '-29.351'], 'kwargs': {'clamp': '5'}}
+        with self.assertRaises(PlanBuildError):
+            plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test)
+        # ----------------------------------------
+        var = {'command_name': 'OBJECT', 'args': ['NGC6871', '18.157'], 'kwargs': {'clamp': '5'}}
+        with self.assertRaises(PlanBuildError):
+            plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test)
+
+    def test_run_command_object(self):
+        """"""
+        # todo continue here
+        mount = self.rm.get_resource(name=self.rm.MOUNT, nr=0)
+        position_ra, position_dec = az_alt_2_ra_dec(random.randint(30, 50), random.randint(20, 50),
+                                                    mount.longitude, mount.latitude, mount.elevation)
+        position_ra_final, position_dec_final = ra_dec_epoch(ra=position_ra,
+                                                             dec=position_dec,
+                                                             epoch=str("2000"))
+        var = {'command_name': 'OBJECT', 'args': ['NGC6871', position_ra, position_dec], 'kwargs': {'clamp': '5'}}
+        plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test)
+
+        async def coro():
+            await plan.run()
+
+        asyncio.run(coro())
+
+
+if __name__ == '__main__':
+    unittest.main()

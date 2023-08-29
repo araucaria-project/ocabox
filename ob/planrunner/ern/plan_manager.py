@@ -67,7 +67,7 @@ class PlanManager:
         return True
 
     @classmethod
-    def from_dict(cls, dic: dict, access_resource_manager, api, loop=None):
+    def from_dict(cls, dic: dict, access_resource_manager, api, loop=None) -> Command:
         """
         Method create observation plan structure from given dictionary.
 

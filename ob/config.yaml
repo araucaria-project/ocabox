@@ -171,6 +171,15 @@ tree:
           kind: focuser
           device_number: 0
           focus_tolerance: 5  # optional
+        derotator:
+          kind: rotator
+          device_number: 0
+        switch:
+          kind: switch
+          device_number: 0
+        safetymonitor:
+          kind: safetymonitor
+          device_number: 0
 
   test_observatory_down:
     observatory:
@@ -189,6 +198,7 @@ tree:
             derotator:
               kind: rotator
               device_number: 0
+
 #  cctv-zb08: # Ubiquity CCTV cameras configured inob/configuration/config_oca.yaml
 #    udm_camera_id: CD08
 #    udm_host: ''
