@@ -105,7 +105,7 @@ class AbstractCycleTime(ABC):
             logger.debug(f'File read')
             return dat
         except (FileExistsError, FileNotFoundError):
-            logger.error(f'File {file_name} do not exists')
+            logger.warning(f'File {file_name} do not exists')
             return None
 
     @staticmethod

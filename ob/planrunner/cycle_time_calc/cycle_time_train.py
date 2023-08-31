@@ -37,6 +37,7 @@ class CycleTimeTrain(AbstractCycleTime):
 
     @staticmethod
     def train_data_command(telescope: str, command: str) -> None:
+        logger.debug(f'Train telelescope: {telescope} command: {command}')
         min_record_to_train = 10
         data = CycleTimeTrain.read_file(CycleTimeTrain.BASE_FOLDER_NAME,
                                         CycleTimeTrain.clean_data_file_name(telescope=telescope, command=command))
@@ -63,6 +64,7 @@ class CycleTimeTrain(AbstractCycleTime):
                                    folder=CycleTimeTrain.BASE_FOLDER_NAME,
                                    file_name=CycleTimeTrain.train_param_file_name(telescope=telescope,
                                                                                   command=command))
+        logger.debug(f'Save train parameters for telescope:{telescope} command:{command}')
 
     @staticmethod
     def train(data_x: np.array, data_y: np.array) -> Dict[str, Any]:
@@ -78,6 +80,7 @@ class CycleTimeTrain(AbstractCycleTime):
 
     @staticmethod
     def train_all_telesc_all_commands() -> None:
+        logger.info(f'Train all telescopes and all commands type')
         for t in CycleTimeTrain.get_list_telesc(file_type='clean_data'):
             for c in CycleTimeTrain.get_list_commands(telescope=t, file_type='clean_data'):
                 CycleTimeTrain.train_data_command(telescope=t, command=c)

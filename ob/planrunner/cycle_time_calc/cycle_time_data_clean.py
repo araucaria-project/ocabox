@@ -26,6 +26,7 @@ class CycleTimeDataClean(AbstractCycleTime):
                 full_nights_id[random_id] = {'started': line_started,
                                              'ended':line_ended,
                                              'utc_time_stamp': m["utc_time_stamp"]}
+        logger.debug(f'Full nights id find: {full_nights_id}')
         return full_nights_id
 
     @staticmethod
@@ -65,7 +66,7 @@ class CycleTimeDataClean(AbstractCycleTime):
     @staticmethod
     def save_commands_data_to_files(commands_data: Dict[str, Any],
                                     full_nights_id: Dict[str, Dict[str, Any]], telescope: str) -> None:
-
+        logger.debug(f'Save commands data for telescope: {telescope}')
         for n in commands_data.keys():
             for m in commands_data[n]:
                 CycleTimeDataClean.add_to_file(
@@ -155,6 +156,8 @@ class CycleTimeDataClean(AbstractCycleTime):
 
     @staticmethod
     def data_clean_all() -> None:
+        logger.debug(f'Data clean for all telescopes and all commands type')
         tel = CycleTimeDataClean.get_list_telesc(file_type='raw_data')
         for t in tel:
+            logger.info(f'Data clean for telescope: {t}')
             CycleTimeDataClean.data_clean(telescope=t)
