@@ -3,7 +3,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 ### Added
+- auto skyflat evening factor add
+- cycle time api in `ocaboxapi`
+- cycle time logging
+
 ### Changed
+- skyflat dithering movement value to 8'
+
 ### Fixed
 
 ## [1.0.15] - 2023-08-14
