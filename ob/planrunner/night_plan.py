@@ -99,9 +99,10 @@ class NightPlan(AbstractSequence):
         self.info_callback['stream_5'](f'{self.id}')
         self.info_callback['stream_1'](f'Night plan {self.id} completed at: {str(datetime.datetime.utcnow())}')
         logger.info(f'Night plan {self.id} completed')
+        """
         if skip == 0:
             CycleTimeDataClean.data_clean_all()
-            CycleTimeTrain.train_all_telesc_all_commands()
+            CycleTimeTrain.train_all_telesc_all_commands()"""
         return skip
 
     def __del__(self):

@@ -143,13 +143,13 @@ class CameraExposure(SubCommand):
         jd = self.get_julian_date(self.exp_time_start)
         jd_oca = f"{self.get_oca_date(jd):010.5f}"
         logger.info(f'_wait_for_save_fits aget_imagearray done')
-
+        """
         gains = await self.value_proof_get(name='fitsh_cam_gains',
                                            awaitab=self.camera.aget_gains,
                                            expect_type=list),
         readoutmodes = await self.value_proof_get(name='fitsh_cam_rms',
                                                   awaitab=self.camera.aget_readoutmodes,
-                                                  expect_type=list),
+                                                  expect_type=list),"""
         # offsets = await self.camera.aget_offsets()
         gain = await self.value_proof_get(name='fitsh_cam_gain',
                                           awaitab=self.camera.aget_gain,
@@ -158,8 +158,8 @@ class CameraExposure(SubCommand):
                                                  awaitab=self.camera.aget_readoutmode,
                                                  expect_type=int),
         # offset = await self.camera.aget_offset()
-        gain = self.indexing_value(gain, gains)
-        readoutmode = self.indexing_value(readoutmode, readoutmodes)
+        # gain = self.indexing_value(gain, gains)
+        # readoutmode = self.indexing_value(readoutmode, readoutmodes)
          # offset = indexing_value(offset, offsets)
 
         if self.kwargs["req_ra"] is None:
@@ -214,8 +214,8 @@ class CameraExposure(SubCommand):
             ccd_biny=await self.value_proof_get(name='fitsh_cam_biny',
                                                 awaitab=self.camera.aget_biny,
                                                 expect_type=int),
-            read_mod=str(readoutmode),
-            gain=str(gain)
+            read_mod=readoutmode,
+            gain=gain
         )
         logger.info(f'_wait_for_save_fits fits_header gather data done')
         if self.kwargs['type'] == 'snap':
