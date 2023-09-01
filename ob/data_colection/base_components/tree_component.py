@@ -1,7 +1,7 @@
 import logging
 import confuse
 from abc import ABC, abstractmethod
-from typing import Protocol, runtime_checkable, List, Tuple, Optional
+from typing import Protocol, runtime_checkable, List, Tuple
 from ob.data_colection.base_components.address_dispatcher import AddressedProtocol
 from ob.data_colection.value_call import ValueRequest, ValueResponse
 from ob.ob_config import SingletonConfig
@@ -47,6 +47,9 @@ class TreeComponent(ABC):
     def get_name(self):
         return self._component_name
 
+    def get_type(self):
+        return type(self).__name__
+
     @abstractmethod
     async def run(self):
         """
@@ -76,6 +79,7 @@ class TreeComponent(ABC):
 
     def _get_self_configuration(self) -> dict:
         out = {self.get_name(): {"child": {},
+                                 "type": self.get_type(),
                                  "config": self._extract_cfg(
                                      SingletonConfig.get_config()['data_collection'][self.COMPONENT_DEFAULT_NAME])}}
         out.get(self.get_name()).get("config").update(self._extract_cfg(SingletonConfig.get_config()['tree'][self._component_name]))

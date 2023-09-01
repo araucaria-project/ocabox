@@ -4,11 +4,14 @@ import time
 import unittest
 
 from ob.comunication.message_serializer import MessageSerializer
+from ob.data_colection.base_components.tree_base_broker_default_target import TreeBaseBrokerDefaultTarget
 from ob.data_colection.base_components.tree_base_provider import TreeBaseProvider
 from ob.data_colection.base_components.tree_component import ProvidesResponseProtocol
+from ob.data_colection.specialistic_components.tree_alpaca import TreeAlpacaObservatory
 from ob.data_colection.value import Value
 from ob.data_colection.value_call import ValueRequest
 from ob.comunication.request_solver import RequestSolver
+from ob.ob_config import SingletonConfig
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -152,6 +155,17 @@ class RequestSolverTest(unittest.TestCase):
             self.assertEqual(count_tasks(), task_on_start)
 
         self.loop.run_until_complete(coro_test())
+
+    def test_get_config_alpaca(self):
+        """test checks if the method `_get_alpaca_modules_configuration()` correctly returns the configuration
+        of the observatories"""
+        OBSERVATORY_NAME = 'test_observatory'
+        tao = TreeAlpacaObservatory(component_name='jk98', observatory_name=OBSERVATORY_NAME)
+        broker = TreeBaseBrokerDefaultTarget(component_name="broker", list_providers=[], default_provider=tao)
+        rs = RequestSolver(broker)
+        cfg = rs._get_alpaca_modules_configuration()
+        configuration = SingletonConfig.get_config()
+        self.assertDictEqual(cfg, {OBSERVATORY_NAME: configuration["tree"][OBSERVATORY_NAME].get()})
 
 
 if __name__ == '__main__':

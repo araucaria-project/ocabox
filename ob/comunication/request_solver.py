@@ -68,3 +68,22 @@ class RequestSolver(BaseRequestSolver):
         v_response = await self._get_single_answer(v_request=v_request)
         response = v_response.to_byte()
         return response
+
+    def _get_alpaca_modules_configuration(self) -> dict:
+        configuration_tree = self.get_tree_configuration()
+        out = {}
+        alpacas = self._find_alpacas(configuration_tree)
+        for a in alpacas:
+            out.update(a)
+        return out
+
+    def _find_alpacas(self, config) -> list:
+        from ob.data_colection.specialistic_components.tree_alpaca import TreeAlpacaObservatory
+        li = []
+        for key, val in config.items():
+            if val.get("type", "") == TreeAlpacaObservatory.__name__:
+                name = val.get("config", None).get("observatory_config_name", key) if val.get("config", None) else key
+                li.append({name: val.get("config", {}).get("observatory_config")})
+            else:
+                li = li + self._find_alpacas(config=val.get("child", []))
+        return li
