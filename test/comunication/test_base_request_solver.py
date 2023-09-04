@@ -1,0 +1,102 @@
+import asyncio
+import logging
+import time
+import unittest
+from typing import List
+
+from serverish.base import StatusEnum
+from serverish.messenger import get_reader
+
+from ob.comunication.base_request_solver import BaseRequestSolver
+from ob.comunication.nats_streams import NatsStreams
+from ob.comunication.request_solver import RequestSolver
+from ob.data_colection.base_components.tree_base_broker_default_target import TreeBaseBrokerDefaultTarget
+from ob.data_colection.specialistic_components.tree_alpaca import TreeAlpacaObservatory
+from ob.ob_config import SingletonConfig
+from ob.util_functions.asyncio_util_functions import wait_for_psce
+from test.data_colection.base_async_test import BaseAsyncTest
+from test.data_colection.sample_test_value_provider import SampleTestValueProvider
+
+logger = logging.getLogger(__name__.rsplit('.')[-1])
+
+
+class RequestSolverTest(unittest.TestCase, BaseAsyncTest):
+
+    class SampleRequestSolver(BaseRequestSolver):
+        async def get_answer(self, request: List[bytes], user_id: bytes, timeout=None) -> List[bytes]:
+            pass
+
+        async def get_single_answer(self, request: bytes, user_id: bytes, timeout=None) -> bytes:
+            pass
+
+    def setUp(self):
+        super().setUp()
+        self._setUpLoop()
+        self.provider = SampleTestValueProvider("provider", "provider", [])
+        self.RS = self.SampleRequestSolver(data_provider=self.provider)
+        self.RS._nats_port = 4222
+        self.RS._nats_host = "localhost"
+
+    def tearDown(self) -> None:
+        self._tearDownLoop()
+        super().tearDown()
+
+    def test_get_config_alpaca(self):
+        """test checks if the method `_get_alpaca_modules_configuration()` correctly returns the configuration
+        of the observatories"""
+        OBSERVATORY_NAME = 'test_observatory'
+        tao = TreeAlpacaObservatory(component_name='jk98', observatory_name=OBSERVATORY_NAME)
+        broker = TreeBaseBrokerDefaultTarget(component_name="broker", list_providers=[], default_provider=tao)
+        rs = RequestSolver(broker)
+        cfg = rs._get_alpaca_modules_configuration()
+        configuration = SingletonConfig.get_config()
+        self.assertDictEqual(cfg, {OBSERVATORY_NAME: configuration["tree"][OBSERVATORY_NAME].get()})
+
+    def test_connect_to_nats_failed(self):
+        """test connect to nats failed"""
+
+        async def coro():
+            self.RS._nats_port = 7452  # set wrong port
+
+            with self.assertRaises(asyncio.TimeoutError):
+                await wait_for_psce(self.RS.run_tree(), 1.5)
+            self.assertEqual(self.RS._tree_data.nats_messenger.conn.status.get("nats_server"), StatusEnum.fail)
+        asyncio.run(coro())
+
+    def test_connect_to_nats(self):
+        """test connect to nats"""
+
+        async def coro():
+
+            await wait_for_psce(self.RS.run_tree(), 1.5)
+            self.assertEqual(self.RS._tree_data.nats_messenger.conn.status.get("nats_server"), StatusEnum.ok)
+            await wait_for_psce(self.RS.stop_tree(), 1.5)
+
+        asyncio.run(coro())
+
+    def test_update_nats_witch_config_alpaca(self):
+        """test update nats witch alpaca configuration"""
+        OBSERVATORY_NAME = 'test_observatory'
+        tao = TreeAlpacaObservatory(component_name='jk98', observatory_name=OBSERVATORY_NAME)
+        broker = TreeBaseBrokerDefaultTarget(component_name="broker", list_providers=[], default_provider=tao)
+        self.RS.data_provider = broker
+
+        async def coro():
+            await wait_for_psce(self.RS.run_tree(), 1.5)
+            self.assertEqual(self.RS._tree_data.nats_messenger.conn.status.get("nats_server"), StatusEnum.ok)
+            await asyncio.sleep(1)
+
+            reader = await get_reader(NatsStreams.ALPACA_CONFIG, deliver_policy="last")
+            cfg = await reader.read_next()
+            await wait_for_psce(self.RS.stop_tree(), 1.5)  # here close connection to nats
+
+            configuration = SingletonConfig.get_config()
+            time_save_read__dif = time.mktime(time.gmtime()) - time.mktime(tuple(cfg[0].get("published", [])))
+            self.assertTrue(time_save_read__dif < 2)
+            self.assertDictEqual(cfg[0].get("config"), {OBSERVATORY_NAME: configuration["tree"][OBSERVATORY_NAME].get()})
+
+        asyncio.run(coro())
+
+
+if __name__ == '__main__':
+    unittest.main()

@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 ### Added
+- A mechanism has been added that will send alpaca configuration to nats at server startup
 ### Changed
 ### Fixed
 

@@ -156,17 +156,6 @@ class RequestSolverTest(unittest.TestCase):
 
         self.loop.run_until_complete(coro_test())
 
-    def test_get_config_alpaca(self):
-        """test checks if the method `_get_alpaca_modules_configuration()` correctly returns the configuration
-        of the observatories"""
-        OBSERVATORY_NAME = 'test_observatory'
-        tao = TreeAlpacaObservatory(component_name='jk98', observatory_name=OBSERVATORY_NAME)
-        broker = TreeBaseBrokerDefaultTarget(component_name="broker", list_providers=[], default_provider=tao)
-        rs = RequestSolver(broker)
-        cfg = rs._get_alpaca_modules_configuration()
-        configuration = SingletonConfig.get_config()
-        self.assertDictEqual(cfg, {OBSERVATORY_NAME: configuration["tree"][OBSERVATORY_NAME].get()})
-
 
 if __name__ == '__main__':
     unittest.main()

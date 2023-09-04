@@ -1,3 +1,8 @@
+nats:
+  host: "nats.oca.lan"
+  port: 4222
+
+
 data_collection:
   TreeCCTV:   # Ubiquity CCTV camera
     udm_camera_id: ''
