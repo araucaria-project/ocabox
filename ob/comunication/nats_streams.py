@@ -1,4 +1,4 @@
 
 
 class NatsStreams:
-    ALPACA_CONFIG = "test.config"
+    ALPACA_CONFIG = "tic.config.observatory"

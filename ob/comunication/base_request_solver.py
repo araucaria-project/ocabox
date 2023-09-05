@@ -161,7 +161,7 @@ class BaseRequestSolver(ABC):
         publisher = await get_publisher(NatsStreams.ALPACA_CONFIG)
         cfg = self._get_alpaca_modules_configuration()
         await publisher.publish(data={'version': "",  # todo uzupełnić
-                                      'published': [*time.gmtime()],  # todo jaka dokładność tego time ma być bo jest do sekundy w ten sposób MIKOŁAJ
+                                      'published': [*time.gmtime()],
                                       'config': cfg},
                                 meta={
                                     "message_type": "config",  # IMPORTANT type message, one of pre declared types
