@@ -58,3 +58,28 @@ class FilterWheelTest(unittest.TestCase, BaseAsyncTest):
             await self.tree_freezer.stop()
 
         asyncio.run(coro())
+
+    def test_no_filter(self):
+        """Test situation when as filter is given None"""
+        async def coro():
+            await self.tree_freezer.run()
+            rm = await self.tao.get_res_manager()
+            plan_data = PlanData(access_resource_manager=rm, client_api=self.api_test)
+            targ_filter = None
+
+            fw = FilterWheel(filter_=targ_filter, plan_data=plan_data)
+            self.assertTrue(fw._virtual_move)
+            await fw.a_init()
+            self.assertEqual(len(fw.positions), 0)
+            # main method to make move
+            start_time = time.time()
+            self.assertTrue(fw.done)  # virtual moves is done before start
+            await fw.run()
+            self.assertTrue(time.time() - start_time < 0.5)  # method run() should make immediately
+            await fw.wait()
+            self.assertFalse(fw.error)  # finish witch no errors
+            self.assertEqual(fw.progress, 1)
+            self.assertTrue(fw.done)
+            await self.tree_freezer.stop()
+
+        asyncio.run(coro())

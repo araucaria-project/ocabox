@@ -1,14 +1,18 @@
 import asyncio
 import logging
+import time
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Optional, Tuple, List
 
 from ob.data_colection.resource_manager.errors import ResourceCommandError
 from ob.planrunner.ern.command import Command
 from ob.planrunner.ern.commands.commands_args_map import CommandArgsMap
+from ob.planrunner.ern.commands.commands_types import CommandsTypes
 from ob.planrunner.ern.errors import ResourceError, PlanBuildError
 from ob.planrunner.ern.commands.commands_names import CommandsNames
 from ob.planrunner.ern.moves.custom_moves.camera_exposure import CameraExposure
+from ob.planrunner.ern.moves.custom_moves.camera_read_picture import CameraReadPicture
 from ob.planrunner.ern.moves.custom_moves.dome_slew import DomeSlew
 from ob.planrunner.ern.moves.custom_moves.dome_slew_ra_dec import DomeSlewRaDec
 from ob.planrunner.ern.moves.custom_moves.filter_wheel import FilterWheel
@@ -27,7 +31,7 @@ class CommandObject(Command):
     @dataclass
     class _ExecuteSeqObject:
         filter: FilterWheel
-        exp_list: List[Tuple[FocuserFocus, CameraExposure]]
+        exp_list: List[Tuple[FocuserFocus, CameraExposure, CameraReadPicture]]
 
     def __init__(self, command_dict: dict, plan_data, previous_command, id_: str = None,
                  loop: asyncio.AbstractEventLoop = None, **kwargs):
@@ -36,11 +40,6 @@ class CommandObject(Command):
         # ------ subcommands ------
         self._move_mount: Optional[Move] = None
         self._move_dome: Optional[Move] = None
-        self._camera_exposure: Optional[Move] = None
-        self._camera_read_pic: Optional[Move] = None
-        self._filter: Optional[Move] = None
-        self._focuser: Optional[Move] = None
-        self.filter_wheel: Optional[Move] = None
         self._mirror_close: Optional[Move] = None
         self._mirror_open: Optional[Move] = None
         self._execute_seq_subcomands: List[CommandObject._ExecuteSeqObject] = []
@@ -55,6 +54,8 @@ class CommandObject(Command):
             int(self.defocus)
         except ValueError:
             raise PlanBuildError(f"Wrong 'defocuser' value, can't cast to int")
+        if not self.plan_seq:
+            raise PlanBuildError(f"No 'seq' in kwargs")
 
     def _create_modules_from_args(self):
         """
@@ -94,13 +95,20 @@ class CommandObject(Command):
                 # ----------- change filter ------------
                 _filter = FilterWheel(filter_=s.filter, plan_data=self._plan_data)
                 exp_list = []
+                # If no seq is given then this loop will not execute so there is no need to create virtual
+                # camera commands
                 for i in range(0, s.exp_quantity):
                     # ----------- set focus ----------------
                     _focuser = FocuserFocus(focus=f.focus_position(exp_no=i), plan_data=self._plan_data)
                     # ----------- camera exposure ----------
                     _camera_exposure = CameraExposure(exposure_time=s.exp_time, light=True,
                                                       plan_data=self._plan_data)
-                    exp_list.append((_focuser, _camera_exposure))
+                    _camera_read = CameraReadPicture(exp_time_start=datetime.utcnow(), plan_data=self._plan_data,
+                                                     resource_nr=0, mount_resource_nr=0, exposure_time=s.exp_time,
+                                                     req_ra=self.plan_ra, req_dec=self.plan_dec, epoch=self.epoch,
+                                                     type_=CommandsTypes.SCIENCE, obj_name=self.object_name,
+                                                     filter_=s.filter, observer=self.observer)
+                    exp_list.append((_focuser, _camera_exposure, _camera_read))
                 self._execute_seq_subcomands.append(CommandObject._ExecuteSeqObject(filter=_filter, exp_list=exp_list))
             # -----------
 
@@ -120,7 +128,7 @@ class CommandObject(Command):
         return m is not None
 
     async def _run_body(self):
-        await self._wait_for_permission_to_locking()  # jeśli zabrało wszystko co potrzebne to można zaczynać zbierać u siebie i lokować
+        await self._wait_for_permission_to_locking()
         try:
             #  --------- prepare step - check all needed resources is available ----------
             if self.res_mngr.get_resource(self.res_mngr.MOUNT) is None or \
@@ -150,32 +158,52 @@ class CommandObject(Command):
             #  ---------  second step ----------
             async with self.res_mngr.get_resource(self.res_mngr.CAMERA), \
                     self.res_mngr.get_resource(self.res_mngr.FOCUSER), \
-                    self.res_mngr.get_resource(self.res_mngr.FILTERWHEEL):
-
+                    self.res_mngr.get_resource(self.res_mngr.FILTERWHEEL), \
+                    self.res_mngr.get_resource(self.res_mngr.COVERCALIBRATOR):
+            # todo po błędzie trzeba je jeszcze cancelować pozycje bo mogą być zakolejkowane i popsuję następne polecneie
+                last_read = None
                 for ess in self._execute_seq_subcomands:
                     await ess.filter.run()
 
-                    for foc, cam in ess.exp_list:
+                    for foc, cam, read in ess.exp_list:
                         await foc.run()
                         await ess.filter.wait()  # attention ! in first loop step here will be wait but all the
                         # next steps always finish immediately because Move will be already finished. In first time
                         # we will save time
                         await foc.wait()
+                        if last_read is not None:
+                            await last_read.wait()
                         await cam.run()
                         await cam.wait()
 
-                # get again for close mirror
-                async with self.res_mngr.get_resource(self.res_mngr.COVERCALIBRATOR):
-                    self._unlock_next_command()  # unlock next command faster, before this command do last thing
-                    if self._mirror_close:
-                        await self._mirror_close.run()
-                        await self._mirror_close.wait()
+                        await read.run()
+                        last_read = read
 
-        except ResourceCommandError as e:
-            print(e)
+                self._unlock_next_command()  # unlock next command faster, before this command do last thing
+                if self._mirror_close:
+                    await self._mirror_close.run()
+                if last_read is not None:  # last wait
+                    await last_read.wait()
+                if self._mirror_close:
+                    await self._mirror_close.wait()
+
+        except ResourceCommandError:
             self.log("Command have error")
 
     async def a_init(self):
         await super().a_init()
         if self._move_mount is not None:
             await self._move_mount.a_init()
+        if self._move_dome is not None:
+            await self._move_dome.a_init()
+        if self._mirror_close is not None:
+            await self._mirror_close.a_init()
+        if self._mirror_open is not None:
+            await self._mirror_open.a_init()
+        for x in self._execute_seq_subcomands:
+            await x.filter.a_init()
+            for focuserFocus, cameraExposure, cameraReadPicture in x.exp_list:
+                await focuserFocus.a_init()
+                await cameraExposure.a_init()
+                await cameraReadPicture.a_init()
+

@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 from ob.comunication.comunication_error import CommunicationTimeoutError, CommunicationRuntimeError
 from ob.data_colection.resource_manager.errors import ResourceCommandError
@@ -13,7 +14,7 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class FocuserFocus(Move):
     _USED_RESOURCE = ResourceManager.FOCUSER
 
-    def __init__(self, focus: int, plan_data, resource_nr=0):
+    def __init__(self, focus: Optional[int], plan_data, resource_nr=0):
         super().__init__(plan_data=plan_data)
         self._resource_nr = resource_nr
         self._resource_content = self.res_mngr.get_resource(self._USED_RESOURCE, nr=self._resource_nr)
@@ -22,6 +23,10 @@ class FocuserFocus(Move):
         self._build()
 
     def _build(self):
+        if self._focus is None:
+            self._virtual_move = True
+        if self._virtual_move:
+            return
         try:
             self._target_focus = int(self._focus)
         except ValueError:

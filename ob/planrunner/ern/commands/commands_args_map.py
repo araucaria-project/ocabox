@@ -37,5 +37,5 @@ class CommandArgsMap(BaseArgsMap):
     MIRROR_COVER: _MirrorCover = _MirrorCover("mirror_cover")
     DOME_FOLLOW: _DomeFollow = _DomeFollow("dome_follow")
     SEQ = StrVal("seq", "")
-    FOCUSING = StrVal("focus_pos", "")
+    FOCUSING = StrVal("pos", "")
     FOCUSING_OFFSET = StrVal("defocus", 0)

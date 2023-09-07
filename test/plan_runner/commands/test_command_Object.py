@@ -9,7 +9,6 @@ from ob.comunication.request_solver import RequestSolver
 from ob.data_colection.specialistic_components.tree_alpaca import TreeAlpacaObservatory
 from ob.data_colection.specialistic_components.tree_cache_observatory import TreeCache
 from ob.data_colection.specialistic_components.tree_conditional_freezer import TreeConditionalFreezer
-from ob.planrunner.ern.command import Command
 from ob.planrunner.ern.commands.command_Object import CommandObject
 from ob.planrunner.ern.errors import PlanBuildError
 from ob.planrunner.ern.plan_manager import PlanManager
@@ -58,18 +57,34 @@ class CommandObjectTest(unittest.TestCase, BaseAsyncTest):
 
     def test_run_command_object(self):
         """"""
-        # todo continue here
         mount = self.rm.get_resource(name=self.rm.MOUNT, nr=0)
         position_ra, position_dec = az_alt_2_ra_dec(random.randint(30, 50), random.randint(20, 50),
                                                     mount.longitude, mount.latitude, mount.elevation)
         position_ra_final, position_dec_final = ra_dec_epoch(ra=position_ra,
                                                              dec=position_dec,
                                                              epoch=str("2000"))
-        var = {'command_name': 'OBJECT', 'args': ['NGC6871', position_ra, position_dec], 'kwargs': {'clamp': '5'}}
-        plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test)
 
         async def coro():
+            names = (await self.api_test.get_async(f"{self.rm.get_resource(self.rm.FILTERWHEEL).adr}.names")).value.v
+            targ_filter = names[random.randint(0, len(names) - 1)]
+
+            filter_ = targ_filter
+            number_of_photo = 1
+            var = {'command_name': 'OBJECT', 'args': ['NGC6871', position_ra, position_dec],
+                   'kwargs': {'clamp': '5', "seq": f"{number_of_photo}/{filter_}/1"}}
+
+            plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test)
+            await plan.a_init()
+
+            self.assertIsInstance(plan, CommandObject)
+            self.assertEqual(plan._execute_seq_subcomands[0].filter._filter, filter_)  # right filter
+            self.assertFalse(plan._execute_seq_subcomands[0].filter._virtual_move)
+            focuserFocus, cameraExposure, cameraReadPicture = plan._execute_seq_subcomands[0].exp_list[0]
+            self.assertTrue(focuserFocus._virtual_move)  # skip focusing
+            self.assertEqual(len(plan._execute_seq_subcomands[0].exp_list), number_of_photo)
+
             await plan.run()
+            await asyncio.sleep(1)
 
         asyncio.run(coro())
 

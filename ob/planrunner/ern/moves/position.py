@@ -3,6 +3,7 @@ import logging
 import time
 from typing import Tuple, Optional, Callable
 from ob.comunication.comunication_error import CommunicationRuntimeError
+from ob.data_colection.resource_manager.errors import ResourceCommandError
 from ob.planrunner.ern.moves.part_move import PartMove
 from ob.util_functions.asyncio_util_functions import wait_for_psce
 
@@ -83,7 +84,14 @@ class Position(PartMove):
     async def _coro(self, api):
         # wait for your turn
         for o in self._wait_for_others:
-            await o.get_finish_future()
+            try:
+                await o.get_finish_future()
+            except ResourceCommandError as e:
+                self._finish_fut.set_exception(ResourceCommandError(f"the higher-priority procedure "
+                                                                    f"({type(self).__name__}) failed"))
+                self._finish_tmstp = time.time()
+                return
+
         CQ = await api.subscribe(address=self._address,
                                  time_of_data_tolerance=0.3, delay=0.1)
         CQ.start()
@@ -92,15 +100,14 @@ class Position(PartMove):
                 await asyncio.sleep(0)
                 try:
                     result = await CQ.get_response()
-                except CommunicationRuntimeError:
-                    self.error = True
-                    self._finish_fut.set_result(False)
+                except CommunicationRuntimeError as e:
+                    self._finish_fut.set_exception(ResourceCommandError(str(e)))
                     return
 
                 single_result = result[0]
                 if not single_result.status:
-                    self.error = True
-                    self._finish_fut.set_result(False)
+                    self._finish_fut.set_exception(ResourceCommandError(f"Get error form server:"
+                                                                        f" {str(single_result.error)}"))
                     return
                 if single_result.value:
                     if self.start is None:
@@ -109,25 +116,24 @@ class Position(PartMove):
                     try:
                         res = self._check_finish()
                     except Exception as e:
-                        self.error = True
-                        self.error_content = str(e)
-                        self._finish_fut.set_result(False)
+                        self._finish_fut.set_exception(ResourceCommandError(str(e)))
+
                         return
                     if res:
                         self._finish_fut.set_result(True)
                         return
                 else:
-                    self.error = True
-                    self._finish_fut.set_result(False)
+                    self._finish_fut.set_exception(ResourceCommandError("Response from server have no errors but "
+                                                                        "value is empty"))
                     return
         except (asyncio.CancelledError, asyncio.TimeoutError):
-            self._finish_fut.set_result(False)
-            self.error = True
-            self.error_content = "Waiting for the target to be reached has been interrupted"
+            self._finish_fut.set_exception(ResourceCommandError("Waiting for the target to be reached has been "
+                                                                "interrupted"))
         finally:
             self._finish_tmstp = time.time()
             if not self._finish_fut.done():
-                self._finish_fut.set_result(False)
+                self._finish_fut.set_exception(ResourceCommandError(f"Main method in {type(self).__name__} finish but "
+                                                                    f"future not done"))
             await CQ.stop_and_wait()
 
     async def run(self, api):

@@ -1,6 +1,4 @@
-from typing import Dict, List
-from pyaraucaria.coordinates import az_alt_2_ra_dec, ra_to_decimal, dec_to_decimal, deg_to_decimal_deg
-import random
+from typing import Optional, Union
 
 from ob.planrunner.ern.errors import PlanBuildError
 
@@ -20,11 +18,13 @@ class SequenceData:
         raise PlanBuildError
         :return:
         """
+        # no seq param
+        if len(self._seq) == 0:
+            self._seq = [0, None, 0]  # set default empty values
 
         if len(self._seq) != self._SEQUENCE_LEN:
             raise PlanBuildError(f"The length of the sequence is wrong, should "
                                  f"be {self._SEQUENCE_LEN}")
-
         try:
             int(self._seq[0])
         except ValueError:
@@ -44,7 +44,7 @@ class SequenceData:
         return int(self._seq[0])
 
     @property
-    def filter(self) -> str or int:
+    def filter(self) -> Optional[Union[str, int]]:
         return self._seq[1]
 
     @property

@@ -6,7 +6,6 @@ from pyaraucaria.coordinates import ra_to_decimal, dec_to_decimal
 from ob.planrunner.ern.commands.commands_args_map import CommandArgsMap
 from ob.planrunner.ern.commands.commands_names import CommandsNames
 from ob.planrunner.ern.commands.commands_types import CommandsTypes
-from ob.planrunner.ern.errors import PlanBuildError
 from ob.planrunner.ern.focusing_data import FocusingData
 from ob.planrunner.ern.sequence_data import SequenceData
 

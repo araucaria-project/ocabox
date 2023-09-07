@@ -1,4 +1,6 @@
 import logging
+from typing import Optional
+
 from ob.comunication.comunication_error import CommunicationTimeoutError, CommunicationRuntimeError
 from ob.data_colection.resource_manager.errors import ResourceCommandError
 from ob.data_colection.resource_manager.resource_manager import ResourceManager
@@ -12,7 +14,7 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class FilterWheel(Move):
     _USED_RESOURCE = ResourceManager.FILTERWHEEL
 
-    def __init__(self, filter_: str, plan_data, resource_nr=0):
+    def __init__(self, filter_: Optional[str], plan_data, resource_nr=0):
         super().__init__(plan_data=plan_data)
         self._resource_nr = resource_nr
         self._resource_content = self.res_mngr.get_resource(self._USED_RESOURCE, nr=self._resource_nr)
@@ -22,6 +24,10 @@ class FilterWheel(Move):
         self._build()
 
     def _build(self):
+        if self._filter is None:
+            self._virtual_move = True
+        if self._virtual_move:
+            return
         # here position has random value in target, it will be updated in a_init() method
         self.add_position(
             Position(f"{self._resource_content.adr}.position", t=self._target_filter, name=self._position_filter_name))
@@ -38,10 +44,12 @@ class FilterWheel(Move):
         await self.watch()
 
     async def a_init(self):
+        if self._virtual_move:
+            return
         filters: dict = await self.res_mngr.get_resource(self._USED_RESOURCE).get_filters()
         if not filters:
             raise PlanBuildError(f"No filter found. Can not find list of filters in resource manager")
-        fil = filters.get(self._filter)
+        fil = filters.get(self._filter, None)
         if fil is None:  # check is None because fil can be 0 and bool(0) == False
             raise PlanBuildError(f"Wrong filter. Can not find given filter name in list of filters")
         self._target_filter = fil

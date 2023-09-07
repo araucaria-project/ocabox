@@ -1,6 +1,8 @@
 import logging
 from abc import abstractmethod, ABC
 
+from ob.data_colection.resource_manager.errors import ResourceCommandError
+
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
@@ -9,8 +11,6 @@ class PartMove(ABC):
         self._target = 1
         self._start = 0
         self._current = 0
-        self.error = False
-        self.error_content = None
         self.task = None
         self._address = address
         self._finish_fut = None
@@ -69,10 +69,15 @@ class PartMove(ABC):
             return False  # false because position even wasn't start so not done
         return self._finish_fut.done()
 
+    def exception(self):
+        if self._finish_fut is None:
+            return None
+        return self._finish_fut.exception()
+
     async def wait(self):
-        # todo może powinien zwracać błąd gdy czekamy a nie zostało uruchomione
-        if self._finish_fut is not None:
-            await self._finish_fut
+        if self._finish_fut is None:
+            raise ResourceCommandError(f"{type(self).__name__} is waited but never start")
+        await self._finish_fut
 
     @abstractmethod
     async def run(self, api):

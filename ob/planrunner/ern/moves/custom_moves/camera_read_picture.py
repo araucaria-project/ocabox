@@ -61,7 +61,6 @@ class CameraReadPicture(Move):
         self._build()
 
     def _build(self):
-        # here position has random value in target, it will be updated in a_init() method
         self.add_position(
             Action(f"", timeout=120,
                    custom_action=self._save_fits(self._exposure_time)))
@@ -84,15 +83,21 @@ class CameraReadPicture(Move):
                   self._get_request_safe(address=f"{self._resource_content.adr}.gains"),
                   self._get_request_safe(address=f"{self._resource_content.adr}.gain"),
                   self._get_request_safe(address=f"{self._resource_content.adr}.readoutmodes"),
-                  self._get_request_safe(address=f"{self._resource_content.adr}.readoutmode")]]
+                  self._get_request_safe(address=f"{self._resource_content.adr}.readoutmode"),
+                  self._get_request_safe(address=f"{self._resource_content.adr}.sensorname"),
+                  self._get_request_safe(address=f"{self._resource_content.adr}.ccdtemperature"),
+                  self._get_request_safe(address=f"{self._resource_content.adr}.binx"),
+                  self._get_request_safe(address=f"{self._resource_content.adr}.biny")]]
 
         try:
-            array, gains, gain, readoutmodes, readoutmode = await asyncio.gather(*tasks)
+            array, gains, gain, readoutmodes, readoutmode, sensorname, ccdtemperature, binx, \
+                biny = await asyncio.gather(*tasks)
         except Exception as e:
             raise ResourceCommandError(f"Can not get image array or any of needed parameters from alpaca. Error: {e}")
         finally:
             for t in tasks:
                 t.cancel()
+
         # -----------------------------------------------------------
 
         gain = self.indexing_value(gain, gains)
@@ -121,10 +126,10 @@ class CameraReadPicture(Move):
             observer=str(self._observer),
             req_exp=sub_time,
             cam_exp=sub_time,
-            ccd_name=str("none"),
-            ccd_temp="none",
-            ccd_binx="none",
-            ccd_biny="none",
+            ccd_name=str(sensorname),
+            ccd_temp=ccdtemperature,
+            ccd_binx=binx,
+            ccd_biny=biny,
             read_mod=str(readoutmode),
             gain=str(gain)
         )

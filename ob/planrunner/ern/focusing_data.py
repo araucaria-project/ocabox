@@ -1,5 +1,5 @@
 import random
-from typing import List
+from typing import List, Optional
 from ob.planrunner.ern.errors import PlanBuildError
 
 
@@ -22,19 +22,19 @@ class FocusingData:
         raise PlanBuildError
         :return:
         """
+        if self._seq:
+            if len(self._seq) != self._FOCUSING_SEQUENCE_LEN:
+                raise PlanBuildError(f"The length of the focusing sequence is wrong, should "
+                                     f"be {self._FOCUSING_SEQUENCE_LEN}")
+            try:
+                int(self._seq[0])
+            except ValueError:
+                raise PlanBuildError(f"Wrong first value in focus sequence, can't cast to int")
 
-        if len(self._seq) != self._FOCUSING_SEQUENCE_LEN:
-            raise PlanBuildError(f"The length of the focusing sequence is wrong, should "
-                                 f"be {self._FOCUSING_SEQUENCE_LEN}")
-        try:
-            int(self._seq[0])
-        except ValueError:
-            raise PlanBuildError(f"Wrong first value in focus sequence, can't cast to int")
-
-        try:
-            int(self._seq[1])
-        except ValueError:
-            raise PlanBuildError(f"Wrong second value in focus sequence, can't cast to int")
+            try:
+                int(self._seq[1])
+            except ValueError:
+                raise PlanBuildError(f"Wrong second value in focus sequence, can't cast to int")
 
     @property
     def focus_id(self) -> int:
@@ -49,28 +49,35 @@ class FocusingData:
         return int(self._defocus)
 
     @property
-    def focus_target(self) -> int:
-        return int(self._seq[0])
+    def focus_target(self) -> Optional[int]:
+        return int(self._seq[0]) if self._seq else None
 
-    def focus_position(self, exp_no: int) -> int or None:
-        if self.focus_values_list and len(self.focus_values_list) > exp_no >= 0:
-            return self.focus_values_list[exp_no]
+    @property
+    def focus_step(self) -> Optional[int]:
+        return int(self._seq[1]) if self._seq else None
+
+    def focus_position(self, exp_no: int) -> Optional[int]:
+        fvl = self.focus_values_list
+        if fvl and len(fvl) > exp_no >= 0:
+            return fvl[exp_no]
         else:
             return None
 
     @property
-    def focus_min(self) -> int:
-        return int(round(self.focus_target - (self.focus_step * ((self._expositions_quantity - 1) / 2))))
-
-    @property
-    def focus_step(self) -> int:
-        return int(self._seq[1])
+    def focus_min(self) -> Optional[int]:
+        if self.focus_target is not None and self.focus_step is not None:  # can be 0 and it is OK
+            return int(round(self.focus_target - (self.focus_step * ((self._expositions_quantity - 1) / 2))))
+        return None
 
     @property
     def focus_values_list(self) -> List[int]:
+        fm = self.focus_min
+        fs = self.focus_step
         f = []
+        if fs is None or fm is None:
+            return []
         for n in range(0, self._expositions_quantity):
-            f.append(self.focus_min + (self.focus_step * n))
+            f.append(fm + (fs * n))
         return f
 
     #

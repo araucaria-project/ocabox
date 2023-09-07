@@ -20,15 +20,15 @@ class Move(BaseCommand):
     @property
     def error(self):
         for p in self.positions:
-            if p.error:
-                return p.error
+            if p.done() and p.exception():
+                return True
         return False
 
     @property
     def error_content(self):
         for p in self.positions:
-            if p.error:
-                return p.error_content
+            if p.done() and p.exception():
+                return str(p.exception())
         return ""
 
     @property
