@@ -2,8 +2,9 @@ import asyncio
 import random
 import time
 import unittest
+from datetime import datetime
 
-from pyaraucaria.coordinates import az_alt_2_ra_dec
+from pyaraucaria.coordinates import az_alt_2_ra_dec, ra_dec_2_az_alt
 
 from ob.comunication.internal_client_api import InternalClientAPI
 from ob.comunication.request_solver import RequestSolver
@@ -74,6 +75,31 @@ class DomeSlewRaDecTest(unittest.TestCase, BaseAsyncTest):
                 position_dec = random.randint(30, 50)
                 with self.assertRaises(PlanBuildError):
                     fw = DomeSlewRaDec(ra_dec=(None, position_dec), plan_data=plan_data)
+            finally:
+                await self.tree_freezer.stop()
+
+        asyncio.run(coro())
+
+    def test_set_right_values_as_positions(self):
+        """test checking whether the correct values for Positions are set"""
+        async def coro():
+            try:
+                await self.tree_freezer.run()
+                rm = await self.tao.get_res_manager()
+                plan_data = PlanData(access_resource_manager=rm, client_api=self.api_test)
+                dome = rm.get_resource(name=rm.DOME, nr=0)
+                mount = rm.get_resource(name=rm.MOUNT, nr=0)
+                az = random.randint(30, 50)
+                alt = random.randint(20, 50)
+                position_ra, position_dec = az_alt_2_ra_dec(az, alt,
+                                                            mount.longitude, mount.latitude, mount.elevation)
+
+                fw = DomeSlewRaDec(ra_dec=(position_ra, position_dec), plan_data=plan_data)
+                await fw.a_init()
+                await fw.run()  # azimuth is updating after run dome
+                self.assertIsNotNone(fw.positions[0].target)  # target azimuth is not None
+                self.assertIsNotNone(fw.positions[1].target)  # target azimuth is not None
+                await fw.wait()
             finally:
                 await self.tree_freezer.stop()
 

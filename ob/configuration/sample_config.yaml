@@ -5,6 +5,7 @@ tree:
       lon: 24.627222    # Paranal
       lat: -70.404167
       elev: 2635.0
+      epoch: 2000
       protocol: alpaca
       address: http://localhost:80/api/v1
       components:

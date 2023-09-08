@@ -65,8 +65,9 @@ class DomeSlewTest(unittest.TestCase, BaseAsyncTest):
                 rm = await self.tao.get_res_manager()
                 plan_data = PlanData(access_resource_manager=rm, client_api=self.api_test)
                 position_alt = random.randint(30, 50)
-                with self.assertRaises(PlanBuildError):
-                    fw = DomeSlew(az=None, plan_data=plan_data)
+
+                fw = DomeSlew(az=None, plan_data=plan_data)
+                self.assertTrue(fw._virtual_move)
             finally:
                 await self.tree_freezer.stop()
 

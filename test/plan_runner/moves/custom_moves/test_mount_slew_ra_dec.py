@@ -46,6 +46,7 @@ class MountSlewRaDecTest(unittest.TestCase, BaseAsyncTest):
                                                                  epoch=str("2000"))
             fw = MountSlewRaDec(ra_dec=(position_ra, position_dec), plan_data=plan_data)
             await fw.a_init()
+            self.assertIsNotNone(fw.positions[0].target)
             start_time = time.time()
             await fw.run()
             self.assertTrue(time.time() - start_time < 0.5)  # method run() should make immediately

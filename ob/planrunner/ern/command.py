@@ -86,8 +86,11 @@ class Command(BaseCommand, CommandArgsReader, ABC):
         await self.previous_command.wait_to_finish()
 
     def _unlock_next_command(self):
-        if self._finish_locking is not None:
-            self._finish_locking.set_result(True)  # all locks were used
+        if self._finish_locking is None:
+            return
+        if self._finish_locking.done():
+            return
+        self._finish_locking.set_result(True)  # all locks were used
 
     def _set_self_finish(self):
         if self._finish is not None:

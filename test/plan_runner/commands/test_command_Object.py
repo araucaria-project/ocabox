@@ -56,15 +56,19 @@ class CommandObjectTest(unittest.TestCase, BaseAsyncTest):
             plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test)
 
     def test_run_command_object(self):
-        """"""
+        """Test run command Object"""
         mount = self.rm.get_resource(name=self.rm.MOUNT, nr=0)
-        position_ra, position_dec = az_alt_2_ra_dec(random.randint(30, 50), random.randint(20, 50),
+        dome = self.rm.get_resource(name=self.rm.DOME, nr=0)
+        az = random.randint(30, 50)
+        alt = random.randint(20, 50)
+        position_ra, position_dec = az_alt_2_ra_dec(az, alt,
                                                     mount.longitude, mount.latitude, mount.elevation)
         position_ra_final, position_dec_final = ra_dec_epoch(ra=position_ra,
                                                              dec=position_dec,
                                                              epoch=str("2000"))
 
         async def coro():
+            await self.rs.run_tree()
             names = (await self.api_test.get_async(f"{self.rm.get_resource(self.rm.FILTERWHEEL).adr}.names")).value.v
             targ_filter = names[random.randint(0, len(names) - 1)]
 
@@ -84,6 +88,16 @@ class CommandObjectTest(unittest.TestCase, BaseAsyncTest):
             self.assertEqual(len(plan._execute_seq_subcomands[0].exp_list), number_of_photo)
 
             await plan.run()
+
+            # --------------------------------- check some status is correct ---------------
+            result = await self.api_test.get_async(f"{mount.adr}.rightascension")
+            self.assertTrue(position_ra_final - 0.5 < result.value.v < position_ra_final + 0.5)
+            result = await self.api_test.get_async(f"{mount.adr}.declination")
+            self.assertTrue(position_dec_final - 0.5 < result.value.v < position_dec_final + 0.5)
+
+            result = await self.api_test.get_async(f"{dome.adr}.azimuth")
+            self.assertTrue(az - 0.5 < result.value.v < az + 0.5)
+            await self.rs.stop_tree()
             await asyncio.sleep(1)
 
         asyncio.run(coro())

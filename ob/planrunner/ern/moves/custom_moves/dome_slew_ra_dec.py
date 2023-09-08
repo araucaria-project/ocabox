@@ -44,7 +44,6 @@ class DomeSlewRaDec(DomeSlew):
             raise PlanBuildError(f"Error when converting RA DEC values. {str(e)}")
 
     async def _action(self):
-        # todo podpytać czy ra_dec_2_az_alt napewno musi być przeliczane w momęcie wykonania
         # convert ra dec to alt az
         try:
             az, alt = ra_dec_2_az_alt(ra=self._real_ra,
