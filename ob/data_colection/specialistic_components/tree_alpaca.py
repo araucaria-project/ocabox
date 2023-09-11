@@ -172,11 +172,9 @@ class TreeAlpacaObservatory(TreeBaseProvider):
 
     def get_configuration(self) -> dict:
         out = self._get_self_configuration()
-
-        map_ = self._get_resources_simple_map()
-        for key, adr, kind, nr, prop in map_:
-            out.get(self.get_name()).get("child").update({adr: {"child": {},
-                                                                "config": prop}})
+        obs_cfq = {"observatory": self._observatory.observatory_configuration_rare}
+        out.get(self.get_name()).get("config").update({"observatory_config": obs_cfq})
+        out.get(self.get_name()).get("config").update({"observatory_config_name": self.observatory_name})
         return out
 
     def __del__(self):

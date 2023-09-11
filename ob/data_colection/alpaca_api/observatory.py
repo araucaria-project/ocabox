@@ -120,6 +120,7 @@ class Observatory(Component):
     def __init__(self):
         configuration = SingletonConfig.get_config()
         self.config = configuration
+        self.observatory_configuration_rare = {}
         self.preset: List[str] = ['default']
         super().__init__('obs', None)
 
@@ -144,6 +145,7 @@ class Observatory(Component):
 
         # options = self.config.data[preset]['observatory']
         options = o['observatory'].get()
+        self.observatory_configuration_rare = options
         self._setup(options)
 
 
