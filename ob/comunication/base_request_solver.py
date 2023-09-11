@@ -1,11 +1,19 @@
 import asyncio
 import logging
+import time
 from typing import List
 from abc import ABC, abstractmethod
+
+from serverish.messenger import get_publisher
+
+from ob.comunication.nats_streams import NatsStreams
 from ob.data_colection.response_error import ResponseError
+from ob.data_colection.tree_data import TreeData
 from ob.data_colection.tree_user import TreeUser, TreeServiceUser
 from ob.data_colection.value_call import ValueRequest, ValueResponse
 from ob.data_colection.base_components.tree_component import ProvidesResponseProtocol
+from ob.ob_config import SingletonConfig
+from ob.util_functions.asyncio_util_functions import wait_for_psce
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -14,6 +22,9 @@ class BaseRequestSolver(ABC):
 
     def __init__(self, data_provider: ProvidesResponseProtocol, **kwargs):
         self.data_provider: ProvidesResponseProtocol = data_provider
+        self._tree_data = TreeData()
+        self._nats_host = SingletonConfig.get_config()['nats']['host'].get()
+        self._nats_port = SingletonConfig.get_config()['nats']['port'].get()
 
     @abstractmethod
     async def get_answer(self, request: List[bytes], user_id: bytes, timeout=None) -> List[bytes]:
@@ -48,7 +59,13 @@ class BaseRequestSolver(ABC):
 
         :return:
         """
+        try:
+            await wait_for_psce(self._tree_data.nats_messenger.open(host=self._nats_host, port=self._nats_port), 10)
+        except asyncio.TimeoutError:
+            logger.error(f"Can not connect to server NATS")
+            raise RuntimeError("Can not connect to server NATS")
         await self.data_provider.run()
+        await self._nats_update_config_alpaca()
 
     async def stop_tree(self):
         """
@@ -56,7 +73,10 @@ class BaseRequestSolver(ABC):
 
         :return:
         """
-        await self.data_provider.stop()
+        try:
+            await self.data_provider.stop()
+        finally:
+            await self._tree_data.nats_messenger.close()
 
     async def get_answer_internal(self, request: List[ValueRequest], timeout=None) -> List[ValueResponse]:
         response = []
@@ -117,3 +137,34 @@ class BaseRequestSolver(ABC):
         :return: dictionary
         """
         return self.data_provider.get_configuration()
+
+    def _get_alpaca_modules_configuration(self) -> dict:
+        configuration_tree = self.get_tree_configuration()
+        out = {}
+        alpacas = self._find_alpacas(configuration_tree)
+        for a in alpacas:
+            out.update(a)
+        return out
+
+    def _find_alpacas(self, config) -> list:
+        from ob.data_colection.specialistic_components.tree_alpaca import TreeAlpacaObservatory
+        li = []
+        for key, val in config.items():
+            if val.get("type", "") == TreeAlpacaObservatory.__name__:
+                name = val.get("config", None).get("observatory_config_name", key) if val.get("config", None) else key
+                li.append({name: val.get("config", {}).get("observatory_config")})
+            else:
+                li = li + self._find_alpacas(config=val.get("child", []))
+        return li
+
+    async def _nats_update_config_alpaca(self):
+        publisher = await get_publisher(NatsStreams.ALPACA_CONFIG)
+        cfg = self._get_alpaca_modules_configuration()
+        await publisher.publish(data={'version': "",  # todo uzupełnić
+                                      'published': [*time.gmtime()],
+                                      'config': cfg},
+                                meta={
+                                    "message_type": "config",  # IMPORTANT type message, one of pre declared types
+                                    "tags": ["config_alpaca"],
+                                    'sender': 'Ocabox server }',
+                                })
