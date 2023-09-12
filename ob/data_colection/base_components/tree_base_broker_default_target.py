@@ -63,7 +63,7 @@ class TreeBaseBrokerDefaultTarget(TreeBaseBroker):
 
     def get_all_providers(self) -> list:
         prov = self.get_list_providers()
-        if self.get_default_provider() in prov:
+        if self.get_default_provider() in prov or self.get_default_provider() is None:
             return prov
         else:
             return [*prov, self.get_default_provider()]

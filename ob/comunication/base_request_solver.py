@@ -158,7 +158,7 @@ class BaseRequestSolver(ABC):
         return li
 
     async def _nats_update_config_alpaca(self):
-        publisher = await get_publisher(NatsStreams.ALPACA_CONFIG)
+        publisher = get_publisher(NatsStreams.ALPACA_CONFIG)
         cfg = self._get_alpaca_modules_configuration()
         await publisher.publish(data={'version': "",  # todo uzupełnić
                                       'published': [*time.gmtime()],
