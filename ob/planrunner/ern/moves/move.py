@@ -1,5 +1,6 @@
 import time
 
+from ob.comunication.comunication_error import CommunicationRuntimeError, CommunicationTimeoutError
 from ob.data_colection.resource_manager.errors import ResourceCommandError
 from ob.planrunner.ern.base_command import BaseCommand
 
@@ -96,3 +97,21 @@ class Move(BaseCommand):
 
     async def a_init(self):
         pass
+
+    async def _get_request_safe(self, address: str, timeout=None):
+        """
+
+        :param address: address
+        :raise ResourceCommandError:
+        :return: value
+        """
+        try:
+            result = await self.api.get_async(address=address,
+                                              parameters_dict={}, request_timeout=timeout)
+        except (CommunicationRuntimeError, CommunicationTimeoutError) as e:
+            raise ResourceCommandError(f"Move has error {str(e)}")
+        if not result.status:
+            raise ResourceCommandError(f"Move has error status in response {result.error}")
+        if result.value is None:
+            raise ResourceCommandError(f"Move try to get value from alpaca but no value was return {result.error}")
+        return result.value.v

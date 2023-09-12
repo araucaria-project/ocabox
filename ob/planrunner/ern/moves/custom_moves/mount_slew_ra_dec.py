@@ -62,7 +62,7 @@ class MountSlewRaDec(Move):
                                       latitude=self._resource_content.latitude,
                                       longitude=self._resource_content.longitude,
                                       elevation=self._resource_content.elevation,
-                                      epoch=self._resource_content.epoch)
+                                      epoch=self._resource_content.epoch)  # todo ten epoch musi być z kwargs a potem z settings
         except Exception as e:
             raise ResourceCommandError(f"Error when converting RA DEC values. {str(e)}")
         if alt <= self._resource_content.min_alt:

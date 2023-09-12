@@ -147,24 +147,6 @@ class CameraReadPicture(Move):
 
         return True
 
-    async def _get_request_safe(self, address: str, timeout=None):
-        """
-
-        :param address: address
-        :raise ResourceCommandError:
-        :return: value
-        """
-        try:
-            result = await self.api.get_async(address=address,
-                                              parameters_dict={}, request_timeout=timeout)
-        except (CommunicationRuntimeError, CommunicationTimeoutError) as e:
-            raise ResourceCommandError(f"Action has error {str(e)}")
-        if not result.status:
-            raise ResourceCommandError(f"Action has error status in response {result.error}")
-        if result.value is None:
-            raise ResourceCommandError(f"Action try to get value from alpaca but no value was return {result.error}")
-        return result.value.v
-
     @staticmethod
     def indexing_value(value: int, values: List[str]) -> int or str:
         if isinstance(value, int) and isinstance(values, list):

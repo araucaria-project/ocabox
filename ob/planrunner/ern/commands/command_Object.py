@@ -18,6 +18,7 @@ from ob.planrunner.ern.moves.custom_moves.dome_slew_ra_dec import DomeSlewRaDec
 from ob.planrunner.ern.moves.custom_moves.filter_wheel import FilterWheel
 from ob.planrunner.ern.moves.custom_moves.focuser_focus import FocuserFocus
 from ob.planrunner.ern.moves.custom_moves.mirror_cover_cls_opn import MirrorCoverClsOpn
+from ob.planrunner.ern.moves.custom_moves.mount_dither import MountDither, DitherShareStartPosition
 from ob.planrunner.ern.moves.custom_moves.mount_slew_alt_az import MountSlewAltAz
 from ob.planrunner.ern.moves.custom_moves.mount_slew_ra_dec import MountSlewRaDec
 from ob.planrunner.ern.moves.move import Move
@@ -27,11 +28,12 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class CommandObject(Command):
     _NAME = CommandsNames.OBJECT
+    _POSSIBLE_DITHER = True
 
     @dataclass
     class _ExecuteSeqObject:
         filter: FilterWheel
-        exp_list: List[Tuple[FocuserFocus, CameraExposure, CameraReadPicture]]
+        exp_list: List[Tuple[FocuserFocus, CameraExposure, CameraReadPicture, MountDither]]
 
     def __init__(self, command_dict: dict, plan_data, previous_command, id_: str = None,
                  loop: asyncio.AbstractEventLoop = None, **kwargs):
@@ -54,8 +56,6 @@ class CommandObject(Command):
             int(self.defocus)
         except ValueError:
             raise PlanBuildError(f"Wrong 'defocuser' value, can't cast to int")
-        if not self.plan_seq:
-            raise PlanBuildError(f"No 'seq' in kwargs")
 
     def _create_modules_from_args(self):
         """
@@ -91,6 +91,7 @@ class CommandObject(Command):
             # if None don't do anything with mirror
 
             # =============== EXPOSITION SEQUENCE ==============
+            sharing_date_between_dithering = DitherShareStartPosition()
             for s, f in self.plan_seq_focus_combination:
                 # ----------- change filter ------------
                 _filter = FilterWheel(filter_=s.filter, plan_data=self._plan_data)
@@ -108,7 +109,12 @@ class CommandObject(Command):
                                                      req_ra=self.plan_ra, req_dec=self.plan_dec, epoch=self.epoch,
                                                      type_=CommandsTypes.SCIENCE, obj_name=self.object_name,
                                                      filter_=s.filter, observer=self.observer)
-                    exp_list.append((_focuser, _camera_exposure, _camera_read))
+                    _dither = None  # todo może zamiast ustawiąc na None to zrobić wirtual move?
+                    if self.dither_on and self.dither.dither_this_exp(i):
+                        _dither = MountDither(dither_frequency=1, dither_mode=self.dither.dither_mode,
+                                              dither_distance=self.dither.dither_distance, plan_data=self._plan_data,
+                                              resource_nr=0, dither_share_start_position=sharing_date_between_dithering)
+                    exp_list.append((_focuser, _camera_exposure, _camera_read, _dither))
                 self._execute_seq_subcomands.append(CommandObject._ExecuteSeqObject(filter=_filter, exp_list=exp_list))
             # -----------
 
@@ -160,17 +166,21 @@ class CommandObject(Command):
                     self.res_mngr.get_resource(self.res_mngr.FOCUSER), \
                     self.res_mngr.get_resource(self.res_mngr.FILTERWHEEL), \
                     self.res_mngr.get_resource(self.res_mngr.COVERCALIBRATOR):
-            # todo po błędzie trzeba je jeszcze cancelować pozycje bo mogą być zakolejkowane i popsuję następne polecneie
+                # todo po błędzie trzeba je jeszcze cancelować pozycje bo mogą być zakolejkowane i popsuję następne polecneie
                 last_read = None
                 for ess in self._execute_seq_subcomands:
                     await ess.filter.run()
 
-                    for foc, cam, read in ess.exp_list:
+                    for foc, cam, read, dithering in ess.exp_list:
                         await foc.run()
+                        if dithering:
+                            await dithering.run()
                         await ess.filter.wait()  # attention ! in first loop step here will be wait but all the
                         # next steps always finish immediately because Move will be already finished. In first time
                         # we will save time
                         await foc.wait()
+                        if dithering:
+                            await dithering.wait()
                         if last_read is not None:
                             await last_read.wait()
                         await cam.run()
@@ -202,8 +212,8 @@ class CommandObject(Command):
             await self._mirror_open.a_init()
         for x in self._execute_seq_subcomands:
             await x.filter.a_init()
-            for focuserFocus, cameraExposure, cameraReadPicture in x.exp_list:
+            for focuserFocus, cameraExposure, cameraReadPicture, ditherModes in x.exp_list:
                 await focuserFocus.a_init()
                 await cameraExposure.a_init()
                 await cameraReadPicture.a_init()
-
+                await ditherModes.a_init()

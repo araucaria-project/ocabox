@@ -6,6 +6,8 @@ from pyaraucaria.coordinates import ra_to_decimal, dec_to_decimal
 from ob.planrunner.ern.commands.commands_args_map import CommandArgsMap
 from ob.planrunner.ern.commands.commands_names import CommandsNames
 from ob.planrunner.ern.commands.commands_types import CommandsTypes
+from ob.planrunner.ern.dither_data import DitherData
+from ob.planrunner.ern.errors import PlanBuildError
 from ob.planrunner.ern.focusing_data import FocusingData
 from ob.planrunner.ern.sequence_data import SequenceData
 
@@ -13,12 +15,15 @@ from ob.planrunner.ern.sequence_data import SequenceData
 class CommandArgsReader(ABC):
     _NAME: str = "DEFAULT"
     DEFAULT_TRACKING_ON = CommandArgsMap.TRACKING.OFF.val()
+    _DEFAULT_DITHER_ON = False
+    _POSSIBLE_DITHER = False
 
     def __init__(self, arg, kwarg, **kwargs):
         super().__init__(**kwargs)
         self._args = arg
         self._kwargs = kwarg
         self._seq: List[Tuple[SequenceData, FocusingData]] = self._create_seq_list()  # can raise PlanBuildError
+        self._dither_data: DitherData = self._create_dither_data()
         self._mapped_args: dict = {CommandArgsMap.RA: CommandArgsMap.RA.val(),
                                    CommandArgsMap.DEC: CommandArgsMap.DEC.val(),
                                    CommandArgsMap.OBJ_NAME: CommandArgsMap.OBJ_NAME.val()}
@@ -57,6 +62,19 @@ class CommandArgsReader(ABC):
             lis.append((sd, fd))
         return lis
 
+    def _create_dither_data(self):
+        """
+
+        :raise PlanBuildError
+        :return:
+        """
+        # validate is dither possible
+        if not self._POSSIBLE_DITHER and self.dither_rare:
+            raise PlanBuildError(f"Find argument: {CommandArgsMap.DITHER} but in this command is not available")
+        d = DitherData(self.dither_rare)
+        d.validate()
+        return d
+
     @property
     def defocus(self) -> int:
         return int(self._kwargs.get(CommandArgsMap.FOCUSING_OFFSET, CommandArgsMap.FOCUSING_OFFSET.val()))
@@ -81,33 +99,32 @@ class CommandArgsReader(ABC):
     def epoch(self) -> str:
         return str(self._kwargs.get(CommandArgsMap.EPOCH, CommandArgsMap.EPOCH.val()))
 
-    # @property
-    # def dither_on(self) -> bool:
-    #     """
-    #     Do dithering or not.
-    #     :return: bool
-    #     """
-    #     if self.command_name == 'SKYFLAT':
-    #         if 'dither' not in self.kwargs.keys():
-    #             return True
-    #         elif 'dither' in self.kwargs.keys() and self.kwargs['dither'] != 'none':
-    #             return True
-    #         elif 'dither' in self.kwargs.keys() and self.kwargs['dither'] == 'none':
-    #             return False
-    #         else:
-    #             return False
-    #
-    #     elif self.command_name in self.possible_dither:
-    #         if 'dither' not in self.kwargs.keys():
-    #             return False
-    #         elif 'dither' in self.kwargs.keys() and self.kwargs['dither'] != 'none':
-    #             return True
-    #         elif 'dither' in self.kwargs.keys() and self.kwargs['dither'] == 'none':
-    #             return False
-    #         else:
-    #             return False
-    #     else:
-    #         return False
+    @property
+    def dither_on(self) -> bool:
+        """
+        Do dithering or not.
+
+        :return: bool
+        """
+        if not self._POSSIBLE_DITHER:
+            return False
+
+        dit = self._kwargs.get(CommandArgsMap.DITHER, CommandArgsMap.DITHER.val())
+        if self._DEFAULT_DITHER_ON:
+            if not dit:
+                return True
+            elif dit != DitherData.PARAM_VAL_OFF_DEFAULT_DITHER:
+                return True
+            elif dit == DitherData.PARAM_VAL_OFF_DEFAULT_DITHER:
+                return False
+
+        if not dit:
+            return False
+        elif dit != DitherData.PARAM_VAL_OFF_DEFAULT_DITHER:
+            return True
+        elif dit == DitherData.PARAM_VAL_OFF_DEFAULT_DITHER:
+            return False
+        return False
 
     @property
     def mirror_cover_mode(self):
@@ -135,6 +152,10 @@ class CommandArgsReader(ABC):
     # def _add_comp(self, sub: SubCommand, id_next: int) -> int:
     #     self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
     #     return id_next + 1
+
+    @property
+    def dither_rare(self) -> str:
+        return str(self._kwargs.get(CommandArgsMap.DITHER, CommandArgsMap.DITHER.val()))
 
     @property
     def plan_object_name(self) -> Optional[str]:
@@ -177,6 +198,10 @@ class CommandArgsReader(ABC):
         return [b for a, b in self._seq]
 
     @property
+    def dither(self):
+        return self._dither_data
+
+    @property
     def domeflat_dome_az(self) -> float or None:
         # TODO take this value from settings
         if CommandsNames.get_item_by_name(self._NAME).val() == CommandsTypes.FLAT:
@@ -199,15 +224,6 @@ class CommandArgsReader(ABC):
             return 15.0
         else:
             return None
-
-    @property
-    def possible_dither(self) -> List[str]:
-        """
-        List of commands with possibility of dither
-        :return: List of commands name
-        """
-        # todo może wywalić to jak nie potrzebne
-        return [CommandsNames.OBJECT, CommandsNames.SNAP, CommandsNames.SKYFLAT]
 
     @property
     def tracking(self) -> bool:

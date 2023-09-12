@@ -55,6 +55,23 @@ class CommandObjectTest(unittest.TestCase, BaseAsyncTest):
         with self.assertRaises(PlanBuildError):
             plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test)
 
+        # -------------------- dither param --------------------
+        # wrong dither param
+        var = {'command_name': 'OBJECT', 'args': ['NGC6871', '18.157', '-29.351'], 'kwargs': {'dither': '5'}}
+        with self.assertRaises(PlanBuildError):
+            plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test)
+        self.assertFalse(plan.dither_on)
+        # good dither param
+        var = {'command_name': 'OBJECT', 'args': ['NGC6871', '18.157', '-29.351'], 'kwargs': {'dither': 'base/2/3'}}
+        plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test)
+        self.assertIsInstance(plan, CommandObject)
+        self.assertTrue(plan.dither_on)
+        # turn off dither
+        var = {'command_name': 'OBJECT', 'args': ['NGC6871', '18.157', '-29.351'], 'kwargs': {'dither': 'none'}}
+        plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test)
+        self.assertIsInstance(plan, CommandObject)
+        self.assertFalse(plan.dither_on)
+
     def test_run_command_object(self):
         """Test run command Object"""
         mount = self.rm.get_resource(name=self.rm.MOUNT, nr=0)

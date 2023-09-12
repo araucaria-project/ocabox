@@ -39,3 +39,4 @@ class CommandArgsMap(BaseArgsMap):
     SEQ = StrVal("seq", "")
     FOCUSING = StrVal("pos", "")
     FOCUSING_OFFSET = StrVal("defocus", 0)
+    DITHER = StrVal("dither", "")
