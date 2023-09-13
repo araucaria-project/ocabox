@@ -12,6 +12,7 @@ from typing import Dict, Any, List
 import math
 import re
 
+
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
@@ -41,8 +42,6 @@ class CameraExposure(SubCommand):
                          started=self.started, done=self.done, skipped=self.skipped, **kwargs)
         self._mk_folder(self.folder)
         self._mk_folder(self.folder_focusing)
-
-
 
     @staticmethod
     def _mk_symlink(target: str, symlink: str):
@@ -79,6 +78,15 @@ class CameraExposure(SubCommand):
             return self.kwargs["sub_exp"]
         else:
             return None
+
+    @property
+    def obs_type(self) -> str:
+        if self.kwargs['type'] == 'snap':
+            return f'test'
+        elif self.kwargs['type'] == 'focusing':
+            return f'calib'
+        else:
+            return f'science'
 
     def _provide_target_folder(self) -> str:
         if self.kwargs['type'] == 'focusing':
@@ -143,32 +151,19 @@ class CameraExposure(SubCommand):
         jd = self.get_julian_date(self.exp_time_start)
         jd_oca = f"{self.get_oca_date(jd):010.5f}"
         logger.info(f'_wait_for_save_fits aget_imagearray done')
-        """
-        gains = await self.value_proof_get(name='fitsh_cam_gains',
-                                           awaitab=self.camera.aget_gains,
-                                           expect_type=list),
-        readoutmodes = await self.value_proof_get(name='fitsh_cam_rms',
-                                                  awaitab=self.camera.aget_readoutmodes,
-                                                  expect_type=list),"""
-        # offsets = await self.camera.aget_offsets()
-        gain = await self.value_proof_get(name='fitsh_cam_gain',
-                                          awaitab=self.camera.aget_gain,
-                                          expect_type=int),
+        gainmode = await self.value_proof_get(name='fitsh_cam_gain',
+                                              awaitab=self.camera.aget_gain,
+                                              expect_type=int),
         readoutmode = await self.value_proof_get(name='fitsh_cam_rm',
                                                  awaitab=self.camera.aget_readoutmode,
                                                  expect_type=int),
-        # offset = await self.camera.aget_offset()
-        # gain = self.indexing_value(gain, gains)
-        # readoutmode = self.indexing_value(readoutmode, readoutmodes)
-         # offset = indexing_value(offset, offsets)
-
         if self.kwargs["req_ra"] is None:
-            req_ra = 'None'
+            req_ra = ''
         else:
             req_ra = self.kwargs["req_ra"]
 
         if self.kwargs["req_dec"] is None:
-            req_dec = 'None'
+            req_dec = ''
         else:
             req_dec = self.kwargs["req_dec"]
 
@@ -176,9 +171,7 @@ class CameraExposure(SubCommand):
         OCA = {'latitude': -24.598056, 'longitude': -70.196389, 'elevation': 2817}
         header = fits_header(
             obs_lat=OCA['latitude'],
-            parsed_obs_lat=OCA['latitude'],
             obs_lon=OCA['longitude'],
-            parsed_obs_lon=OCA['longitude'],
             obs_elev=OCA['elevation'],
             tel_id=str(self.telescope.id),
             utc_now=str(self.exp_time_start.isoformat(sep='T', timespec='auto')),
@@ -196,26 +189,28 @@ class CameraExposure(SubCommand):
             rotator_pos=await self.value_proof_get(name='fitsh_rot_pos',
                                                    awaitab=self.rotator.aget_position,
                                                    expect_type=float),
-            obs_type=str(self.kwargs['type']),
-            object=str(self.kwargs["obj_name"]),
-            filter=str(self.kwargs["filter"]),
             observer=str(self.kwargs['observer']),
-            req_exp=sub_time,
-            cam_exp=sub_time,
-            ccd_name=str(await self.value_proof_get(name='fitsh_cam_sens_name',
-                                                    awaitab=self.camera.aget_sensorname,
-                                                    expect_type=str)),
+            image_type=str(self.kwargs['type']),
+            obs_type=self.obs_type,
+            object=str(self.kwargs["obj_name"]),
+            n_loops=self.kwargs["exp_no"],
+            loop=sub,
+            filter=str(self.kwargs["filter"]),
+            exp_time=sub_time,
+            instrume_name=str(await self.value_proof_get(name='fitsh_cam_sens_name',
+                                                         awaitab=self.camera.aget_sensorname,
+                                                         expect_type=str)),
             ccd_temp=await self.value_proof_get(name='fitsh_cam_temp',
                                                 awaitab=self.camera.aget_ccdtemperature,
                                                 expect_type=float),
-            ccd_binx=await self.value_proof_get(name='fitsh_cam_binx',
-                                                awaitab=self.camera.aget_binx,
-                                                expect_type=int),
-            ccd_biny=await self.value_proof_get(name='fitsh_cam_biny',
-                                                awaitab=self.camera.aget_biny,
-                                                expect_type=int),
+            binx=await self.value_proof_get(name='fitsh_cam_binx',
+                                            awaitab=self.camera.aget_binx,
+                                            expect_type=int),
+            biny=await self.value_proof_get(name='fitsh_cam_biny',
+                                            awaitab=self.camera.aget_biny,
+                                            expect_type=int),
             read_mod=readoutmode,
-            gain=gain
+            gain_mod=gainmode
         )
         logger.info(f'_wait_for_save_fits fits_header gather data done')
         if self.kwargs['type'] == 'snap':
@@ -223,26 +218,6 @@ class CameraExposure(SubCommand):
         else:
             file_name = f'{self.telescope.id}c_{jd_oca.split(".")[0]}_{jd_oca.split(".")[1]}'
         stat = fits_stat(array, size=100, median=False, std=False, min=False, max=False)
-
-        """
-        # Camra Log
-        f = open(os.path.join(self.folder, 'camera_log.txt'), "a")
-        f.write(f'Date:{datetime.utcnow()}')
-        f.write(f' Type:{self.kwargs["type"]}')
-        f.write(f' n_exp/n_exp_req:{sub}/{self.kwargs["exp_no"]}')
-        f.write(f' Exp-time:{self.kwargs["exp_time"]}')
-        f.write(f' Object:{self.kwargs["obj_name"]}')
-        f.write(f' Filter:{self.kwargs["filter"]}')
-        
-        f.write(' Min:')
-        f.write(str(stat['min']))
-        f.write(' Max:')
-        f.write(str(stat['max']))
-        f.write(' Mean:')
-        f.write(str(round(stat['mean'])))
-        f.write(f' File-name:{file_name}')
-        f.write('\n')
-        f.close()"""
 
         save_fits_from_array(array,
                              self.target_folder,
