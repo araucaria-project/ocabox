@@ -84,6 +84,8 @@ class CameraExposure(SubCommand):
         if self.kwargs['type'] == 'snap':
             return f'test'
         elif self.kwargs['type'] == 'focusing':
+            return f'focus'
+        elif self.kwargs['type'] in ['flat', 'dark', 'zero']:
             return f'calib'
         else:
             return f'science'
