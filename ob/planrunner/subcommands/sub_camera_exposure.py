@@ -132,21 +132,6 @@ class CameraExposure(SubCommand):
                self._mk_symlink(target_folder, os.path.join(self.folder, simlink_day))
         return target_folder
 
-    async def _camera_aget_imagearray(self) -> List[Any]:
-        array = await self.camera.aget_imagearray()
-        if array:
-            if isinstance(array, list):
-                if len(array) > 1:
-                    return array
-                else:
-                    r = 'list has 0 lenght'
-            else:
-                r = 'not list'
-        else:
-            r = array
-        logger.warning(f'Camera aget_imagearray failed')
-        self.info_callback['stream_1'](f'Error: {self.id} {self.name} aget_imagearray failed: {r}')
-
     async def _wait_for_save_fits(self, sub: int, sub_time: float) -> None:
         logger.info(f'_wait_for_save_fits started')
         array = await self.value_proof_get(name='fits_get_array', awaitab=self.camera.aget_imagearray, expect_type=list)
