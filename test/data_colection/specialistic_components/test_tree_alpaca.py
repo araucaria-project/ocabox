@@ -106,7 +106,15 @@ class TreeAlpacaTest(unittest.TestCase, BaseAsyncTest):
     def test_get_resource(self):
         """Test method get_resources"""
         resources = self.tao.get_resources()
-        self.assertEqual(resources, [('dibi_RESOURCE', ['dibi']), ('dome_RESOURCE', ['dome'])])
+        self.assertEqual(resources, [('dibi_RESOURCE', ['dibi']), ('dome_RESOURCE', ['dome']),
+                                     ('filterwheel_RESOURCE', ['filterwheel']),
+                                     ('filterwheel2_RESOURCE', ['filterwheel2']),
+                                     ('covercalibrator_RESOURCE', ['covercalibrator']),
+                                     ('camera_RESOURCE', ['camera']),
+                                     ('focuser_RESOURCE', ['focuser']),
+                                     ('derotator_RESOURCE', ['derotator']),
+                                     ('switch_RESOURCE', ['switch']),
+                                     ('safetymonitor_RESOURCE', ['safetymonitor'])])
 
     def test_get_res_manager(self):
         """Test method get_resource_manager()"""
