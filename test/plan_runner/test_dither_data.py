@@ -17,7 +17,7 @@ class TestDitherModes(unittest.TestCase):
 
     def test_ra_dither(self):
         """Test method ra_dither"""
-        a = DitherModes.ra_dither(ra=20, dith_val=3)
+        a = DitherModes.ra_dither(ra=20, dec=0, dither_frequency_nr=0, dith_val=3)
         self.assertIsInstance(a, float)
 
 

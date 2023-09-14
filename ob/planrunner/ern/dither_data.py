@@ -11,27 +11,27 @@ class DitherModes(BaseArgsMap):
 
     # ------- here declare method for type dithering -------------
     @staticmethod
-    def _count_dit_basic(coord: str, val: float, dith_val: float):
+    def _count_dit_basic(coord: str, ra: float, dec: float, dither_frequency_nr: int, dith_val: float):
         if coord == "ra":
-            return val + random.uniform(-dith_val / 60, dith_val / 60)
+            return ra + random.uniform(-dith_val / 60, dith_val / 60)
         if coord == "dec":
-            return val + random.uniform(-dith_val / 60, dith_val / 60)
+            return dec + random.uniform(-dith_val / 60, dith_val / 60)
 
     # ------------------------------------------------------------
     # ------ here create name - method map for dither mode -------
     BASIC = StrVal("basic", _count_dit_basic)
 
     @classmethod
-    def ra_dither(cls, ra: float, dith_val: float, mode: str = BASIC):
+    def ra_dither(cls, ra: float, dec: float, dither_frequency_nr: int, dith_val: float, mode: str = BASIC):
         item = cls.get_item_by_name(mode)
         method = item.val().__func__
-        return method(coord="ra", val=ra, dith_val=dith_val)
+        return method(coord="ra", ra=ra, dec=dec, dither_frequency_nr=dither_frequency_nr, dith_val=dith_val)
 
     @classmethod
-    def dec_dither(cls, dec: float, dith_val: float, mode: str = BASIC):
+    def dec_dither(cls, ra: float, dec: float, dither_frequency_nr: int, dith_val: float, mode: str = BASIC):
         item = cls.get_item_by_name(mode)
         method = item.val().__func__
-        return method(coord="dec", val=dec, dith_val=dith_val)
+        return method(coord="dec", ra=ra, dec=dec, dither_frequency_nr=dither_frequency_nr, dith_val=dith_val)
 
 
 class DitherData:
@@ -92,6 +92,6 @@ class DitherData:
         return bool(self._seq)
 
     def dither_this_exp(self, ex: int) -> bool:
-        if (ex % self.dither_every_sub == 0) and (ex > 1):
+        if ex % self.dither_every_sub == 0:
             return True
         return False

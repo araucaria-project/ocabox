@@ -62,7 +62,8 @@ class CommandObjectTest(unittest.TestCase, BaseAsyncTest):
             plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test)
         self.assertFalse(plan.dither_on)
         # good dither param
-        var = {'command_name': 'OBJECT', 'args': ['NGC6871', '18.157', '-29.351'], 'kwargs': {'dither': 'base/2/3'}}
+        var = {'command_name': 'OBJECT', 'args': ['NGC6871', '18.157', '-29.351'], 'kwargs': {"seq": "2/v/1",
+                                                                                              'dither': 'base/2/3'}}
         plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test)
         self.assertIsInstance(plan, CommandObject)
         self.assertTrue(plan.dither_on)
@@ -71,6 +72,15 @@ class CommandObjectTest(unittest.TestCase, BaseAsyncTest):
         plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test)
         self.assertIsInstance(plan, CommandObject)
         self.assertFalse(plan.dither_on)
+        # ----
+        var = {'command_name': 'OBJECT', 'args': ['NGC6871', '18.157', '-29.351'], 'kwargs': {"seq": "4/v/1",
+                                                                                              'dither': 'base/2/3'}}
+        plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test)
+        self.assertIsInstance(plan, CommandObject)
+        self.assertFalse(plan._execute_seq_subcomands[0].exp_list[0][3]._virtual_move)
+        self.assertTrue(plan._execute_seq_subcomands[0].exp_list[0][3].dither_frequency_nr == 0)
+        self.assertTrue(plan._execute_seq_subcomands[0].exp_list[0][3].dither_distance == 3)
+        self.assertTrue(plan._execute_seq_subcomands[0].exp_list[1][3]._virtual_move)
 
     def test_run_command_object(self):
         """Test run command Object"""
@@ -83,6 +93,9 @@ class CommandObjectTest(unittest.TestCase, BaseAsyncTest):
         position_ra_final, position_dec_final = ra_dec_epoch(ra=position_ra,
                                                              dec=position_dec,
                                                              epoch=str("2000"))
+
+        # todo w tym teście jest zapisywane zdjęcie więc jak będzie nowy mechanizm to dorobić jakieś usuwanie
+        #  tego zdjęcia
 
         async def coro():
             await self.rs.run_tree()
@@ -100,8 +113,9 @@ class CommandObjectTest(unittest.TestCase, BaseAsyncTest):
             self.assertIsInstance(plan, CommandObject)
             self.assertEqual(plan._execute_seq_subcomands[0].filter._filter, filter_)  # right filter
             self.assertFalse(plan._execute_seq_subcomands[0].filter._virtual_move)
-            focuserFocus, cameraExposure, cameraReadPicture = plan._execute_seq_subcomands[0].exp_list[0]
+            focuserFocus, cameraExposure, cameraReadPicture, mountDither = plan._execute_seq_subcomands[0].exp_list[0]
             self.assertTrue(focuserFocus._virtual_move)  # skip focusing
+            self.assertTrue(mountDither._virtual_move)  # skip dithering
             self.assertEqual(len(plan._execute_seq_subcomands[0].exp_list), number_of_photo)
 
             await plan.run()

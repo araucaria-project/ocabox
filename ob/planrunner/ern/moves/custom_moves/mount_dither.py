@@ -26,14 +26,14 @@ class MountDither(Move):
     """
     _USED_RESOURCE = ResourceManager.MOUNT
 
-    def __init__(self, dither_frequency: int, dither_mode: str, dither_distance: float, plan_data, resource_nr=0,
-                 dither_share_start_position: Optional[DitherShareStartPosition] = None):
-        super().__init__(plan_data=plan_data)
+    def __init__(self, dither_frequency_nr: int, dither_mode: str, dither_distance: float, plan_data, resource_nr=0,
+                 dither_share_start_position: Optional[DitherShareStartPosition] = None, virtual_move=False):
+        super().__init__(plan_data=plan_data, virtual_move=virtual_move)
         self._resource_nr = resource_nr
         self._resource_content = self.res_mngr.get_resource(self._USED_RESOURCE, nr=self._resource_nr)
-        self.dither_frequency: int = dither_frequency
         self.dither_mode: str = dither_mode
         self.dither_distance: float = dither_distance
+        self.dither_frequency_nr = dither_frequency_nr
         self._real_ra = None
         self._real_dec = None
         self._position_ra_name = "ra"
@@ -58,6 +58,8 @@ class MountDither(Move):
         self.add_position(Position(f"{self._resource_content.adr}.slewing", t=False, order=2))
 
     async def _action(self):
+        if self._virtual_move:
+            return
         if self._dither_share_start_position.ra is None:
             self._dither_share_start_position.ra = await self._get_request_safe(
                 address=f"{self._resource_content.adr}.rightascension")
@@ -66,9 +68,13 @@ class MountDither(Move):
                 address=f"{self._resource_content.adr}.declination")
 
         self._real_ra = DitherModes.ra_dither(ra=self._dither_share_start_position.ra,
+                                              dec=self._dither_share_start_position.dec,
+                                              dither_frequency_nr=self.dither_frequency_nr,
                                               dith_val=self.dither_distance,
                                               mode=self.dither_mode)
-        self._real_dec = DitherModes.dec_dither(dec=self._dither_share_start_position.dec,
+        self._real_dec = DitherModes.dec_dither(ra=self._dither_share_start_position.ra,
+                                                dec=self._dither_share_start_position.dec,
+                                                dither_frequency_nr=self.dither_frequency_nr,
                                                 dith_val=self.dither_distance,
                                                 mode=self.dither_mode)
 

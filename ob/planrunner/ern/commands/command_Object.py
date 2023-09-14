@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import time
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional, Tuple, List
@@ -8,9 +7,9 @@ from typing import Optional, Tuple, List
 from ob.data_colection.resource_manager.errors import ResourceCommandError
 from ob.planrunner.ern.command import Command
 from ob.planrunner.ern.commands.commands_args_map import CommandArgsMap
+from ob.planrunner.ern.commands.commands_names import CommandsNames
 from ob.planrunner.ern.commands.commands_types import CommandsTypes
 from ob.planrunner.ern.errors import ResourceError, PlanBuildError
-from ob.planrunner.ern.commands.commands_names import CommandsNames
 from ob.planrunner.ern.moves.custom_moves.camera_exposure import CameraExposure
 from ob.planrunner.ern.moves.custom_moves.camera_read_picture import CameraReadPicture
 from ob.planrunner.ern.moves.custom_moves.dome_slew import DomeSlew
@@ -109,11 +108,12 @@ class CommandObject(Command):
                                                      req_ra=self.plan_ra, req_dec=self.plan_dec, epoch=self.epoch,
                                                      type_=CommandsTypes.SCIENCE, obj_name=self.object_name,
                                                      filter_=s.filter, observer=self.observer)
-                    _dither = None  # todo może zamiast ustawiąc na None to zrobić wirtual move?
-                    if self.dither_on and self.dither.dither_this_exp(i):
-                        _dither = MountDither(dither_frequency=1, dither_mode=self.dither.dither_mode,
-                                              dither_distance=self.dither.dither_distance, plan_data=self._plan_data,
-                                              resource_nr=0, dither_share_start_position=sharing_date_between_dithering)
+                    dit_on = self.dither_on and self.dither.dither_this_exp(i)
+                    _dither = MountDither(dither_frequency_nr=i,
+                                          dither_mode=self.dither.dither_mode,
+                                          dither_distance=self.dither.dither_distance, plan_data=self._plan_data,
+                                          resource_nr=0, dither_share_start_position=sharing_date_between_dithering,
+                                          virtual_move=not dit_on)
                     exp_list.append((_focuser, _camera_exposure, _camera_read, _dither))
                 self._execute_seq_subcomands.append(CommandObject._ExecuteSeqObject(filter=_filter, exp_list=exp_list))
             # -----------
@@ -173,14 +173,12 @@ class CommandObject(Command):
 
                     for foc, cam, read, dithering in ess.exp_list:
                         await foc.run()
-                        if dithering:
-                            await dithering.run()
+                        await dithering.run()
                         await ess.filter.wait()  # attention ! in first loop step here will be wait but all the
                         # next steps always finish immediately because Move will be already finished. In first time
                         # we will save time
                         await foc.wait()
-                        if dithering:
-                            await dithering.wait()
+                        await dithering.wait()
                         if last_read is not None:
                             await last_read.wait()
                         await cam.run()

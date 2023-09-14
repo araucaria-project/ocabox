@@ -8,11 +8,11 @@ from ob.planrunner.ern.base_command import BaseCommand
 class Move(BaseCommand):
     _NAME = "MOVE"
 
-    def __init__(self, plan_data):
+    def __init__(self, plan_data, virtual_move=False):
         super().__init__(plan_data=plan_data)
         self.positions = []
         self._actn = None
-        self._virtual_move = False
+        self._virtual_move = virtual_move
 
     async def watch(self):
         for p in self.positions:
