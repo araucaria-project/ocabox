@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - skyflat dithering movement value to 8'
+- `CameraExposure` changed to header beta3
 
 ### Fixed
 
