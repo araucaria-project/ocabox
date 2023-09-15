@@ -3,6 +3,7 @@ import logging
 import time
 import unittest
 
+from ob.comunication.request_solver import RequestSolver
 from ob.data_colection.address import Address
 from ob.data_colection.specialistic_components.tree_alpaca import TreeAlpacaObservatory
 from ob.data_colection.value_call import ValueRequest
@@ -21,6 +22,7 @@ class TreeAlpacaTest(unittest.TestCase, BaseAsyncTest):
         super().setUp()
         self._setUpLoop()
         self.tao = TreeAlpacaObservatory(component_name='sample_component', observatory_name=self.OBSERVATORY_NAME)
+        self.rs = RequestSolver(self.tao)
 
     def tearDown(self) -> None:
         self._tearDownLoop()
@@ -119,11 +121,10 @@ class TreeAlpacaTest(unittest.TestCase, BaseAsyncTest):
     def test_get_res_manager(self):
         """Test method get_resource_manager()"""
         from ob.data_colection.resource_manager.resource_manager import ResourceManager
-
         manager: ResourceManager = asyncio.run(self.tao.get_res_manager())
         self.assertTrue(isinstance(manager, ResourceManager))
         self.assertEqual(len(manager._resources), 2)
-
+        # todo tu skonczyłem ten test nie przechodzi
     def test_alpaca_not_response(self):
         """Test situation when alpaca server is down."""
         # Module with connection to no responding Alpaca

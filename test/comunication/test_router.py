@@ -11,6 +11,7 @@ from ob.comunication.base_request_solver import BaseRequestSolver
 from ob.comunication.router import Router
 from ob.util_functions.asyncio_util_functions import wait_for_psce
 from test.comunication.sample_test_resolver import SampleTestResolver
+from test.data_colection.sample_test_value_provider import SampleTestValueProvider
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -184,7 +185,7 @@ class RouterTest(unittest.TestCase):
         """
 
         name1 = 'SampleTestRouter'
-        vr = Router(self.CrashResolver(None), name=name1, port=5559)
+        vr = Router(self.CrashResolver(SampleTestValueProvider("xxx", "xxx", [])), name=name1, port=5559)
 
         self.assertTrue(len(asyncio.all_tasks(self.loop)) == 0)
         self.assertTrue(len(vr._message_tasks) == 0)
@@ -207,7 +208,7 @@ class RouterTest(unittest.TestCase):
     #     Test task that returns the answer has timeout.
     #     """
     #     name1 = 'SampleTestRouter'
-    #     vr = Router(self.CrashResolver(None), name=name1)
+    #     vr = Router(self.CrashResolver(SampleTestValueProvider("xxx", "xxx", [])), name=name1)
     #     vr.default_timeout = 1
     #
     #     async def primitive_router_main_coro():
@@ -225,7 +226,7 @@ class RouterTest(unittest.TestCase):
         """
         sample_envelope = self.SAMPLE_MESSAGE
         name1 = 'SampleTestRouter'
-        vr = Router(self.CrashResolver(None), name=name1, port=5559)
+        vr = Router(self.CrashResolver(SampleTestValueProvider("xxx", "xxx", [])), name=name1, port=5559)
 
         ms = vr._open_envelope(sample_envelope)
         prefix_size = 1
@@ -259,7 +260,7 @@ class RouterTest(unittest.TestCase):
         import zmq
         from zmq.asyncio import Context
         response_delay = 0.3
-        resolver = SampleTestResolver(None)
+        resolver = SampleTestResolver(SampleTestValueProvider("xxx", "xxx", []))
         resolver.response_delay = response_delay
 
         name1 = 'SampleTestRouter'

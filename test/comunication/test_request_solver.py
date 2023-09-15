@@ -12,6 +12,7 @@ from ob.data_colection.value import Value
 from ob.data_colection.value_call import ValueRequest
 from ob.comunication.request_solver import RequestSolver
 from ob.ob_config import SingletonConfig
+from test.data_colection.sample_test_value_provider import SampleTestValueProvider
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -60,7 +61,7 @@ class RequestSolverTest(unittest.TestCase):
         """
         sample_request = {'address': {'adr': 'sample_telescope.any_val'}, 'time_of_data': 1655975599.883751,
                           'time_of_data_tolerance': 20.0}
-        rs = RequestSolver(None)
+        rs = RequestSolver(SampleTestValueProvider("xxx", "xxx", []))
         answer = self.loop.run_until_complete(
             rs.get_single_answer(MessageSerializer.pack_b(sample_request), user_id=b'12345'))
         answer = MessageSerializer.unpack_b(answer)
@@ -75,7 +76,7 @@ class RequestSolverTest(unittest.TestCase):
         # no address in request
         sample_request = {'wrong_address': {'adr': 'sample_telescope.any_val'}, 'time_of_data': 1655975599.883751,
                           'time_of_data_tolerance': 20.0}
-        rs = RequestSolver(None)
+        rs = RequestSolver(SampleTestValueProvider("xxx", "xxx", []))
 
         answer = self.loop.run_until_complete(
             rs.get_single_answer(MessageSerializer.pack_b(sample_request), user_id=b'12345'))

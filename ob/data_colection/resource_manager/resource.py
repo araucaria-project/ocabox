@@ -151,8 +151,9 @@ class FilterwheelAlpaca(Resource):
 
     async def a_init(self):
         self._correctly_load_data = True
-        api = InternalClientAPI(request_solver=self._target, user_name=f"{self.__class__.__name__}_init_client")
-        await self._read_filters(api=api)
+        if self._target is not None:
+            api = InternalClientAPI(request_solver=self._target, user_name=f"{self.__class__.__name__}_init_client")
+            await self._read_filters(api=api)
 
     async def _read_filters(self, api):
         """Method looking a filters definition in settings or try get them from alpaca"""

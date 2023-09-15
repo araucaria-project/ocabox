@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class TreeBaseBroker(TreeComponent):
     """
-    B0
+
 
     :ivar _list_providers: list all next providers in tree
 
@@ -122,6 +122,12 @@ class TreeBaseBroker(TreeComponent):
         # stop self
         for p in self._list_providers:
             await p.stop()
+
+    def post_init_tree(self, tree_data, tree_path: str):
+        self.set_tree_path(address_to_object=tree_path)
+        self._tree_data = tree_data
+        for p in self._list_providers:
+            p.post_init_tree(tree_data=tree_data, tree_path=self.tree_path)
 
     def get_resources(self):
         providers = self.get_list_providers()

@@ -23,7 +23,6 @@ class MoveTest(unittest.TestCase, BaseAsyncTest):
         self.tree_cache = TreeCache('sample_name_cache', self.tao)
         self.tree_freezer = TreeConditionalFreezer('sample_freezer', self.tree_cache)
         self.rs = RequestSolver(self.tree_freezer)
-        self.tao.target_requests = self.rs
         self.api_test = InternalClientAPI(request_solver=self.rs, user_name=f"DefaultTest")
 
     def tearDown(self) -> None:
@@ -40,7 +39,7 @@ class MoveTest(unittest.TestCase, BaseAsyncTest):
             rm = await self.tao.get_res_manager()
             dome = rm.get_resource(name=rm.DOME, nr=0)
 
-            mov = Move(None, plan_data=plan_data)
+            mov = Move(plan_data=plan_data)
             pos = Position("abc", t=8.0, c="-1", s=int(-6))
             mov.positions.append(pos)
             pos2 = Position("abc", t=7.0, c="6", s=int(-5))

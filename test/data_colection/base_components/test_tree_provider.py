@@ -1,6 +1,8 @@
 import unittest
 
+from ob.data_colection.base_components.tree_base_provider import TreeBaseProvider
 from ob.data_colection.base_components.tree_provider import TreeProvider
+from ob.data_colection.tree_data import TreeData
 from ob.data_colection.value import Value
 from ob.data_colection.value_call import ValueRequest
 from test.data_colection.base_async_test import BaseAsyncTest
@@ -77,6 +79,24 @@ class TreeProviderTest(unittest.TestCase, BaseAsyncTest):
         tp = TreeProvider('component_sample_name', name, self.vp1)
         resources = tp.get_resources()
         self.assertEqual(("component_sample_name_RESOURCE", [name]), resources[0])
+
+    def test_set_tree_path(self):
+        """Test check whether tree path was set correctly """
+        vp3 = SampleTestValueProvider('provider1_name', 'provider1_source_name', [self.v1, self.v2])
+        vp2 = TreeProvider("b", 'b', vp3)
+        vp1 = TreeProvider("a", 'a', vp2)
+        vp1.post_init_tree(TreeData(None), "")
+        self.assertEqual(vp1.tree_path, "a")
+        self.assertEqual(vp2.tree_path, "a.b")
+        self.assertEqual(vp3.tree_path, "a.b.provider1_source_name")
+        #  -------- 2' scenario   ---------
+        vp3 = SampleTestValueProvider('provider1_name', 'provider1_source_name', [self.v1, self.v2])
+        vp2 = TreeBaseProvider("b", vp3)
+        vp1 = TreeProvider("a", 'a', vp2)
+        vp1.post_init_tree(TreeData(None), "")
+        self.assertEqual(vp1.tree_path, "a")
+        self.assertEqual(vp2.tree_path, "a")
+        self.assertEqual(vp3.tree_path, "a.provider1_source_name")
 
 
 if __name__ == '__main__':

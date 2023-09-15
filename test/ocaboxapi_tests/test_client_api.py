@@ -6,6 +6,7 @@ from ocaboxapi.client_api import ClientAPI
 from ob.comunication.router import Router
 from ob.data_colection.value_call import ValueResponse, ValueRequest
 from test.comunication.sample_test_resolver import SampleTestResolver
+from test.data_colection.sample_test_value_provider import SampleTestValueProvider
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -20,7 +21,7 @@ class ClientAPITest(unittest.TestCase):
             self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)
         name = 'SampleTestRouter'
-        self.vr = Router(SampleTestResolver(None), name=name)
+        self.vr = Router(SampleTestValueProvider("xxx", "xxx", []), name=name)
         self.vr.start(self.loop)
 
     def tearDown(self) -> None:

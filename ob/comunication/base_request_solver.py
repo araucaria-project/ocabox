@@ -3,9 +3,7 @@ import logging
 import time
 from typing import List
 from abc import ABC, abstractmethod
-
 from serverish.messenger import get_publisher
-
 from ob.comunication.nats_streams import NatsStreams
 from ob.data_colection.response_error import ResponseError
 from ob.data_colection.tree_data import TreeData
@@ -22,7 +20,8 @@ class BaseRequestSolver(ABC):
 
     def __init__(self, data_provider: ProvidesResponseProtocol, **kwargs):
         self.data_provider: ProvidesResponseProtocol = data_provider
-        self._tree_data = TreeData()
+        self._tree_data = TreeData(target_requests=self)
+        self.data_provider.post_init_tree(tree_data=self._tree_data, tree_path="")
         self._nats_host = SingletonConfig.get_config()['nats']['host'].get()
         self._nats_port = SingletonConfig.get_config()['nats']['port'].get()
 

@@ -22,7 +22,6 @@ class ResourceTest(unittest.TestCase, BaseAsyncTest):
         self.tree_cache = TreeCache('sample_name_cache', self.tao)
         self.tree_freezer = TreeConditionalFreezer('sample_freezer', self.tree_cache)
         self.rs = RequestSolver(self.tree_freezer)
-        self.tao.target_requests = self.rs
         self.api_test = InternalClientAPI(request_solver=self.rs, user_name=f"DefaultTest")
 
     def tearDown(self) -> None:
@@ -47,7 +46,6 @@ class DomeAlpacaTest(unittest.TestCase, BaseAsyncTest):
         self.tree_cache = TreeCache('sample_name_cache', self.tao)
         self.tree_freezer = TreeConditionalFreezer('sample_freezer', self.tree_cache)
         self.rs = RequestSolver(self.tree_freezer)
-        self.tao.target_requests = self.rs
         self.api_test = InternalClientAPI(request_solver=self.rs, user_name=f"DefaultTest")
 
     def tearDown(self) -> None:
@@ -65,7 +63,6 @@ class MountAlpacaTest(unittest.TestCase, BaseAsyncTest):
         self.tree_cache = TreeCache('sample_name_cache', self.tao)
         self.tree_freezer = TreeConditionalFreezer('sample_freezer', self.tree_cache)
         self.rs = RequestSolver(self.tree_freezer)
-        self.tao.target_requests = self.rs
         self.api_test = InternalClientAPI(request_solver=self.rs, user_name=f"DefaultTest")
 
     def tearDown(self) -> None:
@@ -94,7 +91,6 @@ class FilterwheelAlpacaTest(unittest.TestCase, BaseAsyncTest):
         self.tree_cache = TreeCache('sample_name_cache', self.tao)
         self.tree_freezer = TreeConditionalFreezer('sample_freezer', self.tree_cache)
         self.rs = RequestSolver(self.tree_freezer)
-        self.tao.target_requests = self.rs
         self.api_test = InternalClientAPI(request_solver=self.rs, user_name=f"DefaultTest")
 
     def tearDown(self) -> None:
