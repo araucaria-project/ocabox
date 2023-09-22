@@ -20,6 +20,10 @@ class AbstractCycleTime(ABC):
     FILE_NAMES = {'raw_data': 'raw_data.txt', 'clean_data': 'clean_data.txt',
                   'night_verif': 'night_verif.txt', 'train_param': 'train_param.txt'}
     BASE_FOLDER_NAME = os.path.expanduser('~/.oca/cycle_time_calc')
+    FILTERS = {'zb08': {'u': 0, 'g': 1, 'r': 2, 'i': 3, 'z': 4, 'B': 5, 'V': 6, 'Ic': 7},
+               'jk15': {'Empty': 0, 'u SG': 1, 'b SG': 2, 'v SG': 3, 'y SG': 4, 'Hb_w': 5, 'Hb_n': 6, 'Ha_w': 7,
+                       'Ha_n': 8, 'u': 9, 'g': 10, 'r': 11, 'i': 12, 'z': 13, 'B': 14, 'V': 15, 'iC': 16},
+               'dev': {'Red': 0, 'Green': 1, 'Blue': 2, 'Clear': 3, 'Ha': 4, 'OIII': 5, 'LPR': 6, 'Dark': 7}}
     RM_MODES_MHZ = {"zb08": [5, 3, 1, 0.05],
                     "jk15": [1, 1, 1, 1, 1, 1, 1],
                     "wk06": [5, 3, 1, 0.05],
@@ -39,7 +43,9 @@ class AbstractCycleTime(ABC):
         tel_lst = []
         for n in l_dir:
             if AbstractCycleTime.FILE_NAMES[file_type] in n:
-                tel_lst.append(n.split('_')[0])
+                tel = n.split('_')[0]
+                if tel not in tel_lst:
+                    tel_lst.append(n.split('_')[0])
         return tel_lst
 
     @staticmethod
@@ -261,9 +267,14 @@ class AbstractCycleTime(ABC):
         return ret
 
     @staticmethod
-    def filter_changes(record: Dict[str, Any]) -> int:
+    def filter_changes(record: Dict[str, Any], telescope: str) -> int:
         ret = 0
-        f = record['filter_pos']
+        fil = record['filter_pos']
+        inv_f_map = {v: k for k, v in AbstractCycleTime.FILTERS[telescope].items()}
+        try:
+            f = inv_f_map[int(fil)]
+        except (IndexError, ValueError):
+            f = str(fil)
         if 'kwargs' in record.keys():
             if 'seq' in record['kwargs']:
                 s = record['kwargs']['seq'].split(',')

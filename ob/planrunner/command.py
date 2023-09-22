@@ -586,18 +586,11 @@ class Command(AbstractSequence):
         m = self.telescope.get_mount()
         c = self.telescope.get_camera()
         f = self.telescope.get_filterwheel()
-        f_names = await self.value_proof_get(name='command_fw_names',
-                                             awaitab=f.aget_names,
-                                             expect_type=dict)
-        f_n = []
-        for n in f_names.keys():
-            f_n.append(str(n))
         f_pos = await self.value_proof_get(name='command_fw_pos',
                                            awaitab=f.aget_position,
                                            expect_type=int)
-        f_p = f_n[f_pos]
         self._cycle_time_data_build.insert_data(name='dither', value=self.dither_on)
-        self._cycle_time_data_build.insert_data(name='filter_pos', value=f_p)
+        self._cycle_time_data_build.insert_data(name='filter_pos', value=f_pos)
         d_az = await self.value_proof_get(name='command_dome_az',
                                           awaitab=d.aget_az,
                                           expect_type=float)
