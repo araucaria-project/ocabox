@@ -71,7 +71,7 @@ class FilterWheel(TelescopeComponent):
                         'dev': dev_dict
                         }
         tel_id = self.telescope.id
-        if tel_id in filters_temp.keys():
+        if self.telescope.id in filters_temp.keys():
             ret = filters_temp[tel_id]
         else:
             ret = {}

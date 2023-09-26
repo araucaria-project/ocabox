@@ -124,7 +124,7 @@ class CycleTimeDataClean(AbstractCycleTime):
             CycleTimeDataClean.DATA_CLEAN_ORDER[6]:
                 CycleTimeDataClean.exposure_time_sum(first),
             CycleTimeDataClean.DATA_CLEAN_ORDER[7]:
-                CycleTimeDataClean.filter_changes(record=first, telescope=telescope),
+                CycleTimeDataClean.filter_changes(record=first),
             CycleTimeDataClean.DATA_CLEAN_ORDER[8]:
                 CycleTimeDataClean.rm_mode_inverse_mhz(rm_mode=CycleTimeDataClean.rm_mode(second),
                                                        telescope=telescope)*CycleTimeDataClean.exposure_number(first),

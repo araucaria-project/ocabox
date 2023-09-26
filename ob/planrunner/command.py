@@ -579,6 +579,17 @@ class Command(AbstractSequence):
             seq_list = list(seq)
         return seq_list
 
+    @staticmethod
+    def fw_named(f_pos: int, f_names: Dict) -> str or int:
+        if f_names is not None:
+            inv_f_map = {v: k for k, v in f_names.items()}
+        else:
+            inv_f_map = {}
+        if f_pos in inv_f_map.keys():
+            return inv_f_map[f_pos]
+        else:
+            return f_pos
+
     async def arun(self, step_id: str or None = None) -> int:
         self.info_callback['stream_1'](f'Command {self.id} {self.command_name} started')
         logger.info(f'{self.id} {self.command_name} {self.args} {self.kwargs} started')
@@ -589,8 +600,9 @@ class Command(AbstractSequence):
         f_pos = await self.value_proof_get(name='command_fw_pos',
                                            awaitab=f.aget_position,
                                            expect_type=int)
+        f_names = await f.aget_names()
         self._cycle_time_data_build.insert_data(name='dither', value=self.dither_on)
-        self._cycle_time_data_build.insert_data(name='filter_pos', value=f_pos)
+        self._cycle_time_data_build.insert_data(name='filter_pos', value=self.fw_named(f_pos=f_pos, f_names=f_names))
         d_az = await self.value_proof_get(name='command_dome_az',
                                           awaitab=d.aget_az,
                                           expect_type=float)

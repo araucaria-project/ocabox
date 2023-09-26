@@ -267,14 +267,9 @@ class AbstractCycleTime(ABC):
         return ret
 
     @staticmethod
-    def filter_changes(record: Dict[str, Any], telescope: str) -> int:
+    def filter_changes(record: Dict[str, Any]) -> int:
         ret = 0
-        fil = record['filter_pos']
-        inv_f_map = {v: k for k, v in AbstractCycleTime.FILTERS[telescope].items()}
-        try:
-            f = inv_f_map[int(fil)]
-        except (IndexError, ValueError):
-            f = str(fil)
+        f = record['filter_pos']
         if 'kwargs' in record.keys():
             if 'seq' in record['kwargs']:
                 s = record['kwargs']['seq'].split(',')
