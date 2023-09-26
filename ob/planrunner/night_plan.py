@@ -57,7 +57,7 @@ class NightPlan(AbstractSequence):
         self.param['cycle_time'].set_telescope_start_az_alt(az=az, alt=alt)
 
     def _set_r_id(self) -> None:
-        self._r_id =  random.randint(0, 1000000)
+        self._r_id =  random.randint(0, 100000000)
 
     def _build_info_seq(self, name: str, value: str):
         if name in self.info.keys():

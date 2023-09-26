@@ -39,7 +39,9 @@ class AbstractCycleTime(ABC):
         tel_lst = []
         for n in l_dir:
             if AbstractCycleTime.FILE_NAMES[file_type] in n:
-                tel_lst.append(n.split('_')[0])
+                tel = n.split('_')[0]
+                if tel not in tel_lst:
+                    tel_lst.append(tel)
         return tel_lst
 
     @staticmethod

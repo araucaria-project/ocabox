@@ -194,7 +194,7 @@ class CycleTimeCalc(AbstractCycleTime):
         command_dict_param['dome_distance'] = dome_az_dist
         command_dict_param['mount_distance'] = mount_alt_az_dist
         command_dict_param['exposure_time_sum'] = CycleTimeCalc.exposure_time_sum(command_dict)
-        command_dict_param['filter_changes'] = CycleTimeCalc.filter_changes(command_dict)
+        command_dict_param['filter_changes'] = CycleTimeCalc.filter_changes(record=command_dict)
         command_dict_param['rmmode_expno'] = self.rm_mode_inv_mhz * exp_no
         command_dict_param['dither_expno'] = dither * exp_no
         self._current_filter = CycleTimeCalc.last_filter(command_dict)
