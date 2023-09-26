@@ -1,6 +1,6 @@
 import logging
+import re
 from abc import ABC, abstractmethod
-
 import os
 from typing import Dict, Any, List
 import datetime
@@ -38,7 +38,7 @@ class AbstractCycleTime(ABC):
         l_dir = os.listdir(AbstractCycleTime.BASE_FOLDER_NAME)
         tel_lst = []
         for n in l_dir:
-            if AbstractCycleTime.FILE_NAMES[file_type] in n:
+            if AbstractCycleTime.FILE_NAMES[file_type] in n and re.fullmatch(pattern='\w\w..?_.*.txt', string=n):
                 tel = n.split('_')[0]
                 if tel not in tel_lst:
                     tel_lst.append(tel)
