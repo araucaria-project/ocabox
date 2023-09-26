@@ -20,10 +20,6 @@ class AbstractCycleTime(ABC):
     FILE_NAMES = {'raw_data': 'raw_data.txt', 'clean_data': 'clean_data.txt',
                   'night_verif': 'night_verif.txt', 'train_param': 'train_param.txt'}
     BASE_FOLDER_NAME = os.path.expanduser('~/.oca/cycle_time_calc')
-    FILTERS = {'zb08': {'u': 0, 'g': 1, 'r': 2, 'i': 3, 'z': 4, 'B': 5, 'V': 6, 'Ic': 7},
-               'jk15': {'Empty': 0, 'u SG': 1, 'b SG': 2, 'v SG': 3, 'y SG': 4, 'Hb_w': 5, 'Hb_n': 6, 'Ha_w': 7,
-                       'Ha_n': 8, 'u': 9, 'g': 10, 'r': 11, 'i': 12, 'z': 13, 'B': 14, 'V': 15, 'iC': 16},
-               'dev': {'Red': 0, 'Green': 1, 'Blue': 2, 'Clear': 3, 'Ha': 4, 'OIII': 5, 'LPR': 6, 'Dark': 7}}
     RM_MODES_MHZ = {"zb08": [5, 3, 1, 0.05],
                     "jk15": [1, 1, 1, 1, 1, 1, 1],
                     "wk06": [5, 3, 1, 0.05],
