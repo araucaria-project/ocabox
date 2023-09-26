@@ -18,13 +18,9 @@ class TestCycleTime(unittest.TestCase):
 
         az_end = 90
         alt_end = 0
-        c2r = np.array([1.0, 0.0, 0.0])
+        c2r = np.array([0.0, 0.0, 1.0])
         c2 = AbstractCycleTime.vector(alt=alt_end, az=az_end)
-        if c2.all() == c2r.all():
-            r=1
-        else:
-            r=0
-        self.assertEqual(first=1, second=r)
+        self.assertAlmostEqual(first=np.mean(c2-c2r), second=0, places=15)
 
 
 if __name__ == '__main__':
