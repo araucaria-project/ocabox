@@ -108,7 +108,8 @@ class TreeAlpacaTest(unittest.TestCase, BaseAsyncTest):
     def test_get_resource(self):
         """Test method get_resources"""
         resources = self.tao.get_resources()
-        self.assertEqual(resources, [('dibi_RESOURCE', ['dibi']), ('dome_RESOURCE', ['dome']),
+        self.assertEqual(resources, [('dibi_RESOURCE', ['dibi']),
+                                     ('dome_RESOURCE', ['dome']),
                                      ('filterwheel_RESOURCE', ['filterwheel']),
                                      ('filterwheel2_RESOURCE', ['filterwheel2']),
                                      ('covercalibrator_RESOURCE', ['covercalibrator']),
@@ -123,8 +124,8 @@ class TreeAlpacaTest(unittest.TestCase, BaseAsyncTest):
         from ob.data_colection.resource_manager.resource_manager import ResourceManager
         manager: ResourceManager = asyncio.run(self.tao.get_res_manager())
         self.assertTrue(isinstance(manager, ResourceManager))
-        self.assertEqual(len(manager._resources), 2)
-        # todo tu skonczyłem ten test nie przechodzi
+        self.assertEqual(len(manager._resources), 10)
+
     def test_alpaca_not_response(self):
         """Test situation when alpaca server is down."""
         # Module with connection to no responding Alpaca

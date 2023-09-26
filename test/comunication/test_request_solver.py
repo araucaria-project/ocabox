@@ -61,7 +61,7 @@ class RequestSolverTest(unittest.TestCase):
         """
         sample_request = {'address': {'adr': 'sample_telescope.any_val'}, 'time_of_data': 1655975599.883751,
                           'time_of_data_tolerance': 20.0}
-        rs = RequestSolver(SampleTestValueProvider("xxx", "xxx", []))
+        rs = RequestSolver(None)
         answer = self.loop.run_until_complete(
             rs.get_single_answer(MessageSerializer.pack_b(sample_request), user_id=b'12345'))
         answer = MessageSerializer.unpack_b(answer)

@@ -126,6 +126,7 @@ class RouterTest(unittest.TestCase):
         self.loop.run_until_complete(self.loop.shutdown_asyncgens())
         # now router should be stopped
         self.assertTrue(vr.is_stopped())
+        vr._front_socket.close()  # close socket to unlock for other tests
 
     def test_router_stop_task(self):
         """
