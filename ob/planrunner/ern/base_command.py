@@ -2,7 +2,7 @@ import logging
 from abc import ABC, abstractmethod
 
 from ob.comunication.internal_client_api import InternalClientAPI
-from ob.data_colection.resource_manager.resource_manager import ResourceManager
+from ob.data_colection.resource_manager.resource_manager import TelescopeComponentManager
 from ob.planrunner.ern.plan_task_manager_protocol import PlanTaskManagerProtocol
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -21,7 +21,7 @@ class BaseCommand(ABC):
         return cls._NAME
 
     @property
-    def res_mngr(self) -> ResourceManager:
+    def res_mngr(self) -> TelescopeComponentManager:
         return self._plan_data.access_resource_manager
 
     @property

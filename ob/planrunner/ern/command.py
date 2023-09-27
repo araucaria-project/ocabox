@@ -99,7 +99,6 @@ class Command(BaseCommand, CommandArgsReader, ABC):
     @staticmethod
     def build_command(dic, plan_data, id_: str = None, previous_command=None,
                       loop: asyncio.AbstractEventLoop = None, **kwargs):
-        # todo pokombinować coś z __new__() w wolnej chwili
         command_map = plan_data.map_commands
         command_type = dic.get(Command._NAME_KEY, None)
         if command_type and command_type in command_map:

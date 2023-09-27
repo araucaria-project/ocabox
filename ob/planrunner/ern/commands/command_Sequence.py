@@ -6,8 +6,6 @@ from ob.planrunner.ern.command_error import CriticalCommandError, NormalCommandE
 from ob.planrunner.ern.errors import PlanBuildError
 from ob.planrunner.ern.commands.commands_names import CommandsNames
 
-logger = logging.getLogger(__name__.rsplit('.')[-1])
-
 
 class CommandSequence(Command):
     _NAME = CommandsNames.SEQUENCE
@@ -33,11 +31,11 @@ class CommandSequence(Command):
         :return:
         """
         if not subcommands:
-            logger.info(f"Command {self._NAME} has empty list of Subcommands")
+            self.log(f"Command {self._NAME} has empty list of Subcommands", lvl=logging.INFO)
             return
         if not isinstance(subcommands, list):
-            logger.error(f"Command {self._NAME} get subcommands type {type(subcommands)} instead {list}. "
-                         f"Subcommand will be not created")
+            self.log(f"Command {self._NAME} get subcommands type {type(subcommands)} instead {list}. "
+                     f"Subcommand will be not created", lvl=logging.ERROR)
             return
         com = None
         for s in subcommands:
@@ -56,10 +54,15 @@ class CommandSequence(Command):
         tasks = []
         for s in self.get_subcommands():
             self.log(f"Waiting for free task slot")
-            t = await self.tsk_mngr.run_task_when_can(s.run(), is_independent=True)
+            try:
+                t = await self.tsk_mngr.run_task_when_can(s.run(), is_independent=True)
+            except asyncio.CancelledError:
+                await self._cancel_tasks(tasks)
+                break
+                # todo prześledzić co się dzieje podczas cancelacji z komedami
             self.log(f"Created task for {s.get_name()} Id: {s.get_id()}")
             tasks.append(t)
-        
+
         # result = await asyncio.gather(*tasks)
         for t in tasks:
             try:
@@ -92,4 +95,3 @@ class CommandSequence(Command):
         await super().a_init()
         for s in self._subcommands:
             await s.a_init()
-

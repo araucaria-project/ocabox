@@ -80,6 +80,17 @@ class MountAlpacaTest(unittest.TestCase, BaseAsyncTest):
 
         asyncio.run(coro())
 
+    def test_get_configuration(self):
+        """Test get configuration from config file"""
+        async def coro():
+            rm = await self.tao.get_res_manager()
+            # get from config
+            mount = rm.get_resource(name=rm.MOUNT, nr=0)
+            self.assertEqual(15, mount.min_alt)
+            self.assertEqual('2000', mount.epoch)
+
+        asyncio.run(coro())
+
 
 class FilterwheelAlpacaTest(unittest.TestCase, BaseAsyncTest):
     OBSERVATORY_NAME = 'test_observatory'

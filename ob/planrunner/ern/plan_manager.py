@@ -1,10 +1,10 @@
 import asyncio
 import logging
-from typing import Optional, Dict
+from typing import Optional, Dict, Union
 from pyaraucaria.obs_plan.obs_plan_parser import ObsPlanParser
 
 from ob.comunication.internal_client_api import InternalClientAPI
-from ob.data_colection.resource_manager.resource_manager import ResourceManager
+from ob.data_colection.resource_manager.resource_manager import TelescopeComponentManager
 from ob.planrunner.ern.command import Command
 from ob.planrunner.ern.errors import PlanBuildError
 from ob.planrunner.ern.plan_data import PlanData
@@ -13,13 +13,13 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class PlanManager:
-    def __init__(self, acs_res_mngr: ResourceManager, api: InternalClientAPI, loop: asyncio.AbstractEventLoop = None,
+    def __init__(self, acs_res_mngr: TelescopeComponentManager, api: InternalClientAPI, loop: asyncio.AbstractEventLoop = None,
                  **kwargs):
         super().__init__(**kwargs)
         self._loop = loop
         self._set_loop()
-        self._acs_res_mngr: ResourceManager = acs_res_mngr
-        if not isinstance(self._acs_res_mngr, ResourceManager):
+        self._acs_res_mngr: TelescopeComponentManager = acs_res_mngr
+        if not isinstance(self._acs_res_mngr, TelescopeComponentManager):
             raise RuntimeError
         self._plans: Dict[str, Command] = {}
         self._plan_runner_task = asyncio.Task = None
@@ -38,9 +38,8 @@ class PlanManager:
             logger.error(f"Unexpected error when parse plan: {e}")
         return None
 
-    async def upload_plan(self, plan_id: str, raw_plan: str, overwrite: bool = False) -> bool:
-        # todo plan może przyjść w foormacie słownika na nie tylko stringa
-        parsed_plan = self._parse_plan(raw_plan)
+    async def upload_plan(self, plan_id: str, raw_plan: Union[str, dict], overwrite: bool = False) -> bool:
+        parsed_plan = self._parse_plan(raw_plan) if isinstance(raw_plan, str) else raw_plan
         if parsed_plan is None:
             logger.error(f'Plan is wrong. Check the syntax.')
             return False
@@ -56,6 +55,10 @@ class PlanManager:
         except PlanBuildError as e:
             logger.warning(f"Can not create plan witch id: {plan_id} because plan data is corrupted. error "
                            f"message: {e.msg}")
+            return False
+        if np is None:
+            logger.warning(f"Can not create plan witch id: {plan_id} because plan data is corrupted. Plan dict is "
+                           f"empty, has wrong format or has unknown commands")
             return False
         self._plans[plan_id] = np
         try:
@@ -141,7 +144,7 @@ class PlanManager:
                 self._loop = asyncio.get_running_loop()
             except RuntimeError:
                 logger.error(f"{self}: Can not get current async loop, something goes wrong")
-                raise  # todo dorobić błąd
+                raise
 
     async def _main(self, plan: Command, step_id):
         # todo dorobić mechanizm uruchamiania od konkretnego kroku

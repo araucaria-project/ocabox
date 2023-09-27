@@ -132,8 +132,8 @@ class MountAlpaca(Resource):
         self.latitude = self._properties.get("lat", 0)
         self.longitude = self._properties.get("lon", 0)
         self.elevation = self._properties.get("elev", 0)
-        self.epoch = str(self._properties.get("epoch", 2000))  # todo dodac do config albo z kwarksów
-        self.min_alt = self._properties.get("min_alt", 15)  # todo dodac do settings
+        self.epoch = str(self._properties.get("epoch", 2000))
+        self.min_alt = self._properties.get("min_alt", 10)
 
 
 class CameraAlpaca(Resource):

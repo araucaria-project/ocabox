@@ -149,6 +149,7 @@ tree:
           kind: telescope
           comment: DIBI Autoslew Simulated Telescope
           device_number: 0
+          min_alt: 15
           components:
             derotator:
               kind: rotator

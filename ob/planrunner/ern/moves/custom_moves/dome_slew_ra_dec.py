@@ -2,7 +2,7 @@ import logging
 from typing import Tuple
 from pyaraucaria.coordinates import ra_to_decimal, dec_to_decimal, ra_dec_epoch, ra_dec_2_az_alt
 from ob.data_colection.resource_manager.errors import ResourceCommandError
-from ob.data_colection.resource_manager.resource_manager import ResourceManager
+from ob.data_colection.resource_manager.resource_manager import TelescopeComponentManager
 from ob.planrunner.ern.errors import PlanBuildError
 from ob.planrunner.ern.moves.custom_moves.dome_slew import DomeSlew
 
@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class DomeSlewRaDec(DomeSlew):
-    _USED_RESOURCE = ResourceManager.DOME
+    _USED_RESOURCE = TelescopeComponentManager.DOME
 
     def __init__(self, ra_dec: Tuple, plan_data, resource_nr: int = 0, mount_resource_nr=None):
         self._mount_resource_nr = mount_resource_nr if mount_resource_nr is not None else resource_nr
@@ -26,7 +26,7 @@ class DomeSlewRaDec(DomeSlew):
         if self._ra is None and self._dec is None:
             self._virtual_move = True
         # get mount context - here because _build method is call in __init__ method of inherit class
-        self._mount_resource_content = self.res_mngr.get_resource(ResourceManager.MOUNT, nr=self._mount_resource_nr)
+        self._mount_resource_content = self.res_mngr.get_resource(TelescopeComponentManager.MOUNT, nr=self._mount_resource_nr)
 
         super()._build()
 

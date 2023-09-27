@@ -12,7 +12,7 @@ from pyaraucaria.fits import fits_header, save_fits_from_array
 
 from ob.comunication.comunication_error import CommunicationTimeoutError, CommunicationRuntimeError
 from ob.data_colection.resource_manager.errors import ResourceCommandError
-from ob.data_colection.resource_manager.resource_manager import ResourceManager
+from ob.data_colection.resource_manager.resource_manager import TelescopeComponentManager
 from ob.planrunner.ern.errors import PlanBuildError
 from ob.planrunner.ern.moves.action import Action
 from ob.planrunner.ern.moves.move import Move
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class CameraReadPicture(Move):
-    _USED_RESOURCE = ResourceManager.CAMERA
+    _USED_RESOURCE = TelescopeComponentManager.CAMERA
 
     def __init__(self, exp_time_start: datetime, plan_data, resource_nr=0, mount_resource_nr=None,
                  exposure_time: float = None, req_ra=None, req_dec=None, epoch=None, type_=None, obj_name=None,
@@ -30,7 +30,7 @@ class CameraReadPicture(Move):
         self._resource_nr = resource_nr
         self._mount_resource_nr = mount_resource_nr if mount_resource_nr is not None else self._resource_nr
         self._resource_content = self.res_mngr.get_resource(self._USED_RESOURCE, nr=self._resource_nr)
-        self._mount_resource_content = self.res_mngr.get_resource(ResourceManager.MOUNT, nr=self._mount_resource_nr)
+        self._mount_resource_content = self.res_mngr.get_resource(TelescopeComponentManager.MOUNT, nr=self._mount_resource_nr)
         if self._mount_resource_content is None:
             raise PlanBuildError(f"Can not find mount resource content for camera")
         self._exposure_time: Optional[float] = exposure_time

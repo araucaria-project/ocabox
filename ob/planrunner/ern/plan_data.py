@@ -4,7 +4,7 @@ import typing
 import ob.planrunner.ern.commands.command_Object
 import ob.planrunner.ern.commands.command_Sequence
 from ob.comunication.internal_client_api import InternalClientAPI
-from ob.data_colection.resource_manager.resource_manager import ResourceManager
+from ob.data_colection.resource_manager.resource_manager import TelescopeComponentManager
 from ob.planrunner.ern.commands.commands_names import CommandsNames
 from ob.planrunner.ern.plan_task_manager import PlanTaskManager
 from ob.planrunner.ern.plan_task_manager_protocol import PlanTaskManagerProtocol
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 @dataclasses.dataclass
 class PlanData:
 
-    access_resource_manager: ResourceManager
+    access_resource_manager: TelescopeComponentManager
     client_api: InternalClientAPI
     DEFAULT_MAP_COMMANDS: typing.ClassVar[dict] = {
         CommandsNames.SEQUENCE: ob.planrunner.ern.commands.command_Sequence.CommandSequence,

@@ -121,9 +121,9 @@ class TreeAlpacaTest(unittest.TestCase, BaseAsyncTest):
 
     def test_get_res_manager(self):
         """Test method get_resource_manager()"""
-        from ob.data_colection.resource_manager.resource_manager import ResourceManager
-        manager: ResourceManager = asyncio.run(self.tao.get_res_manager())
-        self.assertTrue(isinstance(manager, ResourceManager))
+        from ob.data_colection.resource_manager.resource_manager import TelescopeComponentManager
+        manager: TelescopeComponentManager = asyncio.run(self.tao.get_res_manager())
+        self.assertTrue(isinstance(manager, TelescopeComponentManager))
         self.assertEqual(len(manager._resources), 10)
 
     def test_alpaca_not_response(self):

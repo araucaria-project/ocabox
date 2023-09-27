@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import unittest
 
@@ -39,12 +40,21 @@ class TestPlanManager(unittest.TestCase, BaseAsyncTest):
             {'command_name': 'OBJECT', 'args': ['NGC6871', '18.157', '-29.351'], 'kwargs': {'clamp': '5'}},
             {'command_name': 'OBJECT', 'args': ['NGC6871', '18.157', '-29.351'], 'kwargs': {'clamp': '5'}}
         ]
-                }
+               }
         plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test)
         self.assertIsInstance(plan, CommandSequence)
         self.assertEqual(len(plan.get_subcommands()), 2)
         for s in plan.get_subcommands():
             self.assertIsInstance(s, CommandObject)
+
+    def test_upload_plan_empty_dict(self):
+        """Test situation when user try upload empty dct as plan"""
+
+        async def coro():
+            await self.pm.upload_plan(plan_id="some_id", raw_plan={"uop": {}})
+            self.assertEqual(0, len(self.pm._plans))
+
+        asyncio.run(coro())
 
 
 if __name__ == '__main__':

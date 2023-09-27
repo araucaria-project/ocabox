@@ -4,7 +4,7 @@ from typing import Optional
 from pyaraucaria.coordinates import ra_dec_2_az_alt
 from ob.comunication.comunication_error import CommunicationTimeoutError, CommunicationRuntimeError
 from ob.data_colection.resource_manager.errors import ResourceCommandError
-from ob.data_colection.resource_manager.resource_manager import ResourceManager
+from ob.data_colection.resource_manager.resource_manager import TelescopeComponentManager
 from ob.planrunner.ern.dither_data import DitherModes
 from ob.planrunner.ern.moves.move import Move
 from ob.planrunner.ern.moves.position import Position
@@ -24,7 +24,7 @@ class MountDither(Move):
     If it is not given a dither_share_start_position, the current value of rad dec will be taken each time and the
     effect of rolling dithering will be obtained
     """
-    _USED_RESOURCE = ResourceManager.MOUNT
+    _USED_RESOURCE = TelescopeComponentManager.MOUNT
 
     def __init__(self, dither_frequency_nr: int, dither_mode: str, dither_distance: float, plan_data, resource_nr=0,
                  dither_share_start_position: Optional[DitherShareStartPosition] = None, virtual_move=False):

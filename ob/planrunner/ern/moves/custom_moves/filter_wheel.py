@@ -3,7 +3,7 @@ from typing import Optional
 
 from ob.comunication.comunication_error import CommunicationTimeoutError, CommunicationRuntimeError
 from ob.data_colection.resource_manager.errors import ResourceCommandError
-from ob.data_colection.resource_manager.resource_manager import ResourceManager
+from ob.data_colection.resource_manager.resource_manager import TelescopeComponentManager
 from ob.planrunner.ern.errors import PlanBuildError
 from ob.planrunner.ern.moves.move import Move
 from ob.planrunner.ern.moves.position import Position
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class FilterWheel(Move):
-    _USED_RESOURCE = ResourceManager.FILTERWHEEL
+    _USED_RESOURCE = TelescopeComponentManager.FILTERWHEEL
 
     def __init__(self, filter_: Optional[str], plan_data, resource_nr=0):
         super().__init__(plan_data=plan_data)

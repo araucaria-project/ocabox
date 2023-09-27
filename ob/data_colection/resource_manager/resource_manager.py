@@ -11,8 +11,7 @@ from ob.data_colection.resource_manager.resource import DomeAlpaca, Resource, Co
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
-# todo zmienić nazwe na TelescopeComponentManager
-class ResourceManager(StandardTelescopeComponents, ABC):
+class TelescopeComponentManager(StandardTelescopeComponents, ABC):
     """
     This is the resource manager for the telescope api support modules. The alpaca api class structure has been
     adopted as the resource standard.
@@ -49,7 +48,7 @@ class ResourceManager(StandardTelescopeComponents, ABC):
         raise NotImplementedError
 
 
-class ResourceManagerAlpaca(ResourceManager):
+class TelescopeComponentManagerAlpaca(TelescopeComponentManager):
     """
     This is the resource manager for the alpaca module.
     """
@@ -72,7 +71,6 @@ class ResourceManagerAlpaca(ResourceManager):
             if c is None:
                 logger.error(f"{self.__class__.__name__} can not create resource. Unrecognised resource type {typ}")
                 continue
-                # todo przekazać, address i target w konstruktorze bo na razie to jest None bo nie ma podłączenia do początku
             r = c(source_name=adr, resource_name=name, nr=nr, target_request=self._target, properties=prop,
                   address_path=self._path)
             await r.a_init()
