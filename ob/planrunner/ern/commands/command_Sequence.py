@@ -1,13 +1,14 @@
 import asyncio
 import logging
 from typing import List
+from ob.planrunner.ern.collective_command import CollectiveCommand
 from ob.planrunner.ern.command import Command
 from ob.planrunner.ern.command_error import CriticalCommandError, NormalCommandError
 from ob.planrunner.ern.errors import PlanBuildError
 from ob.planrunner.ern.commands.commands_names import CommandsNames
 
 
-class CommandSequence(Command):
+class CommandSequence(CollectiveCommand):
     _NAME = CommandsNames.SEQUENCE
     # --- arg keys ---
     _SUBCOMMANDS_KEY = "subcommands"
@@ -16,7 +17,6 @@ class CommandSequence(Command):
                  loop: asyncio.AbstractEventLoop = None, **kwargs):
         super().__init__(command_dict=command_dict, plan_data=plan_data, id_=id_, previous_command=previous_command,
                          loop=loop, **kwargs)
-        self._subcommands: List[Command] = []
         self._create_subcommands_objects(self._command_dict.get(self._SUBCOMMANDS_KEY, []))
 
     def validate(self):

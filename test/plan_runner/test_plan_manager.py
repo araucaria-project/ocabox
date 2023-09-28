@@ -7,6 +7,7 @@ from ob.comunication.request_solver import RequestSolver
 from ob.data_colection.specialistic_components.tree_alpaca import TreeAlpacaObservatory
 from ob.data_colection.specialistic_components.tree_cache_observatory import TreeCache
 from ob.data_colection.specialistic_components.tree_conditional_freezer import TreeConditionalFreezer
+from ob.planrunner.ern.collective_command import CollectiveCommand
 from ob.planrunner.ern.commands.command_Object import CommandObject
 from ob.planrunner.ern.commands.command_Sequence import CommandSequence
 from ob.planrunner.ern.plan_manager import PlanManager
@@ -41,6 +42,7 @@ class TestPlanManager(unittest.TestCase, BaseAsyncTest):
             {'command_name': 'OBJECT', 'args': ['NGC6871', '18.157', '-29.351'], 'kwargs': {'clamp': '5'}}
         ]
                }
+
         plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test)
         self.assertIsInstance(plan, CommandSequence)
         self.assertEqual(len(plan.get_subcommands()), 2)
@@ -55,6 +57,40 @@ class TestPlanManager(unittest.TestCase, BaseAsyncTest):
             self.assertEqual(0, len(self.pm._plans))
 
         asyncio.run(coro())
+
+    def test__turn_off_command_until_given(self):
+        """Test method _turn_off_command_until_given()"""
+        var = {'command_name': 'SEQUENCE', 'subcommands': [
+            {'command_name': 'OBJECT', 'args': ['NGC6871', '18.157', '-29.351'], 'kwargs': {'clamp': '5'}},
+            {'command_name': 'OBJECT', 'args': ['NGC6871', '18.157', '-29.351'], 'kwargs': {'clamp': '5'}},
+            {'command_name': 'SEQUENCE', 'subcommands': [
+                {'command_name': 'OBJECT', 'args': ['NGC6871', '18.157', '-29.351'], 'kwargs': {'clamp': '5'}}
+            ]
+             },
+            {'command_name': 'SEQUENCE', 'subcommands': [
+                {'command_name': 'OBJECT', 'args': ['NGC6871', '18.157', '-29.351'], 'kwargs': {'clamp': '5'}},
+                {'command_name': 'OBJECT', 'args': ['NGC6871', '18.157', '-29.351'], 'kwargs': {'clamp': '5'}},
+                {'command_name': 'OBJECT', 'args': ['NGC6871', '18.157', '-29.351'], 'kwargs': {'clamp': '5'}}
+            ]
+             },
+            {'command_name': 'OBJECT', 'args': ['NGC6871', '18.157', '-29.351'], 'kwargs': {'clamp': '5'}}
+        ]
+               }
+        plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test)
+        self.assertIsInstance(plan, CollectiveCommand)
+        id_ = plan[3][1].get_id()
+        self.pm._turn_off_command_until_given(plan=plan, step_id=id_)
+
+        self.assertTrue(plan.is_on())  # main sequence
+        self.assertFalse(plan[0].is_on())  # first element
+        self.assertFalse(plan[1].is_on())  # second element
+        self.assertFalse(plan[2].is_on())  # first internal sequence
+        self.assertFalse(plan[2][0].is_on())
+        self.assertTrue(plan[3].is_on())  # second internal sequence
+        self.assertFalse(plan[3][0].is_on())
+        self.assertTrue(plan[3][1].is_on())  # this element we're looking for
+        self.assertTrue(plan[3][2].is_on())
+        self.assertTrue(plan[4].is_on())
 
 
 if __name__ == '__main__':

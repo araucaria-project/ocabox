@@ -32,6 +32,6 @@ class PlanData:
         if self.map_commands is None:
             self.map_commands = self.DEFAULT_MAP_COMMANDS
 
-    def generate_next_id(self):
+    def generate_next_id(self) -> str:
         self._last_id += 10
-        return self._last_id
+        return str(self._last_id)

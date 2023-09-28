@@ -23,19 +23,20 @@ class Command(BaseCommand, CommandArgsReader, ABC):
         self._loop = loop
         if id_ is None:
             id_ = plan_data.generate_next_id()
-        self._id = id_
+        self._id: str = id_
         super().__init__(plan_data=plan_data, arg=self.get_args(), kwarg=self.get_kwargs(), **kwargs)
 
         # --- --- --- --- --- --- --- --- --- --- ---
         self._needed_modules = []
         self._finish_locking: Optional[asyncio.Future] = None
         self._finish: Optional[asyncio.Future] = None
+        self._is_on = True  # flag mean command is turn on. If command is off will be not do
 
     def log(self, msg, lvl: Optional[int] = None):
         lvl = logging.DEBUG if lvl is None else lvl
         self.plan_log.log(msg=f"[{self._id}][{self.get_name()}] {msg}", level=lvl)
 
-    def get_id(self):
+    def get_id(self) -> str:
         return self._id
 
     def get_kwargs(self) -> dict:
@@ -111,6 +112,8 @@ class Command(BaseCommand, CommandArgsReader, ABC):
 
     async def run(self):
         try:
+            if not self.is_on():  # do not run if command is turn off
+                return
             await self._run_body()
         finally:
             self._unlock_next_command()  # unlock in the end
@@ -119,3 +122,12 @@ class Command(BaseCommand, CommandArgsReader, ABC):
     @abstractmethod
     async def _run_body(self):
         raise NotImplementedError
+
+    def turn_off(self):
+        self._is_on = False
+
+    def turn_on(self):
+        self._is_on = True
+
+    def is_on(self):
+        return self._is_on

@@ -5,6 +5,7 @@ from pyaraucaria.obs_plan.obs_plan_parser import ObsPlanParser
 
 from ob.comunication.internal_client_api import InternalClientAPI
 from ob.data_colection.resource_manager.resource_manager import TelescopeComponentManager
+from ob.planrunner.ern.collective_command import CollectiveCommand
 from ob.planrunner.ern.command import Command
 from ob.planrunner.ern.errors import PlanBuildError
 from ob.planrunner.ern.plan_data import PlanData
@@ -146,8 +147,10 @@ class PlanManager:
                 logger.error(f"{self}: Can not get current async loop, something goes wrong")
                 raise
 
-    async def _main(self, plan: Command, step_id):
-        # todo dorobić mechanizm uruchamiania od konkretnego kroku
+    async def _main(self, plan: Command, step_id: str):
+        # if starting from specific command, turn off all previous
+        if step_id:
+            self._turn_off_command_until_given(plan=plan, step_id=step_id)
         await plan.run()
 
     async def _a_init_plan(self, plan_id):
@@ -164,3 +167,25 @@ class PlanManager:
             await ps.a_init()
         except PlanBuildError:
             raise
+
+    def _turn_off_command_until_given(self, plan: Command, step_id: str, _done=False):
+        """
+        This method turn off all command from beginning to command witch given id. Method turning off sequence too, if
+        all included command turned off
+
+        :param plan: plan structure
+        :param step_id: start command id
+        :param _done: NOT USE !
+        :return: True if done or False if not find command witch given id and turn off all commands
+        """
+        done = _done
+        if isinstance(plan, CollectiveCommand):
+            for c in plan:
+                done = self._turn_off_command_until_given(c, step_id, done)
+
+        # turn all command until find command witch given id
+        if not done and plan.get_id() != step_id:
+            plan.turn_off()
+            return False
+        else:
+            return True
