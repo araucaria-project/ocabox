@@ -115,3 +115,8 @@ class Move(BaseCommand):
         if result.value is None:
             raise ResourceCommandError(f"Move try to get value from alpaca but no value was return {result.error}")
         return result.value.v
+
+    async def reset(self):
+        for p in self.positions:
+            await p.restart()
+

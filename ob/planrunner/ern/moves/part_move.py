@@ -1,6 +1,5 @@
 import logging
 from abc import abstractmethod, ABC
-
 from ob.data_colection.resource_manager.errors import ResourceCommandError
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -61,6 +60,10 @@ class PartMove(ABC):
     def finish_timestamp(self):
         return self._finish_tmstp
 
+    @finish_timestamp.setter
+    def finish_timestamp(self, s):
+        self._finish_tmstp = s
+
     def get_finish_future(self):
         return self._finish_fut
 
@@ -95,3 +98,17 @@ class PartMove(ABC):
         :return: progress in float format from 0 to 1
         """
         raise NotImplementedError
+
+    async def reset(self):
+        """
+        Method restart object to initial state
+
+        :return: None
+        """
+        self.current = None
+        self.start = None
+        self.start_timestamp = 0
+        self.finish_timestamp = 0
+        # if someone see this error that mean the position was restarted when working
+        self.get_finish_future().set_exception(ResourceCommandError(f"The {type(self).__name__} element was restarted"))
+        self._finish_fut = None

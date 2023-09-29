@@ -198,20 +198,26 @@ class CommandObject(Command):
         except ResourceCommandError:
             self.log("Command have error")
 
+    def _subcommands(self):
+        yield self._move_mount
+        yield self._move_dome
+        yield self._mirror_close
+        yield self._mirror_open
+        for x in self._execute_seq_subcomands:
+            yield x.filter
+            for focuserFocus, cameraExposure, cameraReadPicture, ditherModes in x.exp_list:
+                yield focuserFocus
+                yield cameraExposure
+                yield cameraReadPicture
+                yield ditherModes
+
+    async def reset(self):
+        for m in self._subcommands():
+            if m is not None:
+                await m.reset()
+
     async def a_init(self):
         await super().a_init()
-        if self._move_mount is not None:
-            await self._move_mount.a_init()
-        if self._move_dome is not None:
-            await self._move_dome.a_init()
-        if self._mirror_close is not None:
-            await self._mirror_close.a_init()
-        if self._mirror_open is not None:
-            await self._mirror_open.a_init()
-        for x in self._execute_seq_subcomands:
-            await x.filter.a_init()
-            for focuserFocus, cameraExposure, cameraReadPicture, ditherModes in x.exp_list:
-                await focuserFocus.a_init()
-                await cameraExposure.a_init()
-                await cameraReadPicture.a_init()
-                await ditherModes.a_init()
+        for m in self._subcommands():
+            if m is not None:
+                await m.a_init()

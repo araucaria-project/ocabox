@@ -89,7 +89,7 @@ class Position(PartMove):
             except ResourceCommandError as e:
                 self._finish_fut.set_exception(ResourceCommandError(f"the higher-priority procedure "
                                                                     f"({type(self).__name__}) failed"))
-                self._finish_tmstp = time.time()
+                self.finish_timestamp = time.time()
                 return
 
         CQ = await api.subscribe(address=self._address,
@@ -130,7 +130,7 @@ class Position(PartMove):
             self._finish_fut.set_exception(ResourceCommandError("Waiting for the target to be reached has been "
                                                                 "interrupted"))
         finally:
-            self._finish_tmstp = time.time()
+            self.finish_timestamp = time.time()
             if not self._finish_fut.done():
                 self._finish_fut.set_exception(ResourceCommandError(f"Main method in {type(self).__name__} finish but "
                                                                     f"future not done"))

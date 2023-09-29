@@ -43,3 +43,7 @@ class BaseCommand(ABC):
     @abstractmethod
     async def run(self):
         raise NotImplementedError
+
+    @abstractmethod
+    async def reset(self):
+        raise NotImplementedError
