@@ -302,13 +302,13 @@ class CameraExposure(SubCommand):
                         self.info_callback['stream_1'](f"{self.id} skipped - it's too dark")
                         self.skipped = True
                         self.info_callback['exec_json'](self.exec_json())
-                        return 1
+                        return 0
                     elif mean_diff > 0 and mean_min_max[0] > test_min_max_adu[1]:
                         logger.info(f"{self.id} skipped - it's too bright")
                         self.info_callback['stream_1'](f"{self.id} skipped - it's too bright")
                         self.skipped = True
                         self.info_callback['exec_json'](self.exec_json())
-                        return 1
+                        return 0
                 if datetime.utcnow().hour > 14:
                     ev_fact = evening_factor
                 else:
