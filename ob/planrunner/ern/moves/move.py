@@ -118,5 +118,5 @@ class Move(BaseCommand):
 
     async def reset(self):
         for p in self.positions:
-            await p.restart()
+            await p.reset()
 

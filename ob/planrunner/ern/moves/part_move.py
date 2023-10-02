@@ -110,5 +110,7 @@ class PartMove(ABC):
         self.start_timestamp = 0
         self.finish_timestamp = 0
         # if someone see this error that mean the position was restarted when working
-        self.get_finish_future().set_exception(ResourceCommandError(f"The {type(self).__name__} element was restarted"))
+        if self.get_finish_future() is not None and not self.get_finish_future().done():
+            self.get_finish_future().set_exception(ResourceCommandError(f"The {type(self).__name__} element "
+                                                                        f"was restarted"))
         self._finish_fut = None

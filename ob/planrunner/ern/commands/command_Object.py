@@ -212,6 +212,7 @@ class CommandObject(Command):
                 yield ditherModes
 
     async def reset(self):
+        await super().reset()
         for m in self._subcommands():
             if m is not None:
                 await m.reset()

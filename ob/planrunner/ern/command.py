@@ -69,7 +69,7 @@ class Command(BaseCommand, CommandArgsReader, ABC):
         raise RuntimeError  # todo zrobić potem jakiś lokalny błąd
 
     async def wait_to_finish(self):
-        fut = self._finish_locking
+        fut = self._finish
         if fut is not None:
             await fut
         raise RuntimeError  # todo zrobić potem jakiś lokalny błąd
@@ -131,3 +131,7 @@ class Command(BaseCommand, CommandArgsReader, ABC):
 
     def is_on(self):
         return self._is_on
+
+    async def reset(self):
+        self._finish_locking = self._loop.create_future()
+        self._finish = self._loop.create_future()

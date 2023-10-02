@@ -92,6 +92,33 @@ class TestPlanManager(unittest.TestCase, BaseAsyncTest):
         self.assertTrue(plan[3][2].is_on())
         self.assertTrue(plan[4].is_on())
 
+    def test__reset_plan(self):
+        """Test method _reset_plan()"""
+        var = {'command_name': 'SEQUENCE', 'subcommands': [
+            {'command_name': 'OBJECT', 'args': ['NGC6871', '18.157', '-29.351'], 'kwargs': {'clamp': '5'}},
+            {'command_name': 'OBJECT', 'args': ['NGC6871', '18.157', '-29.351'], 'kwargs': {'clamp': '5'}},
+            {'command_name': 'SEQUENCE', 'subcommands': [
+                {'command_name': 'OBJECT', 'args': ['NGC6871', '18.157', '-29.351'], 'kwargs': {'clamp': '5'}}
+            ]
+             },
+        ]
+               }
+        plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test)
+        self.assertIsInstance(plan, CollectiveCommand)
+        asyncio.run(plan.a_init())
+        plan[0]._unlock_next_command()
+        plan[0]._set_self_finish()
+        plan[1]._unlock_next_command()
+        plan[1]._set_self_finish()
+        plan[2]._unlock_next_command()
+        plan[1].turn_off()
+
+        asyncio.run(self.pm._reset_plan(plan=plan))
+
+        self.assertFalse(plan[0]._finish.done())
+        self.assertTrue(plan[1]._finish.done())
+        self.assertFalse(plan[2]._finish.done())
+
 
 if __name__ == '__main__':
     unittest.main()

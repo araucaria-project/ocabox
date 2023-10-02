@@ -151,6 +151,7 @@ class PlanManager:
         # if starting from specific command, turn off all previous
         if step_id:
             self._turn_off_command_until_given(plan=plan, step_id=step_id)
+        await self._reset_plan(plan=plan)
         await plan.run()
 
     async def _a_init_plan(self, plan_id):
@@ -189,3 +190,17 @@ class PlanManager:
             return False
         else:
             return True
+
+    async def _reset_plan(self, plan: Command):
+        """
+        Method resets commands if is not turned off
+
+        :param plan: plan structure
+        :return: True if done or False if not
+        """
+        if isinstance(plan, CollectiveCommand):
+            for c in plan:
+                await self._reset_plan(c)
+        if plan.is_on():  # reset only commands with is not turned off
+            await plan.reset()
+
