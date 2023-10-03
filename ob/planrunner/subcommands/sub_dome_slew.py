@@ -119,6 +119,10 @@ class DomeSlew(SubCommand):
 
     async def arun(self, step_id: str or None = None) -> int:
         self.started = True
+        if 'seq_data' in self.kwargs.keys():
+            if self.kwargs['seq_data'].skip:
+                self.skipped = True
+                return 0
         self.info_callback['exec_json'](self.exec_json())
         logger.info(f'{self.id} started')
         self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} started')
