@@ -63,7 +63,6 @@ class CommandSequence(CollectiveCommand):
             self.log(f"Created task for {s.get_name()} Id: {s.get_id()}")
             tasks.append(t)
 
-        # result = await asyncio.gather(*tasks)
         for t in tasks:
             try:
                 await t
@@ -89,9 +88,11 @@ class CommandSequence(CollectiveCommand):
     async def _cancel_tasks(tasks):
         for t in tasks:
             t.cancel()
-            # await asyncio.gather(*tasks, return_exceptions=True)
 
     async def a_init(self):
         await super().a_init()
         for s in self._subcommands:
             await s.a_init()
+
+    def _submoves(self):
+        return iter(())  # empty iterator

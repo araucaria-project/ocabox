@@ -1,5 +1,8 @@
+import asyncio
 import logging
 from abc import abstractmethod, ABC
+from typing import Optional
+
 from ob.data_colection.resource_manager.errors import ResourceCommandError
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -10,7 +13,7 @@ class PartMove(ABC):
         self._target = 1
         self._start = 0
         self._current = 0
-        self.task = None
+        self.task: Optional[asyncio.Task] = None
         self._address = address
         self._finish_fut = None
         self.timeout = timeout if timeout is not None else 20
@@ -80,7 +83,10 @@ class PartMove(ABC):
     async def wait(self):
         if self._finish_fut is None:
             raise ResourceCommandError(f"{type(self).__name__} is waited but never start")
-        await self._finish_fut
+        # the shield protects against the situation of setting the _finish_fut as canceled. If a task that uses the
+        # wait() method is canceled, it should not change the _finish_fut state. Future can only be set by
+        # PartMove.task, so if we want to cancel position (PartMove), we need to cancel PartMove.task.
+        await asyncio.shield(self._finish_fut)
 
     @abstractmethod
     async def run(self, api):
@@ -114,3 +120,7 @@ class PartMove(ABC):
             self.get_finish_future().set_exception(ResourceCommandError(f"The {type(self).__name__} element "
                                                                         f"was restarted"))
         self._finish_fut = None
+
+    def cancel(self):
+        if self.task is not None:
+            self.task.cancel()

@@ -166,7 +166,6 @@ class CommandObject(Command):
                     self.res_mngr.get_resource(self.res_mngr.FOCUSER), \
                     self.res_mngr.get_resource(self.res_mngr.FILTERWHEEL), \
                     self.res_mngr.get_resource(self.res_mngr.COVERCALIBRATOR):
-                # todo po błędzie trzeba je jeszcze cancelować pozycje bo mogą być zakolejkowane i popsuję następne polecneie
                 last_read = None
                 for ess in self._execute_seq_subcomands:
                     await ess.filter.run()
@@ -198,27 +197,27 @@ class CommandObject(Command):
         except ResourceCommandError:
             self.log("Command have error")
 
-    def _subcommands(self):
-        yield self._move_mount
-        yield self._move_dome
-        yield self._mirror_close
-        yield self._mirror_open
+    def _submoves(self):
+        if self._move_mount: yield self._move_mount
+        if self._move_dome: yield self._move_dome
+        if self._mirror_close: yield self._mirror_close
+        if self._mirror_open: yield self._mirror_open
         for x in self._execute_seq_subcomands:
-            yield x.filter
+            if x.filter: yield x.filter
             for focuserFocus, cameraExposure, cameraReadPicture, ditherModes in x.exp_list:
-                yield focuserFocus
-                yield cameraExposure
-                yield cameraReadPicture
-                yield ditherModes
+                if focuserFocus: yield focuserFocus
+                if cameraExposure: yield cameraExposure
+                if cameraReadPicture: yield cameraReadPicture
+                if ditherModes: yield ditherModes
 
     async def reset(self):
         await super().reset()
-        for m in self._subcommands():
+        for m in self._submoves():
             if m is not None:
                 await m.reset()
 
     async def a_init(self):
         await super().a_init()
-        for m in self._subcommands():
+        for m in self._submoves():
             if m is not None:
                 await m.a_init()

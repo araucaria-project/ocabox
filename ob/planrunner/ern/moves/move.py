@@ -120,3 +120,6 @@ class Move(BaseCommand):
         for p in self.positions:
             await p.reset()
 
+    def cancel(self):
+        for p in self.positions:
+            p.cancel()

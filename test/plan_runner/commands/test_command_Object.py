@@ -11,6 +11,8 @@ from ob.data_colection.specialistic_components.tree_cache_observatory import Tre
 from ob.data_colection.specialistic_components.tree_conditional_freezer import TreeConditionalFreezer
 from ob.planrunner.ern.commands.command_Object import CommandObject
 from ob.planrunner.ern.errors import PlanBuildError
+from ob.planrunner.ern.moves.move import Move
+from ob.planrunner.ern.moves.position import Position
 from ob.planrunner.ern.plan_manager import PlanManager
 from test.data_colection.base_async_test import BaseAsyncTest
 
@@ -127,6 +129,54 @@ class CommandObjectTest(unittest.TestCase, BaseAsyncTest):
 
             result = await self.api_test.get_async(f"{dome.adr}.azimuth")
             self.assertTrue(az - 0.5 < result.value.v < az + 0.5)
+            await self.rs.stop_tree()
+            await asyncio.sleep(1)
+
+        asyncio.run(coro())
+
+    def test_cancel_positions_when_error(self):
+        """the test checks whether all 'positions' are canceled when the command got error."""
+        mount = self.rm.get_resource(name=self.rm.MOUNT, nr=0)
+        dome = self.rm.get_resource(name=self.rm.DOME, nr=0)
+        az = random.randint(30, 50)
+        alt = random.randint(20, 50)
+        position_ra, position_dec = az_alt_2_ra_dec(az, alt,
+                                                    mount.longitude, mount.latitude, mount.elevation)
+        position_ra_final, position_dec_final = ra_dec_epoch(ra=position_ra,
+                                                             dec=position_dec,
+                                                             epoch=str("2000"))
+
+        async def coro():
+            await self.rs.run_tree()
+            names = (await self.api_test.get_async(f"{self.rm.get_resource(self.rm.FILTERWHEEL).adr}.names")).value.v
+            targ_filter = names[random.randint(0, len(names) - 1)]
+
+            filter_ = targ_filter
+            number_of_photo = 1
+            var = {'command_name': 'OBJECT', 'args': ['NGC6871', position_ra, position_dec],
+                   'kwargs': {'clamp': '5', "seq": f"{number_of_photo}/{filter_}/1"}}
+
+            plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test)
+            await plan.a_init()
+
+            # change mount and dome Move targets to impossible values
+            self.assertIsInstance(plan, CommandObject)
+            plan._move_dome.positions[0].target = 1000  # set target impossible to get
+            plan._move_dome._position_az_name = "notexsistingname"  # change the name because target
+            # position is updating after start and is getting by name. We not want to change
+            plan._move_mount.positions[0].target = 1000  # set target impossible to get
+
+            self.assertIsInstance(plan, CommandObject)
+
+            task_run = asyncio.create_task(plan.run())  # run command
+            await asyncio.sleep(0.5)  # wait to start
+            task_run.cancel()  # cancel task
+            await asyncio.sleep(0.5)
+            # -------- check positions is canceled too --------
+            self.assertTrue(plan._move_mount.positions[0].done())
+            self.assertTrue(plan._move_mount.positions[0].task.cancelled())
+            self.assertTrue(plan._move_dome.positions[0].done())
+            self.assertTrue(plan._move_dome.positions[0].task.cancelled())
             await self.rs.stop_tree()
             await asyncio.sleep(1)
 

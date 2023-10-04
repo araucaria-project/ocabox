@@ -2,6 +2,8 @@ import asyncio
 import logging
 from abc import ABC, abstractmethod
 from typing import Optional
+
+from ob.data_colection.resource_manager.errors import ResourceCommandError
 from ob.planrunner.ern.base_command import BaseCommand
 from ob.planrunner.ern.command_args_reader import CommandArgsReader
 from ob.planrunner.ern.errors import PlanBuildError
@@ -118,6 +120,9 @@ class Command(BaseCommand, CommandArgsReader, ABC):
         finally:
             self._unlock_next_command()  # unlock in the end
             self._set_self_finish()  # command finished
+            # cancel Moves
+            for s in self._submoves():
+                s.cancel()
 
     @abstractmethod
     async def _run_body(self):
@@ -135,3 +140,12 @@ class Command(BaseCommand, CommandArgsReader, ABC):
     async def reset(self):
         self._finish_locking = self._loop.create_future()
         self._finish = self._loop.create_future()
+
+    @abstractmethod
+    def _submoves(self):
+        """
+        Method return generator witch all `Move` objects.
+
+        :return:
+        """
+        return iter(())

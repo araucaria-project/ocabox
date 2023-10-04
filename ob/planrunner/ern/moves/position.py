@@ -85,10 +85,10 @@ class Position(PartMove):
         # wait for your turn
         for o in self._wait_for_others:
             try:
-                await o.get_finish_future()
+                await o.wait()
             except ResourceCommandError as e:
-                self._finish_fut.set_exception(ResourceCommandError(f"the higher-priority procedure "
-                                                                    f"({type(self).__name__}) failed"))
+                self.get_finish_future().set_exception(ResourceCommandError(f"the higher-priority procedure "
+                                                                            f"({type(self).__name__}) failed"))
                 self.finish_timestamp = time.time()
                 return
 
@@ -101,13 +101,13 @@ class Position(PartMove):
                 try:
                     result = await CQ.get_response()
                 except CommunicationRuntimeError as e:
-                    self._finish_fut.set_exception(ResourceCommandError(str(e)))
+                    self.get_finish_future().set_exception(ResourceCommandError(str(e)))
                     return
 
                 single_result = result[0]
                 if not single_result.status:
-                    self._finish_fut.set_exception(ResourceCommandError(f"Get error form server:"
-                                                                        f" {str(single_result.error)}"))
+                    self.get_finish_future().set_exception(ResourceCommandError(f"Get error form server:"
+                                                                                f" {str(single_result.error)}"))
                     return
                 if single_result.value:
                     if self.start is None:
@@ -115,25 +115,28 @@ class Position(PartMove):
                     self.current = single_result.value.v
                     try:
                         res = self._check_finish()
+                    except (asyncio.CancelledError, asyncio.TimeoutError):
+                        raise
                     except Exception as e:
-                        self._finish_fut.set_exception(ResourceCommandError(str(e)))
-
+                        self.get_finish_future().set_exception(ResourceCommandError(str(e)))
                         return
                     if res:
-                        self._finish_fut.set_result(True)
+                        self.get_finish_future().set_result(True)
                         return
                 else:
-                    self._finish_fut.set_exception(ResourceCommandError("Response from server have no errors but "
-                                                                        "value is empty"))
+                    self.get_finish_future().set_exception(
+                        ResourceCommandError("Response from server have no errors but "
+                                             "value is empty"))
                     return
         except (asyncio.CancelledError, asyncio.TimeoutError):
-            self._finish_fut.set_exception(ResourceCommandError("Waiting for the target to be reached has been "
-                                                                "interrupted"))
+            self.get_finish_future().set_exception(ResourceCommandError("Waiting for the target to be reached has been "
+                                                                        "interrupted"))
         finally:
             self.finish_timestamp = time.time()
-            if not self._finish_fut.done():
-                self._finish_fut.set_exception(ResourceCommandError(f"Main method in {type(self).__name__} finish but "
-                                                                    f"future not done"))
+            if not self.get_finish_future().done():
+                self.get_finish_future().set_exception(
+                    ResourceCommandError(f"Main method in {type(self).__name__} finish but "
+                                         f"future not done"))
             await CQ.stop_and_wait()
 
     async def run(self, api):
