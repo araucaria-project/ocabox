@@ -240,9 +240,14 @@ class CameraExposure(SubCommand):
             await asyncio.sleep(0.1)
 
     async def arun(self, step_id: str or None = None) -> int:
+
+        self.started = True
+        if 'seq_data' in self.kwargs.keys():
+            if self.kwargs['seq_data'].skip:
+                self.skipped = True
+                return 0
         logger.info(f'{self.id} started')
         self.target_folder = self._provide_target_folder()
-        self.started = True
         self.info_callback['exec_json'](self.exec_json())
         # sub = self.kwargs["sub_exp"]
 
@@ -302,13 +307,15 @@ class CameraExposure(SubCommand):
                         self.info_callback['stream_1'](f"{self.id} skipped - it's too dark")
                         self.skipped = True
                         self.info_callback['exec_json'](self.exec_json())
-                        return 1
+                        self.kwargs['seq_data'].skip = True
+                        return 0
                     elif mean_diff > 0 and mean_min_max[0] > test_min_max_adu[1]:
                         logger.info(f"{self.id} skipped - it's too bright")
                         self.info_callback['stream_1'](f"{self.id} skipped - it's too bright")
                         self.skipped = True
                         self.info_callback['exec_json'](self.exec_json())
-                        return 1
+                        self.kwargs['seq_data'].skip = True
+                        return 0
                 if datetime.utcnow().hour > 14:
                     ev_fact = evening_factor
                 else:

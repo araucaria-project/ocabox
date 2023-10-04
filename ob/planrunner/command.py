@@ -480,6 +480,7 @@ class Command(AbstractSequence):
                                                            dither_mode=seq_data.dither_mode,
                                                            tracking=self.tracking,
                                                            epoch=self.epoch,
+                                                           seq_data=seq_data,
                                                            uobi=self.uobi), id_next=id_next)
 
                     # Dome follow between exposures
@@ -487,6 +488,7 @@ class Command(AbstractSequence):
                         id_next = self._add_comp(DomeSlew(id=self._op_id(id_next=id_next),
                                                           parent=self,
                                                           follow_tol=3.0,
+                                                          seq_data=seq_data,
                                                           uobi=self.uobi), id_next=id_next)
 
                     # Camera exposure
@@ -505,6 +507,7 @@ class Command(AbstractSequence):
                                                             focus_id=seq_data.focus_id,
                                                             auto_exposure=seq_data.auto_exposure,
                                                             observer=self.observer,
+                                                            seq_data=seq_data,
                                                             uobi=self.uobi), id_next=id_next)
 
         # Mirror cover close
