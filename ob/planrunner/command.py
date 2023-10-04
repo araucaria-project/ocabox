@@ -604,6 +604,8 @@ class Command(AbstractSequence):
                                            awaitab=f.aget_position,
                                            expect_type=int)
         f_names = await f.aget_names()
+        logger.info(f'f_pos: {f_pos}')
+        logger.info(f'f_names: {f_names}')
         self._cycle_time_data_build.insert_data(name='dither', value=self.dither_on)
         self._cycle_time_data_build.insert_data(name='filter_pos', value=self.fw_named(f_pos=f_pos, f_names=f_names))
         d_az = await self.value_proof_get(name='command_dome_az',
