@@ -10,7 +10,7 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - skyflat dithering movement value to 8'
 - `CameraExposure` changed to header beta3, fixed autoexposure skyflat no oper. skipping
-- `cycle_time_calc` telescope find changed, filter manage changed, fixed first filter pos
+- `cycle_time_calc` telescope find changed, filter manage changed
 
 ### Fixed
 - `cycle_time_calc` fixed first filter pos
