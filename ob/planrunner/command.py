@@ -604,23 +604,23 @@ class Command(AbstractSequence):
                                            awaitab=f.aget_position,
                                            expect_type=int)
         f_names = await f.aget_names()
-        logger.info(f'f_pos: {f_pos}')
-        logger.info(f'f_names: {f_names}')
-        self._cycle_time_data_build.insert_data(name='dither', value=self.dither_on)
-        self._cycle_time_data_build.insert_data(name='filter_pos',
-                                                value=str(self.fw_named(f_pos=f_pos, f_names=f_names)))
-        logger.info(f'fw_named: {self.fw_named(f_pos=f_pos, f_names=f_names)}')
         d_az = await self.value_proof_get(name='command_dome_az',
                                           awaitab=d.aget_az,
                                           expect_type=float)
-        self._cycle_time_data_build.insert_data(name='dome_az_begin', value=d_az)
         m_az = await self.value_proof_get(name='command_mount_az',
                                           awaitab=m.aget_az,
                                           expect_type=float)
-        self._cycle_time_data_build.insert_data(name='mount_az_begin', value=m_az)
         m_alt = await self.value_proof_get(name='command_mount_alt',
                                            awaitab=m.aget_alt,
                                            expect_type=float)
+        logger.info(f'f_pos: {f_pos}')
+        logger.info(f'f_names: {f_names}')
+        f = str(self.fw_named(f_pos=f_pos, f_names=f_names))
+        logger.info(f'fw_named: {f}')
+        self._cycle_time_data_build.insert_data(name='dome_az_begin', value=d_az)
+        self._cycle_time_data_build.insert_data(name='mount_az_begin', value=m_az)
+        self._cycle_time_data_build.insert_data(name='dither', value=self.dither_on)
+        self._cycle_time_data_build.insert_data(name='filter_pos', value=f)
         self._cycle_time_data_build.insert_data(name='mount_alt_begin', value=m_alt)
         self._cycle_time_data_build.insert_data(name='telescope', value=self.telescope.id)
         self._cycle_time_data_build.insert_data(name='id', value=self.id)
