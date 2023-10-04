@@ -631,6 +631,7 @@ class Command(AbstractSequence):
         logger.info(f'self._cycle_time_data_build._data.data: {self._cycle_time_data_build._data.data}')
         self._cycle_time_data_build.insert_data(name='started', value=True)
         logger.info(f'self._cycle_time_data_build._data.data: {self._cycle_time_data_build._data.data}')
+        logger.info(f'self.sequence_dict: {self.sequence_dict}')
         self._cycle_time_data_build.insert_data_dict(self.sequence_dict)
         logger.info(f'self._cycle_time_data_build._data.data: {self._cycle_time_data_build._data.data}')
         self._cycle_time_data_build.save_to_log()
