@@ -608,6 +608,8 @@ class Command(AbstractSequence):
         logger.info(f'f_names: {f_names}')
         self._cycle_time_data_build.insert_data(name='dither', value=self.dither_on)
         self._cycle_time_data_build.insert_data(name='filter_pos', value=self.fw_named(f_pos=f_pos, f_names=f_names))
+        logger.info(f'self._cycle_time_data_build.insert_data: {self._cycle_time_data_build._data.data}')
+        logger.info(f'fw_named: {self.fw_named(f_pos=f_pos, f_names=f_names)}')
         d_az = await self.value_proof_get(name='command_dome_az',
                                           awaitab=d.aget_az,
                                           expect_type=float)
