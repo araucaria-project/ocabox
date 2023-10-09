@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from abc import ABC, abstractmethod
 from typing import List, Tuple
@@ -18,14 +17,18 @@ class TelescopeComponentManager(StandardTelescopeComponents, ABC):
     """
     RESOURCES_MAP = {}
 
-    def __init__(self, target, path):
+    def __init__(self, target, path, observatory_name):
         self._resources: List[Resource] = []
         self._target = target
         self._path = path
+        self._observatory_name = observatory_name
         # ----- api ------
         # self._obs_api = Observatory(client_name="resource_manager_init_client", software_id="")
         self._rare_api = InternalClientAPI(request_solver=self._target, user_name=f"resource_manager_init_client")
         # self._obs_api.connect(self._rare_api)
+
+    def get_observatory_name(self):
+        return self._observatory_name
 
     def get_resource(self, name, nr: int = 0):
         """

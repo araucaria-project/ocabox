@@ -168,5 +168,5 @@ class BaseRequestSolver(ABC):
                                 meta={
                                     "message_type": "config",  # IMPORTANT type message, one of pre declared types
                                     "tags": ["config_alpaca"],
-                                    'sender': 'Ocabox server }',
+                                    'sender': 'Ocabox server',
                                 })

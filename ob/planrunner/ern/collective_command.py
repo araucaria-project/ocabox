@@ -27,3 +27,11 @@ class CollectiveCommand(Command, ABC):
             if i.get_id() == id_:
                 return i
         return None
+
+    def get_status_dict(self):
+        dic = super().get_status_dict()
+        d = {}
+        for sub in self:
+            d[sub.get_id()] = sub.get_status_dict()
+        dic["subcommands"] = d
+        return dic

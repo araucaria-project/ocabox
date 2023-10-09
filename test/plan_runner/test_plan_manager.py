@@ -2,7 +2,11 @@ import asyncio
 import logging
 import unittest
 
+from serverish.base import StatusEnum
+from serverish.messenger import Messenger, get_reader
+
 from ob.comunication.internal_client_api import InternalClientAPI
+from ob.comunication.nats_streams import NatsStreams
 from ob.comunication.request_solver import RequestSolver
 from ob.data_colection.specialistic_components.tree_alpaca import TreeAlpacaObservatory
 from ob.data_colection.specialistic_components.tree_cache_observatory import TreeCache
@@ -16,24 +20,31 @@ from test.data_colection.base_async_test import BaseAsyncTest
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
-class TestPlanManager(unittest.TestCase, BaseAsyncTest):
+class TestPlanManager(unittest.IsolatedAsyncioTestCase, BaseAsyncTest):
     OBSERVATORY_NAME = 'test_observatory'
 
     def setUp(self):
         super().setUp()
-        self._setUpLoop()
         self.tao = TreeAlpacaObservatory(component_name='sample_component', observatory_name=self.OBSERVATORY_NAME)
         self.tree_cache = TreeCache('sample_name_cache', self.tao)
         self.tree_freezer = TreeConditionalFreezer('sample_freezer', self.tree_cache)
         self.rs = RequestSolver(self.tree_freezer)
         self.api_test = InternalClientAPI(request_solver=self.rs, user_name=f"DefaultTest")
 
-        self.rm = self.loop.run_until_complete(self.tao.get_res_manager())
-        self.pm = PlanManager(acs_res_mngr=self.rm, api=self.api_test, loop=self.loop)
+    async def asyncSetUp(self):
+        await super().asyncSetUp()
+        self.loop = asyncio.get_running_loop()
+        self.rm = await self.tao.get_res_manager()
+        self.messenger = Messenger()
+        self.pm = PlanManager(acs_res_mngr=self.rm, api=self.api_test, nats_messenger=self.messenger, loop=self.loop)
+        await self.messenger.open()
 
     def tearDown(self) -> None:
-        self._tearDownLoop()
         super().tearDown()
+
+    async def asyncTearDown(self):
+        await self.messenger.close()
+        await super().asyncTearDown()
 
     def test_from_dict(self):
         """Test method from_dict()"""
@@ -49,14 +60,11 @@ class TestPlanManager(unittest.TestCase, BaseAsyncTest):
         for s in plan.get_subcommands():
             self.assertIsInstance(s, CommandObject)
 
-    def test_upload_plan_empty_dict(self):
+    async def test_upload_plan_empty_dict(self):
         """Test situation when user try upload empty dct as plan"""
 
-        async def coro():
-            await self.pm.upload_plan(plan_id="some_id", raw_plan={"uop": {}})
-            self.assertEqual(0, len(self.pm._plans))
-
-        asyncio.run(coro())
+        await self.pm.upload_plan(plan_id="some_id", raw_plan={"uop": {}})
+        self.assertEqual(0, len(self.pm._plans))
 
     def test__turn_off_command_until_given(self):
         """Test method _turn_off_command_until_given()"""
@@ -118,6 +126,34 @@ class TestPlanManager(unittest.TestCase, BaseAsyncTest):
         self.assertFalse(plan[0]._finish.done())
         self.assertTrue(plan[1]._finish.done())
         self.assertFalse(plan[2]._finish.done())
+
+    async def test__send_plan_status(self):
+        """Thest method _send_plan_status()"""
+        var = {'command_name': 'SEQUENCE', 'subcommands': [
+            {'command_name': 'OBJECT', 'args': ['NGC6871', '18.157', '-29.351'], 'kwargs': {'clamp': '5'}},
+            {'command_name': 'SEQUENCE', 'subcommands': [
+                {'command_name': 'OBJECT', 'args': ['NGC6871', '18.157', '-29.351'], 'kwargs': {'clamp': '5'}}
+            ]
+             },
+        ]
+               }
+        self.assertEqual(self.pm._nats_messenger.conn.status.get("nats_server"), StatusEnum.ok)
+
+        await self.pm.upload_plan(plan_id="some_id", raw_plan=var)
+        self.assertEqual(1, len(self.pm._plans))
+        plan = self.pm.get_plan_structure("some_id")
+        await self.pm._send_plan_status(plan_id="some_id", plan=plan)
+
+        reader = get_reader(NatsStreams.PLAN_MANAGER_PLAN.format(self.pm._acs_res_mngr.get_observatory_name()),
+                            deliver_policy="last")
+
+        status = await reader.read_next()
+        self.assertEqual(status[0].get("id"), "some_id")
+        self.assertIsInstance(status[0].get("state"), dict)
+        self.assertEqual(len(status[0].get("state")), 1)
+        sequence_parmas = status[0].get("state").get(list(status[0].get("state").keys())[0])
+        self.assertEqual(sequence_parmas.get("command_name"), "SEQUENCE")
+        self.assertEqual(len(sequence_parmas.get("subcommands")), 2)
 
 
 if __name__ == '__main__':

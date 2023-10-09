@@ -149,3 +149,11 @@ class Command(BaseCommand, CommandArgsReader, ABC):
         :return:
         """
         return iter(())
+
+    def get_status_dict(self) -> dict:
+        """
+        Method collect and return command initial status data and return as dict
+
+        :return: dictionary witch command initial status data
+        """
+        return {self._NAME_KEY: self._NAME}

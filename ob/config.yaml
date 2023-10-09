@@ -5,6 +5,10 @@ OCABOX_BUILD_FILE_NAME: "tree_build_example.py"   # file name witch tree build p
 nats:
   host: "localhost"
   port: 4222
+  streams:
+    alpaca_config: "tic.config.observatory"
+    plan_stream: "tic.status.{}.program.current"  # current loaded program
+    status_stream: "tic.status.{}.program.state"  # actual state of current loaded stream
 
 router:
   DefaultRouter:

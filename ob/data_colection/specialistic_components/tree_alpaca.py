@@ -166,7 +166,8 @@ class TreeAlpacaObservatory(TreeBaseProvider):
 
     async def get_res_manager(self) -> TelescopeComponentManagerAlpaca:
         if self._resource_manager is None:
-            self._resource_manager = TelescopeComponentManagerAlpaca(target=self.target_requests, path=self.tree_path)
+            self._resource_manager = TelescopeComponentManagerAlpaca(target=self.target_requests, path=self.tree_path,
+                                                                     observatory_name=self.observatory_name)
             await self._resource_manager.initiate_resource_manager(self._get_resources_simple_map())
         return self._resource_manager
 

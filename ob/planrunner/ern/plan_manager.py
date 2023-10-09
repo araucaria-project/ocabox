@@ -2,6 +2,7 @@ import asyncio
 import logging
 from typing import Optional, Dict, Union
 from pyaraucaria.obs_plan.obs_plan_parser import ObsPlanParser
+from serverish.messenger import Messenger
 
 from ob.comunication.internal_client_api import InternalClientAPI
 from ob.data_colection.resource_manager.resource_manager import TelescopeComponentManager
@@ -9,17 +10,20 @@ from ob.planrunner.ern.collective_command import CollectiveCommand
 from ob.planrunner.ern.command import Command
 from ob.planrunner.ern.errors import PlanBuildError
 from ob.planrunner.ern.plan_data import PlanData
+from ob.planrunner.plan_status_publisher import PlanStatusPublisher
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class PlanManager:
-    def __init__(self, acs_res_mngr: TelescopeComponentManager, api: InternalClientAPI, loop: asyncio.AbstractEventLoop = None,
+    def __init__(self, acs_res_mngr: TelescopeComponentManager, api: InternalClientAPI, nats_messenger: Messenger,
+                 loop: asyncio.AbstractEventLoop = None,
                  **kwargs):
         super().__init__(**kwargs)
         self._loop = loop
         self._set_loop()
         self._acs_res_mngr: TelescopeComponentManager = acs_res_mngr
+        self._nats_messenger: Messenger = nats_messenger
         if not isinstance(self._acs_res_mngr, TelescopeComponentManager):
             raise RuntimeError
         self._plans: Dict[str, Command] = {}
@@ -110,7 +114,8 @@ class PlanManager:
             del self._plans[id_]
             logger.info(f"plan witch id: {id_} was successfully removed")
 
-    async def run_plan(self, plan_id: str, step_id: str = None) -> None:
+    async def run_plan(self, plan_id: str,
+                       step_id: str = None) -> None:  # todo step_id trzeba nazywać że jest 'skip to' - wszystko dział ok tylko zazewnictwo bo się myli
         if not self.is_stopped():
             logger.info(f"Can not run plan with id: {plan_id} because some plan is already running. "
                         f"It will have to be stopped first")
@@ -122,7 +127,7 @@ class PlanManager:
             return
 
         self._running_plan_id = plan_id
-        self._plan_runner_task = self._loop.create_task(self._main(plan=plan, step_id=step_id))
+        self._plan_runner_task = self._loop.create_task(self._main(plan=plan, step_id=step_id, plan_id=plan_id))
 
     def stop_plan(self) -> None:
         if not self.is_stopped() and not self._plan_runner_task.done():
@@ -147,11 +152,12 @@ class PlanManager:
                 logger.error(f"{self}: Can not get current async loop, something goes wrong")
                 raise
 
-    async def _main(self, plan: Command, step_id: str):
+    async def _main(self, plan: Command, step_id: str, plan_id: str):
         # if starting from specific command, turn off all previous
         if step_id:
             self._turn_off_command_until_given(plan=plan, step_id=step_id)
-        await self._reset_plan(plan=plan)
+        await self._reset_plan(plan=plan)  # reset commands that have already been executed
+        await self._send_plan_status(plan_id=plan_id, plan=plan)  # send to NATS plan initial state
         await plan.run()
 
     async def _a_init_plan(self, plan_id):
@@ -169,7 +175,7 @@ class PlanManager:
         except PlanBuildError:
             raise
 
-    def _turn_off_command_until_given(self, plan: Command, step_id: str, _done=False):
+    def _turn_off_command_until_given(self, plan: Command, step_id: str, _done=False) -> bool:
         """
         This method turn off all command from beginning to command witch given id. Method turning off sequence too, if
         all included command turned off
@@ -196,7 +202,7 @@ class PlanManager:
         Method resets commands if is not turned off
 
         :param plan: plan structure
-        :return: True if done or False if not
+        :return: None
         """
         if isinstance(plan, CollectiveCommand):
             for c in plan:
@@ -204,3 +210,16 @@ class PlanManager:
         if plan.is_on():  # reset only commands with is not turned off
             await plan.reset()
 
+    async def _send_plan_status(self, plan_id: str, plan: Command):
+        """
+        Method send dictionary representing plan status to nats server
+
+        :param plan_id: observation plan id
+        :param plan: plan structure
+        :return: None
+        """
+        # collect dictionary
+        dic = {plan.get_id(): plan.get_status_dict()}
+        # send
+        await PlanStatusPublisher.send_program_state(plan_id=plan_id, dic=dic,
+                                                     telescope_id=self._acs_res_mngr.get_observatory_name())
