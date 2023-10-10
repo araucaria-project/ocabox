@@ -39,43 +39,43 @@ class CommandObjectTest(unittest.TestCase, BaseAsyncTest):
         """Test build command Object witch validate arguments"""
         # ------------------------ positive ------------------------
         var = {'command_name': 'OBJECT', 'args': ['NGC6871', '18.157', '-29.351'], 'kwargs': {'clamp': '5'}}
-        plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test)
+        plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test, plan_id="some")
         self.assertIsInstance(plan, CommandObject)
 
         # -------------------- validate args --------------------
         var = {'command_name': 'OBJECT', 'args': ['NGC6871'], 'kwargs': {'clamp': '5'}}
-        plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test)
+        plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test, plan_id="some")
         self.assertIsInstance(plan, CommandObject)
         # ----------------------------------------
         var = {'command_name': 'OBJECT', 'args': ['18.157', '-29.351'], 'kwargs': {'clamp': '5'}}
         with self.assertRaises(PlanBuildError):
-            plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test)
+            plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test, plan_id="some")
         # ----------------------------------------
         var = {'command_name': 'OBJECT', 'args': ['NGC6871', '18.157'], 'kwargs': {'clamp': '5'}}
         with self.assertRaises(PlanBuildError):
-            plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test)
+            plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test, plan_id="some")
 
         # -------------------- dither param --------------------
         # wrong dither param
         var = {'command_name': 'OBJECT', 'args': ['NGC6871', '18.157', '-29.351'], 'kwargs': {'dither': '5'}}
         with self.assertRaises(PlanBuildError):
-            plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test)
+            plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test, plan_id="some")
         self.assertFalse(plan.dither_on)
         # good dither param
         var = {'command_name': 'OBJECT', 'args': ['NGC6871', '18.157', '-29.351'], 'kwargs': {"seq": "2/v/1",
                                                                                               'dither': 'base/2/3'}}
-        plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test)
+        plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test, plan_id="some")
         self.assertIsInstance(plan, CommandObject)
         self.assertTrue(plan.dither_on)
         # turn off dither
         var = {'command_name': 'OBJECT', 'args': ['NGC6871', '18.157', '-29.351'], 'kwargs': {'dither': 'none'}}
-        plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test)
+        plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test, plan_id="some")
         self.assertIsInstance(plan, CommandObject)
         self.assertFalse(plan.dither_on)
         # ----
         var = {'command_name': 'OBJECT', 'args': ['NGC6871', '18.157', '-29.351'], 'kwargs': {"seq": "4/v/1",
                                                                                               'dither': 'base/2/3'}}
-        plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test)
+        plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test, plan_id="some")
         self.assertIsInstance(plan, CommandObject)
         self.assertFalse(plan._execute_seq_subcomands[0].exp_list[0][3]._virtual_move)
         self.assertTrue(plan._execute_seq_subcomands[0].exp_list[0][3].dither_frequency_nr == 0)
@@ -107,7 +107,7 @@ class CommandObjectTest(unittest.TestCase, BaseAsyncTest):
             var = {'command_name': 'OBJECT', 'args': ['NGC6871', position_ra, position_dec],
                    'kwargs': {'clamp': '5', "seq": f"{number_of_photo}/{filter_}/1"}}
 
-            plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test)
+            plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test, plan_id="some")
             await plan.a_init()
 
             self.assertIsInstance(plan, CommandObject)
@@ -155,7 +155,7 @@ class CommandObjectTest(unittest.TestCase, BaseAsyncTest):
             var = {'command_name': 'OBJECT', 'args': ['NGC6871', position_ra, position_dec],
                    'kwargs': {'clamp': '5', "seq": f"{number_of_photo}/{filter_}/1"}}
 
-            plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test)
+            plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test, plan_id="some")
             await plan.a_init()
 
             # change mount and dome Move targets to impossible values

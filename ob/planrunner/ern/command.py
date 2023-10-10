@@ -156,4 +156,4 @@ class Command(BaseCommand, CommandArgsReader, ABC):
 
         :return: dictionary witch command initial status data
         """
-        return {self._NAME_KEY: self._NAME}
+        return {self._NAME_KEY: self._NAME, "is_on": self.is_on()}

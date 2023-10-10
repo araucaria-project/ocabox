@@ -10,7 +10,7 @@ from ob.planrunner.ern.collective_command import CollectiveCommand
 from ob.planrunner.ern.command import Command
 from ob.planrunner.ern.errors import PlanBuildError
 from ob.planrunner.ern.plan_data import PlanData
-from ob.planrunner.plan_status_publisher import PlanStatusPublisher
+from ob.planrunner.ern.plan_status_publisher import PlanStatusPublisher
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -56,7 +56,7 @@ class PlanManager:
             return False
         try:
             np = PlanManager.from_dict(parsed_plan, access_resource_manager=self._acs_res_mngr, api=self._clientAPI,
-                                       loop=self._loop)
+                                       plan_id=plan_id, loop=self._loop)
         except PlanBuildError as e:
             logger.warning(f"Can not create plan witch id: {plan_id} because plan data is corrupted. error "
                            f"message: {e.msg}")
@@ -75,7 +75,7 @@ class PlanManager:
         return True
 
     @classmethod
-    def from_dict(cls, dic: dict, access_resource_manager, api, loop=None) -> Command:
+    def from_dict(cls, dic: dict, access_resource_manager, api, plan_id=None, loop=None) -> Command:
         """
         Method create observation plan structure from given dictionary.
 
@@ -83,12 +83,13 @@ class PlanManager:
         :param access_resource_manager: resource manager
         :param loop: async loop
         :param api: requesting api
+        :param plan_id: plan id, if id None id will be generated
         :raise PlanBuildError: if dict data is corrupted or can not create plan for other reasons
         :return: plan structure
         """
         try:
             plans = Command.build_command(dic=dic, plan_data=PlanData(access_resource_manager=access_resource_manager,
-                                                                      client_api=api),
+                                                                      client_api=api, plan_id=plan_id),
                                           id_=None, previous_command=None, loop=loop)
         except PlanBuildError:
             raise

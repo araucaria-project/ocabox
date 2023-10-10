@@ -54,7 +54,7 @@ class TestPlanManager(unittest.IsolatedAsyncioTestCase, BaseAsyncTest):
         ]
                }
 
-        plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test)
+        plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test, plan_id="some")
         self.assertIsInstance(plan, CommandSequence)
         self.assertEqual(len(plan.get_subcommands()), 2)
         for s in plan.get_subcommands():
@@ -84,7 +84,7 @@ class TestPlanManager(unittest.IsolatedAsyncioTestCase, BaseAsyncTest):
             {'command_name': 'OBJECT', 'args': ['NGC6871', '18.157', '-29.351'], 'kwargs': {'clamp': '5'}}
         ]
                }
-        plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test)
+        plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test, plan_id="some")
         self.assertIsInstance(plan, CollectiveCommand)
         id_ = plan[3][1].get_id()
         self.pm._turn_off_command_until_given(plan=plan, step_id=id_)
@@ -111,7 +111,7 @@ class TestPlanManager(unittest.IsolatedAsyncioTestCase, BaseAsyncTest):
              },
         ]
                }
-        plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test)
+        plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test, plan_id="some")
         self.assertIsInstance(plan, CollectiveCommand)
         asyncio.run(plan.a_init())
         plan[0]._unlock_next_command()
