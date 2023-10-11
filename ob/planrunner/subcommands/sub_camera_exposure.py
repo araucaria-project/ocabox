@@ -7,10 +7,11 @@ from ocaboxapi.formatter import parse_deg_or_dms
 from datetime import datetime
 import time
 import os
-import pwd
+import numpy as np
 from typing import Dict, Any, List
 import math
 import re
+import json
 
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -18,7 +19,7 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class CameraExposure(SubCommand):
 
-    def __init__(self, id: str, parent: 'Command', subcommand_name: str = 'camera-exposure', **kwargs) -> None:
+    def __init__(self, id: str, parent: 'Command', seq_data: 'Seq', subcommand_name: str = 'camera-exposure', **kwargs) -> None:
         self.subcommand_name = subcommand_name
         self.telescope = parent.telescope
         self.mount = self.telescope.get_mount()
@@ -28,6 +29,7 @@ class CameraExposure(SubCommand):
         self.focuser = self.telescope.get_focuser()
         self.rotator = self.telescope.get_rotator()
         self.kwargs = kwargs
+        self.seq_data = seq_data
         self.id = id
         self.base_fits_folder = os.path.expanduser(self.telescope.observatory.get_app_cfg('base_fits_dir', f'~/Desktop'))
         self.folder = os.path.join(self.base_fits_folder, f'fits_{self.telescope.id}')
@@ -239,19 +241,32 @@ class CameraExposure(SubCommand):
                 break
             await asyncio.sleep(0.1)
 
+    async def get_array_autoexp(self, test_exp_time: float,  test_mode: bool = False) -> List:
+        if not test_mode:
+            await self.camera.aput_startexposure(test_exp_time, self.kwargs["light"])
+            await self._wait_for_subexposure(test_exp_time)
+            return await self.value_proof_get(name='autoexp_get_array',
+                                             awaitab=self.camera.aget_imagearray,
+                                             expect_type=list)
+        else:
+            with open(os.path.expanduser('~/.oca/camera_sim.txt'), 'r') as f:
+                arr = json.load(f)
+                f.close()
+                return arr
+
     async def arun(self, step_id: str or None = None) -> int:
 
         self.started = True
-        if 'seq_data' in self.kwargs.keys():
-            if self.kwargs['seq_data'].skip:
-                self.skipped = True
-                return 0
+        if self.seq_data.skip:
+            self.skipped = True
+            if 'sub_exp' in self.kwargs.keys() and 'exp_no' in self.kwargs.keys():
+                if self.kwargs['sub_exp'] == self.kwargs['exp_no']:
+                    self.seq_data.skip = False
+            return 0
         logger.info(f'{self.id} started')
         self.target_folder = self._provide_target_folder()
-        self.info_callback['exec_json'](self.exec_json())
-        # sub = self.kwargs["sub_exp"]
 
-        exposure_time = self.kwargs["exp_time"]
+        exposure_time = self.seq_data.exp_time
 
         if self.if_autoexposure:
             """
@@ -265,7 +280,7 @@ class CameraExposure(SubCommand):
             self.info_callback['stream_1'](f'{self.id} auto skyflat procedure started')
             mean_list = []
             test_exposure_time = 1.0
-            test_time_interval = 0.5
+            test_time_interval = 1
             test_min_max_adu = (20000, 25000)
             test_min_max_time_exp = (2, 30)
             # TODO take zero_level from settings or make some zero
@@ -280,10 +295,9 @@ class CameraExposure(SubCommand):
                                                                auto_exp_finnished=False,
                                                                auto_exp_sub_no = auto_exp_sub_no,
                                                                auto_exp_time=test_exposure_time))
-                await self.camera.aput_startexposure(test_exposure_time, self.kwargs["light"])
-                await self._wait_for_subexposure(test_exposure_time)
-                arr = await self.value_proof_get(name='autoexp_get_array', awaitab=self.camera.aget_imagearray,
-                                             expect_type=list)
+
+                arr = await self.get_array_autoexp(test_exp_time=test_exposure_time, test_mode=False)
+
                 mean = fits_stat(arr, size=100, median=False, std=False, min=False, max=False)['mean']
 
                 self.info_callback['exec_json'](self.exec_json(auto_exp_start=True,
@@ -292,8 +306,9 @@ class CameraExposure(SubCommand):
                                                                auto_exp_time=test_exposure_time))
                 if mean > zero_level:
                     mean = mean - zero_level
-                logger.info(f'{self.id} test_frame time:{test_exposure_time}s mean-zero:{mean}')
-                self.info_callback['stream_1'](f'{self.id} test_frame time:{test_exposure_time}s mean-zero:{mean}')
+                logger.info(f'{self.id} test_frame time:{test_exposure_time}s mean-zero:{round(mean)}')
+                self.info_callback['stream_1'](f'{self.id} test_frame time:{test_exposure_time}s'
+                                               f' mean-zero:{round(mean)}')
                 self.info_callback['exec_json'](self.exec_json(test_exp_mean=mean))
                 mean_list.append(mean)
                 if len(mean_list) > 1:
@@ -307,14 +322,14 @@ class CameraExposure(SubCommand):
                         self.info_callback['stream_1'](f"{self.id} skipped - it's too dark")
                         self.skipped = True
                         self.info_callback['exec_json'](self.exec_json())
-                        self.kwargs['seq_data'].skip = True
+                        self.seq_data.skip = True
                         return 0
                     elif mean_diff > 0 and mean_min_max[0] > test_min_max_adu[1]:
                         logger.info(f"{self.id} skipped - it's too bright")
                         self.info_callback['stream_1'](f"{self.id} skipped - it's too bright")
                         self.skipped = True
                         self.info_callback['exec_json'](self.exec_json())
-                        self.kwargs['seq_data'].skip = True
+                        self.seq_data.skip = True
                         return 0
                 if datetime.utcnow().hour > 14:
                     ev_fact = evening_factor
@@ -324,15 +339,17 @@ class CameraExposure(SubCommand):
                 if test_min_max_adu[0] - mean_min_max[1] < 0 < test_min_max_adu[1] - mean_min_max[0]:
                     if mean_min_max[0] < test_min_max_adu[0]:
                         exposure_time = (test_min_max_adu[0] / mean) * ev_fact
-                        self.info_callback['stream_1'](f"{self.id} calc_exp_time:{exposure_time},"
-                                                       f" expect_adu:{exposure_time * mean}")
-                        logger.info(f"{self.id} calc_exp_time:{exposure_time}, expect_adu:{exposure_time * mean}")
+                        self.info_callback['stream_1'](f"{self.id} calc_exp_time:{round(exposure_time, 1)},"
+                                                       f" expect_adu:{round(exposure_time * mean, 1)}")
+                        logger.info(f"{self.id} calc_exp_time:{round(exposure_time, 1)},"
+                                    f" expect_adu:{round(exposure_time * mean, 1)}")
                         break
                     else:
                         exposure_time = (mean_min_max[0] / mean) * ev_fact
-                        self.info_callback['stream_1'](f"{self.id} calc_exp_time:{exposure_time},"
-                                                       f" expect_adu:{exposure_time * mean}")
-                        logger.info(f"{self.id} calc_exp_time:{exposure_time}, expect_adu:{exposure_time * mean}")
+                        self.info_callback['stream_1'](f"{self.id} calc_exp_time:{round(exposure_time, 1)},"
+                                                       f" expect_adu:{round(exposure_time * mean, 1)}")
+                        logger.info(f"{self.id} calc_exp_time:{round(exposure_time, 1)},"
+                                    f" expect_adu:{round(exposure_time * mean, 1)}")
                         break
                 await asyncio.sleep(test_time_interval)
 
@@ -342,7 +359,7 @@ class CameraExposure(SubCommand):
                                                        exp_done=False,
                                                        exp_saved=False,
                                                        n_exp=self.subexp_no,
-                                                       exp_time=exposure_time))
+                                                       exp_time=float(exposure_time)))
         self.exp_time_start = datetime.utcnow()
         self.readout_time_start = time.time()
         await self.camera.aput_startexposure(float(exposure_time), self.kwargs["light"])
@@ -355,12 +372,12 @@ class CameraExposure(SubCommand):
                                                        exp_saved=False,
                                                        readout_time=self.readout_time,
                                                        n_exp=self.subexp_no,
-                                                       exp_time=exposure_time))
+                                                       exp_time=float(exposure_time)))
         await self._wait_for_save_fits(sub=self.subexp_no, sub_time=float(exposure_time))
         self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
         self.info_callback['stream_5'](f'{self.id}')
         logger.info(f'{self.id} done')
         self.done = True
-        self.info_callback['exec_json'](self.exec_json(exp_time=exposure_time))
+        self.info_callback['exec_json'](self.exec_json(exp_time=float(exposure_time)))
         await asyncio.sleep(0.2)
         return 0

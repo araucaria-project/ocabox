@@ -112,11 +112,13 @@ class BaseCommand(ABC):
         if kw:
             if len(kw)>0:
                 for n in kw.keys():
-                    ex_js[n] = kw[n]
+                    if n != 'seq_data':
+                        ex_js[n] = kw[n]
         if self.kwargs:
             if len(self.kwargs) > 0:
                 for n in self.kwargs.keys():
-                    ex_js[n] = self.kwargs[n]
+                    if n != 'seq_data':
+                        ex_js[n] = self.kwargs[n]
         ex_js['id'] = self.id
         ex_js['name'] = self.name
         ex_js['started'] = self.started
