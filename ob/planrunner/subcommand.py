@@ -31,8 +31,9 @@ class SubCommand(BaseCommand):
         w=0
         if len(self.kwargs) > 0:
             for n in self.kwargs.keys():
-                kw = f'{kw} {n}={self.kwargs[n]}'
-                w+=1
+                if n != 'seq_data':
+                    kw = f'{kw} {n}={self.kwargs[n]}'
+                    w+=1
                 #if w > 3: break
         self.info_callback['c_subcommands'](f'{self.id};{self.subcommand_name};;{kw}')
         logger.debug(f'{self.id} is written')

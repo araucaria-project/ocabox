@@ -49,9 +49,11 @@ class Command(AbstractSequence):
         for n in self.args:
             kw = f'{kw} {n}'
         for n in self.kwargs.keys():
-            kw = f'{kw} {n}={self.kwargs[n]}'
+            if n != 'seq_data':
+                kw = f'{kw} {n}={self.kwargs[n]}'
         for n in self.parent_kwargs.keys():
-            kw = f'{kw} {n}={self.parent_kwargs[n]}'
+            if n != 'seq_data':
+                kw = f'{kw} {n}={self.parent_kwargs[n]}'
         self.info_callback['c_commands'](
             f'{self.id};'f'{self.command_name};'
             f' {round(self.param["cycle_time"].calc_time(command_dict=self.sequence_dict))}s;{kw}')
@@ -377,7 +379,6 @@ class Command(AbstractSequence):
                     id_next = self._add_comp(CameraExposure(id=self._op_id(id_next=id_next),
                                                             parent=self,
                                                             sub_exp=ex,
-                                                            exp_time=seq_data.exp_time,
                                                             exp_no=seq_data.exp_no,
                                                             type=self.exp_type,
                                                             light=True,
@@ -388,6 +389,7 @@ class Command(AbstractSequence):
                                                             filter=seq_data.filter,
                                                             auto_exposure=False,
                                                             observer=self.observer,
+                                                            seq_data=seq_data,
                                                             uobi=self.uobi), id_next=id_next)
 
         # Turning off light
@@ -495,7 +497,6 @@ class Command(AbstractSequence):
                     id_next = self._add_comp(CameraExposure(id=self._op_id(id_next=id_next),
                                                             parent=self,
                                                             sub_exp=ex,
-                                                            exp_time=seq_data.exp_time,
                                                             exp_no=seq_data.exp_no,
                                                             type=self.exp_type,
                                                             light=True,
@@ -546,7 +547,6 @@ class Command(AbstractSequence):
                     id_next = self._add_comp(CameraExposure(id=self._op_id(id_next=id_next),
                                                             parent=self,
                                                             sub_exp=ex,
-                                                            exp_time=seq_data.exp_time,
                                                             exp_no=seq_data.exp_no,
                                                             type=self.exp_type,
                                                             light=False,
@@ -557,6 +557,7 @@ class Command(AbstractSequence):
                                                             filter=seq_data.filter,
                                                             auto_exposure=False,
                                                             observer=self.observer,
+                                                            seq_data=seq_data,
                                                             uobi=self.uobi), id_next=id_next)
 
     def _write_wait(self):
