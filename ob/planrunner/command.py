@@ -49,9 +49,11 @@ class Command(AbstractSequence):
         for n in self.args:
             kw = f'{kw} {n}'
         for n in self.kwargs.keys():
-            kw = f'{kw} {n}={self.kwargs[n]}'
+            if n != 'seq_data':
+                kw = f'{kw} {n}={self.kwargs[n]}'
         for n in self.parent_kwargs.keys():
-            kw = f'{kw} {n}={self.parent_kwargs[n]}'
+            if n != 'seq_data':
+                kw = f'{kw} {n}={self.parent_kwargs[n]}'
         self.info_callback['c_commands'](
             f'{self.id};'f'{self.command_name};'
             f' {round(self.param["cycle_time"].calc_time(command_dict=self.sequence_dict))}s;{kw}')
@@ -377,7 +379,6 @@ class Command(AbstractSequence):
                     id_next = self._add_comp(CameraExposure(id=self._op_id(id_next=id_next),
                                                             parent=self,
                                                             sub_exp=ex,
-                                                            exp_time=seq_data.exp_time,
                                                             exp_no=seq_data.exp_no,
                                                             type=self.exp_type,
                                                             light=True,
@@ -388,6 +389,7 @@ class Command(AbstractSequence):
                                                             filter=seq_data.filter,
                                                             auto_exposure=False,
                                                             observer=self.observer,
+                                                            seq_data=seq_data,
                                                             uobi=self.uobi), id_next=id_next)
 
         # Turning off light
@@ -480,6 +482,7 @@ class Command(AbstractSequence):
                                                            dither_mode=seq_data.dither_mode,
                                                            tracking=self.tracking,
                                                            epoch=self.epoch,
+                                                           seq_data=seq_data,
                                                            uobi=self.uobi), id_next=id_next)
 
                     # Dome follow between exposures
@@ -487,13 +490,13 @@ class Command(AbstractSequence):
                         id_next = self._add_comp(DomeSlew(id=self._op_id(id_next=id_next),
                                                           parent=self,
                                                           follow_tol=3.0,
+                                                          seq_data=seq_data,
                                                           uobi=self.uobi), id_next=id_next)
 
                     # Camera exposure
                     id_next = self._add_comp(CameraExposure(id=self._op_id(id_next=id_next),
                                                             parent=self,
                                                             sub_exp=ex,
-                                                            exp_time=seq_data.exp_time,
                                                             exp_no=seq_data.exp_no,
                                                             type=self.exp_type,
                                                             light=True,
@@ -505,6 +508,7 @@ class Command(AbstractSequence):
                                                             focus_id=seq_data.focus_id,
                                                             auto_exposure=seq_data.auto_exposure,
                                                             observer=self.observer,
+                                                            seq_data=seq_data,
                                                             uobi=self.uobi), id_next=id_next)
 
         # Mirror cover close
@@ -543,7 +547,6 @@ class Command(AbstractSequence):
                     id_next = self._add_comp(CameraExposure(id=self._op_id(id_next=id_next),
                                                             parent=self,
                                                             sub_exp=ex,
-                                                            exp_time=seq_data.exp_time,
                                                             exp_no=seq_data.exp_no,
                                                             type=self.exp_type,
                                                             light=False,
@@ -554,6 +557,7 @@ class Command(AbstractSequence):
                                                             filter=seq_data.filter,
                                                             auto_exposure=False,
                                                             observer=self.observer,
+                                                            seq_data=seq_data,
                                                             uobi=self.uobi), id_next=id_next)
 
     def _write_wait(self):
@@ -601,24 +605,25 @@ class Command(AbstractSequence):
                                            awaitab=f.aget_position,
                                            expect_type=int)
         f_names = await f.aget_names()
-        self._cycle_time_data_build.insert_data(name='dither', value=self.dither_on)
-        self._cycle_time_data_build.insert_data(name='filter_pos', value=self.fw_named(f_pos=f_pos, f_names=f_names))
         d_az = await self.value_proof_get(name='command_dome_az',
                                           awaitab=d.aget_az,
                                           expect_type=float)
-        self._cycle_time_data_build.insert_data(name='dome_az_begin', value=d_az)
         m_az = await self.value_proof_get(name='command_mount_az',
                                           awaitab=m.aget_az,
                                           expect_type=float)
-        self._cycle_time_data_build.insert_data(name='mount_az_begin', value=m_az)
         m_alt = await self.value_proof_get(name='command_mount_alt',
                                            awaitab=m.aget_alt,
                                            expect_type=float)
+        f = str(self.fw_named(f_pos=f_pos, f_names=f_names))
+        self._cycle_time_data_build.insert_data(name='dome_az_begin', value=d_az)
+        self._cycle_time_data_build.insert_data(name='mount_az_begin', value=m_az)
+        self._cycle_time_data_build.insert_data(name='dither', value=self.dither_on)
         self._cycle_time_data_build.insert_data(name='mount_alt_begin', value=m_alt)
         self._cycle_time_data_build.insert_data(name='telescope', value=self.telescope.id)
         self._cycle_time_data_build.insert_data(name='id', value=self.id)
         self._cycle_time_data_build.insert_data(name='started', value=True)
         self._cycle_time_data_build.insert_data_dict(self.sequence_dict)
+        self._cycle_time_data_build.insert_data(name='filter_pos', value=f)
         self._cycle_time_data_build.save_to_log()
         skip = await self._arun(self.subcomponents, step_id=step_id)
         self._cycle_time_data_build.insert_data(name='done', value=self.done)

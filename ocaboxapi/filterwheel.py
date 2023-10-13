@@ -61,7 +61,7 @@ class FilterWheel(TelescopeComponent):
         else:
             dev_dict = {}
 
-        filters_temp = {'zb08': {'u': 1, 'g': 2, 'r': 3, 'i': 4, 'z': 5, 'B': 6, 'V': 7, 'Ic': 8},
+        filters_temp = {'zb08': {'u': 0, 'g': 1, 'r': 2, 'i': 3, 'z': 4, 'B': 5, 'V': 6, 'Ic': 7},
                         'jk15': {'Empty': 0, 'u SG': 1, 'b SG': 2, 'v SG': 3, 'y SG': 4,
                                  'Hb_w': 5, 'Hb_n': 6, 'Ha_w': 7, 'Ha_n': 8,
                                  'u': 9, 'g': 10, 'r': 11, 'i': 12, 'z': 13, 'B': 14, 'V': 15, 'iC': 16},

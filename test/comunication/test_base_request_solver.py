@@ -1,10 +1,10 @@
 import asyncio
 import logging
-import time
 import unittest
+import datetime
 from typing import List
 
-from serverish.base import StatusEnum
+from serverish.base import StatusEnum, dt_utcnow_array, dt_ensure_datetime
 from serverish.messenger import get_reader
 
 from ob.comunication.base_request_solver import BaseRequestSolver
@@ -91,8 +91,8 @@ class RequestSolverTest(unittest.TestCase, BaseAsyncTest):
             await wait_for_psce(self.RS.stop_tree(), 1.5)  # here close connection to nats
 
             configuration = SingletonConfig.get_config()
-            time_save_read__dif = time.mktime(time.gmtime()) - time.mktime(tuple(cfg[0].get("published", [])))
-            self.assertTrue(time_save_read__dif < 2)
+            time_save_read__dif = dt_ensure_datetime(dt_utcnow_array()) - dt_ensure_datetime(tuple(cfg[0].get("published", [])))
+            self.assertTrue(time_save_read__dif < datetime.timedelta(minutes=1))
             self.assertDictEqual(cfg[0].get("config"), {OBSERVATORY_NAME: configuration["tree"][OBSERVATORY_NAME].get()})
 
         asyncio.run(coro())

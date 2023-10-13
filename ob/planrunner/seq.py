@@ -15,6 +15,7 @@ class Seq:
         self._focus_id: int or None = None
         self.parent_kwargs: Dict = parent.kwargs
         self.parent: 'Command' = parent
+        self.skip = False
         self.set_focus_id()
 
     @property

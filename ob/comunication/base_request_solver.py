@@ -1,8 +1,8 @@
 import asyncio
 import logging
-import time
 from typing import List
 from abc import ABC, abstractmethod
+from serverish.base import dt_utcnow_array
 from serverish.messenger import get_publisher
 from ob.comunication.nats_streams import NatsStreams
 from ob.data_colection.response_error import ResponseError
@@ -163,7 +163,7 @@ class BaseRequestSolver(ABC):
         publisher = get_publisher(NatsStreams.ALPACA_CONFIG)
         cfg = self._get_alpaca_modules_configuration()
         await publisher.publish(data={'version': "",  # todo uzupełnić
-                                      'published': [*time.gmtime()],
+                                      'published': dt_utcnow_array(),
                                       'config': cfg},
                                 meta={
                                     "message_type": "config",  # IMPORTANT type message, one of pre declared types
