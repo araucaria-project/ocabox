@@ -35,7 +35,7 @@ class PlanTaskManager:
     def _has_space(self):
         return len(self.tasks) < self.max_tasks
 
-    async def run_task_when_can(self, coro, is_independent: bool):
+    async def run_task_when_can(self, coro, is_independent: bool) -> asyncio.Task:
         """
 
 

@@ -13,27 +13,33 @@ from ob.data_colection.specialistic_components.tree_conditional_freezer import T
 from ob.planrunner.ern.commands.command_Object import CommandObject
 from ob.planrunner.ern.errors import PlanBuildError
 from ob.planrunner.ern.plan_manager import PlanManager
-from test.data_colection.base_async_test import BaseAsyncTest
 
 
-class CommandObjectTest(unittest.TestCase, BaseAsyncTest):
+class CommandObjectTest(unittest.IsolatedAsyncioTestCase):
     OBSERVATORY_NAME = 'test_observatory'
 
     def setUp(self):
         super().setUp()
-        self._setUpLoop()
         self.tao = TreeAlpacaObservatory(component_name='sample_component', observatory_name=self.OBSERVATORY_NAME)
         self.tree_cache = TreeCache('sample_name_cache', self.tao)
         self.tree_freezer = TreeConditionalFreezer('sample_freezer', self.tree_cache)
         self.rs = RequestSolver(self.tree_freezer)
         self.api_test = InternalClientAPI(request_solver=self.rs, user_name=f"DefaultTest")
 
-        self.rm = self.loop.run_until_complete(self.tao.get_res_manager())
-        self.pm = PlanManager(acs_res_mngr=self.rm, api=self.api_test, nats_messenger=Messenger(), loop=self.loop)
+    async def asyncSetUp(self):
+        await super().asyncSetUp()
+        self.loop = asyncio.get_running_loop()
+        self.rm = await self.tao.get_res_manager()
+        self.messenger = Messenger()
+        self.pm = PlanManager(acs_res_mngr=self.rm, api=self.api_test, nats_messenger=self.messenger, loop=self.loop)
+        await self.messenger.open()
 
     def tearDown(self) -> None:
-        self._tearDownLoop()
         super().tearDown()
+
+    async def asyncTearDown(self):
+        await self.messenger.close()
+        await super().asyncTearDown()
 
     def test_build_command_object(self):
         """Test build command Object witch validate arguments"""
@@ -133,7 +139,7 @@ class CommandObjectTest(unittest.TestCase, BaseAsyncTest):
 
         asyncio.run(coro())
 
-    def test_cancel_positions_when_error(self):
+    async def test_cancel_positions_when_error(self):
         """the test checks whether all 'positions' are canceled when the command got error."""
         mount = self.rm.get_resource(name=self.rm.MOUNT, nr=0)
         dome = self.rm.get_resource(name=self.rm.DOME, nr=0)
@@ -145,41 +151,38 @@ class CommandObjectTest(unittest.TestCase, BaseAsyncTest):
                                                              dec=position_dec,
                                                              epoch=str("2000"))
 
-        async def coro():
-            await self.rs.run_tree()
-            names = (await self.api_test.get_async(f"{self.rm.get_resource(self.rm.FILTERWHEEL).adr}.names")).value.v
-            targ_filter = names[random.randint(0, len(names) - 1)]
+        await self.rs.run_tree()
+        names = (await self.api_test.get_async(f"{self.rm.get_resource(self.rm.FILTERWHEEL).adr}.names")).value.v
+        targ_filter = names[random.randint(0, len(names) - 1)]
 
-            filter_ = targ_filter
-            number_of_photo = 1
-            var = {'command_name': 'OBJECT', 'args': ['NGC6871', position_ra, position_dec],
-                   'kwargs': {'clamp': '5', "seq": f"{number_of_photo}/{filter_}/1"}}
+        filter_ = targ_filter
+        number_of_photo = 1
+        var = {'command_name': 'OBJECT', 'args': ['NGC6871', position_ra, position_dec],
+               'kwargs': {'clamp': '5', "seq": f"{number_of_photo}/{filter_}/1"}}
 
-            plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test, plan_id="some")
-            await plan.a_init()
+        plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test, plan_id="some")
+        await plan.a_init()
 
-            # change mount and dome Move targets to impossible values
-            self.assertIsInstance(plan, CommandObject)
-            plan._move_dome.positions[0].target = 1000  # set target impossible to get
-            plan._move_dome._position_az_name = "notexsistingname"  # change the name because target
-            # position is updating after start and is getting by name. We not want to change
-            plan._move_mount.positions[0].target = 1000  # set target impossible to get
+        # change mount and dome Move targets to impossible values
+        self.assertIsInstance(plan, CommandObject)
+        plan._move_dome.positions[0].target = 1000  # set target impossible to get
+        plan._move_dome._position_az_name = "notexsistingname"  # change the name because target
+        # position is updating after start and is getting by name. We not want to change
+        plan._move_mount.positions[0].target = 1000  # set target impossible to get
 
-            self.assertIsInstance(plan, CommandObject)
+        self.assertIsInstance(plan, CommandObject)
 
-            task_run = asyncio.create_task(plan.run())  # run command
-            await asyncio.sleep(0.5)  # wait to start
-            task_run.cancel()  # cancel task
-            await asyncio.sleep(0.5)
-            # -------- check positions is canceled too --------
-            self.assertTrue(plan._move_mount.positions[0].done())
-            self.assertTrue(plan._move_mount.positions[0].task.cancelled())
-            self.assertTrue(plan._move_dome.positions[0].done())
-            self.assertTrue(plan._move_dome.positions[0].task.cancelled())
-            await self.rs.stop_tree()
-            await asyncio.sleep(1)
-
-        asyncio.run(coro())
+        task_run = asyncio.create_task(plan.run())  # run command
+        await asyncio.sleep(0.5)  # wait to start
+        task_run.cancel()  # cancel task
+        await asyncio.sleep(0.5)
+        # -------- check positions is canceled too --------
+        self.assertTrue(plan._move_mount.positions[0].done())
+        self.assertTrue(plan._move_mount.positions[0].task.cancelled())
+        self.assertTrue(plan._move_dome.positions[0].done())
+        self.assertTrue(plan._move_dome.positions[0].task.cancelled())
+        await self.rs.stop_tree()
+        await asyncio.sleep(1)
 
 
 if __name__ == '__main__':

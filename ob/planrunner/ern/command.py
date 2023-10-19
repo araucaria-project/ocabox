@@ -6,6 +6,7 @@ from typing import Optional
 from ob.data_colection.resource_manager.errors import ResourceCommandError
 from ob.planrunner.ern.base_command import BaseCommand
 from ob.planrunner.ern.command_args_reader import CommandArgsReader
+from ob.planrunner.ern.command_error import CriticalCommandError
 from ob.planrunner.ern.errors import PlanBuildError
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -68,13 +69,15 @@ class Command(BaseCommand, CommandArgsReader, ABC):
         fut = self._finish_locking
         if fut is not None:
             await fut
-        raise RuntimeError  # todo zrobić potem jakiś lokalny błąd
+            return
+        raise CriticalCommandError
 
     async def wait_to_finish(self):
         fut = self._finish
         if fut is not None:
             await fut
-        raise RuntimeError  # todo zrobić potem jakiś lokalny błąd
+            return
+        raise CriticalCommandError
 
     async def _wait_for_permission_to_locking(self):
         # No pre-command has been wired, so you can start right now

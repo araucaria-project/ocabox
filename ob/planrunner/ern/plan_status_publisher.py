@@ -1,5 +1,6 @@
 import time
 
+from serverish.base import dt_utcnow_array
 from serverish.messenger import get_publisher
 
 from ob.comunication.nats_streams import NatsStreams
@@ -31,7 +32,7 @@ class PlanStatusPublisher:
         """
         publisher = get_publisher(NatsStreams.PLAN_MANAGER_PLAN.format(telescope_id))
         await publisher.publish(data={'id': plan_id,
-                                      'published': [*time.gmtime()],
+                                      'published': dt_utcnow_array(),
                                       'state': dic},
                                 meta={
                                     "message_type": "program_state",  # IMPORTANT one of pre declared types
@@ -45,13 +46,12 @@ class PlanStatusPublisher:
 
         :return: None
         """
-        # todo może warto zrobić task w tle który będzie to wysyłał nie blokując głównego wątku ( może ten task ma wystłaś z jakąś częstotliwością dane, żeby nie zarżnąć programu?)
         publisher = get_publisher(NatsStreams.PLAN_MANAGER_STATUS.format(self._telescope_id))
         await publisher.publish(data={'id': self._plan_id,
-                                      'published': [*time.gmtime()],
+                                      'published': dt_utcnow_array(),
                                       'state': self._plan_current_state},
                                 meta={
-                                    "message_type": "plan_current_state",  # IMPORTANT one of pre declared types
+                                    "message_type": "program_current_state",  # IMPORTANT one of pre declared types
                                     "tags": ["plan_current_state"],
                                     'sender': 'Ocabox server',
                                 })

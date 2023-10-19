@@ -75,7 +75,7 @@ class PlanManager:
         return True
 
     @classmethod
-    def from_dict(cls, dic: dict, access_resource_manager, api, plan_id=None, loop=None) -> Command:
+    def from_dict(cls, dic: dict, access_resource_manager, api, plan_id=None, loop=None, plan_data=None) -> Command:
         """
         Method create observation plan structure from given dictionary.
 
@@ -84,13 +84,14 @@ class PlanManager:
         :param loop: async loop
         :param api: requesting api
         :param plan_id: plan id, if id None id will be generated
+        :param plan_data: custom PlanData object
         :raise PlanBuildError: if dict data is corrupted or can not create plan for other reasons
         :return: plan structure
         """
+        plan_data = plan_data if plan_data is not None else PlanData(access_resource_manager=access_resource_manager,
+                                                                     client_api=api, plan_id=plan_id)
         try:
-            plans = Command.build_command(dic=dic, plan_data=PlanData(access_resource_manager=access_resource_manager,
-                                                                      client_api=api, plan_id=plan_id),
-                                          id_=None, previous_command=None, loop=loop)
+            plans = Command.build_command(dic=dic, plan_data=plan_data, id_=None, previous_command=None, loop=loop)
         except PlanBuildError:
             raise
         return plans
