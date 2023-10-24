@@ -8,6 +8,7 @@ from ob.planrunner.ern.base_command import BaseCommand
 from ob.planrunner.ern.command_args_reader import CommandArgsReader
 from ob.planrunner.ern.command_error import CriticalCommandError
 from ob.planrunner.ern.errors import PlanBuildError
+from ob.planrunner.ern.plan_status_map import PlanStatusMap
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -105,6 +106,18 @@ class Command(BaseCommand, CommandArgsReader, ABC):
     @staticmethod
     def build_command(dic, plan_data, id_: str = None, previous_command=None,
                       loop: asyncio.AbstractEventLoop = None, **kwargs):
+        """
+        Method create command object from give dictionary
+
+        :param dic: dict witch command settings needed to build
+        :param plan_data: object PlanData
+        :param id_: command id
+        :param previous_command: previous command
+        :param loop: asyncio loop
+        :param kwargs:
+        :raise PlanBuildError:
+        :return: command object
+        """
         command_map = plan_data.map_commands
         command_type = dic.get(Command._NAME_KEY, None)
         if command_type and command_type in command_map:
@@ -112,17 +125,25 @@ class Command(BaseCommand, CommandArgsReader, ABC):
                                                           previous_command=previous_command,
                                                           loop=loop, **kwargs)
         else:
-            command_class = None
+            raise PlanBuildError(f"Unrecognized command type")
         return command_class
 
     async def run(self):
         try:
             if not self.is_on():  # do not run if command is turn off
                 return
+            await self.status_pub.update_status(cmd_id=self.get_id(),
+                                                data={PlanStatusMap.STATUS: PlanStatusMap.STATUS.START})
             await self._run_body()
         finally:
             self._unlock_next_command()  # unlock in the end
             self._set_self_finish()  # command finished
+            # check if status is not error and set status finish (if status is error leave it)
+            if self.status_pub.get_status_local(cmd_id=self.get_id()).get(PlanStatusMap.STATUS,
+                                                                          None) is not PlanStatusMap.STATUS.ERROR:
+                await self.status_pub.update_status(cmd_id=self.get_id(),
+                                                    data={PlanStatusMap.STATUS: PlanStatusMap.STATUS.FINISH})
+
             # cancel Moves
             for s in self._submoves():
                 s.cancel()
@@ -143,6 +164,8 @@ class Command(BaseCommand, CommandArgsReader, ABC):
     async def reset(self):
         self._finish_locking = self._loop.create_future()
         self._finish = self._loop.create_future()
+        # reset locally and not send because is not necessary to send for all commands just need one time after all
+        self.status_pub.reset_status_local(cmd_id=self.get_id())
 
     @abstractmethod
     def _submoves(self):

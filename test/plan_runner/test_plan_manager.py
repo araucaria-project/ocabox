@@ -14,6 +14,7 @@ from ob.data_colection.specialistic_components.tree_conditional_freezer import T
 from ob.planrunner.ern.collective_command import CollectiveCommand
 from ob.planrunner.ern.commands.command_Object import CommandObject
 from ob.planrunner.ern.commands.command_Sequence import CommandSequence
+from ob.planrunner.ern.errors import PlanBuildError
 from ob.planrunner.ern.plan_manager import PlanManager
 from test.data_colection.base_async_test import BaseAsyncTest
 
@@ -59,6 +60,16 @@ class TestPlanManager(unittest.IsolatedAsyncioTestCase, BaseAsyncTest):
         self.assertEqual(len(plan.get_subcommands()), 2)
         for s in plan.get_subcommands():
             self.assertIsInstance(s, CommandObject)
+
+    def test_from_dict_unknown_command(self):
+        """Test method from_dict() witch unknown command type"""
+        var = {'command_name': 'SEQUENCE', 'subcommands': [
+            {'command_name': 'UNKNOWN', 'args': ['NGC6871', '18.157', '-29.351'], 'kwargs': {'clamp': '5'}},
+            {'command_name': 'OBJECT', 'args': ['NGC6871', '18.157', '-29.351'], 'kwargs': {'clamp': '5'}}
+        ]
+               }
+        with self.assertRaises(PlanBuildError):
+            plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test, plan_id="some")
 
     async def test_upload_plan_empty_dict(self):
         """Test situation when user try upload empty dct as plan"""

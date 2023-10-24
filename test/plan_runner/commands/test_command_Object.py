@@ -3,16 +3,21 @@ import random
 import unittest
 
 from pyaraucaria.coordinates import az_alt_2_ra_dec, ra_dec_epoch
-from serverish.messenger import Messenger
-
+from serverish.messenger import Messenger, get_reader
+import test.plan_runner.commands.command_Test
 from ob.comunication.internal_client_api import InternalClientAPI
+from ob.comunication.nats_streams import NatsStreams
 from ob.comunication.request_solver import RequestSolver
 from ob.data_colection.specialistic_components.tree_alpaca import TreeAlpacaObservatory
 from ob.data_colection.specialistic_components.tree_cache_observatory import TreeCache
 from ob.data_colection.specialistic_components.tree_conditional_freezer import TreeConditionalFreezer
+from ob.planrunner.ern.collective_command import CollectiveCommand
 from ob.planrunner.ern.commands.command_Object import CommandObject
 from ob.planrunner.ern.errors import PlanBuildError
+from ob.planrunner.ern.plan_data import PlanData
 from ob.planrunner.ern.plan_manager import PlanManager
+from ob.planrunner.ern.plan_status_map import PlanStatusMap
+from ob.util_functions.asyncio_util_functions import wait_for_psce
 
 
 class CommandObjectTest(unittest.IsolatedAsyncioTestCase):
@@ -32,13 +37,17 @@ class CommandObjectTest(unittest.IsolatedAsyncioTestCase):
         self.rm = await self.tao.get_res_manager()
         self.messenger = Messenger()
         self.pm = PlanManager(acs_res_mngr=self.rm, api=self.api_test, nats_messenger=self.messenger, loop=self.loop)
-        await self.messenger.open()
+        await self.rs.run_tree()
+        custom_map_commands = PlanData.DEFAULT_MAP_COMMANDS | {
+            "TEST": test.plan_runner.commands.command_Test.CommandTest}
+        self.custom_plan_data = PlanData(access_resource_manager=self.rm, client_api=self.api_test,
+                                         map_commands=custom_map_commands)
 
     def tearDown(self) -> None:
         super().tearDown()
 
     async def asyncTearDown(self):
-        await self.messenger.close()
+        await self.rs.stop_tree()
         await super().asyncTearDown()
 
     def test_build_command_object(self):
@@ -182,6 +191,57 @@ class CommandObjectTest(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(plan._move_dome.positions[0].done())
         self.assertTrue(plan._move_dome.positions[0].task.cancelled())
         await self.rs.stop_tree()
+        await asyncio.sleep(1)
+
+    async def test_set_status_in_nats(self):
+        """Test check if statuses is correctly set in nats server"""
+        # ------- prepare data ------------
+        mount = self.rm.get_resource(name=self.rm.MOUNT, nr=0)
+        dome = self.rm.get_resource(name=self.rm.DOME, nr=0)
+        az = random.randint(30, 50)
+        alt = random.randint(20, 50)
+        position_ra, position_dec = az_alt_2_ra_dec(az, alt,
+                                                    mount.longitude, mount.latitude, mount.elevation)
+        position_ra_final, position_dec_final = ra_dec_epoch(ra=position_ra,
+                                                             dec=position_dec,
+                                                             epoch=str("2000"))
+
+        names = (await self.api_test.get_async(f"{self.rm.get_resource(self.rm.FILTERWHEEL).adr}.names")).value.v
+        targ_filter = names[random.randint(0, len(names) - 1)]
+        filter_ = targ_filter
+        number_of_photo = 1
+        var = {'command_name': 'SEQUENCE', 'subcommands': [
+            {'command_name': 'TEST', 'args': ['NGC6871', '18.157', '-29.351'], 'kwargs': {'clamp': '5'}},
+            {'command_name': 'OBJECT', 'args': ['NGC6871', position_ra, position_dec],
+             'kwargs': {'clamp': '5', "seq": f"{number_of_photo}/{filter_}/1"}}
+        ]}
+
+        reader = get_reader(NatsStreams.PLAN_MANAGER_STATUS.format(self.custom_plan_data.status_pub._telescope_id),
+                            deliver_policy="last")
+
+        # --------------- test here ----------------
+        plan = self.pm.from_dict(dic=var, access_resource_manager=self.rm, api=self.api_test, plan_id="some",
+                                 plan_data=self.custom_plan_data)
+        await plan.a_init()
+        self.assertIsInstance(plan, CollectiveCommand)
+        previous_command = plan[0]
+        command = plan[1]
+        t = asyncio.create_task(command.run())
+        await asyncio.sleep(0.2)
+        message = await reader.read_next()
+        self.assertEqual(message[0].get("state").get(command.get_id()).get(PlanStatusMap.STATUS),
+                         PlanStatusMap.STATUS.START)
+        # unlock command and run it
+        previous_command._unlock_next_command()
+        previous_command._set_self_finish()
+        await asyncio.sleep(0.1)
+        message = await reader.read_next()
+        self.assertEqual(message[0].get("state").get(command.get_id()).get(PlanStatusMap.STATUS),
+                         PlanStatusMap.STATUS.RUN)
+        await wait_for_psce(t, 15)
+        message = await reader.read_next()
+        self.assertEqual(message[0].get("state").get(command.get_id()).get(PlanStatusMap.STATUS),
+                         PlanStatusMap.STATUS.FINISH)
         await asyncio.sleep(1)
 
 

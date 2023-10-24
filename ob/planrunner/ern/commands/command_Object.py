@@ -21,6 +21,7 @@ from ob.planrunner.ern.moves.custom_moves.mount_dither import MountDither, Dithe
 from ob.planrunner.ern.moves.custom_moves.mount_slew_alt_az import MountSlewAltAz
 from ob.planrunner.ern.moves.custom_moves.mount_slew_ra_dec import MountSlewRaDec
 from ob.planrunner.ern.moves.move import Move
+from ob.planrunner.ern.plan_status_map import PlanStatusMap
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -135,6 +136,7 @@ class CommandObject(Command):
 
     async def _run_body(self):
         await self._wait_for_permission_to_locking()
+        await self.status_pub.update_status(cmd_id=self.get_id(), data={PlanStatusMap.STATUS: PlanStatusMap.STATUS.RUN})
         try:
             #  --------- prepare step - check all needed resources is available ----------
             if self.res_mngr.get_resource(self.res_mngr.MOUNT) is None or \
@@ -195,6 +197,8 @@ class CommandObject(Command):
                     await self._mirror_close.wait()
 
         except ResourceCommandError:
+            await self.status_pub.update_status(cmd_id=self.get_id(),
+                                                data={PlanStatusMap.STATUS: PlanStatusMap.STATUS.ERROR})
             self.log("Command have error")
 
     def _submoves(self):

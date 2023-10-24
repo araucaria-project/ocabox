@@ -6,6 +6,7 @@ from ob.planrunner.ern.command import Command
 from ob.planrunner.ern.command_error import CriticalCommandError, NormalCommandError
 from ob.planrunner.ern.errors import PlanBuildError
 from ob.planrunner.ern.commands.commands_names import CommandsNames
+from ob.planrunner.ern.plan_status_map import PlanStatusMap
 
 
 class CommandSequence(CollectiveCommand):
@@ -67,14 +68,13 @@ class CommandSequence(CollectiveCommand):
                     stop_future.set_result(True)
 
         await self._wait_for_previous_command_finish()
-        await self.status_pub.update_status(cmd_id=self.get_id(), data={"status": "start"})
+        await self.status_pub.update_status(cmd_id=self.get_id(), data={PlanStatusMap.STATUS: PlanStatusMap.STATUS.RUN})
         self.log("Start doing")
         tasks = []
         for s in self.get_subcommands():
             self.log(f"Waiting for free task slot")
             try:
                 t = await self.tsk_mngr.run_task_when_can(s.run(), is_independent=True)
-                print(s.get_id())
                 t.add_done_callback(callback_subtask_check_status)
                 # !!! situation when a sequence will trigger other sequences. You should wait until the second sequence
                 # finishes running so as not to compete with it for free task slots
@@ -90,23 +90,23 @@ class CommandSequence(CollectiveCommand):
             self.log(f"Created task for {s.get_name()} Id: {s.get_id()}")
             tasks.append(t)
 
+        # this block is needed for wait for last tasks and update statuses
         for t in tasks:
             try:
                 await t
             except asyncio.CancelledError:
-                self.log("Task was canceled - Stop the rest of the tasks in this sequence", lvl=logging.ERROR)
                 await self._cancel_tasks(tasks)
                 break
             except CriticalCommandError:
-                self.log("Task has CRITICAL error - Stop the rest of the tasks in this sequence", lvl=logging.ERROR)
+                await self.status_pub.update_status(cmd_id=self.get_id(),
+                                                    data={PlanStatusMap.STATUS: PlanStatusMap.STATUS.ERROR})
                 await self._cancel_tasks(tasks)
                 break
             except NormalCommandError:
-                self.log("Task has normal error - ignore and continue with the rest of the commands",
-                         lvl=logging.WARNING)
+                pass
             except Exception as e:
-                self.log(f"Task has unexpected error: {e} - Stop the rest of the tasks in this sequence",
-                         lvl=logging.ERROR)
+                await self.status_pub.update_status(cmd_id=self.get_id(),
+                                                    data={PlanStatusMap.STATUS: PlanStatusMap.STATUS.ERROR})
                 await self._cancel_tasks(tasks)
                 break
         self.log("All subcommand finished")
