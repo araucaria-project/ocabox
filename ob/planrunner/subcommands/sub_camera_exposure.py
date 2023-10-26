@@ -155,9 +155,9 @@ class CameraExposure(SubCommand):
 
         try:
             inv_f_map = {v: k for k, v in filters.items()}
-            fiter_str = inv_f_map[filter]
+            filter_str = inv_f_map[filter]
         except KeyError:
-            fiter_str = str(self.kwargs["filter"])
+            filter_str = str(self.kwargs["filter"])
 
         if self.kwargs["req_ra"] is None:
             req_ra = ''
@@ -197,7 +197,7 @@ class CameraExposure(SubCommand):
             object=str(self.kwargs["obj_name"]),
             n_loops=self.kwargs["exp_no"],
             loop=sub,
-            filter=fiter_str,
+            filter=filter_str,
             exp_time=sub_time,
             instrume_name=str(await self.value_proof_get(name='fitsh_cam_sens_name',
                                                          awaitab=self.camera.aget_sensorname,

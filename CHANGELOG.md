@@ -9,8 +9,9 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - skyflat dithering movement value to 8'
-- `CameraExposure` changed to header beta3, fixed autoexposure skyflat no oper. skipping
+- `CameraExposure` changed to header beta3, fixed autoexposure skyflat no oper. skipping, get filter to header from pos
 - `cycle_time_calc` telescope find changed, filter manage changed
+- `ocaboxapi` - `FilterWheel` jk15 get proper filter names 
 
 ### Fixed
 - `cycle_time_calc` fixed first filter pos
