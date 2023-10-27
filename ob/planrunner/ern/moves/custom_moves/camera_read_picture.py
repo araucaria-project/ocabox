@@ -30,7 +30,8 @@ class CameraReadPicture(Move):
         self._resource_nr = resource_nr
         self._mount_resource_nr = mount_resource_nr if mount_resource_nr is not None else self._resource_nr
         self._resource_content = self.res_mngr.get_resource(self._USED_RESOURCE, nr=self._resource_nr)
-        self._mount_resource_content = self.res_mngr.get_resource(TelescopeComponentManager.MOUNT, nr=self._mount_resource_nr)
+        self._mount_resource_content = self.res_mngr.get_resource(TelescopeComponentManager.MOUNT,
+                                                                  nr=self._mount_resource_nr)
         if self._mount_resource_content is None:
             raise PlanBuildError(f"Can not find mount resource content for camera")
         self._exposure_time: Optional[float] = exposure_time
@@ -104,9 +105,7 @@ class CameraReadPicture(Move):
         readoutmode = self.indexing_value(readoutmode, readoutmodes)
         header = fits_header(
             obs_lat=self._mount_resource_content.latitude,
-            parsed_obs_lat=self._mount_resource_content.latitude,
             obs_lon=self._mount_resource_content.longitude,
-            parsed_obs_lon=self._mount_resource_content.longitude,
             obs_elev=self._mount_resource_content.elevation,
             tel_id=str(self._resource_content.telescope_id),  # observatory name like zb08
             utc_now=str(self.exp_time_start.isoformat(sep='T', timespec='auto')),
@@ -114,22 +113,24 @@ class CameraReadPicture(Move):
             req_ra=self._req_ra,
             req_dec=self._req_dec,
             epoch=self._epoch,
+            ra_obj='',
+            dec_obj='',
             tel_ra="none",
             tel_dec="none",  # todo wypełnić te paramtry jakimiś danymi
             tel_alt="none",
             tel_az="none",
+            airmass='',
+            obs_mode='',
             focus="none",
             rotator_pos="none",
+            observer=str(self._observer),
+            image_type='',
             obs_type=str(self._type_),
             object=str(self._obj_name),
             filter=str(self._filter_),
-            observer=str(self._observer),
-            req_exp=sub_time,
-            cam_exp=sub_time,
-            ccd_name=str(sensorname),
             ccd_temp=ccdtemperature,
-            ccd_binx=binx,
-            ccd_biny=biny,
+            binx=binx,
+            biny=biny,
             read_mod=str(readoutmode),
             gain=str(gain)
         )
