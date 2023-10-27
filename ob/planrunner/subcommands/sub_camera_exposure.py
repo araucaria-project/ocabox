@@ -142,10 +142,23 @@ class CameraExposure(SubCommand):
         logger.info(f'_wait_for_save_fits aget_imagearray done')
         gainmode = await self.value_proof_get(name='fitsh_cam_gain',
                                               awaitab=self.camera.aget_gain,
-                                              expect_type=int),
+                                              expect_type=int)
         readoutmode = await self.value_proof_get(name='fitsh_cam_rm',
                                                  awaitab=self.camera.aget_readoutmode,
-                                                 expect_type=int),
+                                                 expect_type=int)
+        filter = await self.value_proof_get(name='fitsh_filter',
+                                            awaitab=self.filter.aget_position,
+                                            expect_type=int)
+        filters = await self.value_proof_get(name='fitsh_filters',
+                                             awaitab=self.filter.aget_names,
+                                             expect_type=dict)
+
+        try:
+            inv_f_map = {v: k for k, v in filters.items()}
+            filter_str = inv_f_map[filter]
+        except KeyError:
+            filter_str = str(self.kwargs["filter"])
+
         if self.kwargs["req_ra"] is None:
             req_ra = ''
         else:
@@ -184,7 +197,7 @@ class CameraExposure(SubCommand):
             object=str(self.kwargs["obj_name"]),
             n_loops=self.kwargs["exp_no"],
             loop=sub,
-            filter=str(self.kwargs["filter"]),
+            filter=filter_str,
             exp_time=sub_time,
             instrume_name=str(await self.value_proof_get(name='fitsh_cam_sens_name',
                                                          awaitab=self.camera.aget_sensorname,
