@@ -24,7 +24,7 @@ class TelescopeComponentManager(StandardTelescopeComponents, ABC):
         self._observatory_name = observatory_name
         # ----- api ------
         # self._obs_api = Observatory(client_name="resource_manager_init_client", software_id="")
-        self._rare_api = InternalClientAPI(request_solver=self._target, user_name=f"resource_manager_init_client")
+        self._rare_api = InternalClientAPI(request_solver=self._target, user_name=f"resource_manager_init_client")  # todo do usunięcie - potwierdzić
         # self._obs_api.connect(self._rare_api)
 
     def get_observatory_name(self):

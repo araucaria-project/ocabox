@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from ob.comunication.base_client_api import BaseClientAPI
 from ob.comunication.base_client_request_solver import BaseClientRequestSolver
-from ob.comunication.base_request_solver import BaseRequestSolver
+from ob.comunication.base_request_solver_protocol import BaseRequestSolverProtocol
 from ob.comunication.internal_client_request_solver import InternalClientRequestSolver
 from ob.data_colection.tree_user import BaseTreeUser, TreeServiceUser
 from ob.data_colection.value_call import ValueRequest, ValueResponse
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class InternalClientAPI(BaseClientAPI):
 
-    def __init__(self, request_solver: BaseRequestSolver, user_name: str = '', **kwargs):
+    def __init__(self, request_solver: BaseRequestSolverProtocol, user_name: str = '', **kwargs):
         super().__init__(**kwargs)
         self._request_solver = request_solver
         self._crs = InternalClientRequestSolver(request_solver=self._request_solver)
