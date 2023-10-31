@@ -109,6 +109,12 @@ class TreeBaseProvider(TreeComponent, ABC):
         if self._subcontractor:
             await self._subcontractor.stop()
 
+    def post_init_tree(self, tree_data, tree_path: str):
+        self.set_tree_path(address_to_object=tree_path)
+        self._tree_data = tree_data
+        if self._subcontractor:
+            self._subcontractor.post_init_tree(tree_data=tree_data, tree_path=self.tree_path)
+
     def get_resources(self):
         if self._subcontractor is not None:
             return self._subcontractor.get_resources()

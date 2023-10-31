@@ -133,7 +133,7 @@ class TreeBaseBrokerTest(unittest.TestCase):
         broker = TreeBaseBroker("test_sample_broker", [provider])
         cfg = broker.get_configuration()
         self.assertListEqual(list(cfg.keys()), ["test_sample_broker"])
-        self.assertListEqual(list(cfg.get("test_sample_broker").keys()), ["child", "config"])
+        self.assertListEqual(list(cfg.get("test_sample_broker").keys()), ["child", "type", "config"])
         self.assertListEqual(list(cfg.get("test_sample_broker").get("child").keys()), ["test_sample_provider"])
         self.assertTrue(isinstance(cfg.get("test_sample_broker").get("child").get("test_sample_provider").
                                    get("config"), dict))

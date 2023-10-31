@@ -1,4 +1,6 @@
 import logging
+from typing import List
+
 from ob.comunication.base_client_api import BaseClientAPI
 from ob.comunication.client import Client
 from ob.comunication.client_request_solver import ClientRequestSolver
@@ -31,6 +33,10 @@ class ClientAPI(BaseClientAPI):
 
     def get_cfg(self, name_cfg: str, default=None, use_default_settings=True):
         return self._CRS.get_cfg(name_cfg, default, use_default_settings)
+
+    def get_cfg_deep(self, name_cfg: List[str], default=None, use_default_settings=True):
+        return self._CRS.client.get_cfg_deep(name_cfg=name_cfg, default=default,
+                                             use_default_settings=use_default_settings)
 
     async def server_is_alive(self, request_timeout: float = None):
         """

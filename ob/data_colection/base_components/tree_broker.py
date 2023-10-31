@@ -5,6 +5,7 @@ from ob.data_colection.base_components.address_dispatcher import AddressDispatch
 from ob.data_colection.base_components.tree_base_broker import TreeBaseBroker
 from ob.data_colection.base_components.tree_component import AddressedResponderProtocol
 from ob.data_colection.response_error import ResponseError
+from ob.data_colection.tree_data import TreeData
 from ob.data_colection.value_call import ValueRequest, ValueResponse
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -47,3 +48,7 @@ class TreeBroker(TreeBaseBroker, AddressDispatcher):
         if names and resource_name:
             return [(resource_name, names)]
         return []
+
+    def set_tree_path(self, address_to_object: str):
+        address_to_object = address_to_object + "." if address_to_object else address_to_object
+        self.tree_path = address_to_object + self.get_source_name()

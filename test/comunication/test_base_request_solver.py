@@ -97,6 +97,20 @@ class RequestSolverTest(unittest.TestCase, BaseAsyncTest):
 
         asyncio.run(coro())
 
+    def test_updating_tree_after_init(self):
+        """Test check thee is correct updating after init (call method `post_init_tree()`)"""
+        OBSERVATORY_NAME = 'test_observatory'
+        tao = TreeAlpacaObservatory(component_name='jk98', observatory_name=OBSERVATORY_NAME)
+        broker = TreeBaseBrokerDefaultTarget(component_name="broker", list_providers=[], default_provider=tao)
+        RS = self.SampleRequestSolver(data_provider=broker)
+        self.assertTrue(RS.data_provider.target_requests == RS)
+        self.assertIsInstance(RS.data_provider, TreeBaseBrokerDefaultTarget)
+        self.assertTrue(RS.data_provider._default_provider.target_requests == RS)
+        self.assertIsNotNone(RS.data_provider._tree_data)
+        self.assertIsInstance(RS.data_provider._default_provider, TreeAlpacaObservatory)
+        self.assertIsNotNone(RS.data_provider._default_provider._tree_data)
+        self.assertEqual(RS.data_provider._default_provider.tree_path, "")
+
 
 if __name__ == '__main__':
     unittest.main()

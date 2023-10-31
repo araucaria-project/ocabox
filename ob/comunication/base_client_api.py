@@ -191,3 +191,15 @@ class BaseClientAPI(ABC):
         CQ_API = PeriodicCycleQuery(crs=self._CRS, list_request=[request], delay=delay,
                                     max_missed_msg=max_missed_msg, name=name, log_missed_msg=log_missed_msg)
         return CQ_API
+
+    @abstractmethod
+    async def server_is_alive(self, request_timeout: float = None):
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_cfg(self, name_cfg: str, default=None, use_default_settings=True):
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_cfg_deep(self, name_cfg: List[str], default=None, use_default_settings=True):
+        raise NotImplementedError

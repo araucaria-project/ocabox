@@ -5,6 +5,7 @@ from ob.data_colection.base_components.address_dispatcher import AddressDispatch
 from ob.data_colection.base_components.tree_base_provider import TreeBaseProvider
 from ob.data_colection.base_components.tree_component import ProvidesResponseProtocol
 from ob.data_colection.response_error import ResponseError
+from ob.data_colection.tree_data import TreeData
 from ob.data_colection.value import Value
 from ob.data_colection.value_call import ValueRequest, ValueResponse
 
@@ -60,3 +61,7 @@ class TreeProvider(TreeBaseProvider, AddressDispatcher):
         if names and resource_name:
             return [(resource_name, names)]
         return []
+
+    def set_tree_path(self, address_to_object: str):
+        address_to_object = address_to_object + "." if address_to_object else address_to_object
+        self.tree_path = address_to_object + self.get_source_name()

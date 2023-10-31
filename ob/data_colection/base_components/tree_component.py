@@ -1,8 +1,11 @@
 import logging
 import confuse
 from abc import ABC, abstractmethod
-from typing import Protocol, runtime_checkable, List, Tuple
+from typing import Protocol, runtime_checkable, List, Tuple, Optional
+
+from ob.comunication.internal_client_api import InternalClientAPI
 from ob.data_colection.base_components.address_dispatcher import AddressedProtocol
+from ob.data_colection.tree_data import TreeData
 from ob.data_colection.value_call import ValueRequest, ValueResponse
 from ob.ob_config import SingletonConfig
 
@@ -27,8 +30,9 @@ class TreeComponent(ABC):
         super().__init__(**kwargs)
         self._component_name: str = component_name  # this is name of tree component, used for debug and errors
         self._resource_name = self._component_name + self._SUFFIX
-        self.target_requests = None
-        self.tree_path = None
+        self._tree_data: Optional[TreeData] = None
+        self.tree_path: str = ""
+        self._api = None
 
     @abstractmethod
     async def get_response(self, request: ValueRequest) -> ValueResponse:
@@ -41,6 +45,17 @@ class TreeComponent(ABC):
         """
         raise NotImplementedError
 
+    @property
+    def target_requests(self):
+        if self._tree_data:
+            return self._tree_data.target_requests
+
+    @property
+    def api(self):
+        if self._api is None:
+            self._api = InternalClientAPI(request_solver=self.target_requests, user_name=f"{self.get_name()}_client")
+        return self._api
+
     def __repr__(self):
         return self._component_name
 
@@ -49,6 +64,19 @@ class TreeComponent(ABC):
 
     def get_type(self):
         return type(self).__name__
+
+    @abstractmethod
+    def post_init_tree(self, tree_data: TreeData, tree_path: str):
+        """
+        This method save tree_data object as parameter and share it to next component in tree and finish all
+        initialization object after tree was build.
+
+        :return:
+        """
+        raise NotImplementedError
+
+    def set_tree_path(self, address_to_object: str):
+        self.tree_path = address_to_object
 
     @abstractmethod
     async def run(self):
@@ -82,7 +110,8 @@ class TreeComponent(ABC):
                                  "type": self.get_type(),
                                  "config": self._extract_cfg(
                                      SingletonConfig.get_config()['data_collection'][self.COMPONENT_DEFAULT_NAME])}}
-        out.get(self.get_name()).get("config").update(self._extract_cfg(SingletonConfig.get_config()['tree'][self._component_name]))
+        out.get(self.get_name()).get("config").update(
+            self._extract_cfg(SingletonConfig.get_config()['tree'][self._component_name]))
         return out
 
     def _extract_cfg(self, x):
@@ -142,9 +171,21 @@ class ProvidesResponseProtocol(Protocol):
         """
         pass
 
+    @property
+    def target_requests(self):
+        return None
+
     async def run(self):
         """
         This method runs all the necessary tasks in the async loop of this component and the children components.
+
+        :return:
+        """
+        pass
+
+    def post_init_tree(self, tree_data: TreeData, tree_path: str):
+        """
+        This method save tree_data object as parameter and share it to next component in tree.
 
         :return:
         """

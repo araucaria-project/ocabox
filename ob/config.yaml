@@ -5,6 +5,10 @@ OCABOX_BUILD_FILE_NAME: "tree_build_example.py"   # file name witch tree build p
 nats:
   host: "localhost"
   port: 4222
+  streams:
+    alpaca_config: "tic.config.observatory"
+    plan_stream: "tic.status.{}.program.current"  # current loaded program
+    status_stream: "tic.status.{}.program.state"  # actual state of current loaded stream
 
 router:
   DefaultRouter:
@@ -138,9 +142,10 @@ tree:
   test_observatory:
     observatory:
       comment: Simulated observatory for tests
-      lon: 12.345    # Paranal
-      lat: 67.890
-      elev: 2635.0
+      lon: 51
+      lat: 0
+      elev: 667.0
+      epoch: 2000
       protocol: alpaca
       address: http://localhost:80/api/v1
       components:
@@ -148,6 +153,7 @@ tree:
           kind: telescope
           comment: DIBI Autoslew Simulated Telescope
           device_number: 0
+          min_alt: 15
           components:
             derotator:
               kind: rotator
@@ -155,12 +161,43 @@ tree:
         dome:
           kind: dome
           device_number: 0
+        filterwheel:
+          kind: filterwheel
+          device_number: 0
+          filters: {} # optional
+        filterwheel2:  # second filterwheel but in alpaca is the same
+          kind: filterwheel
+          device_number: 1
+          filters: # optional
+            a: 1
+            b: 2
+        covercalibrator:
+          kind: covercalibrator
+          device_number: 0
+        camera:
+          kind: camera
+          device_number: 0
+        focuser:
+          kind: focuser
+          device_number: 0
+          focus_tolerance: 5  # optional
+        derotator:
+          kind: rotator
+          device_number: 0
+        switch:
+          kind: switch
+          device_number: 0
+        safetymonitor:
+          kind: safetymonitor
+          device_number: 0
+
   test_observatory_down:
     observatory:
       comment: Simulated observatory for tests
-      lon: 12.345    # Paranal
-      lat: 67.890
-      elev: 2635.0
+      lon: -24.47
+      lat: -0.17
+      elev: 667.0
+      epoch: 2000
       protocol: alpaca
       address: http://10.255.255.1/api/v1  # this url address should return connection timeout error
       components:
@@ -172,6 +209,7 @@ tree:
             derotator:
               kind: rotator
               device_number: 0
+
 #  cctv-zb08: # Ubiquity CCTV cameras configured inob/configuration/config_oca.yaml
 #    udm_camera_id: CD08
 #    udm_host: ''

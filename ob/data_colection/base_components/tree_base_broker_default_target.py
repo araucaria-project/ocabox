@@ -3,7 +3,6 @@ from typing import List
 from ob.data_colection.address import AddressError
 from ob.data_colection.base_components.tree_base_broker import TreeBaseBroker
 from ob.data_colection.base_components.tree_component import AddressedResponderProtocol, ProvidesResponseProtocol
-from ob.data_colection.base_components.tree_provider import TreeProvider
 from ob.data_colection.value_call import ValueRequest
 
 
@@ -79,6 +78,11 @@ class TreeBaseBrokerDefaultTarget(TreeBaseBroker):
         await super().stop()
         if self._default_provider:
             await self._default_provider.stop()
+
+    def post_init_tree(self, tree_data, tree_path: str):
+        super().post_init_tree(tree_data=tree_data, tree_path=tree_path)
+        if self._default_provider:
+            self._default_provider.post_init_tree(tree_data=tree_data, tree_path=self.tree_path)
 
     def get_resources(self):
         providers = self.get_list_providers()
