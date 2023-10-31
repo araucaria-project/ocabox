@@ -81,6 +81,12 @@ class CameraExposure(SubCommand):
         else:
             return None
 
+    def array_bits(self, rmmode) -> str:
+        if self.telescope.id == 'jk15':
+            if rmmode in [3, 5]:
+                return 'int32'
+        return 'sideint16'
+
     @property
     def obs_type(self) -> str:
         if self.kwargs['type'] == 'snap':
@@ -221,12 +227,13 @@ class CameraExposure(SubCommand):
             file_name = f'{self.telescope.id}c_{jd_oca.split(".")[0]}_{jd_oca.split(".")[1]}'
         stat = fits_stat(array, size=100, median=False, std=False, min=False, max=False)
 
+
         save_fits_from_array(array,
                              self.target_folder,
                              file_name,
                              header,
                              overwrite=True,
-                             dtyp='sideint16')
+                             dtyp=self.array_bits(rmmode=readoutmode))
         logger.info(f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} done')
         self.info_callback['stream_1'](f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} done')
         self.info_callback['exec_json'](self.exec_json(exp_started=True,
