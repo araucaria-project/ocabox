@@ -21,7 +21,7 @@ class AbstractCycleTime(ABC):
                   'night_verif': 'night_verif.txt', 'train_param': 'train_param.txt'}
     BASE_FOLDER_NAME = os.path.expanduser('~/.oca/cycle_time_calc')
     RM_MODES_MHZ = {"zb08": [5, 3, 1, 0.05],
-                    "jk15": [1, 1, 1, 1, 1, 1, 1],
+                    "jk15": [4, 2, 1, 1, 0.1, 0.1],
                     "wk06": [5, 3, 1, 0.05],
                     "dev": [1, 1, 1, 1, 1, 1, 1],
                     "sim": [1, 1, 1, 1, 1, 1, 1],
