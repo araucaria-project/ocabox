@@ -121,7 +121,7 @@ class Telescope(AbstractTelescope):
 
     def get_guiding_controller(self) -> GuidingController:
         if self._guiding_controller is None:
-            self._guiding_controller = GuidingController(id='guiding_controller', telescope=self)
+            self._guiding_controller = GuidingController(id='custom_guider', telescope=self)
         return self._guiding_controller
 
     async def is_telescope_alpaca_server_available(self, request_timeout: float = None) -> Dict[str, bool]:

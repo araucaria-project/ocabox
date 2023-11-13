@@ -12,7 +12,7 @@ class GuidingController(TelescopeComponent):
     status = OcaBoxParam(default={}, doc="Guiding status")
     xxxx = OcaBoxParam(default=0.0, doc="xxxx")
 
-    async def aget_status(self) -> Dict:
+    async def aget_status(self) -> str:
         logger.debug(f'Getting guiding status {self.tel_addr}')
         ret = await self.aget_value('status')
         return ret

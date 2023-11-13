@@ -1,7 +1,7 @@
 import logging
 import time
 from typing import Optional
-
+from ob.data_colection.coded_error import TreeOtherError
 from ob.comunication.internal_client_api import InternalClientAPI
 from ob.data_colection.address import AddressError
 from ob.data_colection.base_components.tree_component import ProvidesResponseProtocol
@@ -32,6 +32,9 @@ class TreeCustomGuiderHandler(TreeProvider):
         # todo poniżej są dane wiadomości: user, request_type (PUT/GET), command (np. method1, method2)
         user = request.user
         request_type = request.request_type
+        if user is None:
+            raise TreeOtherError(code=4001, message='No user in request')
+
         try:
             command = request.address[request.index]
         except IndexError:
@@ -53,13 +56,15 @@ class TreeCustomGuiderHandler(TreeProvider):
 
         # todo ---- poniżej ifologia z metodami jeśli jest skompplikowana logika to należy ją wyrzucić do osobnej metody
         #  żeby poniższy kod był czytelny ----  + wszystkie metody wpisać do domumętacji na góże
-        if command == 'method1':
-            timeout_control = "response string"
-            return Value(v=timeout_control, ts=time.time())
 
-        if command == 'method2':
-            timeout_control = "response string"
-            return Value(v=timeout_control, ts=time.time())
+
+        if command == 'status' and request_type == 'GET':
+            status = "idle"
+            return Value(v=status, ts=time.time())
+
+        if command == 'start_guiding' and request_type == 'PUT':
+            #timeout_control = "response string"
+            return Value(v=True, ts=time.time())
         raise AddressError(code=1002, message=f'Unrecognised method for module {self.get_name()}')
 
     async def run(self):
