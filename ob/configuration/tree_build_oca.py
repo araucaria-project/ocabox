@@ -9,6 +9,7 @@ from ob.data_colection.specialistic_components.tree_blocker_access_grantor impor
 from ob.data_colection.specialistic_components.tree_cache_observatory import TreeCache
 from ob.data_colection.specialistic_components.tree_cctv import TreeCCTV
 from ob.data_colection.specialistic_components.tree_conditional_freezer import TreeConditionalFreezer
+from ob.data_colection.specialistic_components.tree_custom_guider_handler import TreeCustomGuiderHandler
 from ob.data_colection.specialistic_components.tree_ephemeris import TreeEphemeris
 from ob.data_colection.specialistic_components.tree_plan_executor import TreePlanExecutor
 
@@ -107,8 +108,9 @@ def tree_build() -> Router:
     alpaca_blocker_dev = TreeBaseRequestBlocker('alpaca-blocker-dev', alpaca_dev)
     blocker_grantor_dev = TreeBlockerAccessGrantor('access-grantor-dev', 'access_grantor', alpaca_blocker_dev)
     plan_executor_dev = TreePlanExecutor('executor-dev', 'executor')
+    custom_guider_handler = TreeCustomGuiderHandler('custom-guider-handler', 'custom_guider', alpaca_dev)
     broker_components_dev = TreeBaseBrokerDefaultTarget('broker-components-dev',
-                                                        [blocker_grantor_dev, plan_executor_dev],
+                                                        [blocker_grantor_dev, plan_executor_dev, custom_guider_handler],
                                                         default_provider=alpaca_blocker_dev)
     cache_dev = TreeCache('cache-dev', broker_components_dev)
     conditional_freezer_dev = TreeConditionalFreezer('conditional-freezer-dev', cache_dev)

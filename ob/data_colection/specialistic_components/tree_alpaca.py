@@ -18,7 +18,7 @@ from aiohttp.client_exceptions import ClientConnectionError, ServerConnectionErr
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
-
+# todo usunac nazwe 'Alpaca' z nazwy
 class TreeAlpacaObservatory(TreeBaseProvider):
     """
     This object represents an alpaca module in a tree structure. Responsible for redirecting queries to the alpaca
