@@ -10,6 +10,7 @@ from ocaboxapi.access import AccessGrantor
 from ocaboxapi.covercalibrator import CoverCalibrator
 from ocaboxapi.rotator import Rotator
 from ocaboxapi.cctv import CCTV
+from ocaboxapi.guiding_controller import GuidingController
 
 __all__ = ['Observatory',
            'Telescope',
@@ -22,5 +23,6 @@ __all__ = ['Observatory',
            'ClientAPI',
            'CoverCalibrator',
            'Rotator',
-           'CCTV'
+           'CCTV',
+           'GuidingController'
            ]

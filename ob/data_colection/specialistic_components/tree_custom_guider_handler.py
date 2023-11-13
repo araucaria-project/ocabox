@@ -32,8 +32,8 @@ class TreeCustomGuiderHandler(TreeProvider):
         # todo poniżej są dane wiadomości: user, request_type (PUT/GET), command (np. method1, method2)
         user = request.user
         request_type = request.request_type
-        if user is None:
-            raise TreeOtherError(code=4001, message='No user in request')
+        #if user is None:
+        #    raise TreeOtherError(code=4001, message='No user in request')
 
         try:
             command = request.address[request.index]
@@ -60,7 +60,9 @@ class TreeCustomGuiderHandler(TreeProvider):
 
         if command == 'status' and request_type == 'GET':
             status = "idle"
+
             return Value(v=status, ts=time.time())
+
 
         if command == 'start_guiding' and request_type == 'PUT':
             #timeout_control = "response string"
