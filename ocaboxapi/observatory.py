@@ -3,6 +3,8 @@ from __future__ import annotations
 import confuse
 import logging
 import asyncio
+
+from ob.comunication.base_client_api import BaseClientAPI
 from ob.ob_config import SingletonConfig
 from time import time
 import os
@@ -23,7 +25,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger("observatory")
 
 
-class Observatory():
+class Observatory:
     """The Observatory maintains connection to the single observatory server using `ocabox.Client`"""
 
     def __init__(self, client_name='DefaultClient', software_id=None) -> None:
@@ -36,8 +38,7 @@ class Observatory():
         super().__init__()
 
     def get_app_cfg(self, key: str, default=None):
-        proper_client = self.client.get_client()
-        value = proper_client.get_cfg_deep(["app", key])  # no use default option because we need a different order
+        value = self.client.get_cfg_deep(["app", key])  # no use default option because we need a different order
         if value is None:
             value = default
         return value
@@ -57,7 +58,7 @@ class Observatory():
     #             client_cfg = 'DefaultClient'
     #     return ClientAPI.client_config()['client'][client_cfg]
 
-    def connect(self, client: ClientAPI | None = None):
+    def connect(self, client: BaseClientAPI | None = None):
         if client is None:
             host = socket.gethostname()
             user = pwd.getpwuid(os.getuid())[0]
@@ -68,7 +69,7 @@ class Observatory():
             self._client = client
 
     @property
-    def client(self) -> ClientAPI:
+    def client(self) -> BaseClientAPI:
         if self._client is None:
             self.connect()
         return self._client

@@ -13,6 +13,7 @@ from ob.data_colection.value import Value
 from ob.data_colection.value_call import ValueRequest, ValueResponse
 from ob.util_functions.asyncio_util_functions import wait_for_psce
 from test.comunication.sample_test_resolver import SampleTestResolver
+from test.data_colection.sample_test_value_provider import SampleTestValueProvider
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 logger.addHandler(logging.StreamHandler())
@@ -29,7 +30,7 @@ class ClientTest(unittest.TestCase):
             self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)
         name = 'SampleTestRouter'
-        self.vr = Router(SampleTestResolver(None), name=name)
+        self.vr = Router(SampleTestResolver(SampleTestValueProvider("xxx", "xxx", [])), name=name)
         self.vr.start(self.loop)
 
     def tearDown(self) -> None:
@@ -108,7 +109,7 @@ class ClientTest(unittest.TestCase):
                 response = ValueResponse(v_request.address, Value(nr, time.time()))
                 return [response.to_byte()]
 
-        self.vr.request_solver = SampleTestResolverMix(None)
+        self.vr.request_solver = SampleTestResolverMix(SampleTestValueProvider("xxx", "xxx", []))
         client = Client(name='SampleTestClient')
         client2 = Client(name='SampleTestClient')
 
@@ -339,7 +340,7 @@ class ClientTest(unittest.TestCase):
         async def coro():
             result = await client.ping_server()
             self.assertTrue(isinstance(result, float))
-            self.assertTrue(0 < result < (client.default_timeout/1000))
+            self.assertTrue(0 < result < (client.default_timeout / 1000))
 
         self.loop.run_until_complete(coro())
 

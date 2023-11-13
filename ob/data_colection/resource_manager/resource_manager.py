@@ -1,7 +1,8 @@
-import asyncio
 import logging
-from abc import ABC
+from abc import ABC, abstractmethod
 from typing import List, Tuple
+
+from ob.comunication.internal_client_api import InternalClientAPI
 from ob.data_colection.alpaca_api.standard_telescope_components import StandardTelescopeComponents
 from ob.data_colection.resource_manager.resource import DomeAlpaca, Resource, CovercalibratorAlpaca, \
     SafetymonitorAlpaca, SwitchAlpaca, FocuserAlpaca, RotatorAlpaca, FilterwheelAlpaca, CameraAlpaca, MountAlpaca
@@ -9,17 +10,25 @@ from ob.data_colection.resource_manager.resource import DomeAlpaca, Resource, Co
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
-class ResourceManager(StandardTelescopeComponents, ABC):
+class TelescopeComponentManager(StandardTelescopeComponents, ABC):
     """
     This is the resource manager for the telescope api support modules. The alpaca api class structure has been
     adopted as the resource standard.
     """
     RESOURCES_MAP = {}
 
-    def __init__(self, target, path):
+    def __init__(self, target, path, observatory_name):
         self._resources: List[Resource] = []
         self._target = target
         self._path = path
+        self._observatory_name = observatory_name
+        # ----- api ------
+        # self._obs_api = Observatory(client_name="resource_manager_init_client", software_id="")
+        self._rare_api = InternalClientAPI(request_solver=self._target, user_name=f"resource_manager_init_client")  # todo do usunięcie - potwierdzić
+        # self._obs_api.connect(self._rare_api)
+
+    def get_observatory_name(self):
+        return self._observatory_name
 
     def get_resource(self, name, nr: int = 0):
         """
@@ -37,8 +46,12 @@ class ResourceManager(StandardTelescopeComponents, ABC):
                 break
         return out
 
+    @abstractmethod
+    async def initiate_resource_manager(self, resource_map: List[Tuple[str, str, str, int, dict]]):
+        raise NotImplementedError
 
-class ResourceManagerAlpaca(ResourceManager):
+
+class TelescopeComponentManagerAlpaca(TelescopeComponentManager):
     """
     This is the resource manager for the alpaca module.
     """
@@ -61,9 +74,9 @@ class ResourceManagerAlpaca(ResourceManager):
             if c is None:
                 logger.error(f"{self.__class__.__name__} can not create resource. Unrecognised resource type {typ}")
                 continue
-                # todo przekazać, address i target w konstruktorze
             r = c(source_name=adr, resource_name=name, nr=nr, target_request=self._target, properties=prop,
                   address_path=self._path)
+            await r.a_init()
             self._resources.append(r)
 
     async def initiate_resource_manager(self, resource_map: List[Tuple[str, str, str, int, dict]]):

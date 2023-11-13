@@ -1,11 +1,16 @@
 import dataclasses
 import logging
+import random
+import string
 import typing
-import ob.planrunner.ern.command_Object
-import ob.planrunner.ern.command_Sequence
-from ob.data_colection.resource_manager.resource_manager import ResourceManager
+import ob.planrunner.ern.commands.command_Object
+import ob.planrunner.ern.commands.command_Sequence
+from ob.comunication.internal_client_api import InternalClientAPI
+from ob.data_colection.resource_manager.resource_manager import TelescopeComponentManager
+from ob.planrunner.ern.commands.commands_names import CommandsNames
 from ob.planrunner.ern.plan_task_manager import PlanTaskManager
 from ob.planrunner.ern.plan_task_manager_protocol import PlanTaskManagerProtocol
+from ob.planrunner.ern.plan_status_publisher import PlanStatusPublisher
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -13,22 +18,31 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 @dataclasses.dataclass
 class PlanData:
 
-    access_resource_manager: ResourceManager
+    access_resource_manager: TelescopeComponentManager
+    client_api: InternalClientAPI
     DEFAULT_MAP_COMMANDS: typing.ClassVar[dict] = {
-        "SEQUENCE": ob.planrunner.ern.command_Sequence.CommandSequence,
-        "OBJECT": ob.planrunner.ern.command_Object.CommandObject,
+        CommandsNames.SEQUENCE: ob.planrunner.ern.commands.command_Sequence.CommandSequence,
+        CommandsNames.OBJECT: ob.planrunner.ern.commands.command_Object.CommandObject,
     }
+    plan_id: str = None
     task_mngr: PlanTaskManagerProtocol = None
+    status_pub: PlanStatusPublisher = None
     plan_log: logging.Logger = logging.getLogger(name="ObsPlanLog")
     map_commands: dict = None
     _last_id: int = 0
 
     def __post_init__(self):
+        if self.plan_id is None:
+            # generate random string
+            self.plan_id = ''.join(random.choice(string.ascii_lowercase + string.digits) for _ in range(16))
         if self.task_mngr is None:
             self.task_mngr = PlanTaskManager()
         if self.map_commands is None:
             self.map_commands = self.DEFAULT_MAP_COMMANDS
+        if self.status_pub is None:
+            self.status_pub = PlanStatusPublisher(plan_id=self.plan_id,
+                                                  telescope_id=self.access_resource_manager.get_observatory_name())
 
-    def generate_next_id(self):
+    def generate_next_id(self) -> str:
         self._last_id += 10
-        return self._last_id
+        return str(self._last_id)

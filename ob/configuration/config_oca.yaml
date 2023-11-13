@@ -18,6 +18,7 @@ tree:
       lon: -24.59806    # OCA
       lat: -70.19638
       elev: 2817  # m
+      epoch: 2000
       protocol: alpaca
       address: http://wk06-tcu.oca.lan:11111/api/v1
       components:
@@ -45,6 +46,7 @@ tree:
         filterwheel:
           kind: filterwheel
           device_number: 0
+          filters: {}  # optional
         switch:
           kind: switch
           device_number: 0
@@ -58,6 +60,7 @@ tree:
       lon: -24.59806    # OCA
       lat: -70.19638
       elev: 2817  # m
+      epoch: 2000
       protocol: alpaca
       address: http://zb08-tcu.oca.lan:11111/api/v1
       components:
@@ -88,6 +91,7 @@ tree:
         filterwheel:
           kind: filterwheel
           device_number: 0
+          filters : {u: 0, g: 1, r: 2, i: 3, z: 4, B: 5, V: 6, Ic: 7}  # optional
         switch:
           kind: switch
           device_number: 0
@@ -101,6 +105,7 @@ tree:
       lon: -24.59806    # OCA
       lat: -70.19638
       elev: 2817  # m
+      epoch: 2000
       protocol: alpaca
       address: http://jk15-tcu.oca.lan:11111/api/v1
       components:
@@ -131,6 +136,7 @@ tree:
         filterwheel:
           kind: filterwheel
           device_number: 0
+          filters: {Empty: 0, u SG: 1, b SG: 2, v SG: 3, y SG: 4, Hb_w: 5, Hb_n: 6, Ha_w: 7, Ha_n: 8, u: 9, g: 10, r: 11, i: 12, z: 13, B: 14, V: 15, iC: 16}  # optional
         switch:
           kind: switch
           device_number: 0
@@ -144,6 +150,7 @@ tree:
       lon: -24.59806    # OCA
       lat: -70.19638
       elev: 2817  # m
+      epoch: 2000
       protocol: alpaca
       address: http://wg25-tcu.oca.lan:11111/api/v1
       components:
@@ -171,6 +178,7 @@ tree:
         filterwheel:
           kind: filterwheel
           device_number: 0
+          filters: {}  # optional
         switch:
           kind: switch
           device_number: 0
@@ -184,6 +192,7 @@ tree:
       lon: -24.59806    # OCA
       lat: -70.19638
       elev: 2817  # m      protocol: alpaca
+      epoch: 2000
       address: http://iris-tcu.oca.lan:11111/api/v1
       components:
         mount:
@@ -210,6 +219,7 @@ tree:
         filterwheel:
           kind: filterwheel
           device_number: 0
+          filters: {}  # optional
         switch:
           kind: switch
           device_number: 0
@@ -223,6 +233,7 @@ tree:
       lon: -24.59806    # OCA
       lat: -70.19638
       elev: 2817  # m      protocol: alpaca
+      epoch: 2000
       protocol: alpaca
       address: http://docker.oca.lan:8089/api/v1
       components:
@@ -247,6 +258,7 @@ tree:
         filterwheel:
           kind: filterwheel
           device_number: 0
+          filters: {}  # optional
         switch:
           kind: switch
           device_number: 0
@@ -260,6 +272,7 @@ tree:
       lon: -24.59806    # OCA
       lat: -70.19638
       elev: 2817  # m      protocol: alpaca
+      epoch: 2000
       protocol: alpaca
       address: http://localhost:80/api/v1
       components:
@@ -272,6 +285,7 @@ tree:
         focuser:
           kind: focuser
           device_number: 0
+          focus_tolerance: 5  # optional
         dome:
           kind: dome
           device_number: 0
@@ -284,6 +298,7 @@ tree:
         filterwheel:
           kind: filterwheel
           device_number: 0
+          filters: {}  # optional
         switch:
           kind: switch
           device_number: 0

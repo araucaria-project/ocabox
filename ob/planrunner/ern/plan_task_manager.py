@@ -35,7 +35,16 @@ class PlanTaskManager:
     def _has_space(self):
         return len(self.tasks) < self.max_tasks
 
-    async def run_task_when_can(self, coro, is_independent: bool):
+    async def run_task_when_can(self, coro, is_independent: bool) -> asyncio.Task:
+        """
+
+
+        :param coro: task method
+        :param is_independent: DOESN'T WORK YET. the x parameter determines whether a given task is independent of
+        another and can end on its own. This parameter is intended to prevent situations where there is a command tree,
+        e.g. SEQUENCE, which will exhaust the pool of free slots for tasks.
+        :return: task
+        """
         if not self._has_space():
             fut = self._future_full_list
             if fut is not None:

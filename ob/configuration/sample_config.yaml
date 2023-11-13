@@ -5,6 +5,7 @@ tree:
       lon: 24.627222    # Paranal
       lat: -70.404167
       elev: 2635.0
+      epoch: 2000
       protocol: alpaca
       address: http://localhost:80/api/v1
       components:
@@ -17,6 +18,7 @@ tree:
         focuser:
           kind: focuser
           device_number: 0
+          focus_tolerance: 5  # optional
         dome:
           kind: dome
           device_number: 0
@@ -29,6 +31,7 @@ tree:
         filterwheel:
           kind: filterwheel
           device_number: 0
+          filters: {}  # optional
         switch:
           kind: switch
           device_number: 0

@@ -2,10 +2,13 @@ import asyncio
 import logging
 import time
 import unittest
+
+from ob.comunication.request_solver import RequestSolver
 from ocaboxapi.client_api import ClientAPI
 from ob.comunication.router import Router
 from ob.data_colection.value_call import ValueResponse, ValueRequest
 from test.comunication.sample_test_resolver import SampleTestResolver
+from test.data_colection.sample_test_value_provider import SampleTestValueProvider
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -20,7 +23,8 @@ class ClientAPITest(unittest.TestCase):
             self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)
         name = 'SampleTestRouter'
-        self.vr = Router(SampleTestResolver(None), name=name)
+        rs = RequestSolver(SampleTestValueProvider("xxx", "xxx", []))
+        self.vr = Router(rs, name=name)
         self.vr.start(self.loop)
 
     def tearDown(self) -> None:
@@ -57,11 +61,11 @@ class ClientAPITest(unittest.TestCase):
         c_api = ClientAPI(name='SampleTestClient')
 
         async def coro():
-            request = [ValueRequest('sample_telescope.dibi.azimuth.1', time.time(), 20),
-                       ValueRequest('sample_telescope.dibi.azimuth.2', time.time(), 20)]
+            request = [ValueRequest('xxx.dibi.azimuth.new_val', time.time(), 20),
+                       ValueRequest('xxx.dibi.azimuth.new_val', time.time(), 20)]
             task1 = asyncio.create_task(c_api.send_multi(request))
             result = await task1
-            # self.assertEqual(len(result), len(request))
+            self.assertEqual(len(result), len(request))
             self.assertTrue(isinstance(result[0], ValueResponse))
             self.assertIsNotNone(result[0].value.v)
             self.assertIsNotNone(result[1].value.v)

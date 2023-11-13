@@ -43,7 +43,14 @@ class OcaboxTask(param.Parameterized):
         logger.info(f'Task starting {self}')
         await self.on_start()
         while not self.stop_running_event.is_set():
-            await self.on_time_tick()
+            try:
+                await self.on_time_tick()
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                logger.error(f"Method in task {self} raise sam errors: {e}")
+                # close task because method is corrupted
+                self.stop_running_event.set()
             try:
                 await wait_for_psce(self.stop_running_event.wait(), timeout=self.time_tick_s)
             except asyncio.TimeoutError:

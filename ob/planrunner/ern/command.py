@@ -3,10 +3,17 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Optional
 
+from ob.data_colection.resource_manager.errors import ResourceCommandError
+from ob.planrunner.ern.base_command import BaseCommand
+from ob.planrunner.ern.command_args_reader import CommandArgsReader
+from ob.planrunner.ern.command_error import CriticalCommandError
+from ob.planrunner.ern.errors import PlanBuildError
+from ob.planrunner.ern.plan_status_map import PlanStatusMap
+
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
-class Command(ABC):
+class Command(BaseCommand, CommandArgsReader, ABC):
     _NAME = "DEFAULT"
     # --- arg keys ---
     _NAME_KEY = "command_name"
@@ -14,44 +21,26 @@ class Command(ABC):
     _KWARGS_KEY = "kwargs"
 
     def __init__(self, command_dict: dict, plan_data, previous_command, id_: str = None,
-                 loop: asyncio.AbstractEventLoop = None,
-                 **kwargs):
+                 loop: asyncio.AbstractEventLoop = None, **kwargs):
+        self._command_dict: dict = command_dict
+        self.previous_command = previous_command
         self._loop = loop
-        self._plan_data = plan_data
         if id_ is None:
             id_ = plan_data.generate_next_id()
-        self._id = id_
-        self.previous_command = previous_command
-        self._command_dict: dict = command_dict
+        self._id: str = id_
+        super().__init__(plan_data=plan_data, arg=self.get_args(), kwarg=self.get_kwargs(), **kwargs)
 
         # --- --- --- --- --- --- --- --- --- --- ---
-        self._needed_modules_list = []  # todo do usunięcia
         self._needed_modules = []
         self._finish_locking: Optional[asyncio.Future] = None
         self._finish: Optional[asyncio.Future] = None
-
-    @property
-    def res_mngr(self):
-        return self._plan_data.access_resource_manager
-
-    @property
-    def plan_log(self) -> logging.Logger:
-        return self._plan_data.plan_log
-
-    @property
-    def tsk_mngr(self):
-        return self._plan_data.task_mngr
-
-    @classmethod
-    def get_name(cls) -> str:
-        """Method returning a command name"""
-        return cls._NAME
+        self._is_on = True  # flag mean command is turn on. If command is off will be not do
 
     def log(self, msg, lvl: Optional[int] = None):
-        lvl = logging.DEBUG if lvl in None else lvl
+        lvl = logging.DEBUG if lvl is None else lvl
         self.plan_log.log(msg=f"[{self._id}][{self.get_name()}] {msg}", level=lvl)
 
-    def get_id(self):
+    def get_id(self) -> str:
         return self._id
 
     def get_kwargs(self) -> dict:
@@ -60,15 +49,20 @@ class Command(ABC):
 
     def get_args(self) -> list:
         """Method returns loaded args"""
-        return self._command_dict.get(self._ARGS_KEY, {})
+        return self._command_dict.get(self._ARGS_KEY, [])
 
     async def a_init(self):
+        """
+        Async version innit method, Should run always after normal init.
+
+        :raise PlanBuildError:
+        :return:
+        """
         if self._loop is None:
             try:
                 self._loop = asyncio.get_running_loop()
             except RuntimeError:
-                logger.error(f"Can not find running async loop.")
-                raise  # todo może jakiś inny błąd?
+                raise PlanBuildError("Can not find running async loop")
         self._finish_locking = self._loop.create_future()
         self._finish = self._loop.create_future()
 
@@ -76,13 +70,15 @@ class Command(ABC):
         fut = self._finish_locking
         if fut is not None:
             await fut
-        raise RuntimeError  # todo zrobić potem jakiś lokalny błąd
+            return
+        raise CriticalCommandError
 
     async def wait_to_finish(self):
-        fut = self._finish_locking
+        fut = self._finish
         if fut is not None:
             await fut
-        raise RuntimeError  # todo zrobić potem jakiś lokalny błąd
+            return
+        raise CriticalCommandError
 
     async def _wait_for_permission_to_locking(self):
         # No pre-command has been wired, so you can start right now
@@ -97,8 +93,11 @@ class Command(ABC):
         await self.previous_command.wait_to_finish()
 
     def _unlock_next_command(self):
-        if self._finish_locking is not None:
-            self._finish_locking.set_result(True)  # all locks were used
+        if self._finish_locking is None:
+            return
+        if self._finish_locking.done():
+            return
+        self._finish_locking.set_result(True)  # all locks were used
 
     def _set_self_finish(self):
         if self._finish is not None:
@@ -107,7 +106,18 @@ class Command(ABC):
     @staticmethod
     def build_command(dic, plan_data, id_: str = None, previous_command=None,
                       loop: asyncio.AbstractEventLoop = None, **kwargs):
-        # todo pokombinować coś z __new__() w wolnej chwili
+        """
+        Method create command object from give dictionary
+
+        :param dic: dict witch command settings needed to build
+        :param plan_data: object PlanData
+        :param id_: command id
+        :param previous_command: previous command
+        :param loop: asyncio loop
+        :param kwargs:
+        :raise PlanBuildError:
+        :return: command object
+        """
         command_map = plan_data.map_commands
         command_type = dic.get(Command._NAME_KEY, None)
         if command_type and command_type in command_map:
@@ -115,20 +125,61 @@ class Command(ABC):
                                                           previous_command=previous_command,
                                                           loop=loop, **kwargs)
         else:
-            command_class = None
+            raise PlanBuildError(f"Unrecognized command type")
         return command_class
 
     async def run(self):
         try:
-            await self.a_init()
-            if self._loop is None:
-                # todo  ustawić status na skończony
+            if not self.is_on():  # do not run if command is turn off
                 return
+            await self.status_pub.update_status(cmd_id=self.get_id(),
+                                                data={PlanStatusMap.STATUS: PlanStatusMap.STATUS.START})
             await self._run_body()
         finally:
             self._unlock_next_command()  # unlock in the end
             self._set_self_finish()  # command finished
+            # check if status is not error and set status finish (if status is error leave it)
+            if self.status_pub.get_status_local(cmd_id=self.get_id()).get(PlanStatusMap.STATUS,
+                                                                          None) is not PlanStatusMap.STATUS.ERROR:
+                await self.status_pub.update_status(cmd_id=self.get_id(),
+                                                    data={PlanStatusMap.STATUS: PlanStatusMap.STATUS.FINISH})
+
+            # cancel Moves
+            for s in self._submoves():
+                s.cancel()
 
     @abstractmethod
     async def _run_body(self):
-        pass
+        raise NotImplementedError
+
+    def turn_off(self):
+        self._is_on = False
+
+    def turn_on(self):
+        self._is_on = True
+
+    def is_on(self):
+        return self._is_on
+
+    async def reset(self):
+        self._finish_locking = self._loop.create_future()
+        self._finish = self._loop.create_future()
+        # reset locally and not send because is not necessary to send for all commands just need one time after all
+        self.status_pub.reset_status_local(cmd_id=self.get_id())
+
+    @abstractmethod
+    def _submoves(self):
+        """
+        Method return generator witch all `Move` objects.
+
+        :return:
+        """
+        return iter(())
+
+    def get_status_dict(self) -> dict:
+        """
+        Method collect and return command initial status data and return as dict
+
+        :return: dictionary witch command initial status data
+        """
+        return {self._NAME_KEY: self._NAME, "is_on": self.is_on()}

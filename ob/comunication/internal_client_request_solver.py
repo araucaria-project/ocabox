@@ -3,7 +3,7 @@ import logging
 from typing import List, Optional
 
 from ob.comunication.base_client_request_solver import BaseClientRequestSolver
-from ob.comunication.base_request_solver import BaseRequestSolver
+from ob.comunication.base_request_solver_protocol import BaseRequestSolverProtocol
 from ob.data_colection.value_call import ValueRequest, ValueResponse
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -11,9 +11,9 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class InternalClientRequestSolver(BaseClientRequestSolver):
 
-    def __init__(self, request_solver: BaseRequestSolver, **kwargs):
+    def __init__(self, request_solver: BaseRequestSolverProtocol, **kwargs):
         super().__init__(**kwargs)
-        self._request_solver: BaseRequestSolver = request_solver
+        self._request_solver: BaseRequestSolverProtocol = request_solver
 
     @property
     def request_solver(self):

@@ -10,7 +10,7 @@ from ob.data_colection.alpaca_api.exceptions import AlpacaHttp400Error, AlpacaHt
 from ob.data_colection.alpaca_api.observatory import Observatory
 from ob.data_colection.base_components.tree_base_provider import TreeBaseProvider
 from ob.data_colection.coded_error import TreeOtherError
-from ob.data_colection.resource_manager.resource_manager import ResourceManagerAlpaca
+from ob.data_colection.resource_manager.resource_manager import TelescopeComponentManagerAlpaca
 from ob.data_colection.value import Value, TreeValueError
 from ob.data_colection.value_call import ValueRequest
 from ob.util_functions.asyncio_util_functions import wait_for_psce
@@ -161,12 +161,13 @@ class TreeAlpacaObservatory(TreeBaseProvider):
         out = []
         for key, val in obs_children.items():
             out.append((key + "_RESOURCE", key, val.kind, val.device_nr,
-                        {**self._observatory.component_options, **val.component_options}))
+                        {"observatory_name": self.observatory_name, **self._observatory.component_options, **val.component_options}))
         return out
 
-    async def get_res_manager(self) -> ResourceManagerAlpaca:
+    async def get_res_manager(self) -> TelescopeComponentManagerAlpaca:
         if self._resource_manager is None:
-            self._resource_manager = ResourceManagerAlpaca(target=self.target_requests, path=self.tree_path)
+            self._resource_manager = TelescopeComponentManagerAlpaca(target=self.target_requests, path=self.tree_path,
+                                                                     observatory_name=self.observatory_name)
             await self._resource_manager.initiate_resource_manager(self._get_resources_simple_map())
         return self._resource_manager
 
