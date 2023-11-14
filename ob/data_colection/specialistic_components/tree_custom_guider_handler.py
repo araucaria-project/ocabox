@@ -9,8 +9,66 @@ from ob.data_colection.base_components.tree_provider import TreeProvider
 from ob.data_colection.specialistic_components.tree_alpaca import TreeAlpacaObservatory
 from ob.data_colection.value import Value
 from ob.data_colection.value_call import ValueRequest
+from typing import Callable, Dict, List
+from serverish.messenger import Messenger, request
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
+
+class GuiderHandler:
+
+    def __init__(self):
+        self.status: str = 'idle'
+        self.exposure: float = 3.0
+        self.period: float = 6.0
+        self.calib_step: float = 1.0
+        self.calib_data: Dict | None = None
+        self.darks: Dict = {}
+
+    def rpc_data_test_sample(self) -> Dict:
+        return {
+                "telescope_id": "dev",
+                "request": "preview",
+                "star_select": [],
+                "fits_id": "232348",
+                "sequence_id": 232344544,
+                "exp_time": 3,
+                "loop": 1,
+                "nloops": 1,
+                "tel_ra": 122.33,
+                "tel_dec": 60.0001,
+                "tel_alt": 44.5,
+                "tel_az": 22,
+                "dtyp": "sideint16"
+            }
+    def meta(self):
+        return {
+                "message_type": 'rpc',  # IMPORTANT type message, one of pre declared types
+                "tags": [""],  # tags
+                'sender': 'tic_guider',  # name who send message
+                 }
+
+    async def preview(self):
+        async with Messenger().context(host="192.168.8.140", port=4222):
+            #logger.info(f'Host: {t.nats_host}:{t.nats_port}')
+            #logger.info(f'On subject: {subject}')
+            #logger.info(f'Data send: d: {data} m: {meta}')
+            r1, r2 = await request(subject='tic.rpc.dev.guiding',
+                                   data=self.rpc_data_test_sample(),
+                                   meta=self.meta(),
+                                   timeout=5)
+            #logger.info(f'Data gather: d: {r1} m: {r2}')
+
+    async def stop(self):
+        pass
+
+    async def start_calib(self):
+        pass
+
+    async def prep_dark(self, sub_no: int = 3):
+        pass
+
+    async def start_guiding(self, star_select: List | None = None, mount_follow: bool = True) -> None:
+        pass
 
 
 class TreeCustomGuiderHandler(TreeProvider):
@@ -22,19 +80,21 @@ class TreeCustomGuiderHandler(TreeProvider):
     """
 
     COMPONENT_DEFAULT_NAME: str = 'TreeCustomGuiderHandler'
+    STATUSES = ['idle', 'calibration', 'guiding', 'preview', 'error']
 
     def __init__(self, component_name: str, source_name: str, target_alpaca: TreeAlpacaObservatory, **kwargs):
         super().__init__(component_name=component_name, source_name=source_name, **kwargs)
         self._target_alpaca: TreeAlpacaObservatory = target_alpaca
         self.rs = None
+        self.gh = GuiderHandler()
 
     async def get_value(self, request: ValueRequest, **kwargs) -> Optional[Value]:
+
         # todo poniżej są dane wiadomości: user, request_type (PUT/GET), command (np. method1, method2)
         user = request.user
         request_type = request.request_type
-        #if user is None:
-        #    raise TreeOtherError(code=4001, message='No user in request')
-
+        if user is None:
+            raise TreeOtherError(code=4001, message='No user in request')
         try:
             command = request.address[request.index]
         except IndexError:
@@ -46,8 +106,8 @@ class TreeCustomGuiderHandler(TreeProvider):
         #  można sobie to obudoawać w jakąś metodę lokalnie jeśli będzie wygodniej
         #  pamiętajmy że uzywamy starego rare api które udostępnia masę opcji i zapytania idą przez cache więc
         #  jak chcemy ominąc to trzeba odpowiednio ustawić parametry
-        address_to_alpaca = f"{self.rs.get_resource(self.rs.MOUNT).adr}.azimuth"  # <--- tak bierzemy adres do Mounta i doklejamy do niebo polecenie np azimuth
-        address_to_alpaca_camera = f"{self.rs.get_resource(self.rs.CAMERA, nr=1).adr}.azimuth"  # <--- tak bierzemy adres do Mounta i doklejamy do niebo polecenie np azimuth
+        #address_to_alpaca = f"{self.rs.get_resource(self.rs.MOUNT).adr}.azimuth"  # <--- tak bierzemy adres do Mounta i doklejamy do niebo polecenie np azimuth
+        #address_to_alpaca_camera = f"{self.rs.get_resource(self.rs.CAMERA, nr=1).adr}.azimuth"  # <--- tak bierzemy adres do Mounta i doklejamy do niebo polecenie np azimuth
         # result = self.api.get_async(address=address_to_alpaca, ...) # <--- tak używamy api
         # todo ważana sprawa to żeby nie wbijać na stałe jakichś danych, jeśli jest coś konkretnego potrzebne to
         #  zapytac ernesta bo bardzo prawdopodobne że jest na to sposób np: jakąś nazwę teleskopu albo
@@ -57,16 +117,80 @@ class TreeCustomGuiderHandler(TreeProvider):
         # todo ---- poniżej ifologia z metodami jeśli jest skompplikowana logika to należy ją wyrzucić do osobnej metody
         #  żeby poniższy kod był czytelny ----  + wszystkie metody wpisać do domumętacji na góże
 
-
         if command == 'status' and request_type == 'GET':
-            status = "idle"
+            return Value(v=self.gh.status, ts=time.time())
 
-            return Value(v=status, ts=time.time())
+        if command == 'exposure' and request_type == 'GET':
+            return Value(v=self.gh.exposure, ts=time.time())
 
+        if command == 'exposure' and request_type == 'PUT':
+            try:
+                self.gh.exposure = request.request_data['exp']
+            except KeyError:
+                raise TreeOtherError(code=4007,
+                                     message=f'{self.get_name()}: Missing "exp" parameter in {command} request.')
+            return Value(v=self.gh.status, ts=time.time())
+
+        if command == 'period' and request_type == 'GET':
+            return Value(v=self.gh.period, ts=time.time())
+
+        if command == 'period' and request_type == 'PUT':
+            try:
+                self.period = request.request_data['period']
+            except KeyError:
+                raise TreeOtherError(code=4007,
+                                     message=f'{self.get_name()}: Missing "period" parameter in {command} request.')
+            return Value(v=True, ts=time.time())
+
+        if command == 'calib_step' and request_type == 'GET':
+            return Value(v=self.gh.calib_step, ts=time.time())
+
+        if command == 'calib_step' and request_type == 'PUT':
+            try:
+                self.calib_step = request.request_data['step']
+            except KeyError:
+                raise TreeOtherError(code=4007,
+                                     message=f'{self.get_name()}: Missing "step" parameter in {command} request.')
+            return Value(v=True, ts=time.time())
+
+        if command == 'preview' and request_type == 'PUT':
+            await self.gh.preview()
+            return Value(v=True, ts=time.time())
+
+        if command == 'stop' and request_type == 'PUT':
+            await self.gh.stop()
+            return Value(v=True, ts=time.time())
+
+        if command == 'start_calib' and request_type == 'PUT':
+            await self.gh.start_calib()
+            return Value(v=True, ts=time.time())
 
         if command == 'start_guiding' and request_type == 'PUT':
-            #timeout_control = "response string"
+            try:
+                star_select = request.request_data['star_select']
+            except KeyError:
+                raise TreeOtherError(code=4007,
+                                     message=f'{self.get_name()}: Missing "star_select" parameter in {command} request.')
+            try:
+                mount_follow = request.request_data['mount_follow']
+            except KeyError:
+                raise TreeOtherError(code=4007,
+                                     message=f'{self.get_name()}: Missing "mount_follow" parameter in {command} request.')
+            await self.gh.start_guiding(star_select=star_select, mount_follow=mount_follow)
             return Value(v=True, ts=time.time())
+
+        if command == 'prep_dark' and request_type == 'PUT':
+            try:
+                sub_no = request.request_data['sub_no']
+            except KeyError:
+                raise TreeOtherError(code=4007,
+                                     message=f'{self.get_name()}: Missing "sub_no" parameter in {command} request.')
+            await self.gh.prep_dark(sub_no=sub_no)
+            return Value(v=True, ts=time.time())
+
+        if command == 'calib_data' and request_type == 'GET':
+            return Value(v=self.gh.calib_data, ts=time.time())
+
         raise AddressError(code=1002, message=f'Unrecognised method for module {self.get_name()}')
 
     async def run(self):
