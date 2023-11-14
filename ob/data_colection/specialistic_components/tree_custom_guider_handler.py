@@ -11,35 +11,55 @@ from ob.data_colection.value import Value
 from ob.data_colection.value_call import ValueRequest
 from typing import Callable, Dict, List
 from serverish.messenger import Messenger, request
+import asyncio
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class GuiderHandler:
 
-    def __init__(self):
+    STATUSES = ['idle', 'calibration', 'guiding', 'preview', 'error']
+
+    def __init__(self, rs) -> None:
+        self.rs = rs
         self.status: str = 'idle'
         self.exposure: float = 3.0
         self.period: float = 6.0
         self.calib_step: float = 1.0
         self.calib_data: Dict | None = None
+        self.preview_single: bool = False
+        self.sequence_id: str = ''
         self.darks: Dict = {}
 
-    def rpc_data_test_sample(self) -> Dict:
+    async def exec_exposure(self, ):
+        await asyncio.sleep(self.exposure)
+        # if after wait we get imageready true
+        return
+
+    def get_seq_id(self):
+        return f'{round((time.time())*10)}'[-7:]
+
+    async def run_body(self):
+        while True:
+            if self.status == 'preview':
+                await self._preview()
+            await asyncio.sleep(0.1)
+
+    def rpc_data(self, request: str) -> Dict:
         return {
-                "telescope_id": "dev",
-                "request": "preview",
+                "telescope_id": "dev", # get from ocabox
+                "request": request,
                 "star_select": [],
-                "fits_id": "232348",
-                "sequence_id": 232344544,
-                "exp_time": 3,
+                "fits_id": f'{round((time.time())*10)}'[-7:],
+                "sequence_id": self.sequence_id,
+                "exp_time": self.exposure,
                 "loop": 1,
                 "nloops": 1,
-                "tel_ra": 122.33,
-                "tel_dec": 60.0001,
-                "tel_alt": 44.5,
-                "tel_az": 22,
+                #"tel_ra": 122.33,
+                #"tel_dec": 60.0001,
+                #"tel_alt": 44.5,
+                #"tel_az": 22,
                 "dtyp": "sideint16"
-            }
+               }
     def meta(self):
         return {
                 "message_type": 'rpc',  # IMPORTANT type message, one of pre declared types
@@ -47,24 +67,29 @@ class GuiderHandler:
                 'sender': 'tic_guider',  # name who send message
                  }
 
-    async def preview(self):
+    async def _preview(self):
+        await self.exec_exposure()
         async with Messenger().context(host="192.168.8.140", port=4222):
-            #logger.info(f'Host: {t.nats_host}:{t.nats_port}')
-            #logger.info(f'On subject: {subject}')
-            #logger.info(f'Data send: d: {data} m: {meta}')
-            r1, r2 = await request(subject='tic.rpc.dev.guiding',
-                                   data=self.rpc_data_test_sample(),
-                                   meta=self.meta(),
-                                   timeout=5)
-            #logger.info(f'Data gather: d: {r1} m: {r2}')
+            d, m = await request(subject='tic.rpc.dev.guiding',
+                                 data=self.rpc_data(request="preview"),
+                                 meta=self.meta(),
+                                 timeout=5)
+        if self.preview_single:
+            self.status = 'idle'
 
-    async def stop(self):
+    async def preview(self, single: bool = False):
+        self.sequence_id = self.get_seq_id()
+        self.preview_single = single
+        self.status = 'preview'
+
+    async def stop(self) -> None:
+        # stop waiting for exposure and exposure itself
+        self.status = 'idle'
+
+    async def start_calib(self) -> None:
         pass
 
-    async def start_calib(self):
-        pass
-
-    async def prep_dark(self, sub_no: int = 3):
+    async def prep_dark(self, sub_no: int = 3) -> None:
         pass
 
     async def start_guiding(self, star_select: List | None = None, mount_follow: bool = True) -> None:
@@ -80,13 +105,13 @@ class TreeCustomGuiderHandler(TreeProvider):
     """
 
     COMPONENT_DEFAULT_NAME: str = 'TreeCustomGuiderHandler'
-    STATUSES = ['idle', 'calibration', 'guiding', 'preview', 'error']
+
 
     def __init__(self, component_name: str, source_name: str, target_alpaca: TreeAlpacaObservatory, **kwargs):
         super().__init__(component_name=component_name, source_name=source_name, **kwargs)
         self._target_alpaca: TreeAlpacaObservatory = target_alpaca
         self.rs = None
-        self.gh = GuiderHandler()
+        self.gh: GuiderHandler | None = None
 
     async def get_value(self, request: ValueRequest, **kwargs) -> Optional[Value]:
 
@@ -154,7 +179,12 @@ class TreeCustomGuiderHandler(TreeProvider):
             return Value(v=True, ts=time.time())
 
         if command == 'preview' and request_type == 'PUT':
-            await self.gh.preview()
+            try:
+                single = request.request_data['single']
+            except KeyError:
+                raise TreeOtherError(code=4007,
+                                     message=f'{self.get_name()}: Missing "single" parameter in {command} request.')
+            await self.gh.preview(single=single)
             return Value(v=True, ts=time.time())
 
         if command == 'stop' and request_type == 'PUT':
@@ -195,9 +225,10 @@ class TreeCustomGuiderHandler(TreeProvider):
 
     async def run(self):
         self.rs = await self._target_alpaca.get_res_manager()
+        self.gh = GuiderHandler(rs=self.rs)
+        self.task = asyncio.create_task(self.gh.run_body())
         await super().run()
 
     async def stop(self):
+        self.task.cancel()
         await super().stop()
-
-

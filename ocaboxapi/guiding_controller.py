@@ -88,9 +88,9 @@ class GuidingController(TelescopeComponent):
         logger.debug(f'Putting stop to {self.tel_addr}')
         await self.aput_value(param_name='stop')
 
-    async def aput_preview(self) -> None:
+    async def aput_preview(self, single: bool = False) -> None:
         logger.debug(f'Putting guider preview to {self.tel_addr}')
-        await self.aput_value(param_name='preview')
+        await self.aput_value(param_name='preview', single=single)
 
     async def aput_exposure(self, exp: float) -> None:
         logger.debug(f'Putting exposure time to {self.tel_addr}')
