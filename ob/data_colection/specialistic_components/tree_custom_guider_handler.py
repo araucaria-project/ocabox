@@ -12,19 +12,23 @@ from ob.data_colection.value_call import ValueRequest
 from typing import Callable, Dict, List
 from serverish.messenger import Messenger, request
 import asyncio
+import numpy as np
+import math
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class GuiderHandler:
 
     STATUSES = ['idle', 'dark', 'calibration', 'guiding', 'preview', 'error']
+    DIRECTIONS = [0, 1, 2, 3]
 
     def __init__(self, rs) -> None:
         self.rs = rs
         self.status: str = 'idle'
-        self.exposure: float = 3.0
-        self.period: float = 6.0
-        self.calib_step: float = 1.0
+        self.exposure: float = 3.0 # in seconds
+        self.period: float = 6.0 # in seconds
+        self.calib_step: float = 1000.0 # in milliseconds
+        self.calib_no_of_steps: int = 6
         self.calib_data: Dict | None = None
         self.preview_single: bool = False
         self.sequence_id: str = ''
@@ -40,22 +44,81 @@ class GuiderHandler:
         # if after wait we get imageready true
         return
 
-    async def _mount_pulseguide(self, direction: int, duration: float):
+    async def _mount_pulseguide(self, direction: int, duration: float) -> None:
+        # TODO put some maximum pulseguide value
         pass
 
-    async def _exec_correction(self, param: Dict, t_start: float) -> None:
+    @staticmethod
+    def get_vector_angle_to_x(vector: np.ndarray) -> float:
+        x_axis = np.array([10, 0])
+        cos_alfa = np.dot(x_axis, vector) / (np.linalg.norm(x_axis) * np.linalg.norm(vector))
+        if vector[1] < 0:
+            a = -1
+        else:
+            a = 1
+        return math.degrees(math.acos(cos_alfa)) * a
+
+    @staticmethod
+    def vector_lenght(vector: np.ndarray) -> float:
+        return float(np.linalg.norm(vector))
+
+    async def _calib_final_calc(self):
+        # Calculate angles
+        for n in self.DIRECTIONS:
+            self.calib_data[n]['angle_to_x'] = self.get_vector_angle_to_x(self.calib_data[n]['guid_corr'].sum())
+            vect_lenght = self.vector_lenght(self.calib_data[n]['guid_corr'].mean(axis=0))
+            self.calib_data[n]['speed_px_per_millisec'] = vect_lenght / self.calib_step
+            self.calib_data[n]['step_std'] = self.calib_data[n]['guid_corr'].std(axis=0)
+
+        # self.calib_data['calib_status'] = 'ok'
+
+    async def _build_calib_data(self, guid_corr) -> (bool, int):
+
+        for n in self.DIRECTIONS:
+            if n not in self.calib_data.keys():
+                self.calib_data[n] = {'guid_corr': np.zeros((self.calib_no_of_steps, 2))}
+                return True, n
+            else:
+                last_step = max(list(self.calib_data[n].keys()))
+                if last_step != self.calib_no_of_steps:
+                    step_no = last_step + 1
+                    self.calib_data[n]['guid_corr'][step_no - 1] = guid_corr
+                    if step_no == self.calib_no_of_steps:
+                        return False, n
+                    else:
+                        return True, n
+                else:
+                    pass
+        await self._calib_final_calc()
+        # TODO TALK TO JOURNAL
+        self.status = 'idle'
+
+
+    async def _calib_corr(self, param: Dict,) -> None:
         try:
             guid_corr = param['guid_corr']
         except KeyError:
             # TODO TALK TO JOURNAL
             self.status = 'idle'
             return
+        mount_pulse, direction = await self._build_calib_data(guid_corr=guid_corr)
+        if mount_pulse:
+            await self._mount_pulseguide(direction=direction, duration=self.calib_step)
 
-        direction = 1
+    async def _guid_corr(self, param: Dict, t_start: float) -> None:
+        try:
+            guid_corr = param['guid_corr']
+        except KeyError:
+            # TODO TALK TO JOURNAL
+            self.status = 'idle'
+            return
+        # TODO CALCULATE CORRECTION AND DIRECTION
+        dec_dir = 0 # [0, 1]
+        ra_dir = 2 # [2, 3]
         duration = 1
-        await self._mount_pulseguide(direction=direction, duration=duration)
+        await self._mount_pulseguide(direction=dec_dir, duration=duration)
+        await self._mount_pulseguide(direction=ra_dir, duration=duration)
         # TODO here wait until the period ends, if time is longer just exit method
-
 
     def _get_seq_id(self):
         return f'{round((time.time())*10)}'[-7:]
@@ -141,7 +204,37 @@ class GuiderHandler:
             self.status = 'idle'
 
     async def _calibration(self) -> None:
-        pass
+        await self._exec_exposure()
+        d, m = await self._send_rpc_request(req="calib", loop=1, nloops=1)
+        if d is not None:
+            try:
+                resp = d['response']
+                status = d['status']
+            except KeyError:
+                # TODO TALK TO JOURNAL
+                self.status = 'idle'
+                return
+            if resp in ['corr_calc'] and status == 'ok':
+                # TODO TALK TO JOURNAL
+                try:
+                    param = d['param']
+                except KeyError:
+                    # TODO TALK TO JOURNAL
+                    self.status = 'idle'
+                    return
+                await self._calib_corr(param=param)
+            elif resp in ['star_selected'] and status == 'ok':
+                # TODO TALK TO JOURNAL
+                pass
+            elif resp in ['star_lost'] and status == 'ok':
+                # TODO TALK TO JOURNAL
+                self.status = 'idle'
+                pass
+            else:
+                pass
+        else:
+            # TODO TALK TO JOURNAL
+            self.status = 'idle'
 
     async def _guiding(self) -> None:
         t_start = time.time()
@@ -163,7 +256,7 @@ class GuiderHandler:
                     # TODO TALK TO JOURNAL
                     self.status = 'idle'
                     return
-                await self._exec_correction(param=param, t_start=t_start)
+                await self._guid_corr(param=param, t_start=t_start)
             elif resp in ['star_selected'] and status == 'ok':
                 # TODO TALK TO JOURNAL
                 pass
@@ -183,10 +276,11 @@ class GuiderHandler:
 
     async def calibration(self) -> None:
         # TODO TALK TO JOURNAL
-        pass
+        self.sequence_id = self._get_seq_id()
+        self.calib_data = {}
+        self.status = 'calibration'
 
     async def dark(self, sub_no: int = 20) -> None:
-        #TODO TALK TO JOURNAL
         self.sequence_id = self._get_seq_id()
         self.loop_dark: int = 0
         self.nloops_dark: int = sub_no
@@ -194,10 +288,23 @@ class GuiderHandler:
 
     async def guiding(self, star_select: List | None = None, mount_follow: bool = True) -> None:
         # TODO TALK TO JOURNAL
-        self.sequence_id = self._get_seq_id()
-        self.star_select = star_select
-        self.mount_follow = mount_follow
-        self.status = 'guiding'
+        if self.calib_data is not None:
+            try:
+                calib_status = self.calib_data['calib_status']
+            except KeyError:
+                # TODO TALK TO JOURNAL
+                return
+            if calib_status == 'ok':
+                self.sequence_id = self._get_seq_id()
+                self.star_select = star_select
+                self.mount_follow = mount_follow
+                self.status = 'guiding'
+            else:
+                # TODO TALK TO JOURNAL
+                pass
+        else:
+            # TODO TALK TO JOURNAL
+            pass
 
     async def stop(self) -> None:
         #TODO stop waiting for exposure and exposure itself
@@ -210,10 +317,10 @@ class GuiderHandler:
                 await self._preview()
             if self.status == 'dark':
                 await self._dark()
-            if self.status == 'calibration':
-                await self._calibration()
-            if self.status == 'guiding':
-                await self._guiding()
+            #if self.status == 'calibration':
+            #    await self._calibration()
+            #if self.status == 'guiding':
+            #    await self._guiding()
             await asyncio.sleep(0.1)
 
 
