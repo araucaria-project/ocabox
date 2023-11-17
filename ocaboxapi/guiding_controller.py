@@ -80,9 +80,9 @@ class GuidingController(TelescopeComponent):
         logger.debug(f'Putting start calibration to {self.tel_addr}')
         await self.aput_value(param_name='start_calib')
 
-    async def aput_prep_master_dark(self, sub_no: int = 3) -> None:
+    async def aput_prep_master_dark(self, sub_no: int = 20) -> None:
         logger.debug(f'Putting prepare guiding master dark to {self.tel_addr}')
-        await self.aput_value(param_name='prep_dark', sub_no=sub_no)
+        await self.aput_value(param_name='dark', sub_no=sub_no)
 
     async def aput_stop(self) -> None:
         logger.debug(f'Putting stop to {self.tel_addr}')

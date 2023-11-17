@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class GuiderHandler:
 
-    STATUSES = ['idle', 'calibration', 'guiding', 'preview', 'error']
+    STATUSES = ['idle', 'dark', 'calibration', 'guiding', 'preview', 'error']
 
     def __init__(self, rs) -> None:
         self.rs = rs
@@ -28,39 +28,65 @@ class GuiderHandler:
         self.calib_data: Dict | None = None
         self.preview_single: bool = False
         self.sequence_id: str = ''
+        self.loop_dark: int = 0
+        self.nloops_dark: int = 0
+        self.star_select: Dict | None = None
+        self.mount_follow: bool = True
         self.darks: Dict = {}
 
-    async def exec_exposure(self, ):
+    async def _exec_exposure(self, ):
+        #TODO how to operate camera and telescope from here?
         await asyncio.sleep(self.exposure)
         # if after wait we get imageready true
         return
 
-    def get_seq_id(self):
+    async def _mount_pulseguide(self, direction: int, duration: float):
+        pass
+
+    async def _exec_correction(self, param: Dict, t_start: float) -> None:
+        try:
+            guid_corr = param['guid_corr']
+        except KeyError:
+            # TODO TALK TO JOURNAL
+            self.status = 'idle'
+            return
+
+        direction = 1
+        duration = 1
+        await self._mount_pulseguide(direction=direction, duration=duration)
+        # TODO here wait until the period ends, if time is longer just exit method
+
+
+    def _get_seq_id(self):
         return f'{round((time.time())*10)}'[-7:]
 
-    async def run_body(self):
-        while True:
-            if self.status == 'preview':
-                await self._preview()
-            await asyncio.sleep(0.1)
+    async def _send_rpc_request(self, req: str, loop: int, nloops: int):
+        #TODO get host, port form ocabox or some nats handler?
+        async with Messenger().context(host="192.168.8.140", port=4222):
+            dat, met = await request(subject='tic.rpc.dev.guiding',
+                                     data=self._rpc_data(req=req, loop=loop, nloops=nloops),
+                                     meta=self._rpc_meta(),
+                                     timeout=5)
+        return dat, met
 
-    def rpc_data(self, request: str) -> Dict:
+    def _rpc_data(self, req: str, loop: int, nloops: int) -> Dict:
         return {
-                "telescope_id": "dev", # get from ocabox
-                "request": request,
+                "telescope_id": "dev", #TODO get from ocabox
+                "request": req,
                 "star_select": [],
                 "fits_id": f'{round((time.time())*10)}'[-7:],
                 "sequence_id": self.sequence_id,
                 "exp_time": self.exposure,
-                "loop": 1,
-                "nloops": 1,
-                #"tel_ra": 122.33,
-                #"tel_dec": 60.0001,
-                #"tel_alt": 44.5,
-                #"tel_az": 22,
+                "loop": loop,
+                "nloops": nloops,
+                #"tel_ra": 122.33, ?
+                #"tel_dec": 60.0001, ?
+                #"tel_alt": 44.5, ?
+                #"tel_az": 22, ?
                 "dtyp": "sideint16"
                }
-    def meta(self):
+
+    def _rpc_meta(self):
         return {
                 "message_type": 'rpc',  # IMPORTANT type message, one of pre declared types
                 "tags": [""],  # tags
@@ -68,32 +94,127 @@ class GuiderHandler:
                  }
 
     async def _preview(self):
-        await self.exec_exposure()
-        async with Messenger().context(host="192.168.8.140", port=4222):
-            d, m = await request(subject='tic.rpc.dev.guiding',
-                                 data=self.rpc_data(request="preview"),
-                                 meta=self.meta(),
-                                 timeout=5)
+        await self._exec_exposure()
+        d, m = await self._send_rpc_request(req="preview", loop=1, nloops=1)
+        if d is not None:
+            try:
+                resp = d['response']
+                status = d['status']
+            except KeyError:
+                #TODO TALK TO JOURNAL
+                self.status = 'idle'
+                return
+            if resp in ['preview_done'] and status == 'ok':
+                #TODO TALK TO JOURNAL
+                pass
+            else:
+                #TODO TALK TO JOURNAL
+                pass
+        else:
+            #TODO TALK TO JOURNAL
+            self.status = 'idle'
         if self.preview_single:
             self.status = 'idle'
 
+    async def _dark(self):
+        await self._exec_exposure()
+        d, m = await self._send_rpc_request(req="dark", loop=self.loop_dark, nloops=self.nloops_dark)
+        if d is not None:
+            try:
+                resp = d['response']
+                status = d['status']
+            except KeyError:
+                #TODO TALK TO JOURNAL
+                self.status = 'idle'
+                return
+            if resp in ['dark_saved', 'master_dark_saved'] and status == 'ok':
+                #TODO TALK TO JOURNAL
+                self.loop_dark += 1
+                if self.nloops_dark == self.loop_dark:
+                    #TODO TALK TO JOURNAL
+                    self.status = 'idle'
+            else:
+                #TODO TALK TO JOURNAL
+                self.status = 'idle'
+        else:
+            #TODO TALK TO JOURNAL
+            self.status = 'idle'
+
+    async def _calibration(self) -> None:
+        pass
+
+    async def _guiding(self) -> None:
+        t_start = time.time()
+        await self._exec_exposure()
+        d, m = await self._send_rpc_request(req="guiding_simple", loop=1, nloops=1)
+        if d is not None:
+            try:
+                resp = d['response']
+                status = d['status']
+            except KeyError:
+                # TODO TALK TO JOURNAL
+                self.status = 'idle'
+                return
+            if resp in ['corr_calc'] and status == 'ok':
+                # TODO TALK TO JOURNAL
+                try:
+                    param = d['param']
+                except KeyError:
+                    # TODO TALK TO JOURNAL
+                    self.status = 'idle'
+                    return
+                await self._exec_correction(param=param, t_start=t_start)
+            elif resp in ['star_selected'] and status == 'ok':
+                # TODO TALK TO JOURNAL
+                pass
+            else:
+                # TODO TALK TO JOURNAL
+                pass
+        else:
+            # TODO TALK TO JOURNAL
+            self.status = 'idle'
+
+
     async def preview(self, single: bool = False):
-        self.sequence_id = self.get_seq_id()
+        #TODO TALK TO JOURNAL
+        self.sequence_id = self._get_seq_id()
         self.preview_single = single
         self.status = 'preview'
 
+    async def calibration(self) -> None:
+        # TODO TALK TO JOURNAL
+        pass
+
+    async def dark(self, sub_no: int = 20) -> None:
+        #TODO TALK TO JOURNAL
+        self.sequence_id = self._get_seq_id()
+        self.loop_dark: int = 0
+        self.nloops_dark: int = sub_no
+        self.status = 'dark'
+
+    async def guiding(self, star_select: List | None = None, mount_follow: bool = True) -> None:
+        # TODO TALK TO JOURNAL
+        self.sequence_id = self._get_seq_id()
+        self.star_select = star_select
+        self.mount_follow = mount_follow
+        self.status = 'guiding'
+
     async def stop(self) -> None:
-        # stop waiting for exposure and exposure itself
+        #TODO stop waiting for exposure and exposure itself
+        #TODO TALK TO JOURNAL
         self.status = 'idle'
 
-    async def start_calib(self) -> None:
-        pass
-
-    async def prep_dark(self, sub_no: int = 3) -> None:
-        pass
-
-    async def start_guiding(self, star_select: List | None = None, mount_follow: bool = True) -> None:
-        pass
+    async def run_body(self):
+        while True:
+            if self.status == 'preview':
+                await self._preview()
+            if self.status == 'dark':
+                await self._dark()
+            if self.status == 'calibration':
+                await self._calibration()
+            if self.status == 'guiding':
+                await self._guiding()
+            await asyncio.sleep(0.1)
 
 
 class TreeCustomGuiderHandler(TreeProvider):
@@ -105,7 +226,6 @@ class TreeCustomGuiderHandler(TreeProvider):
     """
 
     COMPONENT_DEFAULT_NAME: str = 'TreeCustomGuiderHandler'
-
 
     def __init__(self, component_name: str, source_name: str, target_alpaca: TreeAlpacaObservatory, **kwargs):
         super().__init__(component_name=component_name, source_name=source_name, **kwargs)
@@ -192,7 +312,7 @@ class TreeCustomGuiderHandler(TreeProvider):
             return Value(v=True, ts=time.time())
 
         if command == 'start_calib' and request_type == 'PUT':
-            await self.gh.start_calib()
+            await self.gh.calibration()
             return Value(v=True, ts=time.time())
 
         if command == 'start_guiding' and request_type == 'PUT':
@@ -206,16 +326,16 @@ class TreeCustomGuiderHandler(TreeProvider):
             except KeyError:
                 raise TreeOtherError(code=4007,
                                      message=f'{self.get_name()}: Missing "mount_follow" parameter in {command} request.')
-            await self.gh.start_guiding(star_select=star_select, mount_follow=mount_follow)
+            await self.gh.guiding(star_select=star_select, mount_follow=mount_follow)
             return Value(v=True, ts=time.time())
 
-        if command == 'prep_dark' and request_type == 'PUT':
+        if command == 'dark' and request_type == 'PUT':
             try:
                 sub_no = request.request_data['sub_no']
             except KeyError:
                 raise TreeOtherError(code=4007,
                                      message=f'{self.get_name()}: Missing "sub_no" parameter in {command} request.')
-            await self.gh.prep_dark(sub_no=sub_no)
+            await self.gh.dark(sub_no=sub_no)
             return Value(v=True, ts=time.time())
 
         if command == 'calib_data' and request_type == 'GET':
