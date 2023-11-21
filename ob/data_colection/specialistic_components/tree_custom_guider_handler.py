@@ -323,10 +323,10 @@ class GuiderHandler:
                 await self._preview()
             if self.status == 'dark':
                 await self._dark()
-            #if self.status == 'calibration':
-            #    await self._calibration()
-            #if self.status == 'guiding':
-            #    await self._guiding()
+            if self.status == 'calibration':
+                await self._calibration()
+            if self.status == 'guiding':
+                await self._guiding()
             await asyncio.sleep(0.1)
 
 

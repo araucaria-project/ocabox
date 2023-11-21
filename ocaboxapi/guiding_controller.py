@@ -43,31 +43,31 @@ class GuidingController(TelescopeComponent):
         return ret
 
     async def asubscribe_status(self, callback: Callable | None = None,
-                                time_of_data_tolerance: float | None = None) -> None:
+                                time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing guiding status {self.tel_addr}')
         return await self.subscribe(param_name='status',
                                     callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
     async def asubscribe_exposure(self, callback: Callable | None = None,
-                                time_of_data_tolerance: float | None = None) -> None:
+                                time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing guiding status {self.tel_addr}')
         return await self.subscribe(param_name='exposure',
                                     callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
     async def asubscribe_period(self, callback: Callable | None = None,
-                                  time_of_data_tolerance: float | None = None) -> None:
+                                  time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing guiding status {self.tel_addr}')
         return await self.subscribe(param_name='period',
                                     callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
     async def asubscribe_calib_step(self, callback: Callable | None = None,
-                                  time_of_data_tolerance: float | None = None) -> None:
+                                  time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing guiding calibration step {self.tel_addr}')
         return await self.subscribe(param_name='calib_step',
                                     callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
     async def asubscribe_calib_data(self, callback: Callable | None = None,
-                                  time_of_data_tolerance: float | None = None) -> None:
+                                  time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing guiding calibration data {self.tel_addr}')
         return await self.subscribe(param_name='calib_data',
                                     callback=callback, time_of_data_tolerance=time_of_data_tolerance)
