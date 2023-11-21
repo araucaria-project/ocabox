@@ -6,15 +6,11 @@ from ob.planrunner.cycle_time_calc.cycle_time_train import CycleTimeTrain
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
-class CycleTime:
+class CycleTime(CycleTimeCalc):
 
     def __init__(self, telescope: 'Telescope') -> None:
-        self._ctc = CycleTimeCalc(telescope=telescope)
-        super().__init__()
+        super().__init__(telescope=telescope)
 
     def clean_and_train_on_exit(self):
         CycleTimeDataClean.data_clean_all()
         CycleTimeTrain.train_all_telesc_all_commands()
-
-    def get_calculator(self):
-        return self._ctc

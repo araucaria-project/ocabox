@@ -114,7 +114,7 @@ class Telescope(AbstractTelescope):
             self.rotators[id] = dev
             return dev
 
-    def get_cycle_time_calculator(self) -> ObservationPlan:
+    def get_cycle_time_calculator(self) -> CycleTime:
         if self._cycle_time_calculator is None:
             self._cycle_time_calculator = CycleTime(telescope=self)
         return self._cycle_time_calculator
