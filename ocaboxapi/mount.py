@@ -170,10 +170,12 @@ class Mount(TelescopeComponent):
         await self.aput_value('action', Action=action, Parameters=param)
 
     async def aput_opencover(self) -> None:
+        #TODO TO REMOVE
         logger.debug(f'Putting telescope opencover to {self.tel_addr}')
         await self.aput_value('action', Action='telescope:opencover', Parameters='')
 
     async def aput_closecover(self) -> None:
+        # TODO TO REMOVE
         logger.debug(f'Putting telescope closecover to {self.tel_addr}')
         await self.aput_value('action', Action='telescope:closecover', Parameters='')
 
@@ -196,3 +198,14 @@ class Mount(TelescopeComponent):
     async def aput_clearerror(self) -> None:
         logger.debug(f'Putting telescope clearerror to {self.tel_addr}')
         await self.aput_value('action', Action='telescope:clearerror', Parameters='')
+
+    async def aput_pulseguide(self, direction: int, duration: float) -> None:
+        """
+        Moves the scope in the given direction for the given interval or time at the rate given by the corresponding
+        guide rate property
+        :param direction: Direction of movement [0, 1, 2, 3]
+        :param duration: The duration of the guide-rate motion (milliseconds)
+        :return: None
+        """
+        logger.debug(f'Putting telescope pulseguide to {self.tel_addr}')
+        await self.aput_value(param_name='pulseguide', Direction=direction, Duration=duration)

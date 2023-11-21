@@ -8,7 +8,7 @@ from datetime import datetime
 import time
 import os
 import numpy as np
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Tuple
 import math
 import re
 import json
@@ -261,7 +261,11 @@ class CameraExposure(SubCommand):
                 break
             await asyncio.sleep(0.1)
 
-    async def get_array_autoexp(self, test_exp_time: float,  test_mode: bool = False) -> List:
+    async def get_array_autoexp(self, test_exp_time: float) -> List:
+        if self.telescope.id == 'dev':
+            test_mode = True
+        else:
+            test_mode = False
         if not test_mode:
             await self.camera.aput_startexposure(test_exp_time, self.kwargs["light"])
             await self._wait_for_subexposure(test_exp_time)
@@ -273,6 +277,114 @@ class CameraExposure(SubCommand):
                 arr = json.load(f)
                 f.close()
                 return arr
+
+    async def _autoexposure_exec(self) -> Tuple[float, bool]:
+        """
+        TODO for filter, time, make test shot on sky with 1s exposure. If value is not what You expect wait
+        some time and make test shot again until You don't get expected value of adu, then continue to make
+        normal exposure with calculated length of exposure. On another sub, test shot calculation will be
+        repeated, up to end.
+        """
+        logger.info(f'{self.id} auto skyflat procedure started')
+        self.info_callback['stream_1'](f'{self.id} auto skyflat procedure started')
+        mean_list = []
+        mean_diff = None
+        auto_exp_sub_no = 0
+
+        # TODO take all values from settings (for zero_level maybe make some zero?)
+        test_exposure_time = 1.0 # Test exposure time
+        test_time_interval = 1 # Test interval
+        test_min_max_adu = (20000, 25000) # Accepted flat adu range
+        test_min_max_time_exp = (2, 30) # Accepted flat time range
+        zero_level = 290.0 # Zero mean
+        evening_factor = 1.11 # Evening factor to set comparable values from morning and evening
+
+        # Get inf if it is evening or morning and set ev_factor
+        if datetime.utcnow().hour > 14:
+            evening = True
+            ev_fact = evening_factor
+        else:
+            evening = False
+            ev_fact = 1
+        while True:
+            logger.info(f'{self.id} starting test exposure')
+            auto_exp_sub_no += 1
+            self.info_callback['exec_json'](self.exec_json(auto_exp_start=True,
+                                                           auto_exp_finnished=False,
+                                                           auto_exp_sub_no=auto_exp_sub_no,
+                                                           auto_exp_time=test_exposure_time))
+            # Make exposure
+            arr = await self.get_array_autoexp(test_exp_time=test_exposure_time)
+
+            # Calculate mean from exposure (plus some info)
+            mean = fits_stat(arr, size=100, median=False, std=False, min=False, max=False)['mean']
+
+            self.info_callback['exec_json'](self.exec_json(auto_exp_start=True,
+                                                           auto_exp_finnished=True,
+                                                           auto_exp_sub_no=auto_exp_sub_no,
+                                                           auto_exp_time=test_exposure_time))
+
+            # Substract zero from mean and add to mean_list (plus some info)
+            if mean > zero_level:
+                mean = mean - zero_level
+            else:
+                mean = 1.0
+            mean_list.append(mean)
+            logger.info(f'{self.id} Test frame mean:{round(mean)}'
+                        f' range:[{round(test_min_max_adu[0]/test_min_max_time_exp[1])}-'
+                        f'{round(test_min_max_adu[1]/test_min_max_time_exp[0])}]')
+            self.info_callback['stream_1'](f'{self.id} Test frame mean:{round(mean)}'
+                        f' range:[{round(test_min_max_adu[0]/test_min_max_time_exp[1])}-'
+                        f'{round(test_min_max_adu[1]/test_min_max_time_exp[0])}]')
+            self.info_callback['exec_json'](self.exec_json(
+                test_exp_mean=mean,
+                expected_mean_min=round(test_min_max_adu[0]/test_min_max_time_exp[1]),
+                expected_mean_max=round(test_min_max_adu[1]/test_min_max_time_exp[0])))
+
+            # Calculate mean diff from last two steps
+            if len(mean_list) > 1:
+                mean_diff = mean_list[-1] - mean_list[-2]
+
+            # Calculate mean range times minimal and maximal accepted exposure time
+            mean_min_max = (test_min_max_time_exp[0] * mean, test_min_max_time_exp[1] * mean)
+
+            # Check if it should skipp this filter for good
+            if mean_diff is not None:
+                # Evening
+                if evening and mean_diff < 0 and mean_min_max[1] < test_min_max_adu[0]:
+                    logger.info(f"{self.id} skipped - it's too dark")
+                    self.info_callback['stream_1'](f"{self.id} skipped - it's too dark")
+                    self.skipped = True
+                    self.info_callback['exec_json'](self.exec_json())
+                    self.seq_data.skip = True
+                    return 0, True
+                # Morning
+                elif not evening and mean_diff > 0 and mean_min_max[0] > test_min_max_adu[1]:
+                    logger.info(f"{self.id} skipped - it's too bright")
+                    self.info_callback['stream_1'](f"{self.id} skipped - it's too bright")
+                    self.skipped = True
+                    self.info_callback['exec_json'](self.exec_json())
+                    self.seq_data.skip = True
+                    return 0, True
+
+            # Try to calculate exposure time, if fail next loop starts
+            if test_min_max_adu[0] - mean_min_max[1] < 0 < test_min_max_adu[1] - mean_min_max[0]:
+                if mean_min_max[0] < test_min_max_adu[0]:
+                    exposure_time = (test_min_max_adu[0] / mean) * ev_fact
+                    self.info_callback['stream_1'](f"{self.id} calc_exp_time:{round(exposure_time, 1)},"
+                                                   f" expect_adu:{round(exposure_time * mean, 1)}")
+                    logger.info(f"{self.id} calc_exp_time:{round(exposure_time, 1)},"
+                                f" expect_adu:{round(exposure_time * mean, 1)}")
+                    return exposure_time, False
+                else:
+                    exposure_time = (mean_min_max[0] / mean) * ev_fact
+                    self.info_callback['stream_1'](f"{self.id} calc_exp_time:{round(exposure_time, 1)},"
+                                                   f" expect_adu:{round(exposure_time * mean, 1)}")
+                    logger.info(f"{self.id} calc_exp_time:{round(exposure_time, 1)},"
+                                f" expect_adu:{round(exposure_time * mean, 1)}")
+                    return exposure_time, False
+            await asyncio.sleep(test_time_interval)
+
 
     async def arun(self, step_id: str or None = None) -> int:
 
@@ -289,89 +401,9 @@ class CameraExposure(SubCommand):
         exposure_time = self.seq_data.exp_time
 
         if self.if_autoexposure:
-            """
-            TODO for filter, time, make test shot on sky with 1s exposure. If value is not what You expect wait
-            some time and make test shot again until You don't get expected value of adu, then continue to make
-            normal exposure with calculated length of exposure. On another sub, test shot calculation will be
-            repeated, up to end. TODO save last value to settings with filter and time and do not take another 
-            test shoot again, but calculate from settings.
-            """
-            logger.info(f'{self.id} auto skyflat procedure started')
-            self.info_callback['stream_1'](f'{self.id} auto skyflat procedure started')
-            mean_list = []
-            test_exposure_time = 1.0
-            test_time_interval = 1
-            test_min_max_adu = (20000, 25000)
-            test_min_max_time_exp = (2, 30)
-            # TODO take zero_level from settings or make some zero
-            zero_level = 290.0
-            evening_factor = 1.11
-            mean_diff = None
-            auto_exp_sub_no = 0
-            while True:
-                logger.info(f'{self.id} starting test exposure')
-                auto_exp_sub_no += 1
-                self.info_callback['exec_json'](self.exec_json(auto_exp_start=True,
-                                                               auto_exp_finnished=False,
-                                                               auto_exp_sub_no = auto_exp_sub_no,
-                                                               auto_exp_time=test_exposure_time))
-
-                arr = await self.get_array_autoexp(test_exp_time=test_exposure_time, test_mode=False)
-
-                mean = fits_stat(arr, size=100, median=False, std=False, min=False, max=False)['mean']
-
-                self.info_callback['exec_json'](self.exec_json(auto_exp_start=True,
-                                                               auto_exp_finnished=True,
-                                                               auto_exp_sub_no=auto_exp_sub_no,
-                                                               auto_exp_time=test_exposure_time))
-                if mean > zero_level:
-                    mean = mean - zero_level
-                logger.info(f'{self.id} test_frame time:{test_exposure_time}s mean-zero:{round(mean)}')
-                self.info_callback['stream_1'](f'{self.id} test_frame time:{test_exposure_time}s'
-                                               f' mean-zero:{round(mean)}')
-                self.info_callback['exec_json'](self.exec_json(test_exp_mean=mean))
-                mean_list.append(mean)
-                if len(mean_list) > 1:
-                    mean_diff = mean_list[-1] - mean_list[-2]
-                mean_min_max = (test_min_max_time_exp[0] * mean, test_min_max_time_exp[1] * mean)
-
-                # Check if should skipp
-                if mean_diff is not None:
-                    if mean_diff < 0 and mean_min_max[1] < test_min_max_adu[0]:
-                        logger.info(f"{self.id} skipped - it's too dark")
-                        self.info_callback['stream_1'](f"{self.id} skipped - it's too dark")
-                        self.skipped = True
-                        self.info_callback['exec_json'](self.exec_json())
-                        self.seq_data.skip = True
-                        return 0
-                    elif mean_diff > 0 and mean_min_max[0] > test_min_max_adu[1]:
-                        logger.info(f"{self.id} skipped - it's too bright")
-                        self.info_callback['stream_1'](f"{self.id} skipped - it's too bright")
-                        self.skipped = True
-                        self.info_callback['exec_json'](self.exec_json())
-                        self.seq_data.skip = True
-                        return 0
-                if datetime.utcnow().hour > 14:
-                    ev_fact = evening_factor
-                else:
-                    ev_fact = 1
-                # Check if it's ready to calculate exposure time
-                if test_min_max_adu[0] - mean_min_max[1] < 0 < test_min_max_adu[1] - mean_min_max[0]:
-                    if mean_min_max[0] < test_min_max_adu[0]:
-                        exposure_time = (test_min_max_adu[0] / mean) * ev_fact
-                        self.info_callback['stream_1'](f"{self.id} calc_exp_time:{round(exposure_time, 1)},"
-                                                       f" expect_adu:{round(exposure_time * mean, 1)}")
-                        logger.info(f"{self.id} calc_exp_time:{round(exposure_time, 1)},"
-                                    f" expect_adu:{round(exposure_time * mean, 1)}")
-                        break
-                    else:
-                        exposure_time = (mean_min_max[0] / mean) * ev_fact
-                        self.info_callback['stream_1'](f"{self.id} calc_exp_time:{round(exposure_time, 1)},"
-                                                       f" expect_adu:{round(exposure_time * mean, 1)}")
-                        logger.info(f"{self.id} calc_exp_time:{round(exposure_time, 1)},"
-                                    f" expect_adu:{round(exposure_time * mean, 1)}")
-                        break
-                await asyncio.sleep(test_time_interval)
+            exposure_time, _exit = await self._autoexposure_exec()
+            if _exit:
+                return 0
 
         logger.info(f'{self.id} exp:{self.subexp_no}/{self.kwargs["exp_no"]} started')
         self.info_callback['stream_1'](f'{self.id} exp:{self.subexp_no}/{self.kwargs["exp_no"]} started')

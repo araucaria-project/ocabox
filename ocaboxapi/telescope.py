@@ -14,6 +14,7 @@ from ocaboxapi.rotator import Rotator
 from ocaboxapi.plan import ObservationPlan
 from ocaboxapi.exceptions import OcaboxServerError
 from ocaboxapi.cycle_time import CycleTime
+from ocaboxapi.guiding_controller import GuidingController
 from typing import Dict
 from ob.comunication.comunication_error import CommunicationTimeoutError, CommunicationRuntimeError
 
@@ -37,6 +38,7 @@ class Telescope(AbstractTelescope):
         self._access_grantor = None
         self._observation_plan = None
         self._cycle_time_calculator = None
+        self._guiding_controller = None
 
     def get_mount(self, id='mount') -> Mount:
         try:
@@ -112,10 +114,15 @@ class Telescope(AbstractTelescope):
             self.rotators[id] = dev
             return dev
 
-    def get_cycle_time_calculator(self) -> ObservationPlan:
+    def get_cycle_time_calculator(self) -> CycleTime:
         if self._cycle_time_calculator is None:
             self._cycle_time_calculator = CycleTime(telescope=self)
         return self._cycle_time_calculator
+
+    def get_guiding_controller(self) -> GuidingController:
+        if self._guiding_controller is None:
+            self._guiding_controller = GuidingController(id='custom_guider', telescope=self)
+        return self._guiding_controller
 
     async def is_telescope_alpaca_server_available(self, request_timeout: float = None) -> Dict[str, bool]:
         """
