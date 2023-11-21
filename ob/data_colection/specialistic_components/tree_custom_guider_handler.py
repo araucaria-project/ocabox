@@ -13,6 +13,7 @@ from typing import Callable, Dict, List
 from serverish.messenger import Messenger, request
 import asyncio
 import numpy as np
+from serverish.base.exceptions import MessengerRequestNoResponders, MessengerRequestNoResponse, MessengerRequestTimeout
 import math
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -125,11 +126,16 @@ class GuiderHandler:
 
     async def _send_rpc_request(self, req: str, loop: int, nloops: int):
         #TODO get host, port form ocabox or some nats handler?
-        async with Messenger().context(host="192.168.8.140", port=4222):
-            dat, met = await request(subject='tic.rpc.dev.guiding',
-                                     data=self._rpc_data(req=req, loop=loop, nloops=nloops),
-                                     meta=self._rpc_meta(),
-                                     timeout=5)
+        try:
+            async with Messenger().context(host="192.168.8.140", port=4222):
+                dat, met = await request(subject='tic.rpc.dev.guiding',
+                                         data=self._rpc_data(req=req, loop=loop, nloops=nloops),
+                                         meta=self._rpc_meta(),
+                                         timeout=5)
+        except (MessengerRequestNoResponders, MessengerRequestNoResponse, MessengerRequestTimeout):
+            logger.warning(f'Nats rpc guider msg can not reach responder')
+            dat = None
+            met = None
         return dat, met
 
     def _rpc_data(self, req: str, loop: int, nloops: int) -> Dict:
