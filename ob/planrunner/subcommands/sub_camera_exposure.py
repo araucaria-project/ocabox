@@ -262,21 +262,21 @@ class CameraExposure(SubCommand):
             await asyncio.sleep(0.1)
 
     async def get_array_autoexp(self, test_exp_time: float) -> List:
-        if self.telescope.id == 'dev':
-            test_mode = True
-        else:
-            test_mode = False
-        if not test_mode:
-            await self.camera.aput_startexposure(test_exp_time, self.kwargs["light"])
-            await self._wait_for_subexposure(test_exp_time)
-            return await self.value_proof_get(name='autoexp_get_array',
-                                             awaitab=self.camera.aget_imagearray,
-                                             expect_type=list)
-        else:
-            with open(os.path.expanduser('~/.oca/camera_sim.txt'), 'r') as f:
-                arr = json.load(f)
-                f.close()
-                return arr
+        #if self.telescope.id == 'dev':
+        #    test_mode = True
+        #else:
+        #    test_mode = False
+        #if not test_mode:
+        await self.camera.aput_startexposure(test_exp_time, self.kwargs["light"])
+        await self._wait_for_subexposure(test_exp_time)
+        return await self.value_proof_get(name='autoexp_get_array',
+                                         awaitab=self.camera.aget_imagearray,
+                                         expect_type=list)
+        #else:
+        #    with open(os.path.expanduser('~/.oca/camera_sim.txt'), 'r') as f:
+        #        arr = json.load(f)
+        #        f.close()
+        #        return arr
 
     async def _autoexposure_exec(self) -> Tuple[float, bool]:
         """
@@ -330,12 +330,12 @@ class CameraExposure(SubCommand):
             else:
                 mean = 1.0
             mean_list.append(mean)
-            logger.info(f'{self.id} Test frame mean:{round(mean)}'
-                        f' range:[{round(test_min_max_adu[0]/test_min_max_time_exp[1])}-'
-                        f'{round(test_min_max_adu[1]/test_min_max_time_exp[0])}]')
-            self.info_callback['stream_1'](f'{self.id} Test frame mean:{round(mean)}'
-                        f' range:[{round(test_min_max_adu[0]/test_min_max_time_exp[1])}-'
-                        f'{round(test_min_max_adu[1]/test_min_max_time_exp[0])}]')
+            logger.info(f'{self.id} Test frame mean:{round(mean, 2)}'
+                        f' range:[{round(test_min_max_adu[0]/test_min_max_time_exp[1], 2)}-'
+                        f'{round(test_min_max_adu[1]/test_min_max_time_exp[0], 2)}]')
+            self.info_callback['stream_1'](f'{self.id} Test frame mean:{round(mean, 2)}'
+                        f' range:[{round(test_min_max_adu[0]/test_min_max_time_exp[1], 2)}-'
+                        f'{round(test_min_max_adu[1]/test_min_max_time_exp[0], 2)}]')
             self.info_callback['exec_json'](self.exec_json(
                 test_exp_mean=mean,
                 expected_mean_min=round(test_min_max_adu[0]/test_min_max_time_exp[1]),

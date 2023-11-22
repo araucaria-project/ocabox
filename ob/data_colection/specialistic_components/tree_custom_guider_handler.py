@@ -94,7 +94,6 @@ class GuiderHandler:
         # TODO TALK TO JOURNAL
         self.status = 'idle'
 
-
     async def _calib_corr(self, param: Dict,) -> None:
         try:
             guid_corr = param['guid_corr']
@@ -140,7 +139,7 @@ class GuiderHandler:
 
     def _rpc_data(self, req: str, loop: int, nloops: int) -> Dict:
         return {
-                "telescope_id": "dev", #TODO get from ocabox
+                "telescope_id": "dev", #TODO get from ocabox - not necessary???
                 "request": req,
                 "star_select": [],
                 "fits_id": f'{round((time.time())*10)}'[-7:],
@@ -272,7 +271,6 @@ class GuiderHandler:
         else:
             # TODO TALK TO JOURNAL
             self.status = 'idle'
-
 
     async def preview(self, single: bool = False):
         #TODO TALK TO JOURNAL
