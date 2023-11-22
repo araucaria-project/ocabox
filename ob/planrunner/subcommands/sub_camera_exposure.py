@@ -330,12 +330,12 @@ class CameraExposure(SubCommand):
             else:
                 mean = 1.0
             mean_list.append(mean)
-            logger.info(f'{self.id} Test frame mean:{round(mean)}'
-                        f' range:[{round(test_min_max_adu[0]/test_min_max_time_exp[1])}-'
-                        f'{round(test_min_max_adu[1]/test_min_max_time_exp[0])}]')
-            self.info_callback['stream_1'](f'{self.id} Test frame mean:{round(mean)}'
-                        f' range:[{round(test_min_max_adu[0]/test_min_max_time_exp[1])}-'
-                        f'{round(test_min_max_adu[1]/test_min_max_time_exp[0])}]')
+            logger.info(f'{self.id} Test frame mean:{round(mean, 2)}'
+                        f' range:[{round(test_min_max_adu[0]/test_min_max_time_exp[1], 2)}-'
+                        f'{round(test_min_max_adu[1]/test_min_max_time_exp[0], 2)}]')
+            self.info_callback['stream_1'](f'{self.id} Test frame mean:{round(mean, 2)}'
+                        f' range:[{round(test_min_max_adu[0]/test_min_max_time_exp[1], )}-'
+                        f'{round(test_min_max_adu[1]/test_min_max_time_exp[0], 2)}]')
             self.info_callback['exec_json'](self.exec_json(
                 test_exp_mean=mean,
                 expected_mean_min=round(test_min_max_adu[0]/test_min_max_time_exp[1]),
