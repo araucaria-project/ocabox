@@ -212,12 +212,11 @@ class GuiderHandler:
 
     async def _send_rpc_request(self, req: str, loop: int, nloops: int):
         #TODO get host, port form ocabox or some nats handler?
+        requester = self.nats.get_rpcrequester('tic.rpc.dev.guiding')
         try:
-
-            dat, met = await self.nats.request(subject='tic.rpc.dev.guiding',
-                                         data=self._rpc_data(req=req, loop=loop, nloops=nloops),
-                                         meta=self._rpc_meta(),
-                                         timeout=5)
+            dat, met = await requester.request(data=self._rpc_data(req=req, loop=loop, nloops=nloops),
+                                               meta=self._rpc_meta(),
+                                               timeout=5)
         except (MessengerRequestNoResponders, MessengerRequestNoResponse, MessengerRequestTimeout):
             logger.warning(f'Nats rpc guider msg can not reach responder')
             dat = None
