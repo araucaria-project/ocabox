@@ -270,7 +270,7 @@ class Client(BaseZmqCommunicationObject):
         # create message timeout
         if request_timeout is None:
             request_timeout = time.time() + self.default_timeout
-            logger.info(f"Timeout will be set to the default value (The request will expire in {self.default_timeout} "
+            logger.debug(f"Timeout will be set to the default value (The request will expire in {self.default_timeout} "
                         f"second)")
         request_timeout_b = MessageSerializer.pack_b(request_timeout)
         # TODO If some performance problems occurs, here it is place to change potentially unneeded deserialization
