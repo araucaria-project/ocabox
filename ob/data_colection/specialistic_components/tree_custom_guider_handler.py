@@ -96,7 +96,7 @@ class GuiderHandler:
                 try:
                     res = await self.api.get_async(address=cam_comm_imageready,
                                                    time_of_data_tolerance=0.5,
-                                                   request_timeout=2.17)
+                                                   request_timeout=30)
                     logger.error(f'imageready true {res.val.v}')
                     if res is not None:
                         if res.val.v is True:
