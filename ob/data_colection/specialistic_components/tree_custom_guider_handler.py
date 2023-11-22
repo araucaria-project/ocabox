@@ -97,11 +97,16 @@ class GuiderHandler:
                     res = await self.api.get_async(address=cam_comm_imageready,
                                                    time_of_data_tolerance=0.5,
                                                    request_timeout=2.17)
+                    logger.error(f'{res}')
                     if res is True:
                         logger.info(f'imageready true')
                         return True
-                except (CommunicationRuntimeError, CommunicationTimeoutError):
+                except CommunicationRuntimeError:
+                    logger.error(f'RuntimeError')
                     return False
+                except CommunicationTimeoutError:
+                    logger.error(f'TIMEOUT')
+                    pass
                 await asyncio.sleep(0.1)
         else:
             return False
