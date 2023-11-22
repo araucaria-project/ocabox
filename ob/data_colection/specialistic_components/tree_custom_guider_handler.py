@@ -1,11 +1,14 @@
 import logging
 import time
 from typing import Optional
+
+from ob.comunication.comunication_error import CommunicationRuntimeError, CommunicationTimeoutError
 from ob.data_colection.coded_error import TreeOtherError
 from ob.comunication.internal_client_api import InternalClientAPI
 from ob.data_colection.address import AddressError
 from ob.data_colection.base_components.tree_component import ProvidesResponseProtocol
 from ob.data_colection.base_components.tree_provider import TreeProvider
+from ob.data_colection.resource_manager.resource_manager import TelescopeComponentManagerAlpaca
 from ob.data_colection.specialistic_components.tree_alpaca import TreeAlpacaObservatory
 from ob.data_colection.value import Value
 from ob.data_colection.value_call import ValueRequest
@@ -23,8 +26,10 @@ class GuiderHandler:
     STATUSES = ['idle', 'dark', 'calibration', 'guiding', 'preview', 'error']
     DIRECTIONS = [0, 1, 2, 3]
 
-    def __init__(self, rs) -> None:
-        self.rs = rs
+    def __init__(self) -> None:
+        self.rs: TelescopeComponentManagerAlpaca | None = None # Validate if rs not null
+        self.api = None
+        self.nats = None
         self.status: str = 'idle'
         self.exposure: float = 3.0 # in seconds
         self.period: float = 6.0 # in seconds
@@ -39,15 +44,87 @@ class GuiderHandler:
         self.mount_follow: bool = True
         self.darks: Dict = {}
 
-    async def _exec_exposure(self, ):
-        #TODO how to operate camera and telescope from here?
-        await asyncio.sleep(self.exposure)
-        # if after wait we get imageready true
-        return
+    @property
+    def _telescope_id(self) -> str:
+        return self.rs.get_observatory_name()
 
-    async def _mount_pulseguide(self, direction: int, duration: float) -> None:
-        # TODO put some maximum pulseguide value
-        pass
+    def _get_mount_comm(self, command: str) -> str | None:
+        res_mount = self.rs.get_resource(self.rs.MOUNT)
+        if res_mount is not None:
+            return f'{res_mount.adr}.{command}'
+        else:
+            return None
+
+    def _get_camera_comm(self, command: str) -> str | None:
+        # TODO for Ernest change get_resource(... nr=1) -> do not take nr but some "guider" name or else
+        res_cam = self.rs.get_resource(self.rs.CAMERA, nr=1)
+        if res_cam is not None:
+            return f'{res_cam.adr}.{command}'
+        else:
+            return None
+
+    def _get_access_comm(self, command: str) -> str:
+        return f'{self._telescope_id}.access_grantor.{command}'
+
+
+    async def _take_control(self):
+        # TODO temporary for tests
+        try:
+            await self.api.put_async(address=self._get_access_comm('take_controll'), no_wait=True)
+            return True
+        except (CommunicationRuntimeError, CommunicationTimeoutError):
+            return False
+
+    async def _wait_for_exposure(self) -> bool:
+        cam_comm_imageready = self._get_camera_comm('imageready')
+        if self.exposure >= 0.6:
+            sub_t = self.exposure
+        else:
+            sub_t = 1.0
+        await asyncio.sleep(float(sub_t))
+        if cam_comm_imageready is not None:
+            while True:
+                # TODO do some timeout?
+                try:
+                    res = await self.api.get_async(address=cam_comm_imageready,
+                                                   time_of_data=1,
+                                                   time_of_data_tolerance=1,
+                                                   request_timeout=2.17)
+                    if res is True:
+                        return True
+                except (CommunicationRuntimeError, CommunicationTimeoutError):
+                    return False
+                await asyncio.sleep(0.1)
+        else:
+            return False
+
+    async def _exec_exposure(self) -> bool:
+        ret = await self._take_control()
+        if ret:
+            cam_comm_start_exp = self._get_camera_comm('startexposure')
+            if cam_comm_start_exp is not None:
+                try:
+                    await self.api.put_async(address=cam_comm_start_exp, no_wait=True)
+                except (CommunicationRuntimeError, CommunicationTimeoutError):
+                    return False
+            ret = await self._wait_for_exposure()
+        return ret
+
+    async def _exec_pulseguide(self, direction: int, duration: float) -> bool:
+        ret = await self._take_control()
+        if ret:
+            mo_comm_start_exp = self._get_mount_comm('pulseguide')
+            if mo_comm_start_exp is not None:
+                try:
+                    await self.api.put_async(address=mo_comm_start_exp,
+                                             parameters_dict={'Direction': direction, 'Duration': duration},
+                                             no_wait=True)
+                    return True
+                except (CommunicationRuntimeError, CommunicationTimeoutError):
+                    return False
+            else:
+                return False
+        return False
 
     @staticmethod
     def get_vector_angle_to_x(vector: np.ndarray) -> float:
@@ -103,7 +180,7 @@ class GuiderHandler:
             return
         mount_pulse, direction = await self._build_calib_data(guid_corr=guid_corr)
         if mount_pulse:
-            await self._mount_pulseguide(direction=direction, duration=self.calib_step)
+            res = await self._exec_pulseguide(direction=direction, duration=self.calib_step)
 
     async def _guid_corr(self, param: Dict, t_start: float) -> None:
         try:
@@ -116,8 +193,8 @@ class GuiderHandler:
         dec_dir = 0 # [0, 1]
         ra_dir = 2 # [2, 3]
         duration = 1
-        await self._mount_pulseguide(direction=dec_dir, duration=duration)
-        await self._mount_pulseguide(direction=ra_dir, duration=duration)
+        res_1 = await self._exec_pulseguide(direction=dec_dir, duration=duration)
+        res_2 = await self._exec_pulseguide(direction=ra_dir, duration=duration)
         # TODO here wait until the period ends, if time is longer just exit method
 
     def _get_seq_id(self):
@@ -126,8 +203,8 @@ class GuiderHandler:
     async def _send_rpc_request(self, req: str, loop: int, nloops: int):
         #TODO get host, port form ocabox or some nats handler?
         try:
-            async with Messenger().context(host="192.168.8.140", port=4222):
-                dat, met = await request(subject='tic.rpc.dev.guiding',
+
+            dat, met = await self.nats.request(subject='tic.rpc.dev.guiding',
                                          data=self._rpc_data(req=req, loop=loop, nloops=nloops),
                                          meta=self._rpc_meta(),
                                          timeout=5)
@@ -139,7 +216,6 @@ class GuiderHandler:
 
     def _rpc_data(self, req: str, loop: int, nloops: int) -> Dict:
         return {
-                "telescope_id": "dev", #TODO get from ocabox - not necessary???
                 "request": req,
                 "star_select": [],
                 "fits_id": f'{round((time.time())*10)}'[-7:],
@@ -162,27 +238,32 @@ class GuiderHandler:
                  }
 
     async def _preview(self):
-        await self._exec_exposure()
-        d, m = await self._send_rpc_request(req="preview", loop=1, nloops=1)
-        if d is not None:
-            try:
-                resp = d['response']
-                status = d['status']
-            except KeyError:
-                #TODO TALK TO JOURNAL
-                self.status = 'idle'
-                return
-            if resp in ['preview_done'] and status == 'ok':
-                #TODO TALK TO JOURNAL
-                pass
+        res = await self._exec_exposure()
+        if res:
+            d, m = await self._send_rpc_request(req="preview", loop=1, nloops=1)
+            if d is not None:
+                try:
+                    resp = d['response']
+                    status = d['status']
+                except KeyError:
+                    #TODO TALK TO JOURNAL
+                    self.status = 'idle'
+                    return
+                if resp in ['preview_done'] and status == 'ok':
+                    #TODO TALK TO JOURNAL
+                    if self.preview_single:
+                        self.status = 'idle'
+                else:
+                    #TODO TALK TO JOURNAL
+                    #TODO what here?
+                    pass
             else:
                 #TODO TALK TO JOURNAL
-                pass
+                self.status = 'idle'
         else:
-            #TODO TALK TO JOURNAL
+            # TODO TALK TO JOURNAL
             self.status = 'idle'
-        if self.preview_single:
-            self.status = 'idle'
+
 
     async def _dark(self):
         await self._exec_exposure()
@@ -342,6 +423,7 @@ class TreeCustomGuiderHandler(TreeProvider):
         super().__init__(component_name=component_name, source_name=source_name, **kwargs)
         self._target_alpaca: TreeAlpacaObservatory = target_alpaca
         self.rs = None
+        self.gh = GuiderHandler()
         self.gh: GuiderHandler | None = None
 
     async def get_value(self, request: ValueRequest, **kwargs) -> Optional[Value]:
@@ -456,7 +538,9 @@ class TreeCustomGuiderHandler(TreeProvider):
 
     async def run(self):
         self.rs = await self._target_alpaca.get_res_manager()
-        self.gh = GuiderHandler(rs=self.rs)
+        self.gh.rs = self.rs
+        self.gh.api = self.api
+        self.gh.nats = self.target_nats
         self.task = asyncio.create_task(self.gh.run_body())
         await super().run()
 
