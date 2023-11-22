@@ -101,7 +101,7 @@ class GuiderHandler:
             return False
 
     async def _exec_exposure(self) -> bool:
-        ret = await self._take_control()
+        ret = await self._take_control(80000)
         if ret:
             cam_comm_start_exp = self._get_camera_comm('startexposure')
             if cam_comm_start_exp is not None:
@@ -113,7 +113,7 @@ class GuiderHandler:
         return ret
 
     async def _exec_pulseguide(self, direction: int, duration: float) -> bool:
-        ret = await self._take_control()
+        ret = await self._take_control(80000)
         if ret:
             mo_comm_start_exp = self._get_mount_comm('pulseguide')
             if mo_comm_start_exp is not None:
