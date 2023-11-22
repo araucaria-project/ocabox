@@ -70,9 +70,10 @@ class GuiderHandler:
         # TODO temporary for tests
         timeout_reservation = time.time() + for_how_long
         try:
-            await self.api.put_async(address=self._get_access_comm('take_controll'),
+            await self.api.put_async(address=self._get_access_comm('take_control'),
                                      parameters_dict={'timeout_reservation': timeout_reservation},
                                      no_wait=True)
+            logger.info(f'controll taken')
             return True
         except (CommunicationRuntimeError, CommunicationTimeoutError):
             return False
@@ -93,6 +94,7 @@ class GuiderHandler:
                                                    time_of_data_tolerance=1,
                                                    request_timeout=2.17)
                     if res is True:
+                        logger.info(f'imageready true')
                         return True
                 except (CommunicationRuntimeError, CommunicationTimeoutError):
                     return False
