@@ -109,15 +109,18 @@ class GuiderHandler:
     async def _exec_exposure(self, light: bool) -> bool:
         ret = await self._take_control(80000)
         if ret:
+            logger.error(f'take controll ok')
             cam_comm_start_exp = self._get_camera_comm('startexposure')
             if cam_comm_start_exp is not None:
                 try:
                     await self.api.put_async(address=cam_comm_start_exp,
                                              parameters_dict={'Duration': self.exposure, 'Light': light},
                                              no_wait=True)
+                    logger.error(f'camera exposure ok')
                 except (CommunicationRuntimeError, CommunicationTimeoutError):
                     return False
             ret = await self._wait_for_exposure()
+            logger.error(f'wait for exposure {ret}')
         return ret
 
     async def _exec_pulseguide(self, direction: int, duration: float) -> bool:
@@ -249,7 +252,9 @@ class GuiderHandler:
     async def _preview(self):
         res = await self._exec_exposure(light=True)
         if res:
+
             d, m = await self._send_rpc_request(req="preview", loop=1, nloops=1)
+            logger.error(f'rpc ok {d}')
             if d is not None:
                 try:
                     resp = d['response']
