@@ -66,11 +66,13 @@ class GuiderHandler:
     def _get_access_comm(self, command: str) -> str:
         return f'{self._telescope_id}.access_grantor.{command}'
 
-
-    async def _take_control(self):
+    async def _take_control(self, for_how_long: float):
         # TODO temporary for tests
+        timeout_reservation = time.time() + for_how_long
         try:
-            await self.api.put_async(address=self._get_access_comm('take_controll'), no_wait=True)
+            await self.api.put_async(address=self._get_access_comm('take_controll'),
+                                     parameters_dict={'timeout_reservation': timeout_reservation},
+                                     no_wait=True)
             return True
         except (CommunicationRuntimeError, CommunicationTimeoutError):
             return False
