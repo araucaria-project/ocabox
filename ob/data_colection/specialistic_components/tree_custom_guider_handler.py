@@ -77,7 +77,7 @@ class GuiderHandler:
             await self.api.put_async(address=self._get_access_comm('take_control'),
                                      parameters_dict={'timeout_reservation': timeout_reservation},
                                      no_wait=True)
-            logger.info(f'controll taken')
+            logger.error(f'controll taken')
             return True
         except (CommunicationRuntimeError, CommunicationTimeoutError):
             return False
@@ -90,7 +90,7 @@ class GuiderHandler:
             sub_t = 1.0
         await asyncio.sleep(float(sub_t))
         if cam_comm_imageready is not None:
-            logger.info(f'start waiting')
+            logger.error(f'start waiting')
             while True:
                 # TODO do some timeout?
                 try:
@@ -99,7 +99,7 @@ class GuiderHandler:
                                                    request_timeout=2.17)
                     if res is not None:
                         if res.val.v is True:
-                            logger.info(f'imageready true {res.val.v}')
+                            logger.error(f'imageready true {res.val.v}')
                             return True
                 except CommunicationRuntimeError:
                     logger.error(f'RuntimeError')
