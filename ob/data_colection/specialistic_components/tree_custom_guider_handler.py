@@ -57,7 +57,11 @@ class GuiderHandler:
 
     def _get_camera_comm(self, command: str) -> str | None:
         # TODO for Ernest change get_resource(... nr=1) -> do not take nr but some "guider" name or else
-        res_cam = self.rs.get_resource(self.rs.CAMERA, nr=1)
+        if self._telescope_id == 'dev':
+            nr = 0
+        else:
+            nr = 1
+        res_cam = self.rs.get_resource(self.rs.CAMERA, nr=nr)
         if res_cam is not None:
             return f'{res_cam.adr}.{command}'
         else:
