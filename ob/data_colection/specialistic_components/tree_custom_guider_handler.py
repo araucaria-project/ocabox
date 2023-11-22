@@ -106,13 +106,15 @@ class GuiderHandler:
         else:
             return False
 
-    async def _exec_exposure(self) -> bool:
+    async def _exec_exposure(self, light: bool) -> bool:
         ret = await self._take_control(80000)
         if ret:
             cam_comm_start_exp = self._get_camera_comm('startexposure')
             if cam_comm_start_exp is not None:
                 try:
-                    await self.api.put_async(address=cam_comm_start_exp, no_wait=True)
+                    await self.api.put_async(address=cam_comm_start_exp,
+                                             parameters_dict={'Duration': self.exposure, 'Light': light},
+                                             no_wait=True)
                 except (CommunicationRuntimeError, CommunicationTimeoutError):
                     return False
             ret = await self._wait_for_exposure()
@@ -246,7 +248,7 @@ class GuiderHandler:
                  }
 
     async def _preview(self):
-        res = await self._exec_exposure()
+        res = await self._exec_exposure(light=True)
         if res:
             d, m = await self._send_rpc_request(req="preview", loop=1, nloops=1)
             if d is not None:
@@ -274,7 +276,7 @@ class GuiderHandler:
 
 
     async def _dark(self):
-        await self._exec_exposure()
+        await self._exec_exposure(light=False)
         d, m = await self._send_rpc_request(req="dark", loop=self.loop_dark, nloops=self.nloops_dark)
         if d is not None:
             try:
@@ -298,7 +300,7 @@ class GuiderHandler:
             self.status = 'idle'
 
     async def _calibration(self) -> None:
-        await self._exec_exposure()
+        await self._exec_exposure(light=True)
         d, m = await self._send_rpc_request(req="calib", loop=1, nloops=1)
         if d is not None:
             try:
@@ -332,7 +334,7 @@ class GuiderHandler:
 
     async def _guiding(self) -> None:
         t_start = time.time()
-        await self._exec_exposure()
+        await self._exec_exposure(light=True)
         d, m = await self._send_rpc_request(req="guiding_simple", loop=1, nloops=1)
         if d is not None:
             try:
