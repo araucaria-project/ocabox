@@ -423,8 +423,7 @@ class TreeCustomGuiderHandler(TreeProvider):
         super().__init__(component_name=component_name, source_name=source_name, **kwargs)
         self._target_alpaca: TreeAlpacaObservatory = target_alpaca
         self.rs = None
-        self.gh = GuiderHandler()
-        self.gh: GuiderHandler | None = None
+        self.gh: GuiderHandler = GuiderHandler()
 
     async def get_value(self, request: ValueRequest, **kwargs) -> Optional[Value]:
 
