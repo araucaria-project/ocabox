@@ -90,12 +90,12 @@ class GuiderHandler:
             sub_t = 1.0
         await asyncio.sleep(float(sub_t))
         if cam_comm_imageready is not None:
+            logger.info(f'start waiting')
             while True:
                 # TODO do some timeout?
                 try:
                     res = await self.api.get_async(address=cam_comm_imageready,
-                                                   time_of_data=1,
-                                                   time_of_data_tolerance=1,
+                                                   time_of_data_tolerance=0.5,
                                                    request_timeout=2.17)
                     if res is True:
                         logger.info(f'imageready true')
@@ -109,14 +109,12 @@ class GuiderHandler:
     async def _exec_exposure(self, light: bool) -> bool:
         ret = await self._take_control(80000)
         if ret:
-            logger.error(f'take controll ok')
             cam_comm_start_exp = self._get_camera_comm('startexposure')
             if cam_comm_start_exp is not None:
                 try:
                     await self.api.put_async(address=cam_comm_start_exp,
                                              parameters_dict={'Duration': self.exposure, 'Light': light},
                                              no_wait=True)
-                    logger.error(f'camera exposure ok')
                 except (CommunicationRuntimeError, CommunicationTimeoutError):
                     return False
             ret = await self._wait_for_exposure()
