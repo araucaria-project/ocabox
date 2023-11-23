@@ -15,7 +15,7 @@ class CycleTimeDataBuild(AbstractCycleTime):
         self.telescope = telescope
         self._data: CTData = CTData()
         super().__init__()
-        self._mk_dirs()
+        #self._mk_dirs()
 
 
     def insert_data(self, name: str, value: Any) -> None:

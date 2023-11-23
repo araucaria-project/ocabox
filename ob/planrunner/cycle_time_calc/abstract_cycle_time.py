@@ -1,12 +1,13 @@
 import logging
 import re
-from abc import ABC, abstractmethod
+from abc import ABC
 import os
 from typing import Dict, Any, List
 import datetime
 import math
 import numpy as np
 import json
+from ocaboxapi import Observatory
 
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -19,7 +20,7 @@ class AbstractCycleTime(ABC):
 
     FILE_NAMES = {'raw_data': 'raw_data.txt', 'clean_data': 'clean_data.txt',
                   'night_verif': 'night_verif.txt', 'train_param': 'train_param.txt'}
-    BASE_FOLDER_NAME = os.path.expanduser('~/.oca/cycle_time_calc')
+    BASE_FOLDER_NAME = Observatory(client_name='DefaultClient').get_app_cfg(key='base_cycle_time_calc_dir')
     RM_MODES_MHZ = {"zb08": [5, 3, 1, 0.05],
                     "jk15": [4, 2, 1, 1, 0.1, 0.1],
                     "wk06": [5, 3, 1, 0.05],
@@ -93,10 +94,14 @@ class AbstractCycleTime(ABC):
 
     @staticmethod
     def add_to_file(data: str, folder: str, file_name: str) -> None:
-        f = open(os.path.join(folder, file_name), "a", encoding='utf-8')
-        f.write(f'{data}')
-        f.write('\n')
-        f.close()
+        try:
+            f = open(os.path.join(folder, file_name), "a", encoding='utf-8')
+            f.write(f'{data}')
+            f.write('\n')
+            f.close()
+        except (FileExistsError, FileNotFoundError):
+            logger.error(f'File {file_name} can not be reached')
+            return None
 
     @staticmethod
     def read_file(folder: str, file_name: str) -> str or None:
@@ -107,7 +112,7 @@ class AbstractCycleTime(ABC):
             logger.debug(f'File read')
             return dat
         except (FileExistsError, FileNotFoundError):
-            logger.warning(f'File {file_name} do not exists')
+            logger.error(f'File {file_name} can not be reached')
             return None
 
     @staticmethod
