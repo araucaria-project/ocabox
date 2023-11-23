@@ -51,6 +51,11 @@ class TreeComponent(ABC):
             return self._tree_data.target_requests
 
     @property
+    def target_nats(self):
+        if self._tree_data:
+            return self._tree_data.nats_messenger
+
+    @property
     def api(self):
         if self._api is None:
             self._api = InternalClientAPI(request_solver=self.target_requests, user_name=f"{self.get_name()}_client")
