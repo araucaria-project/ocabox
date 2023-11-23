@@ -1,12 +1,13 @@
 import logging
 import re
-from abc import ABC, abstractmethod
+from abc import ABC
 import os
 from typing import Dict, Any, List
 import datetime
 import math
 import numpy as np
 import json
+from ocaboxapi import Observatory
 
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -19,7 +20,7 @@ class AbstractCycleTime(ABC):
 
     FILE_NAMES = {'raw_data': 'raw_data.txt', 'clean_data': 'clean_data.txt',
                   'night_verif': 'night_verif.txt', 'train_param': 'train_param.txt'}
-    BASE_FOLDER_NAME = os.path.expanduser('~/.oca/cycle_time_calc')
+    BASE_FOLDER_NAME = Observatory(client_name='DefaultClient').get_app_cfg(key='base_cycle_time_calc_dir')
     RM_MODES_MHZ = {"zb08": [5, 3, 1, 0.05],
                     "jk15": [4, 2, 1, 1, 0.1, 0.1],
                     "wk06": [5, 3, 1, 0.05],
@@ -35,22 +36,29 @@ class AbstractCycleTime(ABC):
 
     @staticmethod
     def get_list_telesc(file_type: str) -> List[str]:
-        l_dir = os.listdir(AbstractCycleTime.BASE_FOLDER_NAME)
         tel_lst = []
-        for n in l_dir:
-            if AbstractCycleTime.FILE_NAMES[file_type] in n and re.fullmatch(pattern='\w\w..?_.*.txt', string=n):
-                tel = n.split('_')[0]
-                if tel not in tel_lst:
-                    tel_lst.append(tel)
+        try:
+            l_dir = os.listdir(AbstractCycleTime.BASE_FOLDER_NAME)
+
+            for n in l_dir:
+                if AbstractCycleTime.FILE_NAMES[file_type] in n and re.fullmatch(pattern='\w\w..?_.*.txt', string=n):
+                    tel = n.split('_')[0]
+                    if tel not in tel_lst:
+                        tel_lst.append(tel)
+        except (FileExistsError, FileNotFoundError):
+            pass
         return tel_lst
 
     @staticmethod
     def get_list_commands(telescope: str, file_type: str) -> List[str]:
-        l_dir = os.listdir(AbstractCycleTime.BASE_FOLDER_NAME)
         com_lst = []
-        for n in l_dir:
-            if (AbstractCycleTime.FILE_NAMES[file_type] in n) and (telescope in n):
-                com_lst.append(n.split('_')[1])
+        try:
+            l_dir = os.listdir(AbstractCycleTime.BASE_FOLDER_NAME)
+            for n in l_dir:
+                if (AbstractCycleTime.FILE_NAMES[file_type] in n) and (telescope in n):
+                    com_lst.append(n.split('_')[1])
+        except (FileExistsError, FileNotFoundError):
+            pass
         return com_lst
 
     @staticmethod
@@ -88,15 +96,23 @@ class AbstractCycleTime(ABC):
 
     @staticmethod
     def _mk_dirs() -> None:
-        if not os.path.exists(AbstractCycleTime.BASE_FOLDER_NAME):
-            os.makedirs(AbstractCycleTime.BASE_FOLDER_NAME, exist_ok=True)
+        try:
+            if not os.path.exists(AbstractCycleTime.BASE_FOLDER_NAME):
+                os.makedirs(AbstractCycleTime.BASE_FOLDER_NAME, exist_ok=True)
+        except PermissionError:
+            logger.error(f'Can not create folder {AbstractCycleTime.BASE_FOLDER_NAME} - no permission, '
+                         f'please create folder manually and grant permissions')
 
     @staticmethod
     def add_to_file(data: str, folder: str, file_name: str) -> None:
-        f = open(os.path.join(folder, file_name), "a", encoding='utf-8')
-        f.write(f'{data}')
-        f.write('\n')
-        f.close()
+        try:
+            f = open(os.path.join(folder, file_name), "a", encoding='utf-8')
+            f.write(f'{data}')
+            f.write('\n')
+            f.close()
+        except (FileExistsError, FileNotFoundError):
+            logger.error(f'File {file_name} can not be reached')
+            return None
 
     @staticmethod
     def read_file(folder: str, file_name: str) -> str or None:
@@ -107,7 +123,7 @@ class AbstractCycleTime(ABC):
             logger.debug(f'File read')
             return dat
         except (FileExistsError, FileNotFoundError):
-            logger.warning(f'File {file_name} do not exists')
+            logger.error(f'File {file_name} can not be reached')
             return None
 
     @staticmethod
