@@ -98,6 +98,19 @@ class CameraExposure(SubCommand):
         else:
             return f'science'
 
+    def _get_today_symlink_name(self) -> str:
+        """
+        Create name for symlink, name is user-friendly date format YYYY_MM_DD with date when night is started
+        @return: Str in format YYYY_MM_DD
+        """
+        jd_tuple = julian_to_tuple(math.floor(self.get_julian_date(str(datetime.utcnow()))) + 0.1)
+        mnth = self.add_zero(jd_tuple[1])
+        day = self.add_zero(jd_tuple[2])
+        return f'{jd_tuple[0]}_{mnth}_{day}'
+
+    def _get_today_fits_folder_name(self) -> str:
+        return f"{math.floor(self.get_oca_date(self.get_julian_date(str(datetime.utcnow())))):04.0f}"
+
     def _provide_target_folder(self) -> str:
         if self.kwargs['type'] == 'focusing':
             lst = os.listdir(self.folder_focusing)
@@ -110,34 +123,44 @@ class CameraExposure(SubCommand):
             if os.path.exists(os.path.join(self.folder_focusing, f'{num_last:06d}', f'{self.kwargs["focus_id"]}')):
                 target_folder = os.path.join(self.folder_focusing, f'{num_last:06d}')
             else:
-                target_folder = os.path.join(self.folder_focusing, f'{num:06d}')
+                target_folder_name = f'{num:06d}'
+                target_folder = os.path.join(self.folder_focusing, target_folder_name)
                 self._mk_folder(target_folder)
                 open(os.path.join(target_folder, f'{self.kwargs["focus_id"]}'), 'a').close()
                 if os.path.exists(os.path.join(self.folder_focusing, f'actual')):
                     if os.readlink(os.path.join(self.folder_focusing, f'actual')) is not target_folder:
                         os.remove(os.path.join(self.folder_focusing, f'actual'))
-                        self._mk_symlink(target_folder, os.path.join(self.folder_focusing, f'actual'))
+                        os.chdir(self.folder_focusing)
+                        self._mk_symlink(target=f'./{target_folder_name}', symlink=f'./actual')
                 else:
-                    self._mk_symlink(target_folder, os.path.join(self.folder_focusing, f'actual'))
+                    os.chdir(self.folder_focusing)
+                    self._mk_symlink(target=f'./{target_folder_name}', symlink=f'./actual')
         elif self.kwargs['type'] == 'snap':
             target_folder = self.folder
         else:
-            jd_tuple = julian_to_tuple(math.floor(self.get_julian_date(str(datetime.utcnow())))+0.1)
-            mnth = self.add_zero(jd_tuple[1])
-            day = self.add_zero(jd_tuple[2])
-            simlink_day = f'{jd_tuple[0]}_{mnth}_{day}'
-            name = f"{math.floor(self.get_oca_date(self.get_julian_date(str(datetime.utcnow())))):04.0f}"
-            target_folder = os.path.join(self.folder, f'{name}')
+            today_symlink_name = self._get_today_symlink_name()
+            today_fits_folder_name = self._get_today_fits_folder_name()
+            target_folder = os.path.join(self.folder, f'{today_fits_folder_name}')
+
+            # Create today fits folder name (last 4 digits of julian date)
             if not os.path.exists(target_folder):
                 self._mk_folder(target_folder)
+
+            # Create actual symlink to today fits folder
             if os.path.exists(os.path.join(self.folder, f'actual')):
                 if not os.readlink(os.path.join(self.folder, f'actual')) == target_folder:
                     os.remove(os.path.join(self.folder, f'actual'))
-                    self._mk_symlink(target_folder, os.path.join(self.folder, f'actual'))
+                    os.chdir(self.folder)
+                    self._mk_symlink(target=f'./{today_fits_folder_name}', symlink=f'./actual')
             else:
-                self._mk_symlink(target_folder, os.path.join(self.folder, f'actual'))
-            if os.path.exists(os.path.join(self.folder, simlink_day)) is False:
-               self._mk_symlink(target_folder, os.path.join(self.folder, simlink_day))
+                os.chdir(self.folder)
+                self._mk_symlink(target=f'./{today_fits_folder_name}', symlink=f'./actual')
+
+            # Create date friendly format symlink to today fits folder
+            if not os.path.exists(os.path.join(self.folder, today_symlink_name)):
+                os.chdir(self.folder)
+                self._mk_symlink(target=f'./{today_fits_folder_name}', symlink=f'./{today_symlink_name}')
+
         return target_folder
 
     async def _wait_for_save_fits(self, sub: int, sub_time: float) -> None:
