@@ -60,7 +60,7 @@ class CycleTimeCalc(AbstractCycleTime):
                                                       'elevation': 2817}
         self._start_time: datetime.datetime = datetime.datetime.utcnow()
         self._time_length_list: List[float] = []
-        #self._mk_dirs()
+        self._mk_dirs()
         self._get_params()
         super().__init__()
 

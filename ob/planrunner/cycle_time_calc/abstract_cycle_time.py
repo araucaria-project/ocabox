@@ -36,22 +36,29 @@ class AbstractCycleTime(ABC):
 
     @staticmethod
     def get_list_telesc(file_type: str) -> List[str]:
-        l_dir = os.listdir(AbstractCycleTime.BASE_FOLDER_NAME)
         tel_lst = []
-        for n in l_dir:
-            if AbstractCycleTime.FILE_NAMES[file_type] in n and re.fullmatch(pattern='\w\w..?_.*.txt', string=n):
-                tel = n.split('_')[0]
-                if tel not in tel_lst:
-                    tel_lst.append(tel)
+        try:
+            l_dir = os.listdir(AbstractCycleTime.BASE_FOLDER_NAME)
+
+            for n in l_dir:
+                if AbstractCycleTime.FILE_NAMES[file_type] in n and re.fullmatch(pattern='\w\w..?_.*.txt', string=n):
+                    tel = n.split('_')[0]
+                    if tel not in tel_lst:
+                        tel_lst.append(tel)
+        except (FileExistsError, FileNotFoundError):
+            pass
         return tel_lst
 
     @staticmethod
     def get_list_commands(telescope: str, file_type: str) -> List[str]:
-        l_dir = os.listdir(AbstractCycleTime.BASE_FOLDER_NAME)
         com_lst = []
-        for n in l_dir:
-            if (AbstractCycleTime.FILE_NAMES[file_type] in n) and (telescope in n):
-                com_lst.append(n.split('_')[1])
+        try:
+            l_dir = os.listdir(AbstractCycleTime.BASE_FOLDER_NAME)
+            for n in l_dir:
+                if (AbstractCycleTime.FILE_NAMES[file_type] in n) and (telescope in n):
+                    com_lst.append(n.split('_')[1])
+        except (FileExistsError, FileNotFoundError):
+            pass
         return com_lst
 
     @staticmethod
@@ -89,8 +96,12 @@ class AbstractCycleTime(ABC):
 
     @staticmethod
     def _mk_dirs() -> None:
-        if not os.path.exists(AbstractCycleTime.BASE_FOLDER_NAME):
-            os.makedirs(AbstractCycleTime.BASE_FOLDER_NAME, exist_ok=True)
+        try:
+            if not os.path.exists(AbstractCycleTime.BASE_FOLDER_NAME):
+                os.makedirs(AbstractCycleTime.BASE_FOLDER_NAME, exist_ok=True)
+        except PermissionError:
+            logger.error(f'Can not create folder {AbstractCycleTime.BASE_FOLDER_NAME} - no permission, '
+                         f'please create folder manually and grant permissions')
 
     @staticmethod
     def add_to_file(data: str, folder: str, file_name: str) -> None:
