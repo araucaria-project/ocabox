@@ -26,14 +26,16 @@ class NightPlan(AbstractSequence):
         self.param = param if param is not None else {}
         self.mount = self.telescope.get_mount()
         self.camera = self.telescope.get_camera()
-        self.param['cycle_time'] = CycleTimeCalc(self.telescope.id)
+        self.param['cycle_time'] = self.telescope.get_cycle_time_calculator()
         self._get_rm_mode()
         self._get_altaz()
         self.args = []
         self.kwargs = {}
         self._r_id: int
         self.parent_kwargs = self.parent.kwargs | self.parent.parent_kwargs
-        self._cycle_time_data_build = CycleTimeDataBuild(self.telescope.id)
+        self._cycle_time_data_build = CycleTimeDataBuild(
+            telescope=self.telescope.id,
+            base_folder=self.telescope.observatory.get_app_cfg(key='base_cycle_time_calc_dir'))
 
         super().__init__(id=self.id, name=self.name, info_callback=self.info_callback,
                          observatory=self.parent.observatory, c_type='night_plan', kwargs=self.kwargs)

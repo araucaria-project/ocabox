@@ -48,8 +48,8 @@ class CycleTimeDataClean(AbstractCycleTime):
         return commands_data
 
     @staticmethod
-    def verify_nights(full_nights_id: Dict[str, Dict[str, Any]], telescope: str):
-        f = CycleTimeDataClean.read_file(folder=CycleTimeDataClean.BASE_FOLDER_NAME,
+    def verify_nights(full_nights_id: Dict[str, Dict[str, Any]], telescope: str, base_folder: str):
+        f = CycleTimeDataClean.read_file(folder=base_folder,
                                          file_name=CycleTimeDataClean.night_verif_file_name(telescope=telescope))
         if f is not None:
             l = f.split('\n')
@@ -65,13 +65,15 @@ class CycleTimeDataClean(AbstractCycleTime):
 
     @staticmethod
     def save_commands_data_to_files(commands_data: Dict[str, Any],
-                                    full_nights_id: Dict[str, Dict[str, Any]], telescope: str) -> None:
+                                    full_nights_id: Dict[str, Dict[str, Any]],
+                                    telescope: str,
+                                    base_folder: str) -> None:
         logger.debug(f'Save commands data for telescope: {telescope}')
         for n in commands_data.keys():
             for m in commands_data[n]:
                 CycleTimeDataClean.add_to_file(
                     data=CycleTimeDataClean.encode_data(m),
-                    folder=CycleTimeDataClean.BASE_FOLDER_NAME,
+                    folder=base_folder,
                     file_name=CycleTimeDataClean.clean_data_file_name(telescope=telescope, command=n))
         for p, q in full_nights_id.items():
             dat = OrderedDict({
@@ -80,7 +82,7 @@ class CycleTimeDataClean(AbstractCycleTime):
             })
             CycleTimeDataClean.add_to_file(
                 data=CycleTimeDataClean.encode_data(data=dat),
-                folder=CycleTimeDataClean.BASE_FOLDER_NAME,
+                folder=base_folder,
                 file_name=CycleTimeDataClean.night_verif_file_name(telescope=telescope))
 
     @staticmethod
@@ -138,26 +140,28 @@ class CycleTimeDataClean(AbstractCycleTime):
         return dat
 
     @staticmethod
-    def data_clean(telescope: str) -> None:
+    def data_clean(telescope: str, base_folder: str) -> None:
         """
         Method reading and cleaning only data from full nights (i.e. complete program) and only new data
         """
-        str_dat = CycleTimeDataClean.read_file(CycleTimeDataClean.BASE_FOLDER_NAME,
+        str_dat = CycleTimeDataClean.read_file(base_folder,
                                             CycleTimeDataClean.raw_file_name(telescope=telescope))
         parsed_data = CycleTimeDataClean.parse_data(str_dat)
         full_nights_id = CycleTimeDataClean.find_full_nights_id(parsed_data)
-        full_nights_id = CycleTimeDataClean.verify_nights(full_nights_id=full_nights_id, telescope=telescope)
+        full_nights_id = CycleTimeDataClean.verify_nights(full_nights_id=full_nights_id,
+                                                          telescope=telescope, base_folder=base_folder)
         commands_data = CycleTimeDataClean.build_commands_data(data=parsed_data,
                                                                telescope=telescope,
                                                                full_nights_id=full_nights_id)
         CycleTimeDataClean.save_commands_data_to_files(commands_data=commands_data,
                                                        full_nights_id=full_nights_id,
-                                                       telescope=telescope)
+                                                       telescope=telescope,
+                                                       base_folder=base_folder)
 
     @staticmethod
-    def data_clean_all() -> None:
+    def data_clean_all(base_folder: str) -> None:
         logger.debug(f'Data clean for all telescopes and all commands type')
-        tel = CycleTimeDataClean.get_list_telesc(file_type='raw_data')
+        tel = CycleTimeDataClean.get_list_telesc(file_type='raw_data', base_folder=base_folder)
         for t in tel:
             logger.info(f'Data clean for telescope: {t}')
-            CycleTimeDataClean.data_clean(telescope=t)
+            CycleTimeDataClean.data_clean(telescope=t, base_folder=base_folder)

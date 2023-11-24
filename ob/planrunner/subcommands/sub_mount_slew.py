@@ -93,7 +93,7 @@ class MountSlew(SubCommand):
                     return 1
             if self.alt > mount_min_alt:
                 logger.info(f'{self.id} alt:{self.alt}')
-                await self.mount.aput_unpark()
+                #await self.mount.aput_unpark()
                 await self.mount.aput_tracking(False)
                 await self.mount.aput_slewtoaltaz_async(az=self.az, alt=self.alt)
                 await self.mount.aput_tracking(False)
@@ -131,7 +131,7 @@ class MountSlew(SubCommand):
                                       epoch=self.kwargs['epoch'])
             logger.info(f'{self.id} alt:{alt}')
             if alt > mount_min_alt:
-                await self.mount.aput_unpark()
+                #await self.mount.aput_unpark()
                 await self.mount.aput_tracking(self.kwargs["tracking"])
                 await self.mount.aput_slewtocoo_async(ra=float(self.ra_now), dec=float(self.dec_now))
                 await self._wait_to_slew_coo(ra_in=float(self.ra_now), dec_in=float(self.dec_now))

@@ -1,4 +1,5 @@
 from ob.planrunner.cycle_time_calc.abstract_cycle_time import AbstractCycleTime
+from ob.planrunner.cycle_time_calc.cycle_time_calc import CycleTimeCalc
 import unittest
 import numpy as np
 
@@ -21,6 +22,12 @@ class TestCycleTime(unittest.TestCase):
         c2r = np.array([0.0, 0.0, 1.0])
         c2 = AbstractCycleTime.vector(alt=alt_end, az=az_end)
         self.assertAlmostEqual(first=np.mean(c2-c2r), second=0, places=15)
+
+    def test_from_string(self):
+
+        z = CycleTimeCalc('dev', '/data/misc/cycle_time_calc').calc_time("OBJECT alt=45 az=0 seq=3/Red/4")
+        print(z)
+        self.assertGreater(a=z, b=0)
 
 
 if __name__ == '__main__':

@@ -128,13 +128,9 @@ class CameraExposure(SubCommand):
                 self._mk_folder(target_folder)
                 open(os.path.join(target_folder, f'{self.kwargs["focus_id"]}'), 'a').close()
                 if os.path.exists(os.path.join(self.folder_focusing, f'actual')):
-                    if os.readlink(os.path.join(self.folder_focusing, f'actual')) is not target_folder:
-                        os.remove(os.path.join(self.folder_focusing, f'actual'))
-                        os.chdir(self.folder_focusing)
-                        self._mk_symlink(target=f'./{target_folder_name}', symlink=f'./actual')
-                else:
-                    os.chdir(self.folder_focusing)
-                    self._mk_symlink(target=f'./{target_folder_name}', symlink=f'./actual')
+                    os.remove(os.path.join(self.folder_focusing, f'actual'))
+                os.chdir(self.folder_focusing)
+                self._mk_symlink(target=f'./{target_folder_name}', symlink=f'./actual')
         elif self.kwargs['type'] == 'snap':
             target_folder = self.folder
         else:

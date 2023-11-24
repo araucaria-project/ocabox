@@ -11,11 +11,12 @@ class CycleTimeDataBuild(AbstractCycleTime):
     """
     This class represent cycle time data builder (collector)
     """
-    def __init__(self, telescope: str) -> None:
+    def __init__(self, telescope: str, base_folder: str) -> None:
         self.telescope = telescope
+        self.base_folder = base_folder
         self._data: CTData = CTData()
         super().__init__()
-        self._mk_dirs()
+        self._mk_dirs(base_folder=base_folder)
 
 
     def insert_data(self, name: str, value: Any) -> None:
@@ -31,4 +32,4 @@ class CycleTimeDataBuild(AbstractCycleTime):
         self._data.insert_single_data('utc_date_stamp', str(self.time_stamp().isoformat()))
         self._data.insert_single_data('utc_time_stamp', str(self.time_stamp().timestamp()))
         self.add_to_file(self.encode_data(self._data.data),
-                         self.BASE_FOLDER_NAME, self.raw_file_name(telescope=self.telescope))
+                         self.base_folder, self.raw_file_name(telescope=self.telescope))
