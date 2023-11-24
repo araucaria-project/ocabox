@@ -263,7 +263,7 @@ class CycleTimeCalc(AbstractCycleTime):
         if isinstance(command_dict, str):
             conv = ObsPlanParser.convert_from_string(command_dict)
             try:
-                command = conv['subcommands'][0]
+                command_dict = conv['subcommands'][0]
             except (KeyError, IndexError):
                 logger.error(f'Please check plan format')
 
