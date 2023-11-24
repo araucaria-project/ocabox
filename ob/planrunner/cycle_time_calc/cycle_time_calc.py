@@ -3,6 +3,7 @@ import logging
 from ob.planrunner.cycle_time_calc.abstract_cycle_time import AbstractCycleTime
 import datetime
 from pyaraucaria.coordinates import ra_dec_2_az_alt, ra_to_decimal, dec_to_decimal
+from pyaraucaria.obs_plan.obs_plan_parser import ObsPlanParser
 import time
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -43,7 +44,7 @@ class CycleTimeCalc(AbstractCycleTime):
          c.finnish_time_utc() --> you get utc date_time when program will finish
     """
 
-    def __init__(self, telescope: str) -> None:
+    def __init__(self, telescope: str, base_folder: str) -> None:
         self.available_param: Dict[str, Dict[str, Any]] = {}
         self._rmode: int = 0
         self._current_filter: str = ''
@@ -51,6 +52,7 @@ class CycleTimeCalc(AbstractCycleTime):
         self._az_mount: float = 0.0
         self._az_dome: float = 0.0
         self.telescope = telescope
+        self.base_folder = base_folder
         self._time_length: float = 0.0
         self._epoch: str = '2000'
         self._skipping: bool = False
@@ -60,7 +62,7 @@ class CycleTimeCalc(AbstractCycleTime):
                                                       'elevation': 2817}
         self._start_time: datetime.datetime = datetime.datetime.utcnow()
         self._time_length_list: List[float] = []
-        self._mk_dirs()
+        self._mk_dirs(self.base_folder)
         self._get_params()
         super().__init__()
 
@@ -103,15 +105,16 @@ class CycleTimeCalc(AbstractCycleTime):
         return li
 
     def _get_params(self) -> None:
-        for t in CycleTimeCalc.get_list_telesc(file_type='train_param'):
+        for t in CycleTimeCalc.get_list_telesc(file_type='train_param', base_folder=self.base_folder):
             self.available_param[t] = {}
-            for co in CycleTimeCalc.get_list_commands(telescope=t, file_type='train_param'):
-                data = CycleTimeCalc.get_last_params(telescope=t, command=co)
+            for co in CycleTimeCalc.get_list_commands(telescope=t, file_type='train_param',
+                                                      base_folder=self.base_folder):
+                data = self.get_last_params(telescope=t, command=co)
                 self.available_param[t][co] = data
 
-    @staticmethod
-    def get_last_params(telescope: str, command: str) -> Dict[str, Any]:
-        data = CycleTimeCalc.read_file(CycleTimeCalc.BASE_FOLDER_NAME,
+
+    def get_last_params(self, telescope: str, command: str) -> Dict[str, Any]:
+        data = CycleTimeCalc.read_file(self.base_folder,
                                        CycleTimeCalc.train_param_file_name(telescope=telescope, command=command))
         return CycleTimeCalc.parse_data(data=data)[-1]
 
@@ -250,20 +253,30 @@ class CycleTimeCalc(AbstractCycleTime):
         mydate = f"{day} {time_str}"
         return time.mktime(datetime.datetime.strptime(mydate, "%Y-%m-%d %H:%M:%S").timetuple())
 
-    def calc_time(self, command_dict: Dict[str, Any]) -> float or None:
+    def calc_time(self, command_dict: Dict[str, Any] | str) -> float or None:
         """
-        Method calculate time for command and adds it to self._time_length
+        Method calculate time for one command and adds it to self._time_length
         :param command_dict: command_dict parsed by pyaraucaria obs_plan_parser
         :return: operation time in float
         """
         tim = 0.0
-        if command_dict['command_name'] in self.avialable_param_telesc_commands:
-            tim = self._calc_time_no_wait_commands(command_dict=command_dict)
-        elif command_dict['command_name'] in CycleTimeCalc.NO_TRAIN_COMMANDS:
-            tim = self._calc_time_wait_command(command_dict=command_dict)
-        else:
-            logger.debug(f'Cannot calculate time, lack of params')
-        self._time_length_list.append(tim)
+        if isinstance(command_dict, str):
+            conv = ObsPlanParser.convert_from_string(command_dict)
+            try:
+                command = conv['subcommands'][0]
+            except (KeyError, IndexError):
+                logger.error(f'Please check plan format')
+
+        try:
+            if command_dict['command_name'] in self.avialable_param_telesc_commands:
+                tim = self._calc_time_no_wait_commands(command_dict=command_dict)
+            elif command_dict['command_name'] in CycleTimeCalc.NO_TRAIN_COMMANDS:
+                tim = self._calc_time_wait_command(command_dict=command_dict)
+            else:
+                logger.debug(f'Cannot calculate time, lack of params')
+            self._time_length_list.append(tim)
+        except KeyError:
+            logger.error(f'Please check plan format')
         return tim
 
     @property
@@ -296,14 +309,3 @@ class CycleTimeCalc(AbstractCycleTime):
             return ret
         else:
             return None
-
-"""
-if __name__ == '__main__':
-    c = CycleTimeCalc('dev')
-    d = {'command_name': 'OBJECT', 'kwargs': {'seq': '12/Red/1,3/Green/3,2/Blue/5', 'az': 12.0, 'alt':70.0}}
-    print(c.calc_time(command_dict=d))
-    d = {'command_name': 'WAIT', 'kwargs': {'ut': '12:48:00'}}
-    print(c.calc_time(command_dict=d))
-    print(c.time_list)
-    # print(c._time_length)
-    # print(c.finnish_time_from_now_utc)"""

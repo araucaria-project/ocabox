@@ -7,7 +7,6 @@ import datetime
 import math
 import numpy as np
 import json
-from ocaboxapi import Observatory
 
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -20,7 +19,7 @@ class AbstractCycleTime(ABC):
 
     FILE_NAMES = {'raw_data': 'raw_data.txt', 'clean_data': 'clean_data.txt',
                   'night_verif': 'night_verif.txt', 'train_param': 'train_param.txt'}
-    BASE_FOLDER_NAME = Observatory(client_name='DefaultClient').get_app_cfg(key='base_cycle_time_calc_dir')
+
     RM_MODES_MHZ = {"zb08": [5, 3, 1, 0.05],
                     "jk15": [4, 2, 1, 1, 0.1, 0.1],
                     "wk06": [5, 3, 1, 0.05],
@@ -35,10 +34,10 @@ class AbstractCycleTime(ABC):
     NO_TRAIN_COMMANDS = ['WAIT']
 
     @staticmethod
-    def get_list_telesc(file_type: str) -> List[str]:
+    def get_list_telesc(file_type: str, base_folder: str) -> List[str]:
         tel_lst = []
         try:
-            l_dir = os.listdir(AbstractCycleTime.BASE_FOLDER_NAME)
+            l_dir = os.listdir(base_folder)
 
             for n in l_dir:
                 if AbstractCycleTime.FILE_NAMES[file_type] in n and re.fullmatch(pattern='\w\w..?_.*.txt', string=n):
@@ -50,10 +49,10 @@ class AbstractCycleTime(ABC):
         return tel_lst
 
     @staticmethod
-    def get_list_commands(telescope: str, file_type: str) -> List[str]:
+    def get_list_commands(telescope: str, file_type: str, base_folder: str) -> List[str]:
         com_lst = []
         try:
-            l_dir = os.listdir(AbstractCycleTime.BASE_FOLDER_NAME)
+            l_dir = os.listdir(base_folder)
             for n in l_dir:
                 if (AbstractCycleTime.FILE_NAMES[file_type] in n) and (telescope in n):
                     com_lst.append(n.split('_')[1])
@@ -95,12 +94,12 @@ class AbstractCycleTime(ABC):
         return ret
 
     @staticmethod
-    def _mk_dirs() -> None:
+    def _mk_dirs(base_folder: str) -> None:
         try:
-            if not os.path.exists(AbstractCycleTime.BASE_FOLDER_NAME):
-                os.makedirs(AbstractCycleTime.BASE_FOLDER_NAME, exist_ok=True)
+            if not os.path.exists(base_folder):
+                os.makedirs(base_folder, exist_ok=True)
         except PermissionError:
-            logger.error(f'Can not create folder {AbstractCycleTime.BASE_FOLDER_NAME} - no permission, '
+            logger.error(f'Can not create folder {base_folder} - no permission, '
                          f'please create folder manually and grant permissions')
 
     @staticmethod

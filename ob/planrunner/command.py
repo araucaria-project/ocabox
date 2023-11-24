@@ -10,8 +10,7 @@ from ob.planrunner.subcommands.sub_dome_screenlight import DomeScreenLight
 from ob.planrunner.subcommands.sub_focusing import Focusing
 from ob.planrunner.subcommands.sub_stop import Stop
 from ob.planrunner.subcommands.sub_wait import Wait
-from ob.planrunner.cycle_time_calc.cycle_time_data_build import  CycleTimeDataBuild
-
+from ob.planrunner.cycle_time_calc.cycle_time_data_build import CycleTimeDataBuild
 from pyaraucaria.coordinates import ra_to_decimal, dec_to_decimal, deg_to_decimal_deg
 from ob.planrunner.seq import Seq
 from ob.planrunner.subcommand import SubCommand
@@ -38,7 +37,9 @@ class Command(AbstractSequence):
         self.telescope = parent.telescope
         self.param = param
         self.info_callback = parent.info_callback
-        self._cycle_time_data_build = CycleTimeDataBuild(self.telescope.id)
+        self._cycle_time_data_build = CycleTimeDataBuild(
+            telescope=self.telescope.id,
+            base_folder=self.telescope.observatory.get_app_cfg(key='base_cycle_time_calc_dir'))
 
         super().__init__(self.id, self.command_name, self.info_callback,
                          observatory=self.parent.observatory, c_type='command', kwargs=self.kwargs)
