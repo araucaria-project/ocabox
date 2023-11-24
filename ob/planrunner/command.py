@@ -128,9 +128,9 @@ class Command(AbstractSequence):
         if self.command_name == 'SKYFLAT':
             if 'dither' not in self.kwargs.keys():
                 return True
-            elif 'dither' in self.kwargs.keys() and self.kwargs['dither'] != 'none':
+            elif 'dither' in self.kwargs.keys() and self.kwargs['dither'] != 'off':
                 return True
-            elif 'dither' in self.kwargs.keys() and self.kwargs['dither'] == 'none':
+            elif 'dither' in self.kwargs.keys() and self.kwargs['dither'] == 'off':
                 return False
             else:
                 return False
@@ -138,9 +138,9 @@ class Command(AbstractSequence):
         elif self.command_name in self.possible_dither:
             if 'dither' not in self.kwargs.keys():
                 return False
-            elif 'dither' in self.kwargs.keys() and self.kwargs['dither'] != 'none':
+            elif 'dither' in self.kwargs.keys() and self.kwargs['dither'] != 'off':
                 return True
-            elif 'dither' in self.kwargs.keys() and self.kwargs['dither'] == 'none':
+            elif 'dither' in self.kwargs.keys() and self.kwargs['dither'] == 'off':
                 return False
             else:
                 return False
