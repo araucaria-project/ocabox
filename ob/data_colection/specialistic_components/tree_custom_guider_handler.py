@@ -233,7 +233,7 @@ class GuiderHandler:
 
     async def _journal_pub(self, msg: str, level: str) :
         try:
-           await self.journal_publisher.request(data=self._journal_data(msg=msg, level=level),
+           await self.journal_publisher.publish(data=self._journal_data(msg=msg, level=level),
                                                 timeout=5)
         except (MessengerRequestTimeout):
             logger.warning(f'Nats rpc guider msg can not reach responder')
@@ -388,7 +388,7 @@ class GuiderHandler:
             self.status = 'idle'
 
     async def preview(self, single: bool = False):
-        #await self._journal_pub(msg=f'Guiding preview {self._telescope_id} started', level='INFO')
+        await self._journal_pub(msg=f'Guiding preview {self._telescope_id} started.', level='INFO')
         self.sequence_id = self._get_seq_id()
         self.preview_single = single
         self.status = 'preview'
