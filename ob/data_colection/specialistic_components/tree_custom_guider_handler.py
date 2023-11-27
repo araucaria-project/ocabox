@@ -388,7 +388,7 @@ class GuiderHandler:
             self.status = 'idle'
 
     async def preview(self, single: bool = False):
-        await self._journal_pub(msg=f'Guiding preview {self._telescope_id} started', level='INFO')
+        #await self._journal_pub(msg=f'Guiding preview {self._telescope_id} started', level='INFO')
         self.sequence_id = self._get_seq_id()
         self.preview_single = single
         self.status = 'preview'
