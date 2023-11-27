@@ -114,7 +114,7 @@ class GuiderHandler:
 
     async def _exec_exposure(self, light: bool) -> bool:
         ret = False
-        if self.status in ['idle', 'error']:
+        if self.status not in ['idle', 'error']:
             ret = await self._take_control(80000)
             if ret:
                 cam_comm_start_exp = self._get_camera_comm('startexposure')
