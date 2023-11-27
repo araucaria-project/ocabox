@@ -94,6 +94,8 @@ class GuiderHandler:
 
             while True:
                 # TODO do some timeout?
+                if self.status in ['idle', 'error']:
+                    return False
                 try:
                     res = await self.api.get_async(address=cam_comm_imageready,
                                                    time_of_data_tolerance=0.5,
@@ -111,20 +113,22 @@ class GuiderHandler:
             return False
 
     async def _exec_exposure(self, light: bool) -> bool:
-        ret = await self._take_control(80000)
-        if ret:
-            cam_comm_start_exp = self._get_camera_comm('startexposure')
-            if cam_comm_start_exp is not None:
-                try:
-                    await self.api.put_async(address=cam_comm_start_exp,
-                                             parameters_dict={'Duration': self.exposure, 'Light': light},
-                                             no_wait=True)
-                except (CommunicationRuntimeError, CommunicationTimeoutError):
-                    await self._journal_pub(msg=f'Can not execute exposure.', level="WARNING")
-                    return False
-            ret = await self._wait_for_exposure()
-        else:
-            await self._journal_pub(msg=f'Can not take control', level="WARNING")
+        ret = False
+        if self.status in ['idle', 'error']:
+            ret = await self._take_control(80000)
+            if ret:
+                cam_comm_start_exp = self._get_camera_comm('startexposure')
+                if cam_comm_start_exp is not None:
+                    try:
+                        await self.api.put_async(address=cam_comm_start_exp,
+                                                 parameters_dict={'Duration': self.exposure, 'Light': light},
+                                                 no_wait=True)
+                    except (CommunicationRuntimeError, CommunicationTimeoutError):
+                        await self._journal_pub(msg=f'Can not execute exposure.', level="WARNING")
+                        return False
+                ret = await self._wait_for_exposure()
+            else:
+                await self._journal_pub(msg=f'Can not take control', level="WARNING")
         return ret
 
     async def _exec_pulseguide(self, direction: int, duration: float) -> bool:
@@ -277,7 +281,7 @@ class GuiderHandler:
                         resp = d['response']
                         status = d['status']
                     except KeyError:
-                        await self._journal_pub(msg=f'Wrong rpc response.', level="WARNING")
+                        await self._journal_pub(msg=f'Wrong preview rpc response.', level="WARNING")
                         self.status = 'idle'
                         return
                     if resp in ['preview_done'] and status == 'ok':
@@ -287,39 +291,40 @@ class GuiderHandler:
                             self.status = 'idle'
                     else:
                         await self._journal_pub(msg=f'Wrong rpc response status.', level="WARNING")
-                        pass
                 else:
                     await self._journal_pub(msg=f'Rpc response is None.', level="WARNING")
                     self.status = 'idle'
-            else:
-                pass
         else:
-            await self._journal_pub(msg=f'Can not execute exposure', level="WARNING")
+            await self._journal_pub(msg=f'Preview not executing.')
             self.status = 'idle'
 
-
     async def _dark(self):
-        await self._exec_exposure(light=False)
-        d, m = await self._send_rpc_request(req="dark", loop=self.loop_dark, nloops=self.nloops_dark)
-        if d is not None:
-            try:
-                resp = d['response']
-                status = d['status']
-            except KeyError:
-                #TODO TALK TO JOURNAL
-                self.status = 'idle'
-                return
-            if resp in ['dark_saved', 'master_dark_saved'] and status == 'ok':
-                #TODO TALK TO JOURNAL
-                self.loop_dark += 1
-                if self.nloops_dark == self.loop_dark:
-                    #TODO TALK TO JOURNAL
+        res = await self._exec_exposure(light=False)
+        if res:
+            if self.status not in ['idle', 'error']:
+                d, m = await self._send_rpc_request(req="dark", loop=self.loop_dark, nloops=self.nloops_dark)
+                if d is not None:
+                    try:
+                        resp = d['response']
+                        status = d['status']
+                    except KeyError:
+                        await self._journal_pub(msg=f'Wrong dark rpc response.', level="WARNING")
+                        self.status = 'idle'
+                        return
+                    if resp in ['dark_saved', 'master_dark_saved'] and status == 'ok':
+                        await self._journal_pub(msg=f'Dark {self.loop_dark}/{self.nloops_dark} saved.')
+                        self.loop_dark += 1
+                        if self.nloops_dark == self.loop_dark:
+                            await self._journal_pub(msg=f'Master dark {self.exposure}s saved.')
+                            self.status = 'idle'
+                    else:
+                        await self._journal_pub(msg=f'Wrong rpc response status.', level="WARNING")
+                        self.status = 'idle'
+                else:
+                    await self._journal_pub(msg=f'Rpc response is None.', level="WARNING")
                     self.status = 'idle'
-            else:
-                #TODO TALK TO JOURNAL
-                self.status = 'idle'
         else:
-            #TODO TALK TO JOURNAL
+            await self._journal_pub(msg=f'Dark not executing.')
             self.status = 'idle'
 
     async def _calibration(self) -> None:
@@ -399,7 +404,7 @@ class GuiderHandler:
         self.status = 'calibration'
 
     async def dark(self, sub_no: int = 20) -> None:
-        await self._journal_pub(msg=f'Dark {self.exposure}s started.')
+        await self._journal_pub(msg=f'Dark {self.exposure}s subs:{sub_no} started.')
         self.sequence_id = self._get_seq_id()
         self.loop_dark: int = 0
         self.nloops_dark: int = sub_no
