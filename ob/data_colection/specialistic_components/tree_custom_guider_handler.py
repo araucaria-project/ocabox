@@ -295,7 +295,7 @@ class GuiderHandler:
                     await self._journal_pub(msg=f'Rpc response is None.', level="WARNING")
                     self.status = 'idle'
         else:
-            await self._journal_pub(msg=f'Preview not executing.')
+            await self._journal_pub(msg=f'Preview stopped.')
             self.status = 'idle'
 
     async def _dark(self):
@@ -312,8 +312,8 @@ class GuiderHandler:
                         self.status = 'idle'
                         return
                     if resp in ['dark_saved', 'master_dark_saved'] and status == 'ok':
-                        await self._journal_pub(msg=f'Dark {self.loop_dark}/{self.nloops_dark} saved.')
                         self.loop_dark += 1
+                        await self._journal_pub(msg=f'Dark {self.loop_dark}/{self.nloops_dark} saved.')
                         if self.nloops_dark == self.loop_dark:
                             await self._journal_pub(msg=f'Master dark {self.exposure}s saved.')
                             self.status = 'idle'
@@ -324,7 +324,7 @@ class GuiderHandler:
                     await self._journal_pub(msg=f'Rpc response is None.', level="WARNING")
                     self.status = 'idle'
         else:
-            await self._journal_pub(msg=f'Dark not executing.')
+            await self._journal_pub(msg=f'Dark stopped.')
             self.status = 'idle'
 
     async def _calibration(self) -> None:
