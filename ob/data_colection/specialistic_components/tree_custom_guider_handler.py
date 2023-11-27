@@ -79,7 +79,6 @@ class GuiderHandler:
             await self.api.put_async(address=self._get_access_comm('take_control'),
                                      parameters_dict={'timeout_reservation': timeout_reservation},
                                      no_wait=True)
-            logger.error(f'controll taken')
             return True
         except (CommunicationRuntimeError, CommunicationTimeoutError):
             return False
@@ -271,26 +270,29 @@ class GuiderHandler:
     async def _preview(self):
         res = await self._exec_exposure(light=True)
         if res:
-            d, m = await self._send_rpc_request(req="preview", loop=1, nloops=1)
-            if d is not None:
-                try:
-                    resp = d['response']
-                    status = d['status']
-                except KeyError:
-                    await self._journal_pub(msg=f'Wrong rpc response.', level="WARNING")
-                    self.status = 'idle'
-                    return
-                if resp in ['preview_done'] and status == 'ok':
-                    await self._journal_pub(msg=f'Preview success.')
-                    if self.preview_single:
-                        await self._journal_pub(msg=f'Single preview done.')
+            if self.status not in ['idle', 'error']:
+                d, m = await self._send_rpc_request(req="preview", loop=1, nloops=1)
+                if d is not None:
+                    try:
+                        resp = d['response']
+                        status = d['status']
+                    except KeyError:
+                        await self._journal_pub(msg=f'Wrong rpc response.', level="WARNING")
                         self.status = 'idle'
+                        return
+                    if resp in ['preview_done'] and status == 'ok':
+                        await self._journal_pub(msg=f'Preview success.')
+                        if self.preview_single:
+                            await self._journal_pub(msg=f'Single preview done.')
+                            self.status = 'idle'
+                    else:
+                        await self._journal_pub(msg=f'Wrong rpc response status.', level="WARNING")
+                        pass
                 else:
-                    await self._journal_pub(msg=f'Wrong rpc response status.', level="WARNING")
-                    pass
+                    await self._journal_pub(msg=f'Rpc response is None.', level="WARNING")
+                    self.status = 'idle'
             else:
-                await self._journal_pub(msg=f'Rpc response is None.', level="WARNING")
-                self.status = 'idle'
+                pass
         else:
             await self._journal_pub(msg=f'Can not execute exposure', level="WARNING")
             self.status = 'idle'
