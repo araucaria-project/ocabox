@@ -240,7 +240,7 @@ class GuiderHandler:
 
     def _journal_data(self, msg: str, level: str) -> Dict:
         return {
-            "timestamp": dt_utcnow_array(),
+            "ts": dt_utcnow_array(),
             "level": level,
             "message": msg,
             "op": "publish"
