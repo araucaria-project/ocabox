@@ -13,7 +13,7 @@ from ob.data_colection.specialistic_components.tree_alpaca import TreeAlpacaObse
 from ob.data_colection.value import Value
 from ob.data_colection.value_call import ValueRequest
 from typing import Callable, Dict, List
-from serverish.messenger import Messenger, request
+from serverish.base.datetime import dt_utcnow_array
 import asyncio
 import numpy as np
 from serverish.base.exceptions import MessengerRequestNoResponders, MessengerRequestNoResponse, MessengerRequestTimeout
@@ -43,6 +43,8 @@ class GuiderHandler:
         self.star_select: Dict | None = None
         self.mount_follow: bool = True
         self.darks: Dict = {}
+        self.rpc_req = None
+        self.journal_publisher = None
 
     @property
     def _telescope_id(self) -> str:
@@ -90,7 +92,7 @@ class GuiderHandler:
             sub_t = 1.0
         await asyncio.sleep(float(sub_t))
         if cam_comm_imageready is not None:
-            logger.error(f'start waiting')
+
             while True:
                 # TODO do some timeout?
                 try:
@@ -218,17 +220,31 @@ class GuiderHandler:
         return f'{round((time.time())*10)}'[-7:]
 
     async def _send_rpc_request(self, req: str, loop: int, nloops: int):
-        #TODO get host, port form ocabox or some nats handler?
-        requester = self.nats.get_rpcrequester('tic.rpc.dev.guiding')
         try:
-            dat, met = await requester.request(data=self._rpc_data(req=req, loop=loop, nloops=nloops),
-                                               meta=self._rpc_meta(),
-                                               timeout=5)
+            dat, met = await self.rpc_req.request(data=self._rpc_data(req=req, loop=loop, nloops=nloops),
+                                                  meta=self._rpc_meta(),
+                                                  timeout=5)
         except (MessengerRequestNoResponders, MessengerRequestNoResponse, MessengerRequestTimeout):
             logger.warning(f'Nats rpc guider msg can not reach responder')
+
             dat = None
             met = None
         return dat, met
+
+    async def _journal_pub(self, msg: str, level: str) :
+        try:
+           await self.journal_publisher.request(data=self._journal_data(msg=msg, level=level),
+                                                timeout=5)
+        except (MessengerRequestTimeout):
+            logger.warning(f'Nats rpc guider msg can not reach responder')
+
+    def _journal_data(self, msg: str, level: str) -> Dict:
+        return {
+            "timestamp": dt_utcnow_array(),
+            "level": level,
+            "message": msg,
+            "op": "publish"
+        }
 
     def _rpc_data(self, req: str, loop: int, nloops: int) -> Dict:
         return {
@@ -372,7 +388,7 @@ class GuiderHandler:
             self.status = 'idle'
 
     async def preview(self, single: bool = False):
-        #TODO TALK TO JOURNAL
+        await self._journal_pub(msg=f'Guiding preview {self._telescope_id} started', level='INFO')
         self.sequence_id = self._get_seq_id()
         self.preview_single = single
         self.status = 'preview'
@@ -415,6 +431,8 @@ class GuiderHandler:
         self.status = 'idle'
 
     async def run_body(self):
+        self.rpc_req = self.nats.get_rpcrequester(f'tic.rpc.{self._telescope_id}.guiding')
+        self.journal_publisher = self.nats.get_journalpublisher(f'tic.journal.{self._telescope_id}.guiding')
         while True:
             if self.status == 'preview':
                 await self._preview()
