@@ -74,6 +74,7 @@ class GuiderHandler:
 
     async def _take_control(self, for_how_long: float):
         # TODO temporary for tests
+        await self._journal_pub(msg='Requesting for take control', level='DEBUG')
         timeout_reservation = time.time() + for_how_long
         try:
             await self.api.put_async(address=self._get_access_comm('take_control'),
