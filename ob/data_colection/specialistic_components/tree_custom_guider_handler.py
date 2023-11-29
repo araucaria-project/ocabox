@@ -100,11 +100,13 @@ class GuiderHandler:
                 if self.status in ['idle', 'error']:
                     return False
                 try:
+                    await self._journal_pub(msg=f'Imageready get value request...', level="DEBUG")
                     res = await self.api.get_async(address=cam_comm_imageready,
                                                    time_of_data_tolerance=0.5,
                                                    request_timeout=30)
                     if res is not None:
                         if res.value.v is True:
+                            await self._journal_pub(msg=f'Wait for exposure success.', level="DEBUG")
                             return True
                 except CommunicationRuntimeError:
                     await self._journal_pub(msg=f'Wait for imageready failed.', level="WARNING")
