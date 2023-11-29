@@ -79,11 +79,14 @@ class GuiderHandler:
             await self.api.put_async(address=self._get_access_comm('take_control'),
                                      parameters_dict={'timeout_reservation': timeout_reservation},
                                      no_wait=True)
+            await self._journal_pub(msg='Control taken', level='DEBUG')
             return True
         except (CommunicationRuntimeError, CommunicationTimeoutError):
+            await self._journal_pub(msg='Can not take control', level='DEBUG')
             return False
 
     async def _wait_for_exposure(self) -> bool:
+        await self._journal_pub(msg='Wait for exposure started.', level='DEBUG')
         cam_comm_imageready = self._get_camera_comm('imageready')
         if self.exposure >= 0.6:
             sub_t = self.exposure
@@ -91,7 +94,6 @@ class GuiderHandler:
             sub_t = 1.0
         await asyncio.sleep(float(sub_t))
         if cam_comm_imageready is not None:
-
             while True:
                 # TODO do some timeout?
                 if self.status in ['idle', 'error']:
@@ -102,6 +104,7 @@ class GuiderHandler:
                                                    request_timeout=30)
                     if res is not None:
                         if res.value.v is True:
+                            await self._journal_pub(msg='Imageready is True.', level='DEBUG')
                             return True
                 except CommunicationRuntimeError:
                     await self._journal_pub(msg=f'Wait for imageready failed.', level="WARNING")
@@ -123,6 +126,7 @@ class GuiderHandler:
                         await self.api.put_async(address=cam_comm_start_exp,
                                                  parameters_dict={'Duration': self.exposure, 'Light': light},
                                                  no_wait=True)
+                        await self._journal_pub(msg=f'Exposure {self.exposure}s {light} started.', level='DEBUG')
                     except (CommunicationRuntimeError, CommunicationTimeoutError):
                         await self._journal_pub(msg=f'Can not execute exposure.', level="WARNING")
                         return False
@@ -275,6 +279,7 @@ class GuiderHandler:
         res = await self._exec_exposure(light=True)
         if res:
             if self.status not in ['idle', 'error']:
+                await self._journal_pub(msg=f'Rpc rwq send.', level="DEBUG")
                 d, m = await self._send_rpc_request(req="preview", loop=1, nloops=1)
                 if d is not None:
                     try:
