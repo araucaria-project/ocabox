@@ -85,7 +85,7 @@ class GuiderHandler:
         except (CommunicationRuntimeError, CommunicationTimeoutError):
             await self._journal_pub(msg='Can not take control', level='DEBUG')
             return False
-
+    """
     async def _value_proof_get(self, name: str, address: str, expect_type: type,
                                time_of_data_tolerance: float = 0.5, request_timeout: float = 30):
         try:
@@ -122,7 +122,7 @@ class GuiderHandler:
                 logger.warning(f"Can't get {name}, (is None)")
             if n == n_times:
                 await self._journal_pub(msg=f"Can't get {name} x {n_times} times.", level="ERROR")
-                return None
+                return None"""
 
     async def _wait_for_exposure(self) -> bool:
         await self._journal_pub(msg='Wait for exposure started.', level='DEBUG')
@@ -137,12 +137,18 @@ class GuiderHandler:
                 # TODO do some timeout?
                 if self.status in ['idle', 'error']:
                     return False
-                res = await self.value_proof_get(name='guid_handl_imageready',
-                                                 address=cam_comm_imageready,
-                                                 expect_type=bool)
-                if res is not None:
-                    if res.value.v is True:
-                        return True
+                try:
+                    res = await self.api.get_async(address=cam_comm_imageready,
+                                                   time_of_data_tolerance=0.5,
+                                                   request_timeout=5)
+                    if res is not None:
+                        if res.value.v is True:
+                            return True
+                except CommunicationRuntimeError:
+                    await self._journal_pub(msg=f'Wait for imageready failed.', level="WARNING")
+                    return False
+                except CommunicationTimeoutError:
+                    pass
                 await asyncio.sleep(0.1)
         else:
             return False
@@ -153,10 +159,11 @@ class GuiderHandler:
             cam_comm_start_exp = self._get_camera_comm('startexposure')
             if cam_comm_start_exp is not None:
                 try:
+                    await self._journal_pub(msg=f'Exposure {self.exposure}s {light} sending....', level='DEBUG')
                     await self.api.put_async(address=cam_comm_start_exp,
                                              parameters_dict={'Duration': self.exposure, 'Light': light},
                                              no_wait=True)
-                    await self._journal_pub(msg=f'Exposure {self.exposure}s {light} started.', level='DEBUG')
+                    await self._journal_pub(msg=f'Exposure {self.exposure}s {light} send.', level='DEBUG')
                 except (CommunicationRuntimeError, CommunicationTimeoutError):
                     await self._journal_pub(msg=f'Can not execute exposure.', level="WARNING")
                     return False
