@@ -99,8 +99,8 @@ class GuiderHandler:
             while True:
                 if self.status in ['idle', 'error']:
                     return False
-                if timou > time.time():
-                    await self._journal_pub(msg=f'Wait dor exposure timeout.', level="WARNING")
+                if timou < time.time():
+                    await self._journal_pub(msg=f'Wait for exposure timeout.', level="WARNING")
                     return False
                 try:
                     res = await self.api.get_async(address=cam_comm_imageready,
