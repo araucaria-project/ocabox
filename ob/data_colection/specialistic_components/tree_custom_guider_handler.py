@@ -302,6 +302,7 @@ class GuiderHandler:
         res = await self._exec_exposure(light=False)
         if res:
             if self.status not in ['idle', 'error']:
+                self.loop_dark += 1
                 d, m = await self._send_rpc_request(req="dark", loop=self.loop_dark, nloops=self.nloops_dark)
                 if d is not None:
                     try:
@@ -312,7 +313,6 @@ class GuiderHandler:
                         self.status = 'idle'
                         return
                     if resp in ['dark_saved', 'master_dark_saved'] and status == 'ok':
-                        self.loop_dark += 1
                         await self._journal_pub(msg=f'Dark {self.loop_dark}/{self.nloops_dark} saved.')
                         if self.nloops_dark == self.loop_dark:
                             await self._journal_pub(msg=f'Master dark {self.exposure}s saved.')
@@ -406,8 +406,8 @@ class GuiderHandler:
     async def dark(self, sub_no: int = 20) -> None:
         await self._journal_pub(msg=f'Dark {self.exposure}s subs:{sub_no} started.')
         self.sequence_id = self._get_seq_id()
-        self.loop_dark: int = 0
-        self.nloops_dark: int = sub_no
+        self.loop_dark = 0
+        self.nloops_dark = sub_no
         self.status = 'dark'
 
     async def guiding(self, star_select: List | None = None, mount_follow: bool = True) -> None:
