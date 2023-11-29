@@ -91,17 +91,18 @@ class GuiderHandler:
             res = await self.api.get_async(address=address,
                                            time_of_data_tolerance=time_of_data_tolerance,
                                            request_timeout=request_timeout)
-            if expect_type==float and isinstance(res, int):
-                try:
-                    res = float(res)
-                except ValueError:
-                    pass
-            if isinstance(res, expect_type):
-                logger.debug(f"Get {name} value done: {res}")
-
-                return res
+            if isinstance(res, ValueResponse):
+                va = res.value.v
+                if expect_type==float and isinstance(va, int):
+                    try:
+                        res = float(va)
+                    except ValueError:
+                        pass
+                if isinstance(va, expect_type):
+                    logger.debug(f"Get {name} value done: {va}")
+                return va
             else:
-                await self._journal_pub(msg=f"Can't get {name} value, result is {res}", level="WARNING")
+                await self._journal_pub(msg=f"Can't get {name} value", level="WARNING")
                 return None
         except CommunicationRuntimeError:
             await self._journal_pub(msg=f'Wait for imageready failed.', level="WARNING")
