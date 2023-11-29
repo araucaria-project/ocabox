@@ -397,7 +397,7 @@ class GuiderHandler:
         await self._journal_pub(msg=f'Preview started.')
         self.sequence_id = self._get_seq_id()
         self.preview_single = single
-        # await self._take_control(80000)
+        await self._take_control(80000)
         self.status = 'preview'
 
     async def calibration(self) -> None:
@@ -411,7 +411,7 @@ class GuiderHandler:
         self.sequence_id = self._get_seq_id()
         self.loop_dark = 0
         self.nloops_dark = sub_no
-        # await self._take_control(80000)
+        await self._take_control(80000)
         self.status = 'dark'
 
     async def guiding(self, star_select: List | None = None, mount_follow: bool = True) -> None:
