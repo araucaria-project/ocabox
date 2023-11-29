@@ -103,8 +103,8 @@ class GuiderHandler:
                                                    time_of_data_tolerance=0.5,
                                                    request_timeout=30)
                     if res is not None:
+                        await self._journal_pub(msg=f'Imageready is {res}.', level='DEBUG')
                         if res.value.v is True:
-                            await self._journal_pub(msg='Imageready is True.', level='DEBUG')
                             return True
                 except CommunicationRuntimeError:
                     await self._journal_pub(msg=f'Wait for imageready failed.', level="WARNING")
