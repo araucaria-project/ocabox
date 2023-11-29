@@ -86,7 +86,7 @@ class GuiderHandler:
             #await self._journal_pub(msg='Can not take control', level='DEBUG')
             return False
 
-    async def _wait_for_exposure(self) -> bool:
+    async def _wait_for_exposure(self, wait_timeout: float = 30) -> bool:
         #await self._journal_pub(msg='Wait for exposure started.', level='DEBUG')
         cam_comm_imageready = self._get_camera_comm('imageready')
         if self.exposure >= 0.6:
@@ -95,19 +95,20 @@ class GuiderHandler:
             sub_t = 1.0
         await asyncio.sleep(float(sub_t))
         if cam_comm_imageready is not None:
+            timou = time.time() + wait_timeout
             while True:
-                # TODO do some timeout?
                 if self.status in ['idle', 'error']:
                     return False
+                if timou > time.time():
+                    await self._journal_pub(msg=f'Wait dor exposure timeout.', level="WARNING")
+                    return False
                 try:
-                    #await self._journal_pub(msg=f'Imageready get value request...', level="DEBUG")
                     res = await self.api.get_async(address=cam_comm_imageready,
                                                    time_of_data=0.5,
                                                    time_of_data_tolerance=0.5,
                                                    request_timeout=5)
                     if res is not None:
                         if res.value.v is True:
-                            #await self._journal_pub(msg=f'Wait for exposure success.', level="DEBUG")
                             return True
                 except CommunicationRuntimeError:
                     await self._journal_pub(msg=f'Wait for imageready failed.', level="WARNING")
