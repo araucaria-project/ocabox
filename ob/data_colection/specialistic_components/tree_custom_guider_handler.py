@@ -438,7 +438,11 @@ class GuiderHandler:
     async def run_body(self):
         self.rpc_req = self.nats.get_rpcrequester(f'tic.rpc.{self._telescope_id}.guiding')
         self.journal_publisher = self.nats.get_journalpublisher(f'tic.journal.{self._telescope_id}.guiding')
+        w = 0
         while True:
+            if w%10==0:
+                logger.error(w)
+            w+=1
             if self.status == 'preview':
                 await self._preview()
             if self.status == 'dark':
