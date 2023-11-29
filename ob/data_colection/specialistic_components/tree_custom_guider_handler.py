@@ -88,9 +88,9 @@ class GuiderHandler:
     async def _value_proof_get(self, name: str, address: str, expect_type: type,
                                time_of_data_tolerance: float = 0.5, request_timeout: float = 30):
         try:
-            res = self.api.get_async(address=address,
-                                     time_of_data_tolerance=time_of_data_tolerance,
-                                     request_timeout=request_timeout)
+            res = await self.api.get_async(address=address,
+                                           time_of_data_tolerance=time_of_data_tolerance,
+                                           request_timeout=request_timeout)
             if expect_type==float and isinstance(res, int):
                 try:
                     res = float(res)
