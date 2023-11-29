@@ -11,7 +11,7 @@ from ob.data_colection.base_components.tree_provider import TreeProvider
 from ob.data_colection.resource_manager.resource_manager import TelescopeComponentManagerAlpaca
 from ob.data_colection.specialistic_components.tree_alpaca import TreeAlpacaObservatory
 from ob.data_colection.value import Value
-from ob.data_colection.value_call import ValueRequest
+from ob.data_colection.value_call import ValueRequest, ValueResponse
 from typing import Callable, Dict, List
 from serverish.base.datetime import dt_utcnow_array
 import asyncio
@@ -85,6 +85,43 @@ class GuiderHandler:
             await self._journal_pub(msg='Can not take control', level='DEBUG')
             return False
 
+    async def _value_proof_get(self, name: str, address: str, expect_type: type,
+                               time_of_data_tolerance: float = 0.5, request_timeout: float = 30):
+        try:
+            res = self.api.get_async(address=address,
+                                     time_of_data_tolerance=time_of_data_tolerance,
+                                     request_timeout=request_timeout)
+            if expect_type==float and isinstance(res, int):
+                try:
+                    res = float(res)
+                except ValueError:
+                    pass
+            if isinstance(res, expect_type):
+                logger.debug(f"Get {name} value done: {res}")
+
+                return res
+            else:
+                await self._journal_pub(msg=f"Can't get {name} value, result is {res}", level="WARNING")
+                return None
+        except CommunicationRuntimeError:
+            await self._journal_pub(msg=f'Wait for imageready failed.', level="WARNING")
+            return None
+        except CommunicationTimeoutError:
+            await self._journal_pub(msg=f"Can't get {name} - timeout", level="WARNING")
+            return None
+
+    async def value_proof_get(self, name: str, address: str,
+                              expect_type: type, n_times: int = 5) -> ValueResponse or None:
+        for n in range(1, n_times+1):
+            res = await self._value_proof_get(name=name, address=address, expect_type=expect_type)
+            if res is not None:
+                return res
+            else:
+                logger.warning(f"Can't get {name}, (is None)")
+            if n == n_times:
+                await self._journal_pub(msg=f"Can't get {name} x {n_times} times.", level="ERROR")
+                return None
+
     async def _wait_for_exposure(self) -> bool:
         await self._journal_pub(msg='Wait for exposure started.', level='DEBUG')
         cam_comm_imageready = self._get_camera_comm('imageready')
@@ -98,19 +135,12 @@ class GuiderHandler:
                 # TODO do some timeout?
                 if self.status in ['idle', 'error']:
                     return False
-                try:
-                    res = await self.api.get_async(address=cam_comm_imageready,
-                                                   time_of_data_tolerance=0.5,
-                                                   request_timeout=30)
-                    if res is not None:
-                        await self._journal_pub(msg=f'Imageready is {res}.', level='DEBUG')
-                        if res.value.v is True:
-                            return True
-                except CommunicationRuntimeError:
-                    await self._journal_pub(msg=f'Wait for imageready failed.', level="WARNING")
-                    return False
-                except CommunicationTimeoutError:
-                    pass
+                res = await self.value_proof_get(name='guid_handl_imageready',
+                                                 address=cam_comm_imageready,
+                                                 expect_type=bool)
+                if res is not None:
+                    if res.value.v is True:
+                        return True
                 await asyncio.sleep(0.1)
         else:
             return False
