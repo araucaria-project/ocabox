@@ -102,8 +102,9 @@ class GuiderHandler:
                 try:
                     await self._journal_pub(msg=f'Imageready get value request...', level="DEBUG")
                     res = await self.api.get_async(address=cam_comm_imageready,
+                                                   time_of_data=0.5,
                                                    time_of_data_tolerance=0.5,
-                                                   request_timeout=30)
+                                                   request_timeout=5)
                     if res is not None:
                         if res.value.v is True:
                             await self._journal_pub(msg=f'Wait for exposure success.', level="DEBUG")
@@ -440,11 +441,8 @@ class GuiderHandler:
     async def run_body(self):
         self.rpc_req = self.nats.get_rpcrequester(f'tic.rpc.{self._telescope_id}.guiding')
         self.journal_publisher = self.nats.get_journalpublisher(f'tic.journal.{self._telescope_id}.guiding')
-        w = 0
         while True:
-            if w%10==0:
-                logger.error(w)
-            w+=1
+            await self._journal_pub(msg=f'PING')
             if self.status == 'preview':
                 await self._preview()
             if self.status == 'dark':
@@ -453,7 +451,7 @@ class GuiderHandler:
                 await self._calibration()
             if self.status == 'guiding':
                 await self._guiding()
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(1)
 
 
 class TreeCustomGuiderHandler(TreeProvider):
