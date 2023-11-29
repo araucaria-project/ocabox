@@ -74,7 +74,7 @@ class GuiderHandler:
 
     async def _take_control(self, for_how_long: float):
         # TODO temporary for tests
-        await self._journal_pub(msg='Requesting for take control', level='DEBUG')
+        # await self._journal_pub(msg='Requesting for take control', level='DEBUG')
         timeout_reservation = time.time() + for_how_long
         try:
             await self.api.put_async(address=self._get_access_comm('take_control'),
@@ -83,11 +83,11 @@ class GuiderHandler:
             await self._journal_pub(msg='Control taken', level='DEBUG')
             return True
         except (CommunicationRuntimeError, CommunicationTimeoutError):
-            await self._journal_pub(msg='Can not take control', level='DEBUG')
+            #await self._journal_pub(msg='Can not take control', level='DEBUG')
             return False
 
     async def _wait_for_exposure(self) -> bool:
-        await self._journal_pub(msg='Wait for exposure started.', level='DEBUG')
+        #await self._journal_pub(msg='Wait for exposure started.', level='DEBUG')
         cam_comm_imageready = self._get_camera_comm('imageready')
         if self.exposure >= 0.6:
             sub_t = self.exposure
@@ -100,14 +100,14 @@ class GuiderHandler:
                 if self.status in ['idle', 'error']:
                     return False
                 try:
-                    await self._journal_pub(msg=f'Imageready get value request...', level="DEBUG")
+                    #await self._journal_pub(msg=f'Imageready get value request...', level="DEBUG")
                     res = await self.api.get_async(address=cam_comm_imageready,
                                                    time_of_data=0.5,
                                                    time_of_data_tolerance=0.5,
                                                    request_timeout=5)
                     if res is not None:
                         if res.value.v is True:
-                            await self._journal_pub(msg=f'Wait for exposure success.', level="DEBUG")
+                            #await self._journal_pub(msg=f'Wait for exposure success.', level="DEBUG")
                             return True
                 except CommunicationRuntimeError:
                     await self._journal_pub(msg=f'Wait for imageready failed.', level="WARNING")
@@ -124,11 +124,11 @@ class GuiderHandler:
             cam_comm_start_exp = self._get_camera_comm('startexposure')
             if cam_comm_start_exp is not None:
                 try:
-                    await self._journal_pub(msg=f'Exposure {self.exposure}s {light} sending....', level='DEBUG')
+                    #await self._journal_pub(msg=f'Exposure {self.exposure}s {light} sending....', level='DEBUG')
                     await self.api.put_async(address=cam_comm_start_exp,
                                              parameters_dict={'Duration': self.exposure, 'Light': light},
                                              no_wait=True)
-                    await self._journal_pub(msg=f'Exposure {self.exposure}s {light} send.', level='DEBUG')
+                    #await self._journal_pub(msg=f'Exposure {self.exposure}s {light} send.', level='DEBUG')
                 except (CommunicationRuntimeError, CommunicationTimeoutError):
                     await self._journal_pub(msg=f'Can not execute exposure.', level="WARNING")
                     return False
@@ -276,7 +276,7 @@ class GuiderHandler:
         res = await self._exec_exposure(light=True)
         if res:
             if self.status not in ['idle', 'error']:
-                await self._journal_pub(msg=f'Rpc send.', level="DEBUG")
+                #await self._journal_pub(msg=f'Rpc send.', level="DEBUG")
                 d, m = await self._send_rpc_request(req="preview", loop=1, nloops=1)
                 if d is not None:
                     try:
@@ -442,7 +442,6 @@ class GuiderHandler:
         self.rpc_req = self.nats.get_rpcrequester(f'tic.rpc.{self._telescope_id}.guiding')
         self.journal_publisher = self.nats.get_journalpublisher(f'tic.journal.{self._telescope_id}.guiding')
         while True:
-            await self._journal_pub(msg=f'PING')
             if self.status == 'preview':
                 await self._preview()
             if self.status == 'dark':
