@@ -218,7 +218,7 @@ class GuiderHandler:
         res_2 = await self._exec_pulseguide(direction=ra_dir, duration=duration)
         # TODO here wait until the period ends, if time is longer just exit method
 
-    def _get_seq_id(self):
+    def _get_seq_id(self) -> str:
         return f'{round((time.time())*10)}'[-7:]
 
     async def _send_rpc_request(self, req: str, loop: int, nloops: int):
