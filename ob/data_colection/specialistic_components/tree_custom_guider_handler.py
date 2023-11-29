@@ -320,9 +320,6 @@ class GuiderHandler:
                     elif status == 'error':
                         await self._journal_pub(msg=f'Master dark response error:{resp}.', level="WARNING")
                         self.status = 'idle'
-                    else:
-                        await self._journal_pub(msg=f'Wrong rpc response status.', level="WARNING")
-                        self.status = 'idle'
                 else:
                     await self._journal_pub(msg=f'Rpc response is None.', level="WARNING")
                     self.status = 'idle'
