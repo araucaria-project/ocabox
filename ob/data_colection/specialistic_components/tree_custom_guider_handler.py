@@ -85,44 +85,6 @@ class GuiderHandler:
         except (CommunicationRuntimeError, CommunicationTimeoutError):
             await self._journal_pub(msg='Can not take control', level='DEBUG')
             return False
-    """
-    async def _value_proof_get(self, name: str, address: str, expect_type: type,
-                               time_of_data_tolerance: float = 0.5, request_timeout: float = 30):
-        try:
-            res = await self.api.get_async(address=address,
-                                           time_of_data_tolerance=time_of_data_tolerance,
-                                           request_timeout=request_timeout)
-            if isinstance(res, ValueResponse):
-                va = res.value.v
-                if expect_type==float and isinstance(va, int):
-                    try:
-                        res = float(va)
-                    except ValueError:
-                        pass
-                if isinstance(va, expect_type):
-                    logger.debug(f"Get {name} value done: {va}")
-                return va
-            else:
-                await self._journal_pub(msg=f"Can't get {name} value", level="WARNING")
-                return None
-        except CommunicationRuntimeError:
-            await self._journal_pub(msg=f'Wait for imageready failed.', level="WARNING")
-            return None
-        except CommunicationTimeoutError:
-            await self._journal_pub(msg=f"Can't get {name} - timeout", level="WARNING")
-            return None
-
-    async def value_proof_get(self, name: str, address: str,
-                              expect_type: type, n_times: int = 5) -> ValueResponse or None:
-        for n in range(1, n_times+1):
-            res = await self._value_proof_get(name=name, address=address, expect_type=expect_type)
-            if res is not None:
-                return res
-            else:
-                logger.warning(f"Can't get {name}, (is None)")
-            if n == n_times:
-                await self._journal_pub(msg=f"Can't get {name} x {n_times} times.", level="ERROR")
-                return None"""
 
     async def _wait_for_exposure(self) -> bool:
         await self._journal_pub(msg='Wait for exposure started.', level='DEBUG')
