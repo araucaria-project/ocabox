@@ -79,7 +79,7 @@ class GuiderHandler:
         try:
             await self.api.put_async(address=self._get_access_comm('take_control'),
                                      parameters_dict={'timeout_reservation': timeout_reservation},
-                                     no_wait=True)
+                                     no_wait=False)
             await self._journal_pub(msg='Control taken', level='DEBUG')
             return True
         except (CommunicationRuntimeError, CommunicationTimeoutError):
@@ -150,38 +150,31 @@ class GuiderHandler:
     async def _exec_exposure(self, light: bool) -> bool:
         ret = False
         if self.status not in ['idle', 'error']:
-            ret = await self._take_control(80000)
-            if ret:
-                cam_comm_start_exp = self._get_camera_comm('startexposure')
-                if cam_comm_start_exp is not None:
-                    try:
-                        await self.api.put_async(address=cam_comm_start_exp,
-                                                 parameters_dict={'Duration': self.exposure, 'Light': light},
-                                                 no_wait=True)
-                        await self._journal_pub(msg=f'Exposure {self.exposure}s {light} started.', level='DEBUG')
-                    except (CommunicationRuntimeError, CommunicationTimeoutError):
-                        await self._journal_pub(msg=f'Can not execute exposure.', level="WARNING")
-                        return False
-                ret = await self._wait_for_exposure()
-            else:
-                await self._journal_pub(msg=f'Can not take control', level="WARNING")
+            cam_comm_start_exp = self._get_camera_comm('startexposure')
+            if cam_comm_start_exp is not None:
+                try:
+                    await self.api.put_async(address=cam_comm_start_exp,
+                                             parameters_dict={'Duration': self.exposure, 'Light': light},
+                                             no_wait=True)
+                    await self._journal_pub(msg=f'Exposure {self.exposure}s {light} started.', level='DEBUG')
+                except (CommunicationRuntimeError, CommunicationTimeoutError):
+                    await self._journal_pub(msg=f'Can not execute exposure.', level="WARNING")
+                    return False
+            ret = await self._wait_for_exposure()
         return ret
 
     async def _exec_pulseguide(self, direction: int, duration: float) -> bool:
-        ret = await self._take_control(80000)
-        if ret:
-            mo_comm_start_exp = self._get_mount_comm('pulseguide')
-            if mo_comm_start_exp is not None:
-                try:
-                    await self.api.put_async(address=mo_comm_start_exp,
-                                             parameters_dict={'Direction': direction, 'Duration': duration},
-                                             no_wait=True)
-                    return True
-                except (CommunicationRuntimeError, CommunicationTimeoutError):
-                    return False
-            else:
+        mo_comm_start_exp = self._get_mount_comm('pulseguide')
+        if mo_comm_start_exp is not None:
+            try:
+                await self.api.put_async(address=mo_comm_start_exp,
+                                         parameters_dict={'Direction': direction, 'Duration': duration},
+                                         no_wait=True)
+                return True
+            except (CommunicationRuntimeError, CommunicationTimeoutError):
                 return False
-        return False
+        else:
+            return False
 
     @staticmethod
     def get_vector_angle_to_x(vector: np.ndarray) -> float:
@@ -311,7 +304,7 @@ class GuiderHandler:
         res = await self._exec_exposure(light=True)
         if res:
             if self.status not in ['idle', 'error']:
-                await self._journal_pub(msg=f'Rpc rwq send.', level="DEBUG")
+                await self._journal_pub(msg=f'Rpc send.', level="DEBUG")
                 d, m = await self._send_rpc_request(req="preview", loop=1, nloops=1)
                 if d is not None:
                     try:
@@ -432,6 +425,7 @@ class GuiderHandler:
         await self._journal_pub(msg=f'Preview started.')
         self.sequence_id = self._get_seq_id()
         self.preview_single = single
+        await self._take_control(80000)
         self.status = 'preview'
 
     async def calibration(self) -> None:
@@ -445,6 +439,7 @@ class GuiderHandler:
         self.sequence_id = self._get_seq_id()
         self.loop_dark = 0
         self.nloops_dark = sub_no
+        await self._take_control(80000)
         self.status = 'dark'
 
     async def guiding(self, star_select: List | None = None, mount_follow: bool = True) -> None:
