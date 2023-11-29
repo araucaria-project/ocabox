@@ -317,6 +317,9 @@ class GuiderHandler:
                         if self.nloops_dark == self.loop_dark:
                             await self._journal_pub(msg=f'Master dark {self.exposure}s saved.')
                             self.status = 'idle'
+                    elif status == 'error':
+                        await self._journal_pub(msg=f'Master dark response error:{resp}.', level="WARNING")
+                        self.status = 'idle'
                     else:
                         await self._journal_pub(msg=f'Wrong rpc response status.', level="WARNING")
                         self.status = 'idle'
