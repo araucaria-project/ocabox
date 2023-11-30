@@ -11,9 +11,9 @@ from ob.data_colection.base_components.tree_provider import TreeProvider
 from ob.data_colection.resource_manager.resource_manager import TelescopeComponentManagerAlpaca
 from ob.data_colection.specialistic_components.tree_alpaca import TreeAlpacaObservatory
 from ob.data_colection.value import Value
-from ob.data_colection.value_call import ValueRequest
+from ob.data_colection.value_call import ValueRequest, ValueResponse
 from typing import Callable, Dict, List
-from serverish.messenger import Messenger, request
+from serverish.base.datetime import dt_utcnow_array
 import asyncio
 import numpy as np
 from serverish.base.exceptions import MessengerRequestNoResponders, MessengerRequestNoResponse, MessengerRequestTimeout
@@ -43,6 +43,8 @@ class GuiderHandler:
         self.star_select: Dict | None = None
         self.mount_follow: bool = True
         self.darks: Dict = {}
+        self.rpc_req = None
+        self.journal_publisher = None
 
     @property
     def _telescope_id(self) -> str:
@@ -72,17 +74,20 @@ class GuiderHandler:
 
     async def _take_control(self, for_how_long: float):
         # TODO temporary for tests
+        # await self._journal_pub(msg='Requesting for take control', level='DEBUG')
         timeout_reservation = time.time() + for_how_long
         try:
             await self.api.put_async(address=self._get_access_comm('take_control'),
                                      parameters_dict={'timeout_reservation': timeout_reservation},
-                                     no_wait=True)
-            logger.error(f'controll taken')
+                                     no_wait=False)
+            await self._journal_pub(msg='Control taken', level='DEBUG')
             return True
         except (CommunicationRuntimeError, CommunicationTimeoutError):
+            #await self._journal_pub(msg='Can not take control', level='DEBUG')
             return False
 
-    async def _wait_for_exposure(self) -> bool:
+    async def _wait_for_exposure(self, wait_timeout: float = 30) -> bool:
+        #await self._journal_pub(msg='Wait for exposure started.', level='DEBUG')
         cam_comm_imageready = self._get_camera_comm('imageready')
         if self.exposure >= 0.6:
             sub_t = self.exposure
@@ -90,58 +95,59 @@ class GuiderHandler:
             sub_t = 1.0
         await asyncio.sleep(float(sub_t))
         if cam_comm_imageready is not None:
-            logger.error(f'start waiting')
+            timou = time.time() + wait_timeout
             while True:
-                # TODO do some timeout?
+                if self.status in ['idle', 'error']:
+                    return False
+                if timou < time.time():
+                    await self._journal_pub(msg=f'Wait for exposure timeout.', level="WARNING")
+                    return False
                 try:
                     res = await self.api.get_async(address=cam_comm_imageready,
+                                                   time_of_data=0.5,
                                                    time_of_data_tolerance=0.5,
-                                                   request_timeout=30)
+                                                   request_timeout=5)
                     if res is not None:
-                        logger.error(f'imageready true {res}')
                         if res.value.v is True:
-                            logger.error(f'imageready true {res.value.v}')
                             return True
                 except CommunicationRuntimeError:
-                    logger.error(f'RuntimeError')
+                    await self._journal_pub(msg=f'Wait for imageready failed.', level="WARNING")
                     return False
                 except CommunicationTimeoutError:
-                    logger.error(f'TIMEOUT')
                     pass
                 await asyncio.sleep(0.1)
         else:
             return False
 
     async def _exec_exposure(self, light: bool) -> bool:
-        ret = await self._take_control(80000)
-        if ret:
+        ret = False
+        if self.status not in ['idle', 'error']:
             cam_comm_start_exp = self._get_camera_comm('startexposure')
             if cam_comm_start_exp is not None:
                 try:
+                    #await self._journal_pub(msg=f'Exposure {self.exposure}s {light} sending....', level='DEBUG')
                     await self.api.put_async(address=cam_comm_start_exp,
                                              parameters_dict={'Duration': self.exposure, 'Light': light},
                                              no_wait=True)
+                    #await self._journal_pub(msg=f'Exposure {self.exposure}s {light} send.', level='DEBUG')
                 except (CommunicationRuntimeError, CommunicationTimeoutError):
+                    await self._journal_pub(msg=f'Can not execute exposure.', level="WARNING")
                     return False
             ret = await self._wait_for_exposure()
-            logger.error(f'wait for exposure {ret}')
         return ret
 
     async def _exec_pulseguide(self, direction: int, duration: float) -> bool:
-        ret = await self._take_control(80000)
-        if ret:
-            mo_comm_start_exp = self._get_mount_comm('pulseguide')
-            if mo_comm_start_exp is not None:
-                try:
-                    await self.api.put_async(address=mo_comm_start_exp,
-                                             parameters_dict={'Direction': direction, 'Duration': duration},
-                                             no_wait=True)
-                    return True
-                except (CommunicationRuntimeError, CommunicationTimeoutError):
-                    return False
-            else:
+        mo_comm_start_exp = self._get_mount_comm('pulseguide')
+        if mo_comm_start_exp is not None:
+            try:
+                await self.api.put_async(address=mo_comm_start_exp,
+                                         parameters_dict={'Direction': direction, 'Duration': duration},
+                                         no_wait=True)
+                return True
+            except (CommunicationRuntimeError, CommunicationTimeoutError):
                 return False
-        return False
+        else:
+            return False
 
     @staticmethod
     def get_vector_angle_to_x(vector: np.ndarray) -> float:
@@ -214,21 +220,35 @@ class GuiderHandler:
         res_2 = await self._exec_pulseguide(direction=ra_dir, duration=duration)
         # TODO here wait until the period ends, if time is longer just exit method
 
-    def _get_seq_id(self):
+    def _get_seq_id(self) -> str:
         return f'{round((time.time())*10)}'[-7:]
 
     async def _send_rpc_request(self, req: str, loop: int, nloops: int):
-        #TODO get host, port form ocabox or some nats handler?
-        requester = self.nats.get_rpcrequester('tic.rpc.dev.guiding')
         try:
-            dat, met = await requester.request(data=self._rpc_data(req=req, loop=loop, nloops=nloops),
-                                               meta=self._rpc_meta(),
-                                               timeout=5)
+            dat, met = await self.rpc_req.request(data=self._rpc_data(req=req, loop=loop, nloops=nloops),
+                                                  meta=self._rpc_meta(),
+                                                  timeout=5)
         except (MessengerRequestNoResponders, MessengerRequestNoResponse, MessengerRequestTimeout):
             logger.warning(f'Nats rpc guider msg can not reach responder')
+
             dat = None
             met = None
         return dat, met
+
+    async def _journal_pub(self, msg: str, level: str = "INFO") :
+        try:
+           await self.journal_publisher.publish(data=self._journal_data(msg=msg, level=level),
+                                                timeout=5)
+        except (MessengerRequestTimeout):
+            logger.warning(f'Nats rpc guider msg can not reach responder')
+
+    def _journal_data(self, msg: str, level: str = "INFO") -> Dict:
+        return {
+            "ts": dt_utcnow_array(),
+            "level": level,
+            "message": msg,
+            "op": "publish"
+        }
 
     def _rpc_data(self, req: str, loop: int, nloops: int) -> Dict:
         return {
@@ -256,55 +276,58 @@ class GuiderHandler:
     async def _preview(self):
         res = await self._exec_exposure(light=True)
         if res:
-
-            d, m = await self._send_rpc_request(req="preview", loop=1, nloops=1)
-            logger.error(f'rpc ok {d}')
-            if d is not None:
-                try:
-                    resp = d['response']
-                    status = d['status']
-                except KeyError:
-                    #TODO TALK TO JOURNAL
-                    self.status = 'idle'
-                    return
-                if resp in ['preview_done'] and status == 'ok':
-                    #TODO TALK TO JOURNAL
-                    if self.preview_single:
+            if self.status not in ['idle', 'error']:
+                #await self._journal_pub(msg=f'Rpc send.', level="DEBUG")
+                d, m = await self._send_rpc_request(req="preview", loop=1, nloops=1)
+                if d is not None:
+                    try:
+                        resp = d['response']
+                        status = d['status']
+                    except KeyError:
+                        await self._journal_pub(msg=f'Wrong preview rpc response.', level="WARNING")
                         self.status = 'idle'
+                        return
+                    if resp in ['preview_done'] and status == 'ok':
+                        await self._journal_pub(msg=f'Preview success.')
+                        if self.preview_single:
+                            await self._journal_pub(msg=f'Single preview done.')
+                            self.status = 'idle'
+                    else:
+                        await self._journal_pub(msg=f'Wrong rpc response status.', level="WARNING")
                 else:
-                    #TODO TALK TO JOURNAL
-                    #TODO what here?
-                    pass
-            else:
-                #TODO TALK TO JOURNAL
-                self.status = 'idle'
+                    await self._journal_pub(msg=f'Rpc response is None.', level="WARNING")
+                    self.status = 'idle'
         else:
-            # TODO TALK TO JOURNAL
+            await self._journal_pub(msg=f'Preview stopped.')
             self.status = 'idle'
 
-
     async def _dark(self):
-        await self._exec_exposure(light=False)
-        d, m = await self._send_rpc_request(req="dark", loop=self.loop_dark, nloops=self.nloops_dark)
-        if d is not None:
-            try:
-                resp = d['response']
-                status = d['status']
-            except KeyError:
-                #TODO TALK TO JOURNAL
-                self.status = 'idle'
-                return
-            if resp in ['dark_saved', 'master_dark_saved'] and status == 'ok':
-                #TODO TALK TO JOURNAL
+        res = await self._exec_exposure(light=False)
+        if res:
+            if self.status not in ['idle', 'error']:
                 self.loop_dark += 1
-                if self.nloops_dark == self.loop_dark:
-                    #TODO TALK TO JOURNAL
+                d, m = await self._send_rpc_request(req="dark", loop=self.loop_dark, nloops=self.nloops_dark)
+                if d is not None:
+                    try:
+                        resp = d['response']
+                        status = d['status']
+                    except KeyError:
+                        await self._journal_pub(msg=f'Wrong dark rpc response.', level="WARNING")
+                        self.status = 'idle'
+                        return
+                    if resp in ['dark_saved', 'master_dark_saved'] and status == 'ok':
+                        await self._journal_pub(msg=f'Dark {self.loop_dark}/{self.nloops_dark} saved.')
+                        if self.nloops_dark == self.loop_dark:
+                            await self._journal_pub(msg=f'Master dark {self.exposure}s saved.')
+                            self.status = 'idle'
+                    elif status == 'error':
+                        await self._journal_pub(msg=f'Master dark response error:{resp}.', level="WARNING")
+                        self.status = 'idle'
+                else:
+                    await self._journal_pub(msg=f'Rpc response is None.', level="WARNING")
                     self.status = 'idle'
-            else:
-                #TODO TALK TO JOURNAL
-                self.status = 'idle'
         else:
-            #TODO TALK TO JOURNAL
+            await self._journal_pub(msg=f'Dark stopped.')
             self.status = 'idle'
 
     async def _calibration(self) -> None:
@@ -372,21 +395,24 @@ class GuiderHandler:
             self.status = 'idle'
 
     async def preview(self, single: bool = False):
-        #TODO TALK TO JOURNAL
+        await self._journal_pub(msg=f'Preview started.')
         self.sequence_id = self._get_seq_id()
         self.preview_single = single
+        await self._take_control(80000)
         self.status = 'preview'
 
     async def calibration(self) -> None:
-        # TODO TALK TO JOURNAL
+        await self._journal_pub(msg=f'Calibration started.')
         self.sequence_id = self._get_seq_id()
         self.calib_data = {}
         self.status = 'calibration'
 
     async def dark(self, sub_no: int = 20) -> None:
+        await self._journal_pub(msg=f'Dark {self.exposure}s subs:{sub_no} started.')
         self.sequence_id = self._get_seq_id()
-        self.loop_dark: int = 0
-        self.nloops_dark: int = sub_no
+        self.loop_dark = 0
+        self.nloops_dark = sub_no
+        await self._take_control(80000)
         self.status = 'dark'
 
     async def guiding(self, star_select: List | None = None, mount_follow: bool = True) -> None:
@@ -410,11 +436,12 @@ class GuiderHandler:
             pass
 
     async def stop(self) -> None:
-        #TODO stop waiting for exposure and exposure itself
-        #TODO TALK TO JOURNAL
+        await self._journal_pub(msg=f'Guider stopped.')
         self.status = 'idle'
 
     async def run_body(self):
+        self.rpc_req = self.nats.get_rpcrequester(f'tic.rpc.{self._telescope_id}.guiding')
+        self.journal_publisher = self.nats.get_journalpublisher(f'tic.journal.{self._telescope_id}.guiding')
         while True:
             if self.status == 'preview':
                 await self._preview()
@@ -424,7 +451,7 @@ class GuiderHandler:
                 await self._calibration()
             if self.status == 'guiding':
                 await self._guiding()
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(1)
 
 
 class TreeCustomGuiderHandler(TreeProvider):
