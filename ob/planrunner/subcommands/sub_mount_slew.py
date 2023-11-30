@@ -155,12 +155,11 @@ class MountSlew(SubCommand):
             ra_t = await self.value_proof_get(name='mount_ra', awaitab=self.mount.aget_ra, expect_type=float)
             dec_t = await self.value_proof_get(name='mount_dec', awaitab=self.mount.aget_dec, expect_type=float)
             ra_d = self.ra_random_dither(ra=ra_t,
-                                         dith_val=self.kwargs["dither_distance"],
-                                         mode=self.kwargs["dither_mode"])
-
+                                         dith_val=self.kwargs["seq_data"].dither_distance,
+                                         mode=self.kwargs["seq_data"].dither_mode)
             dec_d = self.dec_random_dither(dec=dec_t,
-                                           dith_val=self.kwargs["dither_distance"],
-                                           mode=self.kwargs["dither_mode"])
+                                           dith_val=self.kwargs["seq_data"].dither_distance,
+                                           mode=self.kwargs["seq_data"].dither_mode)
             await self.mount.aput_tracking(self.kwargs["tracking"])
             await self.mount.aput_slewtocoo_async(ra=ra_d, dec=dec_d)
             await self._wait_to_slew_coo(ra_in=ra_d, dec_in=dec_d)
