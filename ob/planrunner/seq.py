@@ -121,7 +121,7 @@ class Seq:
     def dither_list(self) -> List[str] or None:
         # [dither_mode, dither_every_sub, dither_distance]
         if 'dither' in self.parent_kwargs.keys():
-            if self.parent_kwargs['dither'] == 'none':
+            if self.parent_kwargs['dither'] == 'off':
                 return None
             else:
                 return list(self.parent_kwargs['dither'].split('/'))

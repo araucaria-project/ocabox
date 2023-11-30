@@ -39,7 +39,7 @@ class DitherData:
     Class representing dither single sequence parameters
     """
     _DITHER_SEQUENCE_LEN = 3
-    PARAM_VAL_OFF_DEFAULT_DITHER = "none"  # parameter witch turn off default dithering
+    PARAM_VAL_OFF_DEFAULT_DITHER = "off"  # parameter witch turn off default dithering
 
     def __init__(self, seq: str):
         # check param option witch turning off dithering

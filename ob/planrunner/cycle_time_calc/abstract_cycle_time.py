@@ -305,9 +305,9 @@ class AbstractCycleTime(ABC):
         if command_dict['command_name'] == 'SKYFLAT':
             if 'dither' not in kw.keys():
                 return 1
-            elif 'dither' in kw.keys() and kw['dither'] != 'none':
+            elif 'dither' in kw.keys() and kw['dither'] != 'off':
                 return 1
-            elif 'dither' in kw.keys() and kw['dither'] == 'none':
+            elif 'dither' in kw.keys() and kw['dither'] == 'off':
                 return 0
             else:
                 return 0
@@ -315,9 +315,9 @@ class AbstractCycleTime(ABC):
         elif command_dict['command_name'] in AbstractCycleTime.POSSIBLE_DITHER:
             if 'dither' not in kw.keys():
                 return 0
-            elif 'dither' in kw.keys() and kw['dither'] != 'none':
+            elif 'dither' in kw.keys() and kw['dither'] != 'off':
                 return 1
-            elif 'dither' in kw.keys() and kw['dither'] == 'none':
+            elif 'dither' in kw.keys() and kw['dither'] == 'off':
                 return 0
             else:
                 return 0
