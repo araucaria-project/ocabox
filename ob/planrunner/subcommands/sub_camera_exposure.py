@@ -129,8 +129,8 @@ class CameraExposure(SubCommand):
                 open(os.path.join(target_folder, f'{self.kwargs["focus_id"]}'), 'a').close()
                 if os.path.exists(os.path.join(self.folder_focusing, f'actual')):
                     os.remove(os.path.join(self.folder_focusing, f'actual'))
-                os.chdir(self.folder_focusing)
-                self._mk_symlink(target=f'./{target_folder_name}', symlink=f'./actual')
+                self._mk_symlink(target=f'./{target_folder_name}', symlink=os.path.join(self.folder, f'actual'))
+
         elif self.kwargs['type'] == 'snap':
             target_folder = self.folder
         else:
@@ -146,16 +146,14 @@ class CameraExposure(SubCommand):
             if os.path.exists(os.path.join(self.folder, f'actual')):
                 if not os.readlink(os.path.join(self.folder, f'actual')) == target_folder:
                     os.remove(os.path.join(self.folder, f'actual'))
-                    os.chdir(self.folder)
-                    self._mk_symlink(target=f'./{today_fits_folder_name}', symlink=f'./actual')
+                    self._mk_symlink(target=f'./{today_fits_folder_name}', symlink=os.path.join(self.folder, f'actual'))
             else:
-                os.chdir(self.folder)
-                self._mk_symlink(target=f'./{today_fits_folder_name}', symlink=f'./actual')
+                self._mk_symlink(target=f'./{today_fits_folder_name}', symlink=os.path.join(self.folder, f'actual'))
 
             # Create date friendly format symlink to today fits folder
             if not os.path.exists(os.path.join(self.folder, today_symlink_name)):
-                os.chdir(self.folder)
-                self._mk_symlink(target=f'./{today_fits_folder_name}', symlink=f'./{today_symlink_name}')
+                self._mk_symlink(target=f'./{today_fits_folder_name}', symlink=os.path.join(self.folder,
+                                                                                            today_symlink_name))
 
         return target_folder
 
