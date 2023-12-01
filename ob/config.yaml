@@ -41,6 +41,11 @@ client:
       nats:
         host: localhost
         port: 4222
+        rpc_root: 'tic.rpc'
+        rpc_service: # [rpc_root].[tel_id].[rpc_service]
+          download: 'download'
+          guiding: 'guiding'
+        rpc_status: 'status' # [rpc_root].[tel_id].[rpc_service].[rpc_status]
 
   CliClient:
     port: 5558
@@ -60,7 +65,11 @@ client:
       nats:
         host: localhost
         port: 4222
-
+        rpc_root: 'tic.rpc'
+        rpc_service: # [rpc_root].[tel_id].[rpc_service]
+          download: 'download'
+          guiding: 'guiding'
+        rpc_status: 'status' # [rpc_root].[tel_id].[rpc_service].[rpc_status]
 
   DefaultClient:
     port: 5559
@@ -79,6 +88,11 @@ client:
       nats:
         host: localhost
         port: 4222
+        rpc_root: 'tic.rpc'
+        rpc_service: # [rpc_root].[tel_id].[rpc_service]
+          download: 'download'
+          guiding: 'guiding'
+        rpc_status: 'status' # [rpc_root].[tel_id].[rpc_service].[rpc_status]
 
   SampleTestClient:
     port: 5560
