@@ -3,16 +3,15 @@ import logging
 from ob.planrunner.subcommand import SubCommand
 from pyaraucaria.fits import save_fits_from_array, fits_header, fits_stat
 from pyaraucaria.date import julian_to_tuple
-from ocaboxapi.formatter import parse_deg_or_dms
 from datetime import datetime
 import time
 import os
-import numpy as np
 from typing import Dict, Any, List, Tuple
 import math
 import re
-import json
-
+from serverish.messenger import Messenger, request
+from serverish.base.datetime import dt_utcnow_array
+from serverish.base.exceptions import MessengerRequestNoResponders, MessengerRequestNoResponse, MessengerRequestTimeout
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -111,6 +110,32 @@ class CameraExposure(SubCommand):
     def _get_today_fits_folder_name(self) -> str:
         return f"{math.floor(self.get_oca_date(self.get_julian_date(str(datetime.utcnow())))):04.0f}"
 
+    @property
+    def rpc_subject(self) -> str:
+        # TODO take from settings
+        return f'tic.rpc.{self.telescope.id}.ccd'
+
+    def rpc_data(self, fits_id: str, header: Dict, file_location: str, mean_points_no_stats: int, dtyp: str) -> Dict:
+        return {
+            'telescope_id': self.telescope.id,
+            'ts': dt_utcnow_array(),
+            'request': 'fits_download',
+            'fits_id': fits_id,
+            'file_location': file_location,
+            'dtyp': dtyp,
+            'mean_points_no_stats': mean_points_no_stats,
+            'header': header}
+
+    async def rpc_request(self, fits_id: str, header: Dict, file_location: str = '~/Desktop/fits_dev/test',
+                          mean_points_no_stats: int = 100, dtyp: str = 'sideint16', timeout: float = 10):
+        logger.info(f'Send rpc {self.rpc_subject}')
+        dat, met = await request(subject=self.rpc_subject,
+                                 data=self.rpc_data(fits_id=fits_id, header=header, file_location=file_location,
+                                                        mean_points_no_stats=mean_points_no_stats, dtyp=dtyp),
+                                 timeout=timeout)
+        logger.debug(f'Data gather: {dat}')
+        return dat
+
     def _provide_target_folder(self) -> str:
         if self.kwargs['type'] == 'focusing':
             lst = os.listdir(self.folder_focusing)
@@ -158,9 +183,9 @@ class CameraExposure(SubCommand):
 
         return target_folder
 
-    async def _wait_for_save_fits(self, sub: int, sub_time: float) -> None:
+    async def _wait_for_save_fits(self, sub: int, sub_time: float) -> bool:
         logger.info(f'_wait_for_save_fits started')
-        array = await self.value_proof_get(name='fits_get_array', awaitab=self.camera.aget_imagearray, expect_type=list)
+
         jd = self.get_julian_date(self.exp_time_start)
         jd_oca = f"{self.get_oca_date(jd):010.5f}"
         logger.info(f'_wait_for_save_fits aget_imagearray done')
@@ -243,23 +268,28 @@ class CameraExposure(SubCommand):
             file_name = f'snap'
         else:
             file_name = f'{self.telescope.id}c_{jd_oca.split(".")[0]}_{jd_oca.split(".")[1]}'
-        stat = fits_stat(array, size=100, median=False, std=False, min=False, max=False)
 
+        # array = await self.value_proof_get(name='fits_get_array',
+        #                                    awaitab=self.camera.aget_imagearray, expect_type=list)
+        #stat = fits_stat(array, size=100, median=False, std=False, min=False, max=False)
+        #save_fits_from_array(array, self.target_folder, file_name, header, overwrite=True,
+        #                     dtyp=self.array_bits(rmmode=readoutmode))
+        try:
+            await self.rpc_request(fits_id=file_name, header=header)
+        except (MessengerRequestNoResponders, MessengerRequestNoResponse, MessengerRequestTimeout):
+            logger.error(f'Nats rpc guider msg can not reach responder')
+            self.info_callback['stream_1'](f'ERROR: can not reach ofp download.')
+            return False
 
-        save_fits_from_array(array,
-                             self.target_folder,
-                             file_name,
-                             header,
-                             overwrite=True,
-                             dtyp=self.array_bits(rmmode=readoutmode))
         logger.info(f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} done')
         self.info_callback['stream_1'](f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} done')
         self.info_callback['exec_json'](self.exec_json(exp_started=True,
                                                        exp_done=True,
                                                        exp_saved=True,
                                                        n_exp=sub,
-                                                       mean=round(stat['mean']),
+                                                       #mean=round(stat['mean']),
                                                        exp_time=sub_time))
+        return True
 
     async def _wait_for_subexposure(self, sub_time: float) -> None:
         logger.info(f'_wait_for_subexposure started')
@@ -443,7 +473,9 @@ class CameraExposure(SubCommand):
                                                        readout_time=self.readout_time,
                                                        n_exp=self.subexp_no,
                                                        exp_time=float(exposure_time)))
-        await self._wait_for_save_fits(sub=self.subexp_no, sub_time=float(exposure_time))
+        wff = await self._wait_for_save_fits(sub=self.subexp_no, sub_time=float(exposure_time))
+        if not wff:
+            return 2
         self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
         self.info_callback['stream_5'](f'{self.id}')
         logger.info(f'{self.id} done')

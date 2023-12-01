@@ -38,6 +38,9 @@ client:
       base_cycle_time_calc_dir: /data/misc/cycle_time_calc
       base_log_night_dir: ~/.oca/log_night
       base_program_dir: ~/Desktop
+      nats:
+        host: localhost
+        port: 4222
 
   CliClient:
     port: 5558
@@ -54,6 +57,10 @@ client:
       base_cycle_time_calc_dir: /data/misc/cycle_time_calc
       base_log_night_dir: ~/.oca/log_night
       base_program_dir: ~/Desktop
+      nats:
+        host: localhost
+        port: 4222
+
 
   DefaultClient:
     port: 5559
@@ -69,6 +76,9 @@ client:
       base_cycle_time_calc_dir: /data/misc/cycle_time_calc
       base_log_night_dir: ~/.oca/log_night
       base_program_dir: ~/Desktop
+      nats:
+        host: localhost
+        port: 4222
 
   SampleTestClient:
     port: 5560
