@@ -115,23 +115,33 @@ class CameraExposure(SubCommand):
         # TODO take from settings
         return f'tic.rpc.{self.telescope.id}.ccd'
 
-    def rpc_data(self, fits_id: str, header: Dict, file_location: str, mean_points_no_stats: int, dtyp: str) -> Dict:
+    def rpc_data(self, fits_id: str, header: Dict, req: str,
+                 file_location: str, mean_points_no_stats: int, dtyp: str, symlink_location: str) -> Dict:
         return {
             'telescope_id': self.telescope.id,
             'ts': dt_utcnow_array(),
-            'request': 'fits_download',
+            'request': req,
             'fits_id': fits_id,
             'file_location': file_location,
             'dtyp': dtyp,
             'mean_points_no_stats': mean_points_no_stats,
+            'symlink_location': symlink_location,
             'header': header}
 
-    async def rpc_request(self, fits_id: str, header: Dict, file_location: str = '~/Desktop/fits_dev/test',
-                          mean_points_no_stats: int = 100, dtyp: str = 'sideint16', timeout: float = 10):
+    async def rpc_request(self, fits_id: str,
+                          header: Dict,
+                          req: str = 'fits_download',
+                          file_location: str = '~/Desktop/fits_dev/test',
+                          symlink_location: str = '~/Desktop/fits_dev/test',
+                          mean_points_no_stats: int = 100,
+                          dtyp: str = 'sideint16',
+                          timeout: float = 10):
         logger.info(f'Send rpc {self.rpc_subject}')
         dat, met = await request(subject=self.rpc_subject,
-                                 data=self.rpc_data(fits_id=fits_id, header=header, file_location=file_location,
-                                                        mean_points_no_stats=mean_points_no_stats, dtyp=dtyp),
+                                 data=self.rpc_data(fits_id=fits_id, header=header,
+                                                    file_location=file_location, req=req,
+                                                    mean_points_no_stats=mean_points_no_stats,
+                                                    dtyp=dtyp, symlink_location=symlink_location),
                                  timeout=timeout)
         logger.debug(f'Data gather: {dat}')
         return dat
@@ -275,21 +285,36 @@ class CameraExposure(SubCommand):
         #save_fits_from_array(array, self.target_folder, file_name, header, overwrite=True,
         #                     dtyp=self.array_bits(rmmode=readoutmode))
         try:
-            await self.rpc_request(fits_id=file_name, header=header)
+            # Add file_location, dtyp, symlink_location parameters on no-test
+            dat = await self.rpc_request(fits_id=file_name, header=header)
         except (MessengerRequestNoResponders, MessengerRequestNoResponse, MessengerRequestTimeout):
             logger.error(f'Nats rpc guider msg can not reach responder')
             self.info_callback['stream_1'](f'ERROR: can not reach ofp download.')
             return False
-
-        logger.info(f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} done')
-        self.info_callback['stream_1'](f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} done')
-        self.info_callback['exec_json'](self.exec_json(exp_started=True,
-                                                       exp_done=True,
-                                                       exp_saved=True,
-                                                       n_exp=sub,
-                                                       #mean=round(stat['mean']),
-                                                       exp_time=sub_time))
-        return True
+        if dat:
+            try:
+                if dat['response'] == 'fits_saved':
+                    logger.info(f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} done')
+                    self.info_callback['stream_1'](f'{self.id} exp:{sub}/{self.kwargs["exp_no"]} done')
+                    self.info_callback['exec_json'](self.exec_json(exp_started=True,
+                                                                   exp_done=True,
+                                                                   exp_saved=True,
+                                                                   n_exp=sub,
+                                                                   mean=round(dat['param']['mean']),
+                                                                   exp_time=sub_time))
+                    return True
+                else:
+                    logger.error(f'Wrong rpc response, no fits_saved.')
+                    self.info_callback['stream_1'](f'ERROR: wrong rpc response.')
+                    return False
+            except KeyError:
+                logger.error(f'Wrong rpc response, KeyError')
+                self.info_callback['stream_1'](f'ERROR: wrong rpc response.')
+                return False
+        else:
+            logger.error(f'Wrong rpc response')
+            self.info_callback['stream_1'](f'ERROR: wrong rpc response, dat is None.')
+            return False
 
     async def _wait_for_subexposure(self, sub_time: float) -> None:
         logger.info(f'_wait_for_subexposure started')
@@ -357,15 +382,41 @@ class CameraExposure(SubCommand):
         while True:
             logger.info(f'{self.id} starting test exposure')
             auto_exp_sub_no += 1
-            self.info_callback['exec_json'](self.exec_json(auto_exp_start=True,
-                                                           auto_exp_finnished=False,
-                                                           auto_exp_sub_no=auto_exp_sub_no,
-                                                           auto_exp_time=test_exposure_time))
+            #self.info_callback['exec_json'](self.exec_json(auto_exp_start=True,
+            #                                               auto_exp_finnished=False,
+            #                                               auto_exp_sub_no=auto_exp_sub_no,
+            #                                               auto_exp_time=test_exposure_time))
             # Make exposure
-            arr = await self.get_array_autoexp(test_exp_time=test_exposure_time)
-
+            #arr = await self.get_array_autoexp(test_exp_time=test_exposure_time)
             # Calculate mean from exposure (plus some info)
-            mean = fits_stat(arr, size=100, median=False, std=False, min=False, max=False)['mean']
+            #mean = fits_stat(arr, size=100, median=False, std=False, min=False, max=False)['mean']
+
+            await self.camera.aput_startexposure(test_exposure_time, self.kwargs["light"])
+            await self._wait_for_subexposure(test_exposure_time)
+
+            try:
+                dat = await self.rpc_request(fits_id=f'{round((time.time())*10)}'[-7:],
+                                             header={}, req='stats_only')
+            except (MessengerRequestNoResponders, MessengerRequestNoResponse, MessengerRequestTimeout):
+                logger.error(f'Nats rpc guider msg can not reach responder')
+                self.info_callback['stream_1'](f'ERROR: can not reach ofp download.')
+                return 0, True
+            if dat:
+                try:
+                    if dat['response'] == 'stats_done':
+                        mean = dat['param']['mean']
+                    else:
+                        logger.error(f'Wrong rpc response.')
+                        self.info_callback['stream_1'](f'ERROR: wrong rpc response, no stats_done.')
+                        return 0, True
+                except KeyError:
+                    logger.error(f'Wrong rpc response, key error')
+                    self.info_callback['stream_1'](f'ERROR: wrong rpc response, key error.')
+                    return 0, True
+            else:
+                logger.error(f'Wrong rpc response')
+                self.info_callback['stream_1'](f'ERROR: wrong rpc response, dat is None.')
+                return 0, True
 
             self.info_callback['exec_json'](self.exec_json(auto_exp_start=True,
                                                            auto_exp_finnished=True,
