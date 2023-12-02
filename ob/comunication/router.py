@@ -375,13 +375,16 @@ class Router(BaseZmqCommunicationObject):
 
         :return: true if router is stopped or false if don't.
         """
-        if self._current_loop:
-            tasks = [self._main_task, self._ping_task, *self._message_tasks, self._stop_task]
-            for t in tasks:
-                if t and t in asyncio.all_tasks(self._current_loop):
-                    return False
-        # else:
-        # logger.info(f'Can not find async loop for this router. Probably this router was newer started.')
+        try:
+            if self._current_loop:
+                tasks = [self._main_task, self._ping_task, *self._message_tasks, self._stop_task]
+                for t in tasks:
+                    if t and t in asyncio.all_tasks(self._current_loop):
+                        return False
+            # else:
+            # logger.info(f'Can not find async loop for this router. Probably this router was newer started.')
+        except AttributeError: # Router may not have _current_loop attribute when called from _del_ method
+            pass
         return True
 
     def get_stop_task(self):
