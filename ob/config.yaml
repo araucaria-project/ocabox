@@ -39,6 +39,9 @@ client:
       base_log_night_dir: ~/.oca/log_night
       base_program_dir: ~/Desktop
 
+      nats_host: nats.oca.lan
+      nats_port: 4222
+
   CliClient:
     port: 5558
     url: tic.oca.lan
