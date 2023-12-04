@@ -131,8 +131,8 @@ class CameraExposure(SubCommand):
     async def rpc_request(self, fits_id: str,
                           header: Dict,
                           req: str = 'fits_download',
-                          file_location: str = '~/Desktop/fits_dev/test',
-                          symlink_location: str = '~/Desktop/fits_dev/test',
+                          file_location: str = '~/Desktop/test',
+                          symlink_location: str = '~/Desktop/test',
                           mean_points_no_stats: int = 100,
                           dtyp: str = 'sideint16',
                           timeout: float = 10):
