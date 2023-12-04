@@ -38,6 +38,14 @@ client:
       base_cycle_time_calc_dir: /data/misc/cycle_time_calc
       base_log_night_dir: ~/.oca/log_night
       base_program_dir: ~/Desktop
+      nats:
+        host: localhost
+        port: 4222
+        rpc_root: 'tic.rpc'
+        rpc_service: #Rpc subject: [rpc_root].[tel_id].[rpc_service]
+          download: 'download'
+          guiding: 'guiding'
+        rpc_status: 'status' #Rpc status subject: [rpc_root].[tel_id].[rpc_service].[rpc_status]
 
   CliClient:
     port: 5558
@@ -54,6 +62,14 @@ client:
       base_cycle_time_calc_dir: /data/misc/cycle_time_calc
       base_log_night_dir: ~/.oca/log_night
       base_program_dir: ~/Desktop
+      nats:
+        host: localhost
+        port: 4222
+        rpc_root: 'tic.rpc'
+        rpc_service: #Rpc subject: [rpc_root].[tel_id].[rpc_service]
+          download: 'download'
+          guiding: 'guiding'
+        rpc_status: 'status' #Rpc status subject: [rpc_root].[tel_id].[rpc_service].[rpc_status]
 
   DefaultClient:
     port: 5559
@@ -69,6 +85,14 @@ client:
       base_cycle_time_calc_dir: /data/misc/cycle_time_calc
       base_log_night_dir: ~/.oca/log_night
       base_program_dir: ~/Desktop
+      nats:
+        host: localhost
+        port: 4222
+        rpc_root: 'tic.rpc'
+        rpc_service: #Rpc subject: [rpc_root].[tel_id].[rpc_service]
+          download: 'download'
+          guiding: 'guiding'
+        rpc_status: 'status' #Rpc status subject: [rpc_root].[tel_id].[rpc_service].[rpc_status]
 
   SampleTestClient:
     port: 5560
