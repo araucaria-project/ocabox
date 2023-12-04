@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 - A mechanism has been added that will send alpaca configuration to nats at server startup
 - NATS config for `TOI_Client`
 - NATS rpc subject for all clients
+- `ocaboxapi` dome ventilators
 
 ### Changed
 - skyflat dithering movement value to 8'
