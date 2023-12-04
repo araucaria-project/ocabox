@@ -112,7 +112,7 @@ class CameraExposure(SubCommand):
 
     @property
     def rpc_subject(self) -> str:
-        cfg = self.telescope.observatory.get_app_cfg('nats')
+        cfg = self.telescope.observatory.get_app_cfg('nats_subject')
         return f"{cfg['rpc_root']}.{self.telescope.id}.{cfg['rpc_service']['download']}"
 
     def rpc_data(self, fits_id: str, header: Dict, req: str,
