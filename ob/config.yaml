@@ -38,12 +38,15 @@ client:
       base_cycle_time_calc_dir: /data/misc/cycle_time_calc
       base_log_night_dir: ~/.oca/log_night
       base_program_dir: ~/Desktop
-      nats_subject:
+      nats_subject: #Rpc subject: [rpc_root].[tel_id].[service_name], Journal subject: [journal_root].[tel_id].[service_name]
         rpc_root: 'tic.rpc'
-        rpc_service: #Rpc subject: [rpc_root].[tel_id].[rpc_service]
+        journal_root: 'tic.journal'
+        status_root: 'tic.status'
+        service_name:
           download: 'download'
           guiding: 'guiding'
-        rpc_service_status: 'status' #Rpc status subject: [rpc_root].[tel_id].[rpc_service].[rpc_service_status]
+          pipeline: 'pipeline'
+        rpc_service_alive: 'alive' #Rpc service alive subject: [rpc_root].[tel_id].[service_name].[rpc_service_alive]
       nats_host: nats.oca.lan
       nats_port: 4222
 
@@ -62,12 +65,15 @@ client:
       base_cycle_time_calc_dir: /data/misc/cycle_time_calc
       base_log_night_dir: ~/.oca/log_night
       base_program_dir: ~/Desktop
-      nats_subject:
+      nats_subject: #Rpc subject: [rpc_root].[tel_id].[service_name], Journal subject: [journal_root].[tel_id].[service_name]
         rpc_root: 'tic.rpc'
-        rpc_service: #Rpc subject: [rpc_root].[tel_id].[rpc_service]
+        journal_root: 'tic.journal'
+        status_root: 'tic.status'
+        service_name:
           download: 'download'
           guiding: 'guiding'
-        rpc_service_status: 'status' #Rpc status subject: [rpc_root].[tel_id].[rpc_service].[rpc_service_status]
+          pipeline: 'pipeline'
+        rpc_service_alive: 'alive' #Rpc service alive subject: [rpc_root].[tel_id].[service_name].[rpc_service_alive]
       nats_host: nats.oca.lan
       nats_port: 4222
 
@@ -85,12 +91,15 @@ client:
       base_cycle_time_calc_dir: /data/misc/cycle_time_calc
       base_log_night_dir: ~/.oca/log_night
       base_program_dir: ~/Desktop
-      nats_subject:
+      nats_subject: #Rpc subject: [rpc_root].[tel_id].[service_name], Journal subject: [journal_root].[tel_id].[service_name]
         rpc_root: 'tic.rpc'
-        rpc_service: #Rpc subject: [rpc_root].[tel_id].[rpc_service]
+        journal_root: 'tic.journal'
+        status_root: 'tic.status'
+        service_name:
           download: 'download'
           guiding: 'guiding'
-        rpc_service_status: 'status' #Rpc status subject: [rpc_root].[tel_id].[rpc_service].[rpc_service_status]
+          pipeline: 'pipeline'
+        rpc_service_alive: 'alive' #Rpc service alive subject: [rpc_root].[tel_id].[service_name].[rpc_service_alive]
       nats_host: nats.oca.lan
       nats_port: 4222
 
