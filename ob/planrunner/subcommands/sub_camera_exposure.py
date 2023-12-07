@@ -31,7 +31,7 @@ class CameraExposure(SubCommand):
         self.seq_data = seq_data
         self.id = id
         self.base_fits_folder = os.path.expanduser(self.telescope.observatory.get_app_cfg('base_fits_dir', f'~/Desktop'))
-        self.folder = os.path.join(self.base_fits_folder, f'fits_{self.telescope.id}')
+        self.folder = os.path.join(self.base_fits_folder, f'fits_{self.telescope.id}') #TODO change for zb08 only
         self.folder_focusing = os.path.join(self.folder, f'focus')
         self.readout_time: float or None = None
         self.readout_time_start: float or None = None
@@ -131,8 +131,8 @@ class CameraExposure(SubCommand):
     async def rpc_request(self, fits_id: str,
                           header: Dict,
                           req: str = 'fits_download',
-                          file_location: str = '~/Desktop/test',
-                          symlink_location: str = '~/Desktop/test',
+                          file_location: str = '/data/fits/zb08/test',
+                          symlink_location: str = '/data/fits/zb08/test',
                           mean_points_no_stats: int = 100,
                           dtyp: str = 'sideint16',
                           timeout: float = 10):
