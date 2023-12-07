@@ -27,6 +27,7 @@ class NightPlan(AbstractSequence):
         self.mount = self.telescope.get_mount()
         self.camera = self.telescope.get_camera()
         self.param['cycle_time'] = self.telescope.get_cycle_time_calculator()
+        self.param['cycle_time'].reset_time()
         self._get_rm_mode()
         self._get_altaz()
         self.args = []

@@ -203,7 +203,10 @@ class CycleTimeCalc(AbstractCycleTime):
         self._current_filter = CycleTimeCalc.last_filter(command_dict)
         time_cal = self._calc_time(command_name=command_dict['command_name'], command_dict_param=command_dict_param)
         if time_cal:
-            comm_time = time_cal
+            if time_cal >= 0:
+                comm_time = time_cal
+            else:
+                comm_time = 0.0
         else:
             comm_time = 0.0
         self._time_length += comm_time
@@ -309,3 +312,8 @@ class CycleTimeCalc(AbstractCycleTime):
             return ret
         else:
             return None
+
+    def reset_time(self) -> None:
+        self._start_time = datetime.datetime.utcnow()
+        self._time_length_list = []
+        self._time_length = 0
