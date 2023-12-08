@@ -11,12 +11,10 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class DomeSlew(SubCommand):
 
     def __init__(self, id: str, parent: 'Command', name: str = 'dome-slew', **kwargs) -> None:
-        self.telescope = parent.telescope
-        self.dome = self.telescope.get_dome()
-        self.mount = self.telescope.get_mount()
         self.kwargs = kwargs
         super().__init__(id=id, parent=parent, name=name, **kwargs)
-
+        self.dome = self.telescope.get_dome()
+        self.mount = self.telescope.get_mount()
 
     def dome_eq_azimuth(self, ra: float, dec: float, r_dome: float, spx: float, spy: float,
                                gem: float, latitude: float, longitude: float, elevation: float) -> float:

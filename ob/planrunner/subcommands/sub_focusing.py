@@ -9,12 +9,9 @@ class Focusing(SubCommand):
 
 
     def __init__(self, id: str, parent: 'Command', name: str = 'focusing', **kwargs) -> None:
-        self.telescope = parent.telescope
-        self.focuser = self.telescope.get_focuser()
         self.kwargs = kwargs
-        self.ra_now: str or None = None
-        self.dec_now: str or None = None
         super().__init__(id=id, parent=parent, name=name, **kwargs)
+        self.focuser = self.telescope.get_focuser()
 
     async def _wait_for_move(self, position) -> None:
         # TODO focuser_value get from config

@@ -1,7 +1,8 @@
 import logging
-logger = logging.getLogger(__name__.rsplit('.')[-1])
-from typing import Dict, Any
 from ob.planrunner.base_command import BaseCommand
+
+
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class SubCommand(BaseCommand):
@@ -9,9 +10,8 @@ class SubCommand(BaseCommand):
     def __init__(self, id: str, parent: 'Command', name: str, **kwargs) -> None:
         self.args = []
         self.kwargs = kwargs
-        self.parent = parent
         super().__init__(id=id, name=name, info_callback=parent.info_callback,
-                         observatory=parent.observatory, c_type='subcommand', kwargs=self.kwargs)
+                         telescope=parent.telescope, c_type='subcommand', kwargs=self.kwargs)
         self._mk_folder(self.log_night_folder)
         self._create_command_string()
 

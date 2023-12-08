@@ -6,8 +6,8 @@ import os
 from pyaraucaria.date import datetime_to_julian
 from datetime import datetime
 import math
-
 from serverish.messenger import get_journalpublisher
+from serverish.messenger.msg_journal_pub import MsgJournalPublisher
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -18,9 +18,10 @@ class BaseCommand(ABC):
     KWARGS = ['uobi', 'dome_follow', 'epoch', 'mirror_cover', 'observer', 'screen_light', 'az', 'alt', 'seq',
               'pos', 'dither', 'wait', 'ut', 'tracking']
 
-    def __init__(self, id: str, name: str, info_callback: Dict[str, Callable], observatory, c_type, kwargs) -> None:
+    def __init__(self, id: str, name: str, telescope: 'Telescope',
+                 info_callback: Dict[str, Callable], c_type: str, kwargs) -> None:
         self.id = id
-        self.observatory = observatory
+        self.telescope = telescope
         self.info_callback = info_callback
         self.name = name
         self.kwargs = kwargs
@@ -28,16 +29,16 @@ class BaseCommand(ABC):
         self.started: bool = False
         self.done: bool = False
         self.skipped: bool = False
-        self.journal = None
+        self.journal: MsgJournalPublisher | None = None
         super().__init__()
 
-    def journal_subject(self, tel_id: str) -> str:
-        c = self.observatory.get_app_cfg('nats_subject')
-        r = f'{c["journal_root"]}.{tel_id}.{c["tic_comp"]["planner"]}'
+    def journal_subject(self) -> str:
+        c = self.telescope.observatory.get_app_cfg('nats_subject')
+        r = f'{c["journal_root"]}.{self.telescope.id}.{c["tic_comp"]["planner"]}'
         return r
 
     def get_journal(self, tel_id) -> None:
-        self.journal = get_journalpublisher(subject=self.journal_subject(tel_id=tel_id))
+        self.journal = get_journalpublisher(subject=self.journal_subject())
 
     @property
     def user(self):
@@ -89,7 +90,7 @@ class BaseCommand(ABC):
 
     @property
     def log_night_folder(self):
-        return os.path.expanduser(self.observatory.get_app_cfg('base_log_night_dir', f'~/.oca/log_night'))
+        return os.path.expanduser(self.telescope.observatory.get_app_cfg('base_log_night_dir'))
 
     @staticmethod
     def get_jd_now() -> float:

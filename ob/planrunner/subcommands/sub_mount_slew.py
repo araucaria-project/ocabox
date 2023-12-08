@@ -10,14 +10,13 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class MountSlew(SubCommand):
 
     def __init__(self, id: str, parent: 'Command', name: str = 'mount-slew', **kwargs) -> None:
-        self.telescope = parent.telescope
-        self.mount = self.telescope.get_mount()
         self.kwargs = kwargs
         self.ra_now: float or None = None
         self.dec_now: float or None = None
         self.alt: float
         self.az: float
         super().__init__(id=id, parent=parent, name=name, **kwargs)
+        self.mount = self.telescope.get_mount()
 
     async def _wait_to_slew_coo(self, ra_in: float, dec_in: float) -> None:
         await asyncio.sleep(0.5)

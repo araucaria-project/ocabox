@@ -12,19 +12,14 @@ class Sequence(AbstractSequence):
 
     def __init__(self, id: str, sequence_dict: Dict[str, Any],
                  parent: 'NightPlan' or 'Sequence', param: Dict[str, Any] or None = None) -> None:
-        self.id = id
-        self.name = 'Sequence'
         self.sequence_dict = sequence_dict
-        self.parent = parent
-        self.info_callback = parent.info_callback
         self.args = self.build_args(sequence_dict=self.sequence_dict)
-        self.kwargs = self.build_kwargs(sequence_dict=self.sequence_dict, info_callback=self.info_callback, id=id)
-        self.parent_kwargs = self.parent.kwargs | self.parent.parent_kwargs
+        self.kwargs = self.build_kwargs(sequence_dict=self.sequence_dict, info_callback=parent.info_callback, id=id)
+        self.parent_kwargs = parent.kwargs | parent.parent_kwargs
         self.param = param
         self.subcomponents = {}
-        self.telescope = parent.telescope
-        super().__init__(self.id, self.name, self.info_callback,
-                         observatory=self.parent.observatory, c_type='sequence', kwargs=self.kwargs)
+        super().__init__(id=id, name='Sequence', info_callback=parent.info_callback,
+                         telescope=parent.telescope, c_type='sequence', kwargs=self.kwargs)
         self.build_sequence()
 
     def _create_sequence_string(self):

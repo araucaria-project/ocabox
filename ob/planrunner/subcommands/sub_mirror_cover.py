@@ -9,13 +9,12 @@ class MirrorCover(SubCommand):
 
 
     def __init__(self, id: str, parent: 'Command', name: str = 'mirror-cover', **kwargs) -> None:
-        self.telescope = parent.telescope
-        self.mount = self.telescope.get_mount('mount')
         self.kwargs = kwargs
         self.ra_now: str or None = None
         self.dec_now: str or None = None
-        self.cover = self.telescope.get_covercalibrator()
         super().__init__(id=id, parent=parent, name=name, **kwargs)
+        self.mount = self.telescope.get_mount('mount')
+        self.cover = self.telescope.get_covercalibrator()
 
     async def _wait_for_move(self, expected_status: str):
         while True:

@@ -17,7 +17,6 @@ class ObservPlan:
         self.parent_kwargs = {}
         self.subcomponents = {}
         self.telescope = telescope
-        self.observatory = telescope.observatory
         self.parsed_plan: List[Any] or None = None
         self.plan_string: str or None = None
         self.tsk: asyncio.Task or None = None

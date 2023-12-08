@@ -10,13 +10,11 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class AbstractSequence(BaseCommand):
 
-    def __init__(self, id: str, name: str, info_callback: Dict[str, Callable], observatory, c_type, kwargs) -> None:
-        self.observatory = observatory
-        self.info_callback = info_callback
-        self.c_type: str = c_type
+    def __init__(self, id: str, name: str, telescope: 'Telescope', info_callback: Dict[str, Callable],
+                 c_type, kwargs) -> None:
         self.kwargs = kwargs
         super().__init__(id=id, name=name, info_callback=info_callback,
-                         observatory=observatory, c_type=c_type, kwargs=self.kwargs)
+                         telescope=telescope, c_type=c_type, kwargs=self.kwargs)
 
     @staticmethod
     def build_args(sequence_dict: Dict[Any, Any]) -> List[Any]:

@@ -8,7 +8,6 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class Stop(SubCommand):
 
     def __init__(self, id: str, parent: 'Command', name: str = 'stop', **kwargs) -> None:
-        self.telescope = parent.telescope
         self.kwargs = kwargs
         super().__init__(id=id, parent=parent, name=name, **kwargs)
 

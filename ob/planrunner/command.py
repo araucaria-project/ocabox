@@ -26,18 +26,16 @@ class Command(AbstractSequence):
     def __init__(self, id: str, sequence_dict: Dict[Any, Any],
                  parent: 'Sequence' or 'NightPlan', param: Dict[str, Any] or None = None) -> None:
         self.sequence_dict = sequence_dict
-        self.parent = parent
         self.args = self.build_args(self.sequence_dict)
         self.kwargs = self.build_kwargs(sequence_dict=self.sequence_dict, info_callback=parent.info_callback, id=id)
-        self.parent_kwargs = self.parent.kwargs | self.parent.parent_kwargs
+        self.parent_kwargs = parent.kwargs | parent.parent_kwargs
         self.subcomponents = {}
-        self.telescope = parent.telescope
         self.param = param
         self._cycle_time_data_build = CycleTimeDataBuild(
-            telescope=self.telescope.id,
-            base_folder=self.telescope.observatory.get_app_cfg(key='base_cycle_time_calc_dir'))
+            telescope=parent.telescope.id,
+            base_folder=parent.telescope.observatory.get_app_cfg(key='base_cycle_time_calc_dir'))
         super().__init__(id=id, name=self.sequence_dict['command_name'], info_callback=parent.info_callback,
-                         observatory=self.parent.observatory, c_type='command', kwargs=self.kwargs)
+                         telescope=parent.telescope, c_type='command', kwargs=self.kwargs)
         self._write_subcommands()
 
     def _create_command_string(self):

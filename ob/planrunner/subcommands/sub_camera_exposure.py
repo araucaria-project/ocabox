@@ -19,23 +19,22 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class CameraExposure(SubCommand):
 
     def __init__(self, id: str, parent: 'Command', seq_data: 'Seq', name: str = 'camera-exposure', **kwargs) -> None:
-        self.telescope = parent.telescope
+
+        self.kwargs = kwargs
+        self.seq_data = seq_data
+        self.readout_time: float or None = None
+        self.readout_time_start: float or None = None
+        self.exp_time_start: str or None = None
+        super().__init__(id=id, parent=parent, name=name, **kwargs)
         self.mount = self.telescope.get_mount()
         self.camera = self.telescope.get_camera()
         self.cover = self.telescope.get_covercalibrator()
         self.filter = self.telescope.get_filterwheel()
         self.focuser = self.telescope.get_focuser()
         self.rotator = self.telescope.get_rotator()
-        self.kwargs = kwargs
-        self.seq_data = seq_data
         self.base_fits_folder = os.path.expanduser(self.telescope.observatory.get_app_cfg('base_fits_dir'))
         self.folder = os.path.join(self.base_fits_folder, f'{self.telescope.id}')
         self.folder_focusing = os.path.join(self.folder, f'focus')
-        self.readout_time: float or None = None
-        self.readout_time_start: float or None = None
-        self.exp_time_start: str or None = None
-        super().__init__(id=id, parent=parent, name=name, **kwargs)
-
         self._mk_folder(self.folder)
         self._mk_folder(self.folder_focusing)
         self.get_journal(self.telescope.id)

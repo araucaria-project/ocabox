@@ -7,14 +7,10 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class DomeScreenLight(SubCommand):
 
-
     def __init__(self, id: str, parent: 'Command', name: str = 'dome-screenlight', **kwargs) -> None:
-        self.telescope = parent.telescope
-        self.mount = self.telescope.get_mount('mount')
         self.kwargs = kwargs
-        self.ra_now: str or None = None
-        self.dec_now: str or None = None
         super().__init__(id=id, parent=parent, name=name, **kwargs)
+        self.mount = self.telescope.get_mount('mount')
 
     async def _wait_for_turn_on_off(self):
         await asyncio.sleep(15)

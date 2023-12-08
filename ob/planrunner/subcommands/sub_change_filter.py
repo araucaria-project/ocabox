@@ -11,10 +11,9 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class ChangeFilter(SubCommand):
 
     def __init__(self, id: str, parent: 'Command', name: str = 'change-filter', **kwargs) -> None:
-        self.telescope = parent.telescope
-        self.filterwheel = self.telescope.get_filterwheel()
         self.kwargs = kwargs
         super().__init__(id=id, parent=parent, name=name, **kwargs)
+        self.filterwheel = self.telescope.get_filterwheel()
 
     async def _wait_to_move(self, pos: int) -> None:
         logger.info('Wait to move...')
@@ -56,7 +55,7 @@ class ChangeFilter(SubCommand):
             pos = filter_dict[self.kwargs["filter"]]
         else:
             self.info_callback['stream_1'](
-                f'Filter index{self.kwargs["filter"]} is wrong, {self.parent.id} skipping')
+                f'Filter index{self.kwargs["filter"]} is wrong, {self.id} skipping')
             self.info_callback['stream_5'](f'{self.id}')
             self.skipped = True
             self.info_callback['exec_json'](self.exec_json())
