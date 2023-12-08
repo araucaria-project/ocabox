@@ -10,11 +10,10 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class Wait(SubCommand):
 
-    def __init__(self, id: str, parent: 'Command', subcommand_name: str = 'wait', **kwargs) -> None:
-        self.subcommand_name = subcommand_name
+    def __init__(self, id: str, parent: 'Command', name: str = 'wait', **kwargs) -> None:
         self.telescope = parent.telescope
         self.kwargs = kwargs
-        super().__init__(id=id, parent=parent, subcommand_name=subcommand_name, **kwargs)
+        super().__init__(id=id, parent=parent, name=name, **kwargs)
 
     async def _wait_exec(self, value: float) -> None:
         await asyncio.sleep(value)
@@ -53,7 +52,7 @@ class Wait(SubCommand):
         logger.info(f'{self.id} started')
         self.started = True
         self.info_callback['exec_json'](self.exec_json())
-        self.info_callback['stream_1'](f"{self.id} {self.subcommand_name} {self.kwargs['key']} started")
+        self.info_callback['stream_1'](f"{self.id} {self.name} {self.kwargs['key']} started")
         logger.info(f'{self.id} started')
         if self.kwargs['key'] == 'wait':
             await self._wait_exec(float(self.kwargs['value']))
@@ -65,7 +64,7 @@ class Wait(SubCommand):
             await self._wait_sunset_exec(self.kwargs['value'])
         else:
             pass
-        self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
+        self.info_callback['stream_1'](f'{self.id} {self.name} done')
         self.info_callback['stream_5'](f'{self.id}')
         logger.info(f'{self.id} done')
         self.done = True

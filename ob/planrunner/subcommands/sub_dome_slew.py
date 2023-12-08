@@ -10,13 +10,12 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class DomeSlew(SubCommand):
 
-    def __init__(self, id: str, parent: 'Command', subcommand_name: str = 'dome-slew', **kwargs) -> None:
-        self.subcommand_name = subcommand_name
+    def __init__(self, id: str, parent: 'Command', name: str = 'dome-slew', **kwargs) -> None:
         self.telescope = parent.telescope
         self.dome = self.telescope.get_dome()
         self.mount = self.telescope.get_mount()
         self.kwargs = kwargs
-        super().__init__(id=id, parent=parent, subcommand_name=subcommand_name, **kwargs)
+        super().__init__(id=id, parent=parent, name=name, **kwargs)
 
 
     def dome_eq_azimuth(self, ra: float, dec: float, r_dome: float, spx: float, spy: float,
@@ -120,7 +119,7 @@ class DomeSlew(SubCommand):
                 return 0
         self.info_callback['exec_json'](self.exec_json())
         logger.info(f'{self.id} started')
-        self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} started')
+        self.info_callback['stream_1'](f'{self.id} {self.name} started')
         # TODO get mount kind and parameters from settings
         if 'az' in self.kwargs.keys():
             az = self.kwargs['az']
@@ -130,7 +129,7 @@ class DomeSlew(SubCommand):
             if self.kwargs['follow_tol']<abs(mount_az - dome_az):
                 az = mount_az
             else:
-                self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} dome in position tolerance, skipping')
+                self.info_callback['stream_1'](f'{self.id} {self.name} dome in position tolerance, skipping')
                 self.info_callback['stream_5'](f'{self.id}')
                 logger.info(f'{self.id} dome in position tolerance, skipping')
                 self.skipped = True
@@ -168,7 +167,7 @@ class DomeSlew(SubCommand):
         await self.dome.aput_slewtoazimuth(az)
         await self._wait_to_slew(az)
         logger.info(f'{self.id} done')
-        self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
+        self.info_callback['stream_1'](f'{self.id} {self.name} done')
         self.info_callback['stream_5'](f'{self.id}')
         self.done = True
         self.info_callback['exec_json'](self.exec_json())

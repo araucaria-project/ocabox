@@ -8,14 +8,13 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class Focusing(SubCommand):
 
 
-    def __init__(self, id: str, parent: 'Command', subcommand_name: str = 'focusing', **kwargs) -> None:
-        self.subcommand_name = subcommand_name
+    def __init__(self, id: str, parent: 'Command', name: str = 'focusing', **kwargs) -> None:
         self.telescope = parent.telescope
         self.focuser = self.telescope.get_focuser()
         self.kwargs = kwargs
         self.ra_now: str or None = None
         self.dec_now: str or None = None
-        super().__init__(id=id, parent=parent, subcommand_name=subcommand_name, **kwargs)
+        super().__init__(id=id, parent=parent, name=name, **kwargs)
 
     async def _wait_for_move(self, position) -> None:
         # TODO focuser_value get from config
@@ -35,18 +34,18 @@ class Focusing(SubCommand):
         self.info_callback['exec_json'](self.exec_json())
         if 'position' in self.kwargs.keys():
             position = self.kwargs['position']
-            self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} moving to {position}')
-            logger.debug(f'{self.id} {self.subcommand_name} moving to {position}')
+            self.info_callback['stream_1'](f'{self.id} {self.name} moving to {position}')
+            logger.debug(f'{self.id} {self.name} moving to {position}')
             await self.focuser.aput_move(int(position))
             await self._wait_for_move(position)
             logger.info(f'{self.id} done')
-            self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
+            self.info_callback['stream_1'](f'{self.id} {self.name} done')
             self.info_callback['stream_5'](f'{self.id}')
             self.done = True
             self.info_callback['exec_json'](self.exec_json())
             return 0
         else:
-            self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} skipping - no position')
+            self.info_callback['stream_1'](f'{self.id} {self.name} skipping - no position')
             logger.info(f'{self.id} skipping: no position set')
             self.skipped = True
             self.info_callback['exec_json'](self.exec_json())

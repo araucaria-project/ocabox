@@ -6,18 +6,14 @@ from ob.planrunner.base_command import BaseCommand
 
 class SubCommand(BaseCommand):
 
-    def __init__(self, id: str, parent: 'Command', subcommand_name: str, **kwargs) -> None:
-        self.id = id
+    def __init__(self, id: str, parent: 'Command', name: str, **kwargs) -> None:
         self.args = []
         self.kwargs = kwargs
         self.parent = parent
-        self.subcommand_name = subcommand_name
-        self.info_callback = parent.info_callback
-        self.observatory = parent.observatory
-        self._create_command_string()
+        super().__init__(id=id, name=name, info_callback=parent.info_callback,
+                         observatory=parent.observatory, c_type='subcommand', kwargs=self.kwargs)
         self._mk_folder(self.log_night_folder)
-        super().__init__(self.id, name=subcommand_name, info_callback=self.info_callback,
-                         observatory=self.observatory, c_type='subcommand', kwargs=self.kwargs)
+        self._create_command_string()
 
     def _create_command_string(self):
         kw = ''
@@ -31,7 +27,7 @@ class SubCommand(BaseCommand):
                     kw = f'{kw} {n}={self.kwargs[n]}'
                     w+=1
                 #if w > 3: break
-        self.info_callback['c_subcommands'](f'{self.id};{self.subcommand_name};;{kw}')
+        self.info_callback['c_subcommands'](f'{self.id};{self.name};;{kw}')
         logger.debug(f'{self.id} is written')
 
     async def arun(self) -> int:

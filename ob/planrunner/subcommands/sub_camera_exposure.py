@@ -18,8 +18,7 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class CameraExposure(SubCommand):
 
-    def __init__(self, id: str, parent: 'Command', seq_data: 'Seq', subcommand_name: str = 'camera-exposure', **kwargs) -> None:
-        self.subcommand_name = subcommand_name
+    def __init__(self, id: str, parent: 'Command', seq_data: 'Seq', name: str = 'camera-exposure', **kwargs) -> None:
         self.telescope = parent.telescope
         self.mount = self.telescope.get_mount()
         self.camera = self.telescope.get_camera()
@@ -35,7 +34,7 @@ class CameraExposure(SubCommand):
         self.readout_time: float or None = None
         self.readout_time_start: float or None = None
         self.exp_time_start: str or None = None
-        super().__init__(id=id, parent=parent, subcommand_name=subcommand_name, **kwargs)
+        super().__init__(id=id, parent=parent, name=name, **kwargs)
 
         self._mk_folder(self.folder)
         self._mk_folder(self.folder_focusing)
@@ -579,7 +578,7 @@ class CameraExposure(SubCommand):
         wff = await self._wait_for_save_fits(sub=self.subexp_no, sub_time=float(exposure_time))
         if not wff:
             return 2
-        self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
+        self.info_callback['stream_1'](f'{self.id} {self.name} done')
         self.info_callback['stream_5'](f'{self.id}')
         inf = f'{self.id} done'
         logger.debug(inf)

@@ -25,23 +25,18 @@ class Command(AbstractSequence):
 
     def __init__(self, id: str, sequence_dict: Dict[Any, Any],
                  parent: 'Sequence' or 'NightPlan', param: Dict[str, Any] or None = None) -> None:
-        self.id = id
         self.sequence_dict = sequence_dict
         self.parent = parent
-        self.info_callback = parent.info_callback
         self.args = self.build_args(self.sequence_dict)
-        self.kwargs = self.build_kwargs(sequence_dict=self.sequence_dict, info_callback=self.info_callback, id=id)
+        self.kwargs = self.build_kwargs(sequence_dict=self.sequence_dict, info_callback=parent.info_callback, id=id)
         self.parent_kwargs = self.parent.kwargs | self.parent.parent_kwargs
-        self.command_name = self.sequence_dict['command_name']
         self.subcomponents = {}
         self.telescope = parent.telescope
         self.param = param
-        self.info_callback = parent.info_callback
         self._cycle_time_data_build = CycleTimeDataBuild(
             telescope=self.telescope.id,
             base_folder=self.telescope.observatory.get_app_cfg(key='base_cycle_time_calc_dir'))
-
-        super().__init__(self.id, self.command_name, self.info_callback,
+        super().__init__(id=id, name=self.sequence_dict['command_name'], info_callback=parent.info_callback,
                          observatory=self.parent.observatory, c_type='command', kwargs=self.kwargs)
         self._write_subcommands()
 
@@ -56,40 +51,39 @@ class Command(AbstractSequence):
             if n != 'seq_data':
                 kw = f'{kw} {n}={self.parent_kwargs[n]}'
         self.info_callback['c_commands'](
-            f'{self.id};'f'{self.command_name};'
+            f'{self.id};'f'{self.name};'
             f' {round(self.param["cycle_time"].calc_time(command_dict=self.sequence_dict))}s;{kw}')
-        logger.info(f'{self.id} {self.command_name} {self.args} {self.kwargs} is written')
+        logger.info(f'{self.id} {self.name} {self.args} {self.kwargs} is written')
 
     def _write_subcommands(self) -> None:
         self._create_command_string()
 
-        if self.command_name == 'OBJECT':
+        if self.name == 'OBJECT':
             self._write_object_skyflat_focusing()
 
-        elif self.command_name == 'DOMEFLAT':
+        elif self.name == 'DOMEFLAT':
             self._write_domeflat()
 
-        elif self.command_name == 'FOCUS':
+        elif self.name == 'FOCUS':
             self._write_object_skyflat_focusing()
 
-        elif self.command_name == 'DARK':
+        elif self.name == 'DARK':
             self._write_zero_dark()
 
-        elif self.command_name == 'ZERO':
+        elif self.name == 'ZERO':
             self._write_zero_dark()
 
-        elif self.command_name == 'SKYFLAT':
+        elif self.name == 'SKYFLAT':
             self._write_object_skyflat_focusing()
 
-        elif self.command_name == 'WAIT':
+        elif self.name == 'WAIT':
             self._write_wait()
 
-        elif self.command_name == 'STOP':
+        elif self.name == 'STOP':
             self._write_stop()
 
-        elif self.command_name == 'SNAP':
+        elif self.name == 'SNAP':
             self._write_object_skyflat_focusing()
-
         else:
             logger.warning(f'{self.id} command name: {self.name} is wrong')
             self.info_callback['stream_1'](f'{self.id} command name: {self.name} is wrong')
@@ -125,7 +119,7 @@ class Command(AbstractSequence):
         Do dithering or not.
         :return: bool
         """
-        if self.command_name == 'SKYFLAT':
+        if self.name == 'SKYFLAT':
             if 'dither' not in self.kwargs.keys():
                 return True
             elif 'dither' in self.kwargs.keys() and self.kwargs['dither'] != 'off':
@@ -135,7 +129,7 @@ class Command(AbstractSequence):
             else:
                 return False
 
-        elif self.command_name in self.possible_dither:
+        elif self.name in self.possible_dither:
             if 'dither' not in self.kwargs.keys():
                 return False
             elif 'dither' in self.kwargs.keys() and self.kwargs['dither'] != 'off':
@@ -296,7 +290,7 @@ class Command(AbstractSequence):
                 self.info_callback['stream_1'](f'{self.id} Wrong tracking value, set to off')
                 return False
         else:
-            if self.command_name in default_tracking_on:
+            if self.name in default_tracking_on:
                 return True
             else:
                 return False
@@ -304,17 +298,17 @@ class Command(AbstractSequence):
     @property
     def object_name(self) -> str:
         if not self.plan_object_name:
-            if self.command_name == 'SKYFLAT':
+            if self.name == 'SKYFLAT':
                 name = 'skyflat'
-            elif self.command_name == 'FOCUS':
+            elif self.name == 'FOCUS':
                 name = 'focusing'
-            elif self.command_name == 'DOMEFLAT':
+            elif self.name == 'DOMEFLAT':
                 name = 'domeflat'
-            elif self.command_name == 'DARK':
+            elif self.name == 'DARK':
                 name = 'dark'
-            elif self.command_name == 'ZERO':
+            elif self.name == 'ZERO':
                 name = 'zero'
-            elif self.command_name == 'SNAP':
+            elif self.name == 'SNAP':
                 name = 'snap'
             else:
                 name = ''
@@ -324,7 +318,7 @@ class Command(AbstractSequence):
 
     @property
     def exp_type(self):
-        return Command.TYPES[self.command_name]
+        return Command.TYPES[self.name]
 
     def _write_domeflat(self):
 
@@ -465,7 +459,7 @@ class Command(AbstractSequence):
                     # Camera single sequence, single exposure
 
                     # Focusig
-                    if self.command_name == 'FOCUS':
+                    if self.name == 'FOCUS':
                         id_next = self._add_comp(Focusing(id=self._op_id(id_next=id_next),
                                                           parent=self,
                                                           position=seq_data.focus_position(exp_no=ex),
@@ -596,8 +590,8 @@ class Command(AbstractSequence):
             return f_pos
 
     async def arun(self, step_id: str or None = None) -> int:
-        self.info_callback['stream_1'](f'Command {self.id} {self.command_name} started')
-        logger.info(f'{self.id} {self.command_name} {self.args} {self.kwargs} started')
+        self.info_callback['stream_1'](f'Command {self.id} {self.name} started')
+        logger.info(f'{self.id} {self.name} {self.args} {self.kwargs} started')
         d = self.telescope.get_dome()
         m = self.telescope.get_mount()
         c = self.telescope.get_camera()

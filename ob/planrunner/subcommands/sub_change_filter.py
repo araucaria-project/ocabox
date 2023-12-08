@@ -10,12 +10,11 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class ChangeFilter(SubCommand):
 
-    def __init__(self, id: str, parent: 'Command', subcommand_name: str = 'change-filter', **kwargs) -> None:
-        self.subcommand_name = subcommand_name
+    def __init__(self, id: str, parent: 'Command', name: str = 'change-filter', **kwargs) -> None:
         self.telescope = parent.telescope
         self.filterwheel = self.telescope.get_filterwheel()
         self.kwargs = kwargs
-        super().__init__(id=id, parent=parent, subcommand_name=subcommand_name, **kwargs)
+        super().__init__(id=id, parent=parent, name=name, **kwargs)
 
     async def _wait_to_move(self, pos: int) -> None:
         logger.info('Wait to move...')
@@ -33,9 +32,9 @@ class ChangeFilter(SubCommand):
         t = datetime.datetime.now()
         try:
             await self.filterwheel.aput_position(pos)
-            logger.info(f'{self.id} {self.subcommand_name} filter position done in {datetime.datetime.now()-t}')
+            logger.info(f'{self.id} {self.name} filter position done in {datetime.datetime.now()-t}')
         except Exception as e:
-            logger.error(f'{self.id} {self.subcommand_name} filter position error after {datetime.datetime.now()-t}: {e}')
+            logger.error(f'{self.id} {self.name} filter position error after {datetime.datetime.now()-t}: {e}')
             try:
                 logger.warning(f'{self.id} filter change 2-nd try')
                 await self.filterwheel.aput_position(pos)
@@ -49,7 +48,7 @@ class ChangeFilter(SubCommand):
 
     async def arun(self, step_id: str or None = None) -> int:
         logger.info(f'{self.id} started')
-        self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} {self.kwargs["filter"]} started')
+        self.info_callback['stream_1'](f'{self.id} {self.name} {self.kwargs["filter"]} started')
         self.started = True
         self.info_callback['exec_json'](self.exec_json())
         filter_dict = await self.filterwheel.aget_names()
@@ -76,7 +75,7 @@ class ChangeFilter(SubCommand):
         # TODO this subcommand is freeze on aput_position -> change_filter_pos_proof
         res = await self.change_filter_pos_proof(pos)
         if res==1:
-            self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} filter aput_position error, skipping')
+            self.info_callback['stream_1'](f'{self.id} {self.name} filter aput_position error, skipping')
             self.info_callback['stream_5'](f'{self.id}')
             logger.info(f'{self.id} filter aput_position error, skipping')
             self.skipped = True
@@ -84,7 +83,7 @@ class ChangeFilter(SubCommand):
             return 1
         await self._wait_to_move(pos)
         logger.info(f'{self.id} done')
-        self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
+        self.info_callback['stream_1'](f'{self.id} {self.name} done')
         self.info_callback['stream_5'](f'{self.id}')
         self.done = True
         self.info_callback['exec_json'](self.exec_json())

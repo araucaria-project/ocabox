@@ -9,8 +9,7 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class MountSlew(SubCommand):
 
-    def __init__(self, id: str, parent: 'Command', subcommand_name: str = 'mount-slew', **kwargs) -> None:
-        self.subcommand_name = subcommand_name
+    def __init__(self, id: str, parent: 'Command', name: str = 'mount-slew', **kwargs) -> None:
         self.telescope = parent.telescope
         self.mount = self.telescope.get_mount()
         self.kwargs = kwargs
@@ -18,7 +17,7 @@ class MountSlew(SubCommand):
         self.dec_now: float or None = None
         self.alt: float
         self.az: float
-        super().__init__(id=id, parent=parent, subcommand_name=subcommand_name, **kwargs)
+        super().__init__(id=id, parent=parent, name=name, **kwargs)
 
     async def _wait_to_slew_coo(self, ra_in: float, dec_in: float) -> None:
         await asyncio.sleep(0.5)
@@ -65,7 +64,7 @@ class MountSlew(SubCommand):
                 return 0
         self.info_callback['exec_json'](self.exec_json())
         logger.info(f'{self.id} started')
-        self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} OBJ:{self.kwargs["obj_name"]} started')
+        self.info_callback['stream_1'](f'{self.id} {self.name} OBJ:{self.kwargs["obj_name"]} started')
 
         # TODO This OCA should be taken from settings
         OCA = {'latitude': -24.598056, 'longitude': -70.196389, 'elevation': 2817}
@@ -97,9 +96,9 @@ class MountSlew(SubCommand):
                     await asyncio.sleep(5)
                     await self.mount.aput_tracking(self.kwargs["tracking"])
                     self.info_callback['stream_1'](
-                        f'{self.id} {self.subcommand_name} tracking={self.kwargs["tracking"]}')
+                        f'{self.id} {self.name} tracking={self.kwargs["tracking"]}')
                 logger.info(f'{self.id} done')
-                self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
+                self.info_callback['stream_1'](f'{self.id} {self.name} done')
                 self.info_callback['stream_5'](f'{self.id}')
                 self.done = True
                 self.info_callback['exec_json'](self.exec_json())
@@ -132,7 +131,7 @@ class MountSlew(SubCommand):
                 await self._wait_to_slew_coo(ra_in=float(self.ra_now), dec_in=float(self.dec_now))
                 await self.mount.aput_tracking(self.kwargs["tracking"])
                 logger.info(f'{self.id} done')
-                self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
+                self.info_callback['stream_1'](f'{self.id} {self.name} done')
                 self.info_callback['stream_5'](f'{self.id}')
                 self.done = True
                 self.info_callback['exec_json'](self.exec_json())
@@ -159,7 +158,7 @@ class MountSlew(SubCommand):
             await self.mount.aput_slewtocoo_async(ra=ra_d, dec=dec_d)
             await self._wait_to_slew_coo(ra_in=ra_d, dec_in=dec_d)
             logger.info(f'{self.id} done')
-            self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
+            self.info_callback['stream_1'](f'{self.id} {self.name} done')
             self.info_callback['stream_5'](f'{self.id}')
             self.done = True
             self.info_callback['exec_json'](self.exec_json())
@@ -172,5 +171,3 @@ class MountSlew(SubCommand):
             self.info_callback['exec_json'](self.exec_json())
             logger.info(f'{self.id} no coordinates, intend to skip')
             return 0
-
-
