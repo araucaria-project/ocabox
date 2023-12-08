@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from ob.planrunner.subcommand import SubCommand
+from ob.planrunner.subcommands.subcommand import SubCommand
 import math
 from pyaraucaria.coordinates import site_sidereal_time, ra_dec_2_az_alt
 

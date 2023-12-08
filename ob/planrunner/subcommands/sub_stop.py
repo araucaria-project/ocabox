@@ -1,4 +1,4 @@
-from ob.planrunner.subcommand import SubCommand
+from ob.planrunner.subcommands.subcommand import SubCommand
 import logging
 
 

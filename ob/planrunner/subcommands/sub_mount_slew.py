@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from ob.planrunner.subcommand import SubCommand
+from ob.planrunner.subcommands.subcommand import SubCommand
 from pyaraucaria.coordinates import ra_dec_epoch, ra_dec_2_az_alt, deg_to_decimal_deg
 import random
 

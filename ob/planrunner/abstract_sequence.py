@@ -1,6 +1,5 @@
 from typing import Dict, List, Any, Callable
 import logging
-from datetime import datetime
 from ob.planrunner.base_command import BaseCommand
 from ob.planrunner.coded_error import SequenceTreeError
 
@@ -11,7 +10,7 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class AbstractSequence(BaseCommand):
 
     def __init__(self, id: str, name: str, telescope: 'Telescope', info_callback: Dict[str, Callable],
-                 c_type, kwargs) -> None:
+                 c_type: str, kwargs) -> None:
         self.kwargs = kwargs
         super().__init__(id=id, name=name, info_callback=info_callback,
                          telescope=telescope, c_type=c_type, kwargs=self.kwargs)

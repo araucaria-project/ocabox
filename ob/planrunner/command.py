@@ -13,7 +13,7 @@ from ob.planrunner.subcommands.sub_wait import Wait
 from ob.planrunner.cycle_time_calc.cycle_time_data_build import CycleTimeDataBuild
 from pyaraucaria.coordinates import ra_to_decimal, dec_to_decimal, deg_to_decimal_deg
 from ob.planrunner.seq import Seq
-from ob.planrunner.subcommand import SubCommand
+from ob.planrunner.subcommands.subcommand import SubCommand
 from ob.planrunner.coded_error import SequenceTreeError
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])

@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from ob.planrunner.subcommand import SubCommand
+from ob.planrunner.subcommands.subcommand import SubCommand
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 

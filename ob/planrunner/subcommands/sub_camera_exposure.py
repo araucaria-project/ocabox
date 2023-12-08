@@ -1,15 +1,15 @@
 import asyncio
 import logging
-from ob.planrunner.subcommand import SubCommand
-from pyaraucaria.fits import save_fits_from_array, fits_header, fits_stat
+from ob.planrunner.subcommands.subcommand import SubCommand
+from pyaraucaria.fits import fits_header
 from pyaraucaria.date import julian_to_tuple
 from datetime import datetime
 import time
 import os
-from typing import Dict, Any, List, Tuple
+from typing import Dict, List, Tuple
 import math
 import re
-from serverish.messenger import Messenger, request
+from serverish.messenger import request
 from serverish.base.datetime import dt_utcnow_array
 from serverish.base.exceptions import MessengerRequestNoResponders, MessengerRequestNoResponse, MessengerRequestTimeout
 
