@@ -17,9 +17,6 @@ class AbstractSequence(BaseCommand):
         self.name = name
         self.c_type: str = c_type
         self.kwargs = kwargs
-        self.started: bool = False
-        self.done: bool = False
-        self.skipped: bool = False
         super().__init__(self.id, name=name, info_callback=info_callback,
                          observatory=observatory, c_type=c_type, kwargs=self.kwargs)
 

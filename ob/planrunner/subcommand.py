@@ -6,17 +6,13 @@ from ob.planrunner.base_command import BaseCommand
 
 class SubCommand(BaseCommand):
 
-    def __init__(self, id: str, parent: 'Command', started: bool, done: bool, skipped: bool,
-                 subcommand_name: str, **kwargs) -> None:
+    def __init__(self, id: str, parent: 'Command', subcommand_name: str, **kwargs) -> None:
         self.id = id
         self.args = []
         self.kwargs = kwargs
         self.parent = parent
         self.subcommand_name = subcommand_name
         self.info_callback = parent.info_callback
-        self.started = started
-        self.done = done
-        self.skipped = skipped
         self.observatory = parent.observatory
         self._create_command_string()
         self._mk_folder(self.log_night_folder)

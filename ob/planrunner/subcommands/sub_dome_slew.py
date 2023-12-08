@@ -16,12 +16,7 @@ class DomeSlew(SubCommand):
         self.dome = self.telescope.get_dome()
         self.mount = self.telescope.get_mount()
         self.kwargs = kwargs
-        self.id = id
-        self.started: bool = False
-        self.done: bool = False
-        self.skipped: bool = False
-        super().__init__(id=id, parent=parent, subcommand_name=subcommand_name,
-                         started=self.started, done=self.done, skipped=self.skipped, **kwargs)
+        super().__init__(id=id, parent=parent, subcommand_name=subcommand_name, **kwargs)
 
 
     def dome_eq_azimuth(self, ra: float, dec: float, r_dome: float, spx: float, spy: float,

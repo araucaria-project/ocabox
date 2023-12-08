@@ -11,12 +11,7 @@ class Stop(SubCommand):
         self.subcommand_name = subcommand_name
         self.telescope = parent.telescope
         self.kwargs = kwargs
-        self.id = id
-        self.started: bool = False
-        self.done: bool = False
-        self.skipped: bool = False
-        super().__init__(id=id, parent=parent, subcommand_name=subcommand_name,
-                         started=self.started, done=self.done, skipped=self.skipped, **kwargs)
+        super().__init__(id=id, parent=parent, subcommand_name=subcommand_name, **kwargs)
 
     async def arun(self, step_id: str or None = None) -> int:
         logger.info(f'{self.id} started')

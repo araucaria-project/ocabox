@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file.
 - NATS config for `TOI_Client`
 - NATS rpc subject for all clients
 - `ocaboxapi` dome ventilators
+- `sub_camera_exposure` fits gather and saving by ofp downloader
 
 ### Changed
 - skyflat dithering movement value to 8'

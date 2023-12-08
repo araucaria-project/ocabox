@@ -7,6 +7,7 @@ from pyaraucaria.date import datetime_to_julian
 from datetime import datetime
 import math
 
+from serverish.messenger import get_journalpublisher
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -27,7 +28,16 @@ class BaseCommand(ABC):
         self.started: bool = False
         self.done: bool = False
         self.skipped: bool = False
+        self.journal = None
         super().__init__()
+
+    def journal_subject(self, tel_id: str) -> str:
+        c = self.observatory.get_app_cfg('nats_subject')
+        r = f'{c["journal_root"]}.{tel_id}.{c["tic_comp"]["planner"]}'
+        return r
+
+    def get_journal(self, tel_id) -> None:
+        self.journal = get_journalpublisher(subject=self.journal_subject(tel_id=tel_id))
 
     @property
     def user(self):

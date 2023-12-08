@@ -11,16 +11,11 @@ class DomeScreenLight(SubCommand):
     def __init__(self, id: str, parent: 'Command', subcommand_name: str = 'dome-screenlight', **kwargs) -> None:
         self.subcommand_name = subcommand_name
         self.telescope = parent.telescope
-        self.id = id
         self.mount = self.telescope.get_mount('mount')
         self.kwargs = kwargs
         self.ra_now: str or None = None
         self.dec_now: str or None = None
-        self.started: bool = False
-        self.done: bool = False
-        self.skipped: bool = False
-        super().__init__(id=id, parent=parent, subcommand_name=subcommand_name,
-                         started=self.started, done=self.done, skipped=self.skipped, **kwargs)
+        super().__init__(id=id, parent=parent, subcommand_name=subcommand_name, **kwargs)
 
     async def _wait_for_turn_on_off(self):
         await asyncio.sleep(15)
