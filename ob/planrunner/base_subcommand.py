@@ -1,12 +1,12 @@
 import logging
-from ob.planrunner.base_command import BaseCommand
+from ob.planrunner.abstract_base import AbstractBase
 from datetime import datetime
 from typing import Dict, List, Any, Callable
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
-class AbstractSubCommand(BaseCommand):
+class BaseSubCommand(AbstractBase):
 
     def __init__(self, id: str, parent: 'Command', name: str, **kwargs) -> None:
         self.args = []

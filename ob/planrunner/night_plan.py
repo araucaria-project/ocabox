@@ -1,7 +1,7 @@
 import datetime
 import logging
 from typing import List, Any, Dict
-from ob.planrunner.abstract_sequence import AbstractSequence
+from ob.planrunner.base_sequence import BaseSequence
 from ob.planrunner.sequence import Sequence
 from ob.planrunner.cycle_time_calc.cycle_time_data_build import CycleTimeDataBuild
 from ob.planrunner.cycle_time_calc.cycle_time_calc import CycleTimeCalc
@@ -13,7 +13,7 @@ import random
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
-class NightPlan(AbstractSequence):
+class NightPlan(BaseSequence):
     def __init__(self, id: str, sequence_dict: Dict[str, Any],
                  parent: 'ObservationPlan', param: Dict[str, Any] or None = None) -> None:
         self.sequence_dict = sequence_dict

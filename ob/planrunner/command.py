@@ -1,6 +1,6 @@
 import logging
 from typing import Dict, Any, List
-from ob.planrunner.abstract_sequence import AbstractSequence
+from ob.planrunner.base_sequence import BaseSequence
 from ob.planrunner.subcommands.sub_mount_slew import MountSlew
 from ob.planrunner.subcommands.sub_dome_slew import DomeSlew
 from ob.planrunner.subcommands.sub_change_filter import ChangeFilter
@@ -13,12 +13,12 @@ from ob.planrunner.subcommands.sub_wait import Wait
 from ob.planrunner.cycle_time_calc.cycle_time_data_build import CycleTimeDataBuild
 from pyaraucaria.coordinates import ra_to_decimal, dec_to_decimal, deg_to_decimal_deg
 from ob.planrunner.seq import Seq
-from ob.planrunner.subcommands.abstract_sub_command import AbstractSubCommand
+from ob.planrunner.base_subcommand import BaseSubCommand
 from ob.planrunner.coded_error import SequenceTreeError
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
-class Command(AbstractSequence):
+class Command(BaseSequence):
 
     TYPES = {'SKYFLAT': 'flat', 'FOCUS': 'focusing', 'DOMEFLAT': 'flat',
              'DARK': 'dark', 'ZERO': 'zero', 'OBJECT': 'science', 'WAIT': 'wait', 'STOP': 'stop', 'SNAP': 'snap'}
@@ -171,7 +171,7 @@ class Command(AbstractSequence):
     def _op_id(self, id_next: int) -> str:
         return f'{self.id}_{self.numb(id_next)}'
 
-    def _add_comp(self, sub: AbstractSubCommand, id_next: int) -> int:
+    def _add_comp(self, sub: BaseSubCommand, id_next: int) -> int:
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
         return id_next + 1
 

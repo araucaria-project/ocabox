@@ -1,13 +1,13 @@
 import asyncio
 import logging
-from ob.planrunner.subcommands.abstract_sub_command import AbstractSubCommand
+from ob.planrunner.base_subcommand import BaseSubCommand
 from pyaraucaria.coordinates import ra_dec_epoch, ra_dec_2_az_alt, deg_to_decimal_deg
 import random
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
-class MountSlew(AbstractSubCommand):
+class MountSlew(BaseSubCommand):
 
     def __init__(self, id: str, parent: 'Command', name: str = 'mount-slew', **kwargs) -> None:
         self.kwargs = kwargs

@@ -1,6 +1,6 @@
 import datetime
 import time
-from ob.planrunner.subcommands.abstract_sub_command import AbstractSubCommand
+from ob.planrunner.base_subcommand import BaseSubCommand
 import logging
 import asyncio
 
@@ -8,7 +8,7 @@ import asyncio
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
-class Wait(AbstractSubCommand):
+class Wait(BaseSubCommand):
 
     def __init__(self, id: str, parent: 'Command', name: str = 'wait', **kwargs) -> None:
         self.kwargs = kwargs

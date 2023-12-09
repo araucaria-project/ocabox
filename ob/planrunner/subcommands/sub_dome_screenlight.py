@@ -1,11 +1,11 @@
 import asyncio
 import logging
-from ob.planrunner.subcommands.abstract_sub_command import AbstractSubCommand
+from ob.planrunner.base_subcommand import BaseSubCommand
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
-class DomeScreenLight(AbstractSubCommand):
+class DomeScreenLight(BaseSubCommand):
 
     def __init__(self, id: str, parent: 'Command', name: str = 'dome-screenlight', **kwargs) -> None:
         self.kwargs = kwargs

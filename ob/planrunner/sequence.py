@@ -1,6 +1,6 @@
 from typing import Dict, Any
 import logging
-from ob.planrunner.abstract_sequence import AbstractSequence
+from ob.planrunner.base_sequence import BaseSequence
 from ob.planrunner.command import Command
 from ob.planrunner.coded_error import SequenceTreeError
 
@@ -8,7 +8,7 @@ from ob.planrunner.coded_error import SequenceTreeError
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
-class Sequence(AbstractSequence):
+class Sequence(BaseSequence):
 
     def __init__(self, id: str, sequence_dict: Dict[str, Any],
                  parent: 'NightPlan' or 'Sequence', param: Dict[str, Any] or None = None) -> None:

@@ -12,7 +12,7 @@ from serverish.messenger.msg_journal_pub import MsgJournalPublisher
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
-class BaseCommand(ABC):
+class AbstractBase(ABC):
 
     COMMAND_NAMES = ['SKYFLAT', 'FOCUS', 'DOMEFLAT', 'DARK', 'ZERO', 'OBJECT', 'WAIT', 'STOP', 'SNAP', 'SEQUENCE']
     KWARGS = ['uobi', 'dome_follow', 'epoch', 'mirror_cover', 'observer', 'screen_light', 'az', 'alt', 'seq',
@@ -94,11 +94,11 @@ class BaseCommand(ABC):
 
     @staticmethod
     def get_jd_now() -> float:
-        return BaseCommand.get_julian_date(datetime.utcnow())
+        return AbstractBase.get_julian_date(datetime.utcnow())
 
     @property
     def log_file_name(self) -> str:
-        return f'log_night_{math.floor(BaseCommand.get_jd_now())}.txt'
+        return f'log_night_{math.floor(AbstractBase.get_jd_now())}.txt'
 
     def _add_to_log_night(self, log_line: Dict[str, Any], filter: Dict[str, Any] = None) -> None:
         put = True

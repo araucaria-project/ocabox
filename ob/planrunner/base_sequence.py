@@ -1,13 +1,13 @@
 from typing import Dict, List, Any, Callable
 import logging
-from ob.planrunner.base_command import BaseCommand
+from ob.planrunner.abstract_base import AbstractBase
 from ob.planrunner.coded_error import SequenceTreeError
 
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
-class AbstractSequence(BaseCommand):
+class BaseSequence(AbstractBase):
 
     def __init__(self, id: str, name: str, telescope: 'Telescope', info_callback: Dict[str, Callable],
                  c_type: str, kwargs) -> None:
