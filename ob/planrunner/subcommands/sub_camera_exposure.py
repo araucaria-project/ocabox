@@ -1,5 +1,7 @@
 import asyncio
 import logging
+import stat
+
 from ob.planrunner.subcommands.subcommand import SubCommand
 from pyaraucaria.fits import fits_header
 from pyaraucaria.date import julian_to_tuple
@@ -36,7 +38,9 @@ class CameraExposure(SubCommand):
         self.folder = os.path.join(self.base_fits_folder, f'{self.telescope.id}')
         self.folder_focusing = os.path.join(self.folder, f'focus')
         self._mk_folder(self.folder)
+        os.chmod(self.folder, stat.S_IWGRP)
         self._mk_folder(self.folder_focusing)
+        os.chmod(self.folder_focusing, stat.S_IWGRP)
         self.get_journal(self.telescope.id)
 
     @staticmethod
@@ -163,6 +167,7 @@ class CameraExposure(SubCommand):
                 target_folder_name = f'{num:06d}'
                 target_folder = os.path.join(self.folder_focusing, target_folder_name)
                 self._mk_folder(target_folder)
+                os.chmod(target_folder, stat.S_IWGRP)
                 open(os.path.join(target_folder, f'{self.kwargs["focus_id"]}'), 'a').close()
                 if os.path.exists(os.path.join(self.folder_focusing, f'actual')):
                     os.remove(os.path.join(self.folder_focusing, f'actual'))
@@ -179,6 +184,7 @@ class CameraExposure(SubCommand):
             # Create today fits folder name (last 4 digits of julian date)
             if not os.path.exists(target_folder):
                 self._mk_folder(target_folder)
+                os.chmod(target_folder, stat.S_IWGRP)
 
             # Create actual symlink to today fits folder
             if os.path.exists(os.path.join(self.folder, f'actual')):
