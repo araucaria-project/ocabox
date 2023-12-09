@@ -38,7 +38,6 @@ class CameraExposure(SubCommand):
         self.folder = os.path.join(self.base_fits_folder, f'{self.telescope.id}')
         self.folder_focusing = os.path.join(self.folder, f'focus')
         self._mk_folder(self.folder)
-        os.chmod(self.folder, stat.S_IWGRP)
         self._mk_folder(self.folder_focusing)
         os.chmod(self.folder_focusing, stat.S_IWGRP)
         self.get_journal(self.telescope.id)
