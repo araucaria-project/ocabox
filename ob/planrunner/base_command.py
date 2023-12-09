@@ -117,25 +117,3 @@ class BaseCommand(ABC):
             f.write(f'{log_line}')
             f.write('\n')
             f.close()
-
-    def exec_json(self, **kw) -> Dict[str, Any]:
-        ex_js = {}
-        if kw:
-            if len(kw)>0:
-                for n in kw.keys():
-                    if n != 'seq_data':
-                        ex_js[n] = kw[n]
-        if self.kwargs:
-            if len(self.kwargs) > 0:
-                for n in self.kwargs.keys():
-                    if n != 'seq_data':
-                        ex_js[n] = self.kwargs[n]
-        ex_js['id'] = self.id
-        ex_js['name'] = self.name
-        ex_js['started'] = self.started
-        ex_js['done'] = self.done
-        ex_js['skipped'] = self.skipped
-        ex_js['timestamp_utc'] = str(datetime.utcnow())
-        ex_js['c_type'] = self.c_type
-        self._add_to_log_night(ex_js, {'c_type': 'command'})
-        return ex_js

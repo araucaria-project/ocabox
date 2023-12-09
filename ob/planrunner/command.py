@@ -13,7 +13,7 @@ from ob.planrunner.subcommands.sub_wait import Wait
 from ob.planrunner.cycle_time_calc.cycle_time_data_build import CycleTimeDataBuild
 from pyaraucaria.coordinates import ra_to_decimal, dec_to_decimal, deg_to_decimal_deg
 from ob.planrunner.seq import Seq
-from ob.planrunner.subcommands.subcommand import SubCommand
+from ob.planrunner.subcommands.abstract_sub_command import AbstractSubCommand
 from ob.planrunner.coded_error import SequenceTreeError
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -171,7 +171,7 @@ class Command(AbstractSequence):
     def _op_id(self, id_next: int) -> str:
         return f'{self.id}_{self.numb(id_next)}'
 
-    def _add_comp(self, sub: SubCommand, id_next: int) -> int:
+    def _add_comp(self, sub: AbstractSubCommand, id_next: int) -> int:
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
         return id_next + 1
 
@@ -357,7 +357,8 @@ class Command(AbstractSequence):
         # Camera exposure sequences
         if self.plan_seq:
             for s in self.plan_seq:
-                seq_data = Seq(seq=s, parent=self)
+                seq_data = Seq(seq=s, command_kwargs=self.kwargs, plan_ra=self.plan_ra, plan_dec=self.plan_dec,
+                               plan_az=self.plan_az, plan_alt=self.plan_alt, dither_on=self.dither_on)
 
                 # Change filter
                 id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),
@@ -445,7 +446,8 @@ class Command(AbstractSequence):
         # Camera exposure sequences
         if self.plan_seq:
             for s in self.plan_seq:
-                seq_data = Seq(seq=s, parent=self)
+                seq_data = Seq(seq=s, command_kwargs=self.kwargs, plan_ra=self.plan_ra, plan_dec=self.plan_dec,
+                               plan_az=self.plan_az, plan_alt=self.plan_alt, dither_on=self.dither_on)
 
                 # Change filter
                 id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),
@@ -525,7 +527,8 @@ class Command(AbstractSequence):
         # Camera exposure sequences
         if self.plan_seq:
             for s in self.plan_seq:
-                seq_data = Seq(seq=s, parent=self)
+                seq_data = Seq(seq=s, command_kwargs=self.kwargs, plan_ra=self.plan_ra, plan_dec=self.plan_dec,
+                               plan_az=self.plan_az, plan_alt=self.plan_alt, dither_on=self.dither_on)
 
                 # Change filter
                 id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),

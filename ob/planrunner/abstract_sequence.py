@@ -11,7 +11,8 @@ class AbstractSequence(BaseCommand):
 
     def __init__(self, id: str, name: str, telescope: 'Telescope', info_callback: Dict[str, Callable],
                  c_type: str, kwargs) -> None:
-        self.kwargs = kwargs
+        # self.args: List = args
+        self.kwargs: Dict = kwargs
         super().__init__(id=id, name=name, info_callback=info_callback,
                          telescope=telescope, c_type=c_type, kwargs=self.kwargs)
 

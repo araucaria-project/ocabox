@@ -1,11 +1,11 @@
 import asyncio
 import logging
-from ob.planrunner.subcommands.subcommand import SubCommand
+from ob.planrunner.subcommands.abstract_sub_command import AbstractSubCommand
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
-class MirrorCover(SubCommand):
+class MirrorCover(AbstractSubCommand):
 
 
     def __init__(self, id: str, parent: 'Command', name: str = 'mirror-cover', **kwargs) -> None:

@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from ob.planrunner.subcommands.subcommand import SubCommand
+from ob.planrunner.subcommands.abstract_sub_command import AbstractSubCommand
 import math
 from pyaraucaria.coordinates import site_sidereal_time, ra_dec_2_az_alt
 
@@ -8,7 +8,7 @@ from pyaraucaria.coordinates import site_sidereal_time, ra_dec_2_az_alt
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
-class DomeSlew(SubCommand):
+class DomeSlew(AbstractSubCommand):
 
     def __init__(self, id: str, parent: 'Command', name: str = 'dome-slew', **kwargs) -> None:
         self.kwargs = kwargs

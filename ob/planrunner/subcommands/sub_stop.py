@@ -1,11 +1,11 @@
-from ob.planrunner.subcommands.subcommand import SubCommand
+from ob.planrunner.subcommands.abstract_sub_command import AbstractSubCommand
 import logging
 
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
-class Stop(SubCommand):
+class Stop(AbstractSubCommand):
 
     def __init__(self, id: str, parent: 'Command', name: str = 'stop', **kwargs) -> None:
         self.kwargs = kwargs

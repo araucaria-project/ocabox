@@ -2,13 +2,13 @@ import datetime
 
 import asyncio
 import logging
-from ob.planrunner.subcommands.subcommand import SubCommand
+from ob.planrunner.subcommands.abstract_sub_command import AbstractSubCommand
 
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
-class ChangeFilter(SubCommand):
+class ChangeFilter(AbstractSubCommand):
 
     def __init__(self, id: str, parent: 'Command', name: str = 'change-filter', **kwargs) -> None:
         self.kwargs = kwargs

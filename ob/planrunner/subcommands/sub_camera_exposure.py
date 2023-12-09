@@ -2,7 +2,7 @@ import asyncio
 import logging
 import stat
 
-from ob.planrunner.subcommands.subcommand import SubCommand
+from ob.planrunner.subcommands.abstract_sub_command import AbstractSubCommand
 from pyaraucaria.fits import fits_header
 from pyaraucaria.date import julian_to_tuple
 from datetime import datetime
@@ -18,7 +18,7 @@ from serverish.base.exceptions import MessengerRequestNoResponders, MessengerReq
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
-class CameraExposure(SubCommand):
+class CameraExposure(AbstractSubCommand):
 
     def __init__(self, id: str, parent: 'Command', seq_data: 'Seq', name: str = 'camera-exposure', **kwargs) -> None:
 
