@@ -473,8 +473,6 @@ class Command(BaseSequence):
                                                            parent=self,
                                                            obj_name=self.object_name,
                                                            dither=True,
-                                                           #dither_distance=seq_data.dither_distance,
-                                                           #dither_mode=seq_data.dither_mode,
                                                            tracking=self.tracking,
                                                            epoch=self.epoch,
                                                            seq_data=seq_data,
@@ -500,7 +498,6 @@ class Command(BaseSequence):
                                                             req_dec=self.plan_dec,
                                                             epoch=self.epoch,
                                                             filter=seq_data.filter,
-                                                            focus_id=seq_data.focus_id,
                                                             auto_exposure=seq_data.auto_exposure,
                                                             observer=self.observer,
                                                             seq_data=seq_data,
@@ -563,13 +560,14 @@ class Command(BaseSequence):
             id_next = self._add_comp(Wait(id=self._op_id(id_next=id_next),
                                           parent=self,
                                           key=key,
-                                          value=self.kwargs[key]), id_next=id_next)
+                                          value=self.kwargs[key],
+                                          uobi=self.uobi), id_next=id_next)
         else:
             pass
 
     def _write_stop(self):
         id_next = 0
-        id_next = self._add_comp(Stop(id=self._op_id(id_next=id_next), parent=self), id_next=id_next)
+        id_next = self._add_comp(Stop(id=self._op_id(id_next=id_next), parent=self, uobi=self.uobi), id_next=id_next)
 
     @staticmethod
     def _split_seq(seq):

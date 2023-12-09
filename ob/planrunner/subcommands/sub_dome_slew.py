@@ -10,11 +10,16 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class DomeSlew(BaseSubCommand):
 
-    def __init__(self, id: str, parent: 'Command', name: str = 'dome-slew', **kwargs) -> None:
-        self.kwargs = kwargs
-        super().__init__(id=id, parent=parent, name=name, **kwargs)
+    def __init__(self, id: str, parent: 'Command',  uobi: int, seq_data: 'Seq' or None = None,
+                 follow_tol: float or None = None, az: float or None = None, name: str = 'dome-slew') -> None:
+        self.seq_data = seq_data
+        self.az = az
+        self.follow_tol = follow_tol
+        super().__init__(id=id, parent=parent, name=name, uobi=uobi)
         self.dome = self.telescope.get_dome()
         self.mount = self.telescope.get_mount()
+        self.info_dict = {'az': self.az, 'follow_tol': self.follow_tol}
+        self.create_sub_command_string(**self.info_dict)
 
     def dome_eq_azimuth(self, ra: float, dec: float, r_dome: float, spx: float, spy: float,
                                gem: float, latitude: float, longitude: float, elevation: float) -> float:
@@ -111,27 +116,27 @@ class DomeSlew(BaseSubCommand):
 
     async def arun(self, step_id: str or None = None) -> int:
         self.started = True
-        if 'seq_data' in self.kwargs.keys():
-            if self.kwargs['seq_data'].skip:
+        if self.seq_data:
+            if self.seq_data.skip:
                 self.skipped = True
                 return 0
-        self.info_callback['exec_json'](self.exec_json())
+        self.info_callback['exec_json'](self.exec_json(**self.info_dict))
         logger.info(f'{self.id} started')
         self.info_callback['stream_1'](f'{self.id} {self.name} started')
         # TODO get mount kind and parameters from settings
-        if 'az' in self.kwargs.keys():
-            az = self.kwargs['az']
-        elif 'follow_tol' in self.kwargs.keys():
+        if self.az:
+            az = self.az
+        elif self.follow_tol:
             mount_az = await self.value_proof_get(name='mount_az', awaitab=self.mount.aget_az, expect_type=float)
             dome_az = await self.value_proof_get(name='sub_dome_az', awaitab=self.dome.aget_az, expect_type=float)
-            if self.kwargs['follow_tol']<abs(mount_az - dome_az):
+            if self.follow_tol < abs(mount_az - dome_az):
                 az = mount_az
             else:
                 self.info_callback['stream_1'](f'{self.id} {self.name} dome in position tolerance, skipping')
                 self.info_callback['stream_5'](f'{self.id}')
                 logger.info(f'{self.id} dome in position tolerance, skipping')
                 self.skipped = True
-                self.info_callback['exec_json'](self.exec_json())
+                self.info_callback['exec_json'](self.exec_json(**self.info_dict))
                 return 0
         else:
             az = await self.value_proof_get(name='mount_az', awaitab=self.mount.aget_az, expect_type=float)
@@ -168,5 +173,5 @@ class DomeSlew(BaseSubCommand):
         self.info_callback['stream_1'](f'{self.id} {self.name} done')
         self.info_callback['stream_5'](f'{self.id}')
         self.done = True
-        self.info_callback['exec_json'](self.exec_json())
+        self.info_callback['exec_json'](self.exec_json(**self.info_dict))
         return 0

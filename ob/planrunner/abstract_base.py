@@ -19,12 +19,11 @@ class AbstractBase(ABC):
               'pos', 'dither', 'wait', 'ut', 'tracking']
 
     def __init__(self, id: str, name: str, telescope: 'Telescope',
-                 info_callback: Dict[str, Callable], c_type: str, kwargs) -> None:
+                 info_callback: Dict[str, Callable], c_type: str) -> None:
         self.id = id
         self.telescope = telescope
         self.info_callback = info_callback
         self.name = name
-        self.kwargs = kwargs
         self.c_type: str = c_type
         self.started: bool = False
         self.done: bool = False
@@ -117,3 +116,27 @@ class AbstractBase(ABC):
             f.write(f'{log_line}')
             f.write('\n')
             f.close()
+
+    def exec_json(self, **kw) -> Dict[str, Any]:
+        ex_js = {}
+        if kw:
+            for n in kw.keys():
+                if n != 'seq_data':
+                    ex_js[n] = kw[n]
+
+
+        # if self.kwargs:
+        #     if len(self.kwargs) > 0:
+        #         for n in self.kwargs.keys():
+        #             if n != 'seq_data':
+        #                 ex_js[n] = self.kwargs[n]
+
+        ex_js['id'] = self.id
+        ex_js['name'] = self.name
+        ex_js['started'] = self.started
+        ex_js['done'] = self.done
+        ex_js['skipped'] = self.skipped
+        ex_js['timestamp_utc'] = str(datetime.utcnow())
+        ex_js['c_type'] = self.c_type
+        self._add_to_log_night(ex_js, {'c_type': 'command'})
+        return ex_js

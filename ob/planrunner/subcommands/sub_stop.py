@@ -7,9 +7,9 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class Stop(BaseSubCommand):
 
-    def __init__(self, id: str, parent: 'Command', name: str = 'stop', **kwargs) -> None:
-        self.kwargs = kwargs
-        super().__init__(id=id, parent=parent, name=name, **kwargs)
+    def __init__(self, id: str, parent: 'Command', uobi: int, name: str = 'stop') -> None:
+        super().__init__(id=id, parent=parent, name=name, uobi=uobi)
+        self.create_sub_command_string()
 
     async def arun(self, step_id: str or None = None) -> int:
         logger.info(f'{self.id} started')

@@ -10,11 +10,10 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class BaseSequence(AbstractBase):
 
     def __init__(self, id: str, name: str, telescope: 'Telescope', info_callback: Dict[str, Callable],
-                 c_type: str, kwargs) -> None:
+                 c_type: str, kwargs: Dict) -> None:
         # self.args: List = args
-        self.kwargs: Dict = kwargs
-        super().__init__(id=id, name=name, info_callback=info_callback,
-                         telescope=telescope, c_type=c_type, kwargs=self.kwargs)
+        self.kwargs = kwargs
+        super().__init__(id=id, name=name, info_callback=info_callback, telescope=telescope, c_type=c_type)
 
     @staticmethod
     def build_args(sequence_dict: Dict[Any, Any]) -> List[Any]:
@@ -45,7 +44,7 @@ class BaseSequence(AbstractBase):
 
     async def _arun(self, subcomponents: Any, step_id: str or None = None) -> int:
         self.started = True
-        self.info_callback['exec_json'](self.exec_json())
+        self.info_callback['exec_json'](self.exec_json(**self.kwargs))
         for n in subcomponents.keys():
             skip = 0
             if step_id is None:
@@ -57,13 +56,13 @@ class BaseSequence(AbstractBase):
             if skip == 1:
                 self.info_callback['stream_1'](f'{self.id} skipped')
                 self.skipped = True
-                self.info_callback['exec_json'](self.exec_json())
+                self.info_callback['exec_json'](self.exec_json(**self.kwargs))
                 return 0
             if skip == 2:
                 self.skipped = True
-                self.info_callback['exec_json'](self.exec_json())
+                self.info_callback['exec_json'](self.exec_json(**self.kwargs))
                 return 2
         # self.info_callback['stream_1'](f'{self.name} {self.id} done')
         self.done = True
-        self.info_callback['exec_json'](self.exec_json())
+        self.info_callback['exec_json'](self.exec_json(**self.kwargs))
         return 0
