@@ -174,6 +174,7 @@ class CameraExposure(BaseSubCommand):
             num = num_last + 1
             if os.path.exists(os.path.join(self.folder_focusing, f'{num_last:06d}', f'{self.seq_data.focus_id}')):
                 target_folder = os.path.join(self.folder_focusing, f'{num_last:06d}')
+                os.chmod(target_folder, os.stat(target_folder).st_mode | stat.S_IWOTH)
             else:
                 target_folder_name = f'{num:06d}'
                 target_folder = os.path.join(self.folder_focusing, target_folder_name)
@@ -195,7 +196,7 @@ class CameraExposure(BaseSubCommand):
             # Create today fits folder name (last 4 digits of julian date)
             if not os.path.exists(target_folder):
                 self._mk_folder(target_folder)
-                os.chmod(target_folder, os.stat(target_folder).st_mode | stat.S_IWOTH)
+            os.chmod(target_folder, os.stat(target_folder).st_mode | stat.S_IWOTH)
 
             # Create actual symlink to today fits folder
             if os.path.exists(os.path.join(self.folder, f'actual')):
