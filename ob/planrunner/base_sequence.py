@@ -11,7 +11,7 @@ class BaseSequence(AbstractBase):
 
     def __init__(self, id: str, name: str, telescope: 'Telescope', sequence_dict: Dict[str, Any],
                  info_callback: Dict[str, Callable], c_type: str, param: Dict[str, Any]) -> None:
-        self.param = param
+        self.param = param if param is not None else {}
         self.subcomponents = {}
         self.sequence_dict = sequence_dict
         self.args: List = []
