@@ -481,7 +481,7 @@ class Command(BaseSequence):
                                                            telescope=self.telescope,
                                                            info_callback=self.info_callback,
                                                            obj_name=self.object_name,
-                                                           dither=True,
+                                                           dithering=True,
                                                            tracking=self.tracking,
                                                            epoch=self.epoch,
                                                            seq_data=seq_data,

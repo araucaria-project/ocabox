@@ -55,7 +55,6 @@ class CameraExposure(BaseSubCommand):
         self._mk_folder(self.folder)
         self._mk_folder(self.folder_focusing)
         os.chmod(self.folder_focusing, os.stat(self.folder_focusing).st_mode | stat.S_IWOTH)
-        self.get_journal(self.telescope.id)
         self.info_dict = {
             'type': self.type,
             'filter': filter,

@@ -29,6 +29,7 @@ class AbstractBase(ABC):
         self.done: bool = False
         self.skipped: bool = False
         self.journal: MsgJournalPublisher | None = None
+        self.get_journal()
         super().__init__()
 
     def journal_subject(self) -> str:
@@ -36,7 +37,7 @@ class AbstractBase(ABC):
         r = f'{c["journal_root"]}.{self.telescope.id}.{c["tic_comp"]["planner"]}'
         return r
 
-    def get_journal(self, tel_id) -> None:
+    def get_journal(self) -> None:
         self.journal = get_journalpublisher(subject=self.journal_subject())
 
     @property

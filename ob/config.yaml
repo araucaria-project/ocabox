@@ -49,12 +49,6 @@ client:
         tic_comp: #Journal exampl: [journal_root].[tel_id].[tic_component].[planner_sub]
           planner: 'planner'
           guider_handler: 'guider_handler'
-        planner_sub:
-          camera_exposure: 'camera_exposure'
-          change_filter: 'change_filter'
-          dome_slew: 'dome_slew'
-          focusing: 'focusing'
-          mount_slew: 'mount_slew'
         rpc_service_alive: 'alive' #Rpc service alive subject: [rpc_root].[tel_id].[service_name].[rpc_service_alive]
             # e.g.: tic.rpc.zb08.pipeline.alive
             # e.g.: tic.pipeline.zb08.alive  {timestamp: 2021-03-04T12:00:00.000000Z, next_alvie: 2021-03-04T12:00:00.000000Z, status: 1}
@@ -98,12 +92,6 @@ client:
         tic_comp: #Journal exampl: [journal_root].[tel_id].[tic_component].[planner_sub]
           planner: 'planner'
           guider_handler: 'guider_handler'
-        planner_sub:
-          camera_exposure: 'camera_exposure'
-          change_filter: 'change_filter'
-          dome_slew: 'dome_slew'
-          focusing: 'focusing'
-          mount_slew: 'mount_slew'
         rpc_service_alive: 'alive' #Rpc service alive subject: [rpc_root].[tel_id].[service_name].[rpc_service_alive]
       nats_host: nats.oca.lan
       nats_port: 4222
