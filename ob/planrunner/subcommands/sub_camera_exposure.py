@@ -162,6 +162,7 @@ class CameraExposure(SubCommand):
             num = num_last + 1
             if os.path.exists(os.path.join(self.folder_focusing, f'{num_last:06d}', f'{self.kwargs["focus_id"]}')):
                 target_folder = os.path.join(self.folder_focusing, f'{num_last:06d}')
+                os.chmod(target_folder, os.stat(target_folder).st_mode | stat.S_IWOTH)
             else:
                 target_folder_name = f'{num:06d}'
                 target_folder = os.path.join(self.folder_focusing, target_folder_name)
