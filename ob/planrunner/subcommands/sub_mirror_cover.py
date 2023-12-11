@@ -31,42 +31,54 @@ class MirrorCover(BaseSubCommand):
 
     async def arun(self, step_id: str or None = None) -> int:
         self.started = True
+        inf = f'{self.id} {self.name} started.'
         self.info_callback['exec_json'](self.exec_json(**self.info_dict))
-        logger.info(f'{self.id} started')
+        logger.info(inf)
+        await self.journal.info(inf)
         cover_status = await self.value_proof_get(name='coverstate',
                                                   awaitab=self.cover.aget_coverstate,
                                                   expect_type=bool)
 
         # {"3": "success", "1": "off", "2": "warning"})
         if self.open and str(cover_status) == "1":
-            self.info_callback['stream_1'](f'{self.id} {self.name} opening')
-            logger.debug(f'{self.id} opening')
+            inf = f'{self.id} {self.name} opening.'
+            self.info_callback['stream_1'](inf)
+            await self.journal.debug(inf)
+            logger.debug(inf)
             if self.telescope.id == 'dev':
                 pass
             else:
                 await self.mount.aput_opencover()
                 await self._wait_for_move(expected_status="3")
-            self.info_callback['stream_1'](f'{self.id} {self.name} done')
-            logger.info(f'{self.id} done')
+            inf = f'{self.id} {self.name} opening done.'
+            self.info_callback['stream_1'](inf)
+            logger.info(inf)
             self.info_callback['stream_5'](f'{self.id}')
             self.done = True
+            await self.journal.info(inf)
             self.info_callback['exec_json'](self.exec_json(**self.info_dict))
             return 0
         elif not self.open and str(cover_status) == "3":
-            self.info_callback['stream_1'](f'{self.id} {self.name} closing')
-            logger.debug(f'{self.id} closing')
+            inf = f'{self.id} {self.name} closing.'
+            self.info_callback['stream_1'](inf)
+            await self.journal.debug(inf)
+            logger.debug(inf)
             if self.telescope.id == 'dev':
                 pass
             else:
                 await self.mount.aput_closecover()
                 await self._wait_for_move(expected_status="1")
-            logger.info(f'{self.id} done')
+            inf = f'{self.id} {self.name} closing done.'
+            logger.info(inf)
             self.done = True
+            await self.journal.info(inf)
             self.info_callback['exec_json'](self.exec_json(**self.info_dict))
             return 0
         else:
             pass
+        inf = f'{self.id} {self.name} skipped.'
         self.skipped = True
         self.info_callback['exec_json'](self.exec_json(**self.info_dict))
         logger.info(f'{self.id} skipped')
+        await self.journal.debug(inf)
         return 0

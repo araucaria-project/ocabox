@@ -23,26 +23,36 @@ class DomeScreenLight(BaseSubCommand):
 
     async def arun(self, step_id: str or None = None) -> int:
         self.started = True
+        inf = f'{self.id} {self.name} started.'
         self.info_callback['exec_json'](self.exec_json(**self.info_dict))
-        logger.info(f'{self.id} started')
-        if self.light == True:
-            self.info_callback['stream_1'](f'{self.id} {self.name} turning on')
-            logger.debug(f'{self.id} turning on')
+        logger.info(inf)
+        await self.journal.info(inf)
+
+        if self.light is True:
+            inf = f'{self.id} {self.name} turning on.'
+            self.info_callback['stream_1'](inf)
+            await self.journal.debug(inf)
+            logger.debug(inf)
             if self.telescope.id == 'dev':
                 pass
             else:
                 await self.mount.aput_domelamp_on()
         else:
-            self.info_callback['stream_1'](f'{self.id} {self.name} turning off')
-            logger.debug(f'{self.id} turning off')
+            inf = f'{self.id} {self.name} turning off.'
+            self.info_callback['stream_1'](inf)
+            await self.journal.debug(inf)
+            logger.debug(inf)
             if self.telescope.id == 'dev':
                 pass
             else:
                 await self.mount.aput_domelamp_off()
             await self._wait_for_turn_on_off()
+
+        inf = f'{self.id} {self.name} done.'
         self.info_callback['stream_5'](f'{self.id}')
-        self.info_callback['stream_1'](f'{self.id} {self.name} done')
-        logger.info(f'{self.id} done')
+        self.info_callback['stream_1'](inf)
+        logger.info(inf)
+        await self.journal.info(inf)
         self.done = True
         self.info_callback['exec_json'](self.exec_json(**self.info_dict))
         return 0
