@@ -54,11 +54,12 @@ class Wait(BaseSubCommand):
         pass
 
     async def arun(self, step_id: str or None = None) -> int:
-        logger.info(f'{self.id} started')
+        inf = f'{self.id} {self.name} {self.key} {self.value} started.'
+        await self.journal.info(inf)
+        logger.info(inf)
         self.started = True
         self.info_callback['exec_json'](self.exec_json(**self.info_dict))
-        self.info_callback['stream_1'](f"{self.id} {self.name} {self.key} started")
-        logger.info(f'{self.id} started')
+        self.info_callback['stream_1'](inf)
         if self.key == 'wait':
             await self._wait_exec(float(self.value))
         elif self.key == 'ut':
@@ -69,9 +70,10 @@ class Wait(BaseSubCommand):
             await self._wait_sunset_exec(self.value)
         else:
             pass
-        self.info_callback['stream_1'](f'{self.id} {self.name} done')
+        inf = f'{self.id} {self.name} done.'
+        self.info_callback['stream_1'](inf)
         self.info_callback['stream_5'](f'{self.id}')
-        logger.info(f'{self.id} done')
+        logger.info(inf)
         self.done = True
         self.info_callback['exec_json'](self.exec_json(**self.info_dict))
         return 0

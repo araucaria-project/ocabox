@@ -32,14 +32,21 @@ class Focusing(BaseSubCommand):
 
     async def arun(self, step_id: str or None = None) -> int:
         self.started = True
-        logger.info(f'{self.id} started')
+        inf = f'{self.id} {self.name} started.'
+        logger.info(inf)
+        await self.journal.info(inf)
+
         self.info_callback['exec_json'](self.exec_json(**self.info_dict))
-        self.info_callback['stream_1'](f'{self.id} {self.name} moving to {self.position}')
-        logger.debug(f'{self.id} {self.name} moving to {self.position}')
+        inf = f'{self.id} {self.name} moving to {self.position}.'
+        self.info_callback['stream_1'](inf)
+        await self.journal.debug(inf)
+        logger.debug(inf)
         await self.focuser.aput_move(int(self.position))
         await self._wait_for_move(self.position)
-        logger.info(f'{self.id} done')
-        self.info_callback['stream_1'](f'{self.id} {self.name} done')
+        inf = f'{self.id} {self.name} done.'
+        logger.info(inf)
+        self.info_callback['stream_1'](inf)
+        await self.journal.info(inf)
         self.info_callback['stream_5'](f'{self.id}')
         self.done = True
         self.info_callback['exec_json'](self.exec_json())
