@@ -1,7 +1,9 @@
-
 from typing import Dict, List
-from pyaraucaria.coordinates import az_alt_2_ra_dec, ra_to_decimal, dec_to_decimal, deg_to_decimal_deg
+import logging
 import random
+
+
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class Seq:
@@ -13,20 +15,10 @@ class Seq:
     def __init__(self,
                  seq: str,
                  command_kwargs: Dict,
-                 plan_ra: float,
-                 plan_dec: float,
-                 plan_az: float,
-                 plan_alt: float,
-                 dither_on: bool
                  ):
         self.seq: str = seq
         self._focus_id: int or None = None
         self.command_kwargs: Dict = command_kwargs
-        self.plan_ra = plan_ra,
-        self.plan_dec = plan_dec,
-        self.plan_az = plan_az
-        self.plan_alt = plan_alt
-        self.dither_on = dither_on,
         self.skip = False
         self.set_focus_id()
 
@@ -34,19 +26,6 @@ class Seq:
     def site_coo(self) -> Dict[str, float]:
         # TODO Take this from settings
         return {'latitude': -24.598056, 'longitude': -70.196389, 'elevation': 2817}
-
-    @property
-    def if_radec(self) -> bool:
-        if self.plan_ra and self.plan_dec:
-            return True
-        else:
-            return False
-
-    def if_altaz(self) -> bool:
-        if self.plan_az and self.plan_alt:
-            return True
-        else:
-            return False
 
     @property
     def focus_id(self) -> int or None:
@@ -165,7 +144,7 @@ class Seq:
             return 8.0
 
     def dither_this_exp(self, ex: int) -> bool:
-        if (ex % self.dither_every_sub == 0) and self.dither_on and (ex > 0):
+        if ((ex % self.dither_every_sub) == 0):
             return True
         else:
             return False

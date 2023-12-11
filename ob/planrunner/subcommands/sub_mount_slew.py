@@ -12,11 +12,10 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class MountSlew(BaseSubCommand):
 
     def __init__(self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable],
-                 obj_name: str, uobi: int,
+                 obj_name: str, uobi: int, epoch: str, tracking: bool,
                  dither: bool or None = None, seq_data: 'Seq' or None = None,
                  ra: float or None = None, dec: float or None = None,
                  az: float or None = None, alt: float or None = None,
-                 epoch: str or None = None, tracking: bool or None = None,
                  name: str = 'mount-slew') -> None:
         self.obj_name = obj_name
         self.seq_data = seq_data
@@ -94,7 +93,7 @@ class MountSlew(BaseSubCommand):
         # TODO mount_min_alt should be taken from settings
         mount_min_alt = 14.9
 
-        if self.alt is not None and self.az is not None:
+        if self.alt is not None and self.az is not None and not self.dither:
             logger.debug(f'{self.id} started --> AltAz')
             try:
                 az = float(self.az)
@@ -134,7 +133,7 @@ class MountSlew(BaseSubCommand):
                 self.info_callback['exec_json'](self.exec_json(**self.info_dict))
                 return 1
 
-        elif self.ra is not None and self.dec is not None and self.epoch is not None:
+        elif self.ra is not None and self.dec is not None and not self.dither:
             logger.debug(f'{self.id} started --> RaDec')
             self.ra_now, self.dec_now = ra_dec_epoch(ra=self.ra,
                                                      dec=self.dec,
@@ -167,8 +166,8 @@ class MountSlew(BaseSubCommand):
                 logger.info(f'{self.id} target is below allowed alt:{alt}, skipping')
                 return 1
 
-        elif self.dither is True and (self.ra is None and self.dec is None):
-            logger.debug(f'{self.id} started --> dither')
+        elif self.dither is True:
+            logger.info(f'{self.id} started dither')
             ra_t = await self.value_proof_get(name='mount_ra', awaitab=self.mount.aget_ra, expect_type=float)
             dec_t = await self.value_proof_get(name='mount_dec', awaitab=self.mount.aget_dec, expect_type=float)
             ra_d = self.ra_random_dither(ra=ra_t,
@@ -180,7 +179,7 @@ class MountSlew(BaseSubCommand):
             await self.mount.aput_tracking(self.tracking)
             await self.mount.aput_slewtocoo_async(ra=ra_d, dec=dec_d)
             await self._wait_to_slew_coo(ra_in=ra_d, dec_in=dec_d)
-            logger.info(f'{self.id} done')
+            logger.info(f'{self.id} dither done')
             self.info_callback['stream_1'](f'{self.id} {self.name} done')
             self.info_callback['stream_5'](f'{self.id}')
             self.done = True

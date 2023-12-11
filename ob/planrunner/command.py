@@ -113,24 +113,25 @@ class Command(BaseSequence):
         :return: bool
         """
         if self.name == 'SKYFLAT':
-            if 'dither' not in self.kwargs.keys():
+            try:
+                d = self.kwargs['dither']
+                if d == 'off':
+                    return False
+                else:
+                    return True
+            except KeyError:
                 return True
-            elif 'dither' in self.kwargs.keys() and self.kwargs['dither'] != 'off':
-                return True
-            elif 'dither' in self.kwargs.keys() and self.kwargs['dither'] == 'off':
-                return False
-            else:
-                return False
 
         elif self.name in self.possible_dither:
-            if 'dither' not in self.kwargs.keys():
+            try:
+                d = self.kwargs['dither']
+                if d == 'off':
+                    return False
+                else:
+                    return True
+            except KeyError:
                 return False
-            elif 'dither' in self.kwargs.keys() and self.kwargs['dither'] != 'off':
-                return True
-            elif 'dither' in self.kwargs.keys() and self.kwargs['dither'] == 'off':
-                return False
-            else:
-                return False
+
         else:
             return False
 
@@ -356,8 +357,7 @@ class Command(BaseSequence):
         # Camera exposure sequences
         if self.plan_seq:
             for s in self.plan_seq:
-                seq_data = Seq(seq=s, command_kwargs=self.kwargs, plan_ra=self.plan_ra, plan_dec=self.plan_dec,
-                               plan_az=self.plan_az, plan_alt=self.plan_alt, dither_on=self.dither_on)
+                seq_data = Seq(seq=s, command_kwargs=self.kwargs)
 
                 # Change filter
                 id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),
@@ -453,8 +453,7 @@ class Command(BaseSequence):
         # Camera exposure sequences
         if self.plan_seq:
             for s in self.plan_seq:
-                seq_data = Seq(seq=s, command_kwargs=self.kwargs, plan_ra=self.plan_ra, plan_dec=self.plan_dec,
-                               plan_az=self.plan_az, plan_alt=self.plan_alt, dither_on=self.dither_on)
+                seq_data = Seq(seq=s, command_kwargs=self.kwargs)
 
                 # Change filter
                 id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),
@@ -475,7 +474,7 @@ class Command(BaseSequence):
                                                           uobi=self.uobi), id_next=id_next)
 
                     # Dithering
-                    if seq_data.dither_this_exp(ex=ex):
+                    if seq_data.dither_this_exp(ex=ex) is True and self.dither_on is True:
 
                         # Mount slew dithering
                         id_next = self._add_comp(MountSlew(id=self._op_id(id_next=id_next),
@@ -538,8 +537,7 @@ class Command(BaseSequence):
         # Camera exposure sequences
         if self.plan_seq:
             for s in self.plan_seq:
-                seq_data = Seq(seq=s, command_kwargs=self.kwargs, plan_ra=self.plan_ra, plan_dec=self.plan_dec,
-                               plan_az=self.plan_az, plan_alt=self.plan_alt, dither_on=self.dither_on)
+                seq_data = Seq(seq=s, command_kwargs=self.kwargs)
 
                 # Change filter
                 id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),
