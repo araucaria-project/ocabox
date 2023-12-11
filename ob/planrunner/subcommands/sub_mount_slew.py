@@ -63,7 +63,7 @@ class MountSlew(BaseSubCommand):
             alt = await self.value_proof_get(name='mount_alt', awaitab=self.mount.aget_alt, expect_type=float)
             slew = await self.value_proof_get(name='mount_slew', awaitab=self.mount.aget_slewing, expect_type=bool)
 
-            if ((abs(az - az_in) > 359.0) or (abs(az - az_in)<1.0)) and (abs(alt - alt_in)<1.0) and (slew == False):
+            if ((abs(az - az_in) > 359.0) or (abs(az - az_in) < 1.0)) and (abs(alt - alt_in) < 1.0) and (slew is False):
                 await self.mount.aput_tracking(False)
                 await self.mount.aput_slewtoaltaz_async(az=az_in, alt=alt_in)
                 await asyncio.sleep(0.5)
@@ -99,7 +99,7 @@ class MountSlew(BaseSubCommand):
         self.info_callback['exec_json'](self.exec_json(**self.info_dict))
         logger.info(f'{self.id} started')
         self.info_callback['stream_1'](f'{self.id} {self.name} started')
-        await self.journal.info(f'{self.id} {self.name} started')
+        await self.journal.info(f'{self.id} {self.name} started.')
 
         # TODO This OCA should be taken from settings
         OCA = {'latitude': -24.598056, 'longitude': -70.196389, 'elevation': 2817}
@@ -120,7 +120,7 @@ class MountSlew(BaseSubCommand):
                     self.skipped = True
                     self.info_callback['exec_json'](self.exec_json(**self.info_dict))
                     logger.error(f"Wrong az alt format")
-                    await self.journal.error(f"Wrong az alt format")
+                    await self.journal.error(f"{self.id} {self.name} wrong az alt format.")
                     return 1
             if alt > mount_min_alt:
                 await self.mount.aput_tracking(False)
@@ -130,12 +130,12 @@ class MountSlew(BaseSubCommand):
                 if self.tracking is not None:
                     await asyncio.sleep(5)
                     await self.mount.aput_tracking(self.tracking)
-                    self.info_callback['stream_1'](f'{self.id} {self.name} tracking: {self.tracking}')
-                    await self.journal.debug(f'{self.id} {self.name} tracking: {self.tracking}')
+                    self.info_callback['stream_1'](f'{self.id} {self.name} tracking: {self.tracking}.')
+                    await self.journal.debug(f'{self.id} {self.name} tracking: {self.tracking}.')
                 logger.info(f'{self.id} done')
                 self.info_callback['stream_1'](f'{self.id} {self.name} done')
                 self.info_callback['stream_5'](f'{self.id}')
-                await self.journal.info(f'{self.id} {self.name} done')
+                await self.journal.info(f'{self.id} {self.name} done.')
                 self.done = True
                 self.info_callback['exec_json'](self.exec_json(**self.info_dict))
                 return 0

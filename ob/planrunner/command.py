@@ -439,7 +439,6 @@ class Command(BaseSequence):
             id_next = self._add_comp(DomeSlew(id=self._op_id(id_next=id_next),
                                               telescope=self.telescope,
                                               info_callback=self.info_callback,
-                                              follow_tol=2.0,
                                               uobi=self.uobi), id_next=id_next)
 
         # Mirror cover
@@ -492,7 +491,6 @@ class Command(BaseSequence):
                         id_next = self._add_comp(DomeSlew(id=self._op_id(id_next=id_next),
                                                           telescope=self.telescope,
                                                           info_callback=self.info_callback,
-                                                          follow_tol=3.0,
                                                           seq_data=seq_data,
                                                           uobi=self.uobi), id_next=id_next)
 

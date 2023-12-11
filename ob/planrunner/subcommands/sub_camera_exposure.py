@@ -147,7 +147,7 @@ class CameraExposure(BaseSubCommand):
                           dtyp: str = 'sideint16',
                           timeout: float = 10):
 
-        inf = f'Send rpc {self.rpc_subject}'
+        inf = f'{self.id} {self.name} send rpc request {self.rpc_subject}'
         logger.debug(inf)
         await self.journal.debug(inf)
         dat, met = await request(subject=self.rpc_subject,
@@ -157,7 +157,7 @@ class CameraExposure(BaseSubCommand):
                                                     dtyp=dtyp, symlink_location=symlink_location),
                                  timeout=timeout)
 
-        inf = f'Data gather'
+        inf = f'{self.id} {self.name} rpc response received.'
         logger.debug(inf)
         await self.journal.debug(inf)
         return dat
@@ -213,9 +213,7 @@ class CameraExposure(BaseSubCommand):
         return target_folder
 
     async def _wait_for_save_fits(self, sub: int, sub_time: float) -> bool:
-        inf = f'_wait_for_save_fits started'
-        logger.debug(inf)
-        await self.journal.debug(inf)
+
         jd = self.get_julian_date(self.exp_time_start)
         jd_oca = f"{self.get_oca_date(jd):010.5f}"
 
@@ -293,7 +291,6 @@ class CameraExposure(BaseSubCommand):
             read_mod=readoutmode,
             gain_mod=gainmode
         )
-        logger.debug(f'_wait_for_save_fits fits_header gather data done')
         if self.type == 'snap':
             file_name = f'snap'
         else:
@@ -312,7 +309,7 @@ class CameraExposure(BaseSubCommand):
                                          header=header,
                                          dtyp=self.array_bits(rmmode=readoutmode))
         except (MessengerRequestNoResponders, MessengerRequestNoResponse, MessengerRequestTimeout):
-            inf = f'Nats rpc guider msg can not reach responder'
+            inf = f'{self.id} {self.name} nats rpc guider msg can not reach responder.'
             logger.error(inf)
             await self.journal.error(inf)
             self.info_callback['stream_1'](inf)
@@ -320,7 +317,7 @@ class CameraExposure(BaseSubCommand):
         if dat:
             try:
                 if dat['response'] == 'fits_saved':
-                    inf = f'{self.id} exp:{sub}/{self.exp_no} done'
+                    inf = f'{self.id} {self.name} exp:{sub}/{self.exp_no} done.'
                     logger.info(inf)
                     await self.journal.info(inf)
                     self.info_callback['stream_1'](inf)
@@ -333,28 +330,25 @@ class CameraExposure(BaseSubCommand):
                                                                    **self.info_dict))
                     return True
                 else:
-                    inf = f'Wrong rpc response, no fits_saved.'
+                    inf = f'{self.id} {self.name} wrong rpc response, no fits_saved.'
                     logger.error(inf)
                     await self.journal.error(inf)
                     self.info_callback['stream_1'](inf)
                     return False
             except KeyError:
-                inf = f'Wrong rpc response, KeyError'
+                inf = f'{self.id} {self.name} wrong rpc response, KeyError.'
                 logger.error(inf)
                 await self.journal.error(inf)
                 self.info_callback['stream_1'](inf)
                 return False
         else:
-            inf = f'ERROR: wrong rpc response, dat is None.'
+            inf = f'{self.id} {self.name} wrong rpc response, dat is None.'
             logger.error(inf)
             await self.journal.error(inf)
             self.info_callback['stream_1'](inf)
             return False
 
     async def _wait_for_subexposure(self, sub_time: float) -> None:
-        inf = f'_wait_for_subexposure started'
-        logger.debug(inf)
-        await self.journal.debug(inf)
         # TODO In final version, i.e. on server-side exposures, I would avoid asyncio.sleep and subscibe on imagerady
         #  and camerastate. (exposures may be aborted earlier, no imagerady then)
         if sub_time >= 0.6:
@@ -367,9 +361,6 @@ class CameraExposure(BaseSubCommand):
                                                           awaitab=self.camera.aget_imageready,
                                                           expect_type=bool)
             if subexposure_done is True:
-                inf = f'_wait_for_subexposure subexposure_done is True'
-                logger.debug(inf)
-                await self.journal.debug(inf)
                 break
             await asyncio.sleep(0.1)
 
@@ -421,7 +412,7 @@ class CameraExposure(BaseSubCommand):
             evening = False
             ev_fact = 1
         while True:
-            inf = f'{self.id} starting test exposure'
+            inf = f'{self.id} {self.name} filter: {self.filter} starting test exposure.'
             logger.info(inf)
             await self.journal.info(inf)
             self.info_callback['stream_1'](inf)
@@ -445,7 +436,7 @@ class CameraExposure(BaseSubCommand):
                                              header={},
                                              req='stats_only')
             except (MessengerRequestNoResponders, MessengerRequestNoResponse, MessengerRequestTimeout):
-                inf = 'Nats rpc guider msg can not reach responder.'
+                inf = f'{self.id} {self.name} nats rpc guider msg can not reach responder.'
                 logger.error(inf)
                 await self.journal.error(inf)
                 self.info_callback['stream_1'](inf)
@@ -455,19 +446,19 @@ class CameraExposure(BaseSubCommand):
                     if dat['response'] == 'stats_done':
                         mean = dat['param']['mean']
                     else:
-                        inf = f'Wrong rpc response, no stats_done.'
+                        inf = f'{self.id} {self.name} wrong rpc response, no stats_done.'
                         logger.error(inf)
                         await self.journal.error(inf)
                         self.info_callback['stream_1'](inf)
                         return 0, True
                 except KeyError:
-                    inf = f'Wrong rpc response, key error'
+                    inf = f'{self.id} {self.name} wrong rpc response, key error.'
                     logger.error(inf)
                     await self.journal.error(inf)
                     self.info_callback['stream_1'](inf)
                     return 0, True
             else:
-                inf = f'Wrong rpc response, dat is None.'
+                inf = f'{self.id} {self.name} wrong rpc response, dat is None.'
                 logger.error(inf)
                 await self.journal.error(inf)
                 self.info_callback['stream_1'](inf)
@@ -485,7 +476,7 @@ class CameraExposure(BaseSubCommand):
             else:
                 mean = 1.0
             mean_list.append(mean)
-            inf = (f'{self.id} Test frame mean:{round(mean, 2)}'
+            inf = (f'{self.id} Test frame filter: {self.filter} mean:{round(mean, 2)}'
                    f' range:[{round(test_min_max_adu[0]/test_min_max_time_exp[1], 2)}-'
                    f'{round(test_min_max_adu[1]/test_min_max_time_exp[0], 2)}]')
             logger.info(inf)
@@ -508,7 +499,7 @@ class CameraExposure(BaseSubCommand):
             if mean_diff is not None:
                 # Evening
                 if evening and mean_diff < 0 and mean_min_max[1] < test_min_max_adu[0]:
-                    inf = f"{self.id} skipped - too dark"
+                    inf = f"{self.id} autoflat filter: {self.filter} skipped - too dark."
                     logger.info(inf)
                     await self.journal.info(inf)
                     self.info_callback['stream_1'](inf)
@@ -518,7 +509,7 @@ class CameraExposure(BaseSubCommand):
                     return 0, True
                 # Morning
                 elif not evening and mean_diff > 0 and mean_min_max[0] > test_min_max_adu[1]:
-                    inf = f"{self.id} skipped - too bright"
+                    inf = f"{self.id} autoflat filter: {self.filter} skipped - too bright."
                     logger.info(inf)
                     await self.journal.info(inf)
                     self.info_callback['stream_1'](inf)
@@ -531,7 +522,7 @@ class CameraExposure(BaseSubCommand):
             if test_min_max_adu[0] - mean_min_max[1] < 0 < test_min_max_adu[1] - mean_min_max[0]:
                 if mean_min_max[0] < test_min_max_adu[0]:
                     exposure_time = (test_min_max_adu[0] / mean) * ev_fact
-                    inf = (f"{self.id} calc_exp_time:{round(exposure_time, 1)},"
+                    inf = (f"{self.id} {self.name} calc_exp_time:{round(exposure_time, 1)},"
                            f" expect_adu:{round(exposure_time * mean, 1)}")
                     logger.info(inf)
                     await self.journal.info(inf)
@@ -584,10 +575,10 @@ class CameraExposure(BaseSubCommand):
         await self.camera.aput_startexposure(float(exposure_time), self.light)
         await self._wait_for_subexposure(float(exposure_time))
         self.readout_time = time.time() - self.readout_time_start - float(exposure_time)
-        inf = f'{self.id} exp:{self.sub_exp}/{self.exp_no} saving'
+        inf = f'{self.id} {self.name} exp:{self.sub_exp}/{self.exp_no} saving.'
         logger.info(inf)
         await self.journal.info(inf)
-        self.info_callback['stream_1'](f'{self.id} exp:{self.sub_exp}/{self.exp_no} --> saving')
+        self.info_callback['stream_1'](f'{self.id} {self.name} exp:{self.sub_exp}/{self.exp_no} --> saving')
         self.info_callback['exec_json'](self.exec_json(exp_started=True,
                                                        exp_done=True,
                                                        exp_saved=False,
@@ -600,9 +591,8 @@ class CameraExposure(BaseSubCommand):
             return 2
         self.info_callback['stream_1'](f'{self.id} {self.name} done')
         self.info_callback['stream_5'](f'{self.id}')
-        inf = f'{self.id} done'
+        inf = f'{self.id} {self.name} done.'
         logger.debug(inf)
-        await self.journal.debug(inf)
         self.done = True
         self.info_callback['exec_json'](self.exec_json(exp_time=float(exposure_time),
                                                        **self.info_dict))

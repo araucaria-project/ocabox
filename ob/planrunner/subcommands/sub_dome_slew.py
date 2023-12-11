@@ -13,10 +13,10 @@ class DomeSlew(BaseSubCommand):
 
     def __init__(self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable],
                  uobi: int, seq_data: 'Seq' or None = None,
-                 follow_tol: float or None = None, az: float or None = None, name: str = 'dome-slew') -> None:
+                 follow_tol: float = 3.0, az: float or None = None, name: str = 'dome-slew') -> None:
         self.seq_data = seq_data
         self.az = az
-        self.follow_tol = follow_tol
+        self.follow_tol = follow_tol # TODO take from settings
         super().__init__(id=id, info_callback=info_callback, telescope=telescope, name=name, uobi=uobi)
         self.dome = self.telescope.get_dome()
         self.mount = self.telescope.get_mount()
@@ -124,24 +124,30 @@ class DomeSlew(BaseSubCommand):
                 return 0
         self.info_callback['exec_json'](self.exec_json(**self.info_dict))
         logger.info(f'{self.id} started')
-        self.info_callback['stream_1'](f'{self.id} {self.name} started')
+        self.info_callback['stream_1'](f'{self.id} {self.name} started.')
+        await self.journal.info(f"{self.id} {self.name} started.")
+
         # TODO get mount kind and parameters from settings
-        if self.az:
+        if self.az is not None:
             az = self.az
-        elif self.follow_tol:
-            mount_az = await self.value_proof_get(name='mount_az', awaitab=self.mount.aget_az, expect_type=float)
+        else:
+            mount_az = await self.value_proof_get(name='sub_dome_mount_az',
+                                                  awaitab=self.mount.aget_az, expect_type=float)
             dome_az = await self.value_proof_get(name='sub_dome_az', awaitab=self.dome.aget_az, expect_type=float)
-            if self.follow_tol < abs(mount_az - dome_az):
+
+            if (360 > abs(mount_az - dome_az) > (360 - self.follow_tol)) or \
+                0 < (abs(mount_az - dome_az) < self.follow_tol):
                 az = mount_az
-            else:
-                self.info_callback['stream_1'](f'{self.id} {self.name} dome in position tolerance, skipping')
+                inf = f'{self.id} {self.name} in position tolerance, skipping.'
+                self.info_callback['stream_1'](inf)
                 self.info_callback['stream_5'](f'{self.id}')
-                logger.info(f'{self.id} dome in position tolerance, skipping')
+                logger.info(inf)
+                await self.journal.info(inf)
                 self.skipped = True
                 self.info_callback['exec_json'](self.exec_json(**self.info_dict))
                 return 0
-        else:
-            az = await self.value_proof_get(name='mount_az', awaitab=self.mount.aget_az, expect_type=float)
+            else:
+                az = mount_az
 
         # TODO config? At lest in final server-side version...
         if self.telescope.id == 'wk06':
@@ -169,11 +175,13 @@ class DomeSlew(BaseSubCommand):
         else:
             pass
         # TODO maybe use synctoazimuth (if yes add to ocaboxapi)
+        await self.journal.debug(f"{self.id} {self.name} slewing az: {az}")
         await self.dome.aput_slewtoazimuth(az)
         await self._wait_to_slew(az)
         logger.info(f'{self.id} done')
-        self.info_callback['stream_1'](f'{self.id} {self.name} done')
+        self.info_callback['stream_1'](f'{self.id} {self.name} done.')
         self.info_callback['stream_5'](f'{self.id}')
+        await self.journal.info(f"{self.id} {self.name} done.")
         self.done = True
         self.info_callback['exec_json'](self.exec_json(**self.info_dict))
         return 0
