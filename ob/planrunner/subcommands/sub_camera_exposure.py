@@ -183,7 +183,7 @@ class CameraExposure(SubCommand):
             # Create today fits folder name (last 4 digits of julian date)
             if not os.path.exists(target_folder):
                 self._mk_folder(target_folder)
-                os.chmod(target_folder, os.stat(target_folder).st_mode | stat.S_IWOTH)
+            os.chmod(target_folder, os.stat(target_folder).st_mode | stat.S_IWOTH)
 
             # Create actual symlink to today fits folder
             if os.path.exists(os.path.join(self.folder, f'actual')):
