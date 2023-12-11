@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import stat
-
+from typing import Callable, Dict
 from ob.planrunner.base_subcommand import BaseSubCommand
 from pyaraucaria.fits import fits_header
 from pyaraucaria.date import julian_to_tuple
@@ -15,12 +15,13 @@ from serverish.messenger import request
 from serverish.base.datetime import dt_utcnow_array
 from serverish.base.exceptions import MessengerRequestNoResponders, MessengerRequestNoResponse, MessengerRequestTimeout
 
+
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class CameraExposure(BaseSubCommand):
 
-    def __init__(self, id: str, parent: 'Command', seq_data: 'Seq', uobi: int,
+    def __init__(self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable], seq_data: 'Seq', uobi: int,
                  type: str, filter: str, light: bool, sub_exp: int, exp_no: int, auto_exposure: bool,
                  epoch: str, observer: str, obj_name: str, req_ra: float or None = None, req_dec: float or None = None,
                  name: str = 'camera-exposure') -> None:
@@ -41,7 +42,7 @@ class CameraExposure(BaseSubCommand):
         self.readout_time: float or None = None
         self.readout_time_start: float or None = None
         self.exp_time_start: str or None = None
-        super().__init__(id=id, parent=parent, name=name, uobi=uobi)
+        super().__init__(id=id, info_callback=info_callback, telescope=telescope, name=name, uobi=uobi)
         self.mount = self.telescope.get_mount()
         self.camera = self.telescope.get_camera()
         self.cover = self.telescope.get_covercalibrator()

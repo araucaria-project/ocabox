@@ -3,6 +3,7 @@ import logging
 from ob.planrunner.base_subcommand import BaseSubCommand
 import math
 from pyaraucaria.coordinates import site_sidereal_time, ra_dec_2_az_alt
+from typing import Callable, Dict
 
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -10,12 +11,13 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class DomeSlew(BaseSubCommand):
 
-    def __init__(self, id: str, parent: 'Command',  uobi: int, seq_data: 'Seq' or None = None,
+    def __init__(self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable],
+                 uobi: int, seq_data: 'Seq' or None = None,
                  follow_tol: float or None = None, az: float or None = None, name: str = 'dome-slew') -> None:
         self.seq_data = seq_data
         self.az = az
         self.follow_tol = follow_tol
-        super().__init__(id=id, parent=parent, name=name, uobi=uobi)
+        super().__init__(id=id, info_callback=info_callback, telescope=telescope, name=name, uobi=uobi)
         self.dome = self.telescope.get_dome()
         self.mount = self.telescope.get_mount()
         self.info_dict = {'az': self.az, 'follow_tol': self.follow_tol}

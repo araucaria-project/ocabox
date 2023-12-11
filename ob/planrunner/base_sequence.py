@@ -9,34 +9,34 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class BaseSequence(AbstractBase):
 
-    def __init__(self, id: str, name: str, telescope: 'Telescope', info_callback: Dict[str, Callable],
-                 c_type: str, kwargs: Dict) -> None:
-        # self.args: List = args
-        self.kwargs = kwargs
-        super().__init__(id=id, name=name, info_callback=info_callback, telescope=telescope, c_type=c_type)
+    def __init__(self, id: str, name: str, telescope: 'Telescope', sequence_dict: Dict[str, Any],
+                 info_callback: Dict[str, Callable], c_type: str, param: Dict[str, Any]) -> None:
+        self.param = param
+        self.subcomponents = {}
+        self.sequence_dict = sequence_dict
+        self.args: List = []
+        self.kwargs: Dict = {}
+        super().__init__(id=id, name=name, telescope=telescope, info_callback=info_callback, c_type=c_type)
 
-    @staticmethod
-    def build_args(sequence_dict: Dict[Any, Any]) -> List[Any]:
+    def build_args(self, sequence_dict: Dict[Any, Any]) -> None:
         if 'args' in sequence_dict.keys():
-            return sequence_dict['args']
+            self.args = sequence_dict['args']
         else:
-            return []
+            self.args = []
 
-    def build_kwargs(self, sequence_dict: Dict[str, Any],
-                     info_callback: Dict[str, Any] or None = None,
-                     id: str or None = None) -> Dict[str, Any]:
+    def build_kwargs(self, sequence_dict: Dict[str, Any]) -> None:
         if 'kwargs' in sequence_dict.keys():
             for n, m in sequence_dict['kwargs'].items():
                 if n in self.KWARGS:
                     pass
                 else:
-                    if info_callback:
-                        info_callback['stream_1'](f'Warning: {id} kwarg:{n} wrong name')
-                    logger.warning(f'{id} kwarg:{n} wrong name')
+                    if self.info_callback:
+                        self.info_callback['stream_1'](f'Warning: {self.id} kwarg:{n} wrong name')
+                    logger.warning(f'{self.id} kwarg:{n} wrong name')
                     raise SequenceTreeError
-            return sequence_dict['kwargs']
+            self.kwargs = sequence_dict['kwargs']
         else:
-            return {}
+            self.kwargs = {}
 
     @staticmethod
     def numb(number: int) -> str:

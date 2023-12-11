@@ -1,15 +1,18 @@
 import asyncio
 import logging
 from ob.planrunner.base_subcommand import BaseSubCommand
+from typing import Callable, Dict
+
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class DomeScreenLight(BaseSubCommand):
 
-    def __init__(self, id: str, parent: 'Command', light: bool, uobi: int, name: str = 'dome-screenlight') -> None:
+    def __init__(self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable],
+                 light: bool, uobi: int, name: str = 'dome-screenlight') -> None:
         self.light = light
-        super().__init__(id=id, parent=parent, name=name, uobi=uobi)
+        super().__init__(id=id, info_callback=info_callback, telescope=telescope, name=name, uobi=uobi)
         self.mount = self.telescope.get_mount('mount')
         self.info_dict = {'light': self.light}
         self.create_sub_command_string(**self.info_dict)

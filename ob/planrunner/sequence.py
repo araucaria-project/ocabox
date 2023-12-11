@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Dict, Any, Callable
 import logging
 from ob.planrunner.base_sequence import BaseSequence
 from ob.planrunner.command import Command
@@ -10,24 +10,18 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class Sequence(BaseSequence):
 
-    def __init__(self, id: str, sequence_dict: Dict[str, Any],
-                 parent: 'NightPlan' or 'Sequence', param: Dict[str, Any] or None = None) -> None:
-        self.sequence_dict = sequence_dict
-        self.args = self.build_args(sequence_dict=self.sequence_dict)
-        self.kwargs = self.build_kwargs(sequence_dict=self.sequence_dict, info_callback=parent.info_callback, id=id)
-        self.parent_kwargs = parent.kwargs | parent.parent_kwargs
-        self.param = param
-        self.subcomponents = {}
-        super().__init__(id=id, name='Sequence', info_callback=parent.info_callback,
-                         telescope=parent.telescope, c_type='sequence', kwargs=self.kwargs)
+    def __init__(self, id: str, sequence_dict: Dict[str, Any], telescope: 'Telescope',
+                 info_callback: Dict[str, Callable], param: Dict[str, Any] or None = None) -> None:
+        super().__init__(id=id, name='Sequence', info_callback=info_callback,
+                         telescope=telescope, sequence_dict=sequence_dict, c_type='sequence', param=param)
+        self.build_args(self.sequence_dict)
+        self.build_kwargs(sequence_dict=self.sequence_dict)
         self.build_sequence()
 
     def _create_sequence_string(self):
         kw = ''
         for n in self.kwargs.keys():
             kw = f'{kw} {n}={self.kwargs[n]}'
-        for n in self.parent_kwargs.keys():
-            kw = f'{kw} {n}={self.parent_kwargs[n]}'
         self.info_callback['c_sequences'](f'{self.id};SEQUENCE;;{kw}')
         logger.info(f'{self.id} is written')
 
@@ -54,11 +48,13 @@ class Sequence(BaseSequence):
                     raise SequenceTreeError
 
     def write_subcomponent(self, sequence_id, sequence_dict) -> 'Sequence':
-        sub = Sequence(sequence_id, sequence_dict, self, param=self.param)
+        sub = Sequence(id=sequence_id, sequence_dict=sequence_dict, telescope=self.telescope,
+                       info_callback=self.info_callback, param=self.param)
         return sub
 
     def write_command(self, command_id, command_dict) -> 'Command':
-        com = Command(command_id, command_dict, self, param=self.param)
+        com = Command(id=command_id, sequence_dict=command_dict, telescope=self.telescope,
+                       info_callback=self.info_callback, param=self.param)
         return com
 
     async def arun(self, step_id: str or None = None) -> int:

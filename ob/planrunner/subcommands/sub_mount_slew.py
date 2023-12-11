@@ -3,6 +3,7 @@ import logging
 from ob.planrunner.base_subcommand import BaseSubCommand
 from pyaraucaria.coordinates import ra_dec_epoch, ra_dec_2_az_alt, deg_to_decimal_deg
 import random
+from typing import Callable, Dict
 
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -10,7 +11,8 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class MountSlew(BaseSubCommand):
 
-    def __init__(self, id: str, parent: 'Command', obj_name: str, uobi: int,
+    def __init__(self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable],
+                 obj_name: str, uobi: int,
                  dither: bool or None = None, seq_data: 'Seq' or None = None,
                  ra: float or None = None, dec: float or None = None,
                  az: float or None = None, alt: float or None = None,
@@ -27,7 +29,7 @@ class MountSlew(BaseSubCommand):
         self.az = az
         self.ra_now: float or None = None
         self.dec_now: float or None = None
-        super().__init__(id=id, parent=parent, name=name, uobi=uobi)
+        super().__init__(id=id, info_callback=info_callback, telescope=telescope, name=name, uobi=uobi)
         self.mount = self.telescope.get_mount()
         self.info_dict = { 'obj_name': self.obj_name,
                             'seq_data': self.seq_data,

@@ -12,9 +12,6 @@ class ObservPlan:
 
     def __init__(self, observ_plan_id: str, telescope: 'Telescope') -> None:
         self.observ_plan_id = observ_plan_id
-        self.args = []
-        self.kwargs = {}
-        self.parent_kwargs = {}
         self.subcomponents = {}
         self.telescope = telescope
         self.parsed_plan: List[Any] or None = None
@@ -113,7 +110,8 @@ class ObservPlan:
                         overwrite: bool = False, param: Dict[str, Any] or None = None) -> None:
         if (nightplan_id in self.subcomponents.keys()) and (overwrite is True):
             self.delete_nightplan(nightplan_id)
-            np = NightPlan(nightplan_id, nightplan_dict, self, param=param)
+            np = NightPlan(id=nightplan_id, sequence_dict=nightplan_dict,
+                           telescope=self.telescope, info_callback=self.info_callback, param=param)
             self.subcomponents[nightplan_id] = np
             logger.info(f'Night plan {nightplan_id} to {self.observ_plan_id} is overwritten')
 
@@ -121,7 +119,8 @@ class ObservPlan:
             raise CantOverideNightPlanError
 
         else:
-            np = NightPlan(nightplan_id, nightplan_dict, self, param=param)
+            np = NightPlan(id=nightplan_id, sequence_dict=nightplan_dict,
+                           telescope=self.telescope, info_callback=self.info_callback, param=param)
             self.subcomponents[nightplan_id] = np
             logger.info(f'Night plan {nightplan_id} is written')
 

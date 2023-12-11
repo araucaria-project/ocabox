@@ -1,17 +1,20 @@
 import asyncio
 import logging
 from ob.planrunner.base_subcommand import BaseSubCommand
+from typing import Callable, Dict
+
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class MirrorCover(BaseSubCommand):
 
-    def __init__(self, id: str, parent: 'Command', open: bool, uobi: int, name: str = 'mirror-cover') -> None:
+    def __init__(self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable],
+                 open: bool, uobi: int, name: str = 'mirror-cover') -> None:
         self.open = open
         self.ra_now: str or None = None
         self.dec_now: str or None = None
-        super().__init__(id=id, parent=parent, name=name, uobi=uobi)
+        super().__init__(id=id, info_callback=info_callback, telescope=telescope, name=name, uobi=uobi)
         self.mount = self.telescope.get_mount('mount')
         self.cover = self.telescope.get_covercalibrator()
         self.info_dict = {'open': self.open}

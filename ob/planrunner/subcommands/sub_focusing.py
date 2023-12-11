@@ -1,6 +1,8 @@
 import asyncio
 import logging
 from ob.planrunner.base_subcommand import BaseSubCommand
+from typing import Callable, Dict
+
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -8,9 +10,10 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class Focusing(BaseSubCommand):
 
 
-    def __init__(self, id: str, parent: 'Command', position: float, uobi: int, name: str = 'focusing') -> None:
+    def __init__(self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable],
+                 position: float, uobi: int, name: str = 'focusing') -> None:
         self.position = position
-        super().__init__(id=id, parent=parent, name=name, uobi=uobi)
+        super().__init__(id=id, info_callback=info_callback, telescope=telescope, name=name, uobi=uobi)
         self.focuser = self.telescope.get_focuser()
         self.info_dict = {'position': self.position}
         self.create_sub_command_string(**self.info_dict)

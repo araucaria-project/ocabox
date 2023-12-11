@@ -3,6 +3,7 @@ import time
 from ob.planrunner.base_subcommand import BaseSubCommand
 import logging
 import asyncio
+from typing import Callable, Dict
 
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -10,10 +11,12 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class Wait(BaseSubCommand):
 
-    def __init__(self, id: str, parent: 'Command', key: str, value: str, uobi: int, name: str = 'wait') -> None:
+    def __init__(self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable],
+                 key: str, value: str, uobi: int, name: str = 'wait') -> None:
         self.key = key
         self.value = value
-        super().__init__(id=id, parent=parent, name=name, uobi=uobi)
+        super().__init__(id=id, info_callback=info_callback,
+                         telescope=telescope, name=name, uobi=uobi)
         self.info_dict = {'key': self.key, 'value': self.value}
         self.create_sub_command_string(**self.info_dict)
 

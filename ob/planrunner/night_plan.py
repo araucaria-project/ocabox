@@ -1,6 +1,6 @@
 import datetime
 import logging
-from typing import List, Any, Dict
+from typing import List, Any, Dict, Callable
 from ob.planrunner.base_sequence import BaseSequence
 from ob.planrunner.sequence import Sequence
 from ob.planrunner.cycle_time_calc.cycle_time_data_build import CycleTimeDataBuild
@@ -14,24 +14,18 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class NightPlan(BaseSequence):
-    def __init__(self, id: str, sequence_dict: Dict[str, Any],
-                 parent: 'ObservationPlan', param: Dict[str, Any] or None = None) -> None:
+    def __init__(self, id: str, sequence_dict: Dict[str, Any], telescope: 'Telescope',
+                 info_callback: Dict[str, Callable], param: Dict[str, Any] or None = None) -> None:
         self.sequence_dict = sequence_dict
-        self.subcomponents = {}
-        self.param = param if param is not None else {}
-        self.args = []
-        self.kwargs = {}
         self._r_id: int
-        self.parent_kwargs = parent.kwargs | parent.parent_kwargs
-        super().__init__(id=id, name='Night plan', info_callback=parent.info_callback,
-                         telescope=parent.telescope, c_type='night_plan', kwargs=self.kwargs)
+        super().__init__(id=id, name='Night plan', info_callback=info_callback,
+                         telescope=telescope, sequence_dict=sequence_dict, c_type='night_plan', param=param)
         self.mount = self.telescope.get_mount()
         self.camera = self.telescope.get_camera()
         self.param['cycle_time'] = self.telescope.get_cycle_time_calculator()
         self.param['cycle_time'].reset_time()
         self._get_rm_mode()
         self._get_altaz()
-        self.info = {}
         self._cycle_time_data_build = CycleTimeDataBuild(
             telescope=self.telescope.id,
             base_folder=self.telescope.observatory.get_app_cfg(key='base_cycle_time_calc_dir'))
@@ -56,17 +50,11 @@ class NightPlan(BaseSequence):
     def _set_r_id(self) -> None:
         self._r_id =  random.randint(0, 100000000)
 
-    def _build_info_seq(self, name: str, value: str):
-        if name in self.info.keys():
-            self.info[name] = self.info[name] + [value]
-        else:
-            self.info[name] = []
-            self.info[name] = self.info[name] + [value]
-
     def _write_subcomponents(self):
         self.info_callback['stream_1'](f'Nightplan {self.id} written')
         seq_id = 0
-        sub = Sequence(f'{self.numb(seq_id)}', self.sequence_dict, self, param=self.param)
+        sub = Sequence(id=f'{self.numb(seq_id)}', sequence_dict=self.sequence_dict,
+                       telescope=self.telescope, info_callback=self.info_callback, param=self.param)
         self.subcomponents[f'{self.numb(seq_id)}'] = sub
         self.info_callback['stream_1'](f'Nightplan {self.id}'
                                        f' estimated time lenght: {self.param["cycle_time"].time_lenght_min}min')
