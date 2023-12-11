@@ -15,7 +15,7 @@ class NightPlan(BaseSequence):
                  info_callback: Dict[str, Callable], param: Dict[str, Any] or None = None) -> None:
         self.sequence_dict = sequence_dict
         self._r_id: int
-        super().__init__(id=id, name='Night plan', info_callback=info_callback,
+        super().__init__(id=id, name='NIGHTPLAN', info_callback=info_callback,
                          telescope=telescope, sequence_dict=sequence_dict, c_type='night_plan', param=param)
         self.mount = self.telescope.get_mount()
         self.camera = self.telescope.get_camera()
@@ -48,7 +48,7 @@ class NightPlan(BaseSequence):
         self._r_id =  random.randint(0, 100000000)
 
     def _write_subcomponents(self):
-        self.info_callback['stream_1'](f'Nightplan {self.id} written')
+        self.info_callback['stream_1'](f'{self.id} {self.name} written.')
         seq_id = 0
         sub = Sequence(id=f'{self.numb(seq_id)}', sequence_dict=self.sequence_dict,
                        telescope=self.telescope, info_callback=self.info_callback, param=self.param)
@@ -57,8 +57,11 @@ class NightPlan(BaseSequence):
                                        f' estimated time lenght: {self.param["cycle_time"].time_lenght_min}min')
 
     async def arun(self, step_id: str or None = None) -> int:
-        self.info_callback['stream_1'](f'Night plan {self.id} started')
+        self.info_callback['stream_1'](f'{self.id} {self.name} started.')
         logger.info(f'Night plan {self.id} started')
+        await self.journal.info(f'{self.id} {self.name} started,'
+                                f' estimated time: {self.param["cycle_time"].time_lenght_min} min, '
+                                f'utc finnish: {self.param["cycle_time"].finnish_time_utc}')
         self.info_callback['time_end'](f'{self.param["cycle_time"].finnish_time_utc}')
         self._set_r_id()
         self._cycle_time_data_build.insert_data(name='command_name', value=self.name)
@@ -79,7 +82,8 @@ class NightPlan(BaseSequence):
         self._cycle_time_data_build.insert_data(name='mount_alt_end', value=mount_alt)
         self._cycle_time_data_build.save_to_log()
         self.info_callback['stream_5'](f'{self.id}')
-        self.info_callback['stream_1'](f'Night plan {self.id} completed at: {str(datetime.datetime.utcnow())}')
+        self.info_callback['stream_1'](f'{self.id} {self.name} done at: {str(datetime.datetime.utcnow())}')
+        await self.journal.info(f'{self.id} {self.name} done at: {str(datetime.datetime.utcnow())}')
         logger.info(f'Night plan {self.id} completed')
         """
         if skip == 0:

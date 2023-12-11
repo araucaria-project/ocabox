@@ -75,12 +75,20 @@ class MountSlew(BaseSubCommand):
     def ra_random_dither(ra: float, dith_val: float, mode: str = 'basic') -> float:
         # TODO dith_val = dith_val / cos(dec) ?
         if mode == 'basic':
-            return ra + random.uniform(-dith_val / 60, dith_val / 60)
+            m = 0.000001
+            diff = random.uniform(-dith_val / 60, dith_val / 60)
+            if abs(diff) < m:
+                diff = m
+            return ra + diff
 
     @staticmethod
     def dec_random_dither(dec: float, dith_val: float, mode: str = 'basic') -> float:
         if mode == 'basic':
-            return dec + random.uniform(-dith_val / 60, dith_val / 60)
+            m = 0.000001
+            diff = random.uniform(-dith_val / 60, dith_val / 60)
+            if abs(diff) < m:
+                diff = m
+            return dec + diff
 
     async def arun(self, step_id: str or None = None) -> int:
         self.started = True

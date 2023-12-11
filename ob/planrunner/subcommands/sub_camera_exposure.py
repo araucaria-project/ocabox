@@ -558,7 +558,7 @@ class CameraExposure(BaseSubCommand):
             if self.sub_exp == self.exp_no:
                 self.seq_data.skip = False
             return 0
-        inf = f'{self.id} started'
+        inf = f'{self.id} {self.name} started.'
         logger.debug(inf)
         await self.journal.debug(inf)
         self.target_folder = self._provide_target_folder()
@@ -569,7 +569,7 @@ class CameraExposure(BaseSubCommand):
             exposure_time, _exit = await self._autoexposure_exec()
             if _exit:
                 return 0
-        inf = f'{self.id} exp:{self.sub_exp}/{self.exp_no} started'
+        inf = f'{self.id} {self.name} exp: {self.sub_exp}/{self.exp_no} started.'
         logger.info(inf)
         await self.journal.info(inf)
         self.info_callback['stream_1'](inf)

@@ -607,8 +607,9 @@ class Command(BaseSequence):
             return f_pos
 
     async def arun(self, step_id: str or None = None) -> int:
-        self.info_callback['stream_1'](f'Command {self.id} {self.name} started')
-        logger.info(f'{self.id} {self.name} {self.args} {self.kwargs} started')
+        self.info_callback['stream_1'](f'Command {self.id} {self.name} started.')
+        await self.journal.info(f'{self.id} {self.name} started.')
+        logger.info(f'{self.id} {self.name} started.')
         d = self.telescope.get_dome()
         m = self.telescope.get_mount()
         c = self.telescope.get_camera()
@@ -646,5 +647,6 @@ class Command(BaseSequence):
         self._cycle_time_data_build.insert_data(name='readoutmode', value=rm1)
         self._cycle_time_data_build.save_to_log()
         self.info_callback['stream_5'](f'{self.id}')
+        await self.journal.info(f'{self.id} {self.name} done.')
         logger.info(f'{self.id} done')
         return skip

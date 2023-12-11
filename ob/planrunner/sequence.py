@@ -12,7 +12,7 @@ class Sequence(BaseSequence):
 
     def __init__(self, id: str, sequence_dict: Dict[str, Any], telescope: 'Telescope',
                  info_callback: Dict[str, Callable], param: Dict[str, Any] or None = None) -> None:
-        super().__init__(id=id, name='Sequence', info_callback=info_callback,
+        super().__init__(id=id, name='SEQUENCE', info_callback=info_callback,
                          telescope=telescope, sequence_dict=sequence_dict, c_type='sequence', param=param)
         self.build_args(self.sequence_dict)
         self.build_kwargs(sequence_dict=self.sequence_dict)
@@ -59,8 +59,10 @@ class Sequence(BaseSequence):
 
     async def arun(self, step_id: str or None = None) -> int:
         self.info_callback['stream_1'](f'Sequence {self.id} started')
+        await self.journal.debug(f'{self.id} {self.name} started.')
         logger.info(f'{self.id} started')
         skip = await self._arun(self.subcomponents, step_id=step_id)
         self.info_callback['stream_5'](f'{self.id}')
+        await self.journal.debug(f'{self.id} {self.name} done.')
         logger.info(f'{self.id} done')
         return skip
