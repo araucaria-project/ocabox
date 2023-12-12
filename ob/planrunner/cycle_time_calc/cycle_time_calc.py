@@ -115,7 +115,7 @@ class CycleTimeCalc(AbstractCycleTime):
 
     def get_last_params(self, telescope: str, command: str) -> Dict[str, Any]:
         data = CycleTimeCalc.read_file(self.base_folder,
-                                       CycleTimeCalc.train_param_file_name(telescope=telescope, command=command))
+                                       CycleTimeCalc.train_param_last_file_name(telescope=telescope, command=command))
         return CycleTimeCalc.parse_data(data=data)[-1]
 
     def set_start_rmode(self, rmode: int) -> None:
