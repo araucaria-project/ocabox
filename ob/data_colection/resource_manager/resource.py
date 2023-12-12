@@ -171,9 +171,10 @@ class FilterwheelAlpaca(Resource):
             result = None
         if result and result.status and result.value and isinstance(result.value.v, list):
             f = result.value.v
+            self.filters = {x: count for count, x in enumerate(f)}
         else:
             self._correctly_load_data = False
-        self.filters = {x: count for count, x in enumerate(f)}
+
 
     async def get_filters(self, no_init=False) -> dict:
         """
