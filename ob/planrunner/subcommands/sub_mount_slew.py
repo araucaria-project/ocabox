@@ -3,8 +3,7 @@ import logging
 from ob.planrunner.base_subcommand import BaseSubCommand
 from pyaraucaria.coordinates import ra_dec_epoch, ra_dec_2_az_alt, deg_to_decimal_deg
 import random
-from typing import Callable, Dict
-
+from typing import Callable, Dict, Any
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -16,7 +15,7 @@ class MountSlew(BaseSubCommand):
                  dithering: bool = False, seq_data: 'Seq' or None = None,
                  ra: float or None = None, dec: float or None = None,
                  az: float or None = None, alt: float or None = None,
-                 name: str = 'mount-slew') -> None:
+                 name: str = 'mount-slew', param: Dict[str, Any] or None = None) -> None:
         self.obj_name = obj_name
         self.seq_data = seq_data
         self.ra = ra
@@ -28,7 +27,8 @@ class MountSlew(BaseSubCommand):
         self.az = az
         self.ra_now: float or None = None
         self.dec_now: float or None = None
-        super().__init__(id=id, info_callback=info_callback, telescope=telescope, name=name, uobi=uobi)
+        super().__init__(id=id, info_callback=info_callback, telescope=telescope,
+                         name=name, uobi=uobi, param=param)
         self.mount = self.telescope.get_mount()
         self.info_dict = { 'obj_name': self.obj_name,
                             'seq_data': self.seq_data,
@@ -92,9 +92,11 @@ class MountSlew(BaseSubCommand):
 
     async def arun(self, step_id: str or None = None) -> int:
         self.started = True
+        await self.param['plan_status'].upd_status(id=self.id, field='started', value=True)
         if self.seq_data:
             if self.seq_data.skip:
                 self.skipped = True
+                await self.param['plan_status'].upd_status(id=self.id, field='skipped', value=True)
                 return 0
         self.info_callback['exec_json'](self.exec_json(**self.info_dict))
         logger.info(f'{self.id} started')
@@ -118,6 +120,7 @@ class MountSlew(BaseSubCommand):
                     alt = deg_to_decimal_deg(self.alt)
                 except ValueError:
                     self.skipped = True
+                    await self.param['plan_status'].upd_status(id=self.id, field='skipped', value=True)
                     self.info_callback['exec_json'](self.exec_json(**self.info_dict))
                     logger.error(f"Wrong az alt format")
                     await self.journal.error(f"{self.id} {self.name} wrong az alt format.")
@@ -137,6 +140,7 @@ class MountSlew(BaseSubCommand):
                 self.info_callback['stream_5'](f'{self.id}')
                 await self.journal.info(f'{self.id} {self.name} done.')
                 self.done = True
+                await self.param['plan_status'].upd_status(id=self.id, field='done', value=True)
                 self.info_callback['exec_json'](self.exec_json(**self.info_dict))
                 return 0
             else:
@@ -144,6 +148,7 @@ class MountSlew(BaseSubCommand):
                 self.info_callback['stream_5'](f'{self.id}')
                 await self.journal.warning(f'{self.id} {self.name} target is below allowed alt: {alt}, skipping')
                 self.skipped = True
+                await self.param['plan_status'].upd_status(id=self.id, field='skipped', value=True)
                 logger.info(f'{self.id} {self.name} target is below allowed alt:{alt}, skipping')
                 self.info_callback['exec_json'](self.exec_json(**self.info_dict))
                 return 1
@@ -170,12 +175,14 @@ class MountSlew(BaseSubCommand):
                 self.info_callback['stream_5'](f'{self.id}')
                 await self.journal.info(f'{self.id} {self.name} done')
                 self.done = True
+                await self.param['plan_status'].upd_status(id=self.id, field='done', value=True)
                 self.info_callback['exec_json'](self.exec_json(**self.info_dict))
                 return 0
             else:
                 self.info_callback['stream_1'](f'{self.id} target is below allowed alt:{alt}, skipping')
                 self.info_callback['stream_5'](f'{self.id}')
                 self.skipped = True
+                await self.param['plan_status'].upd_status(id=self.id, field='skipped', value=True)
                 self.info_callback['exec_json'](self.exec_json(**self.info_dict))
                 logger.info(f'{self.id} {self.name} target is below allowed alt:{alt}, skipping')
                 await self.journal.warning(f'{self.id} {self.name} target is below allowed alt: {alt}, skipping')
@@ -200,6 +207,7 @@ class MountSlew(BaseSubCommand):
             self.info_callback['stream_1'](f'{self.id} {self.name} done')
             self.info_callback['stream_5'](f'{self.id}')
             self.done = True
+            await self.param['plan_status'].upd_status(id=self.id, field='done', value=True)
             self.info_callback['exec_json'](self.exec_json(**self.info_dict))
             return 0
 
@@ -207,6 +215,7 @@ class MountSlew(BaseSubCommand):
             self.info_callback['stream_1'](f'{self.id} no coordinates, skipping')
             self.info_callback['stream_5'](f'{self.id}')
             self.skipped = True
+            await self.param['plan_status'].upd_status(id=self.id, field='skipped', value=True)
             self.info_callback['exec_json'](self.exec_json(**self.info_dict))
             logger.info(f'{self.id} {self.name} no coordinates and dither, skipping')
             await self.journal.warning(f'{self.id} {self.name} no coordinates and dither, skipping')

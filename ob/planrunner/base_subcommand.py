@@ -9,9 +9,10 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class BaseSubCommand(AbstractBase):
 
     def __init__(self, id: str, name: str, telescope: 'Telescope',
-                 info_callback: Dict[str, Callable], uobi: int) -> None:
+                 info_callback: Dict[str, Callable], uobi: int, param: Dict[str, Any] or None = None) -> None:
         self.uobi = uobi
-        super().__init__(id=id, name=name, info_callback=info_callback, telescope=telescope, c_type='subcommand')
+        super().__init__(id=id, name=name, info_callback=info_callback,
+                         telescope=telescope, c_type='subcommand', param=param)
         self._mk_folder(self.log_night_folder)
 
     def create_sub_command_string(self, **kw):

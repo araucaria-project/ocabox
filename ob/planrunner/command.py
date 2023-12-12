@@ -324,6 +324,7 @@ class Command(BaseSequence):
                                               telescope=self.telescope,
                                               info_callback=self.info_callback,
                                               az=self.domeflat_dome_az,
+                                              param=self.param,
                                               uobi=self.uobi), id_next=id_next)
 
         # Mount slewing to domeflat position
@@ -335,6 +336,7 @@ class Command(BaseSequence):
                                            az=self.domeflat_mount_az,
                                            tracking=self.tracking,
                                            epoch=self.epoch,
+                                           param=self.param,
                                            uobi=self.uobi
                                            ), id_next=id_next)
 
@@ -344,6 +346,7 @@ class Command(BaseSequence):
                                                      telescope=self.telescope,
                                                      info_callback=self.info_callback,
                                                      light=True,
+                                                     param=self.param,
                                                      uobi=self.uobi), id_next=id_next)
 
         # Open mirror cover
@@ -352,6 +355,7 @@ class Command(BaseSequence):
                                                  telescope=self.telescope,
                                                  info_callback=self.info_callback,
                                                  open=True,
+                                                 param=self.param,
                                                  uobi=self.uobi), id_next=id_next)
 
         # Camera exposure sequences
@@ -364,6 +368,7 @@ class Command(BaseSequence):
                                                       telescope=self.telescope,
                                                       info_callback=self.info_callback,
                                                       filter=seq_data.filter,
+                                                      param=self.param,
                                                       uobi=self.uobi), id_next=id_next)
 
                 for ex in range(1, seq_data.exp_no + 1):
@@ -385,6 +390,7 @@ class Command(BaseSequence):
                                                             auto_exposure=False,
                                                             observer=self.observer,
                                                             seq_data=seq_data,
+                                                            param=self.param,
                                                             uobi=self.uobi), id_next=id_next)
 
         # Turning off light
@@ -393,6 +399,7 @@ class Command(BaseSequence):
                                                      telescope=self.telescope,
                                                      info_callback=self.info_callback,
                                                      light=False,
+                                                     param=self.param,
                                                      uobi=self.uobi), id_next=id_next)
 
         # Close mirror covers
@@ -401,6 +408,7 @@ class Command(BaseSequence):
                                                  telescope=self.telescope,
                                                  info_callback=self.info_callback,
                                                  open=False,
+                                                 param=self.param,
                                                  uobi=self.uobi), id_next=id_next)
 
     def _write_object_skyflat_focusing(self) -> None:
@@ -417,6 +425,7 @@ class Command(BaseSequence):
                                                dec=self.plan_dec,
                                                tracking=self.tracking,
                                                epoch=self.epoch,
+                                               param=self.param,
                                                uobi=self.uobi), id_next=id_next)
 
         # Mount slewing altaz
@@ -429,6 +438,7 @@ class Command(BaseSequence):
                                                az=self.plan_az,
                                                tracking=self.tracking,
                                                epoch=self.epoch,
+                                               param=self.param,
                                                uobi=self.uobi), id_next=id_next)
         # No coordinates - no slewing
         else:
@@ -439,6 +449,7 @@ class Command(BaseSequence):
             id_next = self._add_comp(DomeSlew(id=self._op_id(id_next=id_next),
                                               telescope=self.telescope,
                                               info_callback=self.info_callback,
+                                              param=self.param,
                                               uobi=self.uobi), id_next=id_next)
 
         # Mirror cover
@@ -447,6 +458,7 @@ class Command(BaseSequence):
                                                  telescope=self.telescope,
                                                  info_callback=self.info_callback,
                                                  open=True,
+                                                 param=self.param,
                                                  uobi=self.uobi), id_next=id_next)
 
         # Camera exposure sequences
@@ -459,6 +471,7 @@ class Command(BaseSequence):
                                                       telescope=self.telescope,
                                                       info_callback=self.info_callback,
                                                       filter=seq_data.filter,
+                                                      param=self.param,
                                                       uobi=self.uobi), id_next=id_next)
 
                 for ex in range(1, seq_data.exp_no + 1):
@@ -470,6 +483,7 @@ class Command(BaseSequence):
                                                           telescope=self.telescope,
                                                           info_callback=self.info_callback,
                                                           position=seq_data.focus_position(exp_no=ex),
+                                                          param=self.param,
                                                           uobi=self.uobi), id_next=id_next)
 
                     # Dithering
@@ -484,6 +498,7 @@ class Command(BaseSequence):
                                                            tracking=self.tracking,
                                                            epoch=self.epoch,
                                                            seq_data=seq_data,
+                                                           param=self.param,
                                                            uobi=self.uobi), id_next=id_next)
 
                     # Dome follow between exposures
@@ -492,6 +507,7 @@ class Command(BaseSequence):
                                                           telescope=self.telescope,
                                                           info_callback=self.info_callback,
                                                           seq_data=seq_data,
+                                                          param=self.param,
                                                           uobi=self.uobi), id_next=id_next)
 
                     # Camera exposure
@@ -510,6 +526,7 @@ class Command(BaseSequence):
                                                             auto_exposure=seq_data.auto_exposure,
                                                             observer=self.observer,
                                                             seq_data=seq_data,
+                                                            param=self.param,
                                                             uobi=self.uobi), id_next=id_next)
 
         # Mirror cover close
@@ -518,6 +535,7 @@ class Command(BaseSequence):
                                                  telescope=self.telescope,
                                                  info_callback=self.info_callback,
                                                  open=False,
+                                                 param=self.param,
                                                  uobi=self.uobi), id_next=id_next)
 
     def _write_zero_dark(self) -> None:
@@ -530,6 +548,7 @@ class Command(BaseSequence):
                                                  telescope=self.telescope,
                                                  info_callback=self.info_callback,
                                                  open=False,
+                                                 param=self.param,
                                                  uobi=self.uobi), id_next=id_next)
 
         # Camera exposure sequences
@@ -542,6 +561,7 @@ class Command(BaseSequence):
                                                       telescope=self.telescope,
                                                       info_callback=self.info_callback,
                                                       filter=seq_data.filter,
+                                                      param=self.param,
                                                       uobi=self.uobi), id_next=id_next)
 
                 for ex in range(1, seq_data.exp_no + 1):
@@ -563,6 +583,7 @@ class Command(BaseSequence):
                                                             auto_exposure=False,
                                                             observer=self.observer,
                                                             seq_data=seq_data,
+                                                            param=self.param,
                                                             uobi=self.uobi), id_next=id_next)
 
     def _write_wait(self):
@@ -574,6 +595,7 @@ class Command(BaseSequence):
                                           info_callback=self.info_callback,
                                           key=key,
                                           value=self.kwargs[key],
+                                          param=self.param,
                                           uobi=self.uobi), id_next=id_next)
         else:
             pass
@@ -583,6 +605,7 @@ class Command(BaseSequence):
         id_next = self._add_comp(Stop(id=self._op_id(id_next=id_next),
                                       telescope=self.telescope,
                                       info_callback=self.info_callback,
+                                      param=self.param,
                                       uobi=self.uobi), id_next=id_next)
 
     @staticmethod
@@ -606,6 +629,7 @@ class Command(BaseSequence):
 
     async def arun(self, step_id: str or None = None) -> int:
         self.info_callback['stream_1'](f'Command {self.id} {self.name} started.')
+
         await self.journal.info(f'{self.id} {self.name} started.')
         logger.info(f'{self.id} {self.name} started.')
         d = self.telescope.get_dome()
@@ -645,6 +669,7 @@ class Command(BaseSequence):
         self._cycle_time_data_build.insert_data(name='readoutmode', value=rm1)
         self._cycle_time_data_build.save_to_log()
         self.info_callback['stream_5'](f'{self.id}')
+
         await self.journal.info(f'{self.id} {self.name} done.')
         logger.info(f'{self.id} done')
         return skip

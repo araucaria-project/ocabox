@@ -6,6 +6,7 @@ from ob.planrunner.sequence import Sequence
 from ob.planrunner.cycle_time_calc.cycle_time_data_build import CycleTimeDataBuild
 import random
 
+from ob.planrunner.status import PlanStatus
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -15,12 +16,15 @@ class NightPlan(BaseSequence):
                  info_callback: Dict[str, Callable], param: Dict[str, Any] or None = None) -> None:
         self.sequence_dict = sequence_dict
         self._r_id: int
+        param = param if param is not None else {}
+        param['plan_status'] = PlanStatus(telescope=telescope, info_callback=info_callback)
         super().__init__(id=id, name='NIGHTPLAN', info_callback=info_callback,
                          telescope=telescope, sequence_dict=sequence_dict, c_type='night_plan', param=param)
         self.mount = self.telescope.get_mount()
         self.camera = self.telescope.get_camera()
         self.param['cycle_time'] = self.telescope.get_cycle_time_calculator()
         self.param['cycle_time'].reset_time()
+
         self._get_rm_mode()
         self._get_altaz()
         self._cycle_time_data_build = CycleTimeDataBuild(
@@ -45,6 +49,7 @@ class NightPlan(BaseSequence):
         self.param['cycle_time'].set_telescope_start_az_alt(az=az, alt=alt)
 
     def _set_r_id(self) -> None:
+
         self._r_id =  random.randint(0, 100000000)
 
     def _write_subcomponents(self):
@@ -85,10 +90,7 @@ class NightPlan(BaseSequence):
         self.info_callback['stream_1'](f'{self.id} {self.name} done at: {str(datetime.datetime.utcnow())}')
         await self.journal.info(f'{self.id} {self.name} done at: {str(datetime.datetime.utcnow())}')
         logger.info(f'Night plan {self.id} completed')
-        """
-        if skip == 0:
-            CycleTimeDataClean.data_clean_all()
-            CycleTimeTrain.train_all_telesc_all_commands()"""
+
         return skip
 
     def __del__(self):

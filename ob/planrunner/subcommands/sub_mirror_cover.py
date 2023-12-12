@@ -1,8 +1,7 @@
 import asyncio
 import logging
 from ob.planrunner.base_subcommand import BaseSubCommand
-from typing import Callable, Dict
-
+from typing import Callable, Dict, Any
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -10,11 +9,12 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class MirrorCover(BaseSubCommand):
 
     def __init__(self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable],
-                 open: bool, uobi: int, name: str = 'mirror-cover') -> None:
+                 open: bool, uobi: int, name: str = 'mirror-cover', param: Dict[str, Any] or None = None) -> None:
         self.open = open
         self.ra_now: str or None = None
         self.dec_now: str or None = None
-        super().__init__(id=id, info_callback=info_callback, telescope=telescope, name=name, uobi=uobi)
+        super().__init__(id=id, info_callback=info_callback, telescope=telescope,
+                         name=name, uobi=uobi, param=param)
         self.mount = self.telescope.get_mount('mount')
         self.cover = self.telescope.get_covercalibrator()
         self.info_dict = {'open': self.open}
@@ -31,6 +31,7 @@ class MirrorCover(BaseSubCommand):
 
     async def arun(self, step_id: str or None = None) -> int:
         self.started = True
+        await self.param['plan_status'].upd_status(id=self.id, field='started', value=True)
         inf = f'{self.id} {self.name} started.'
         self.info_callback['exec_json'](self.exec_json(**self.info_dict))
         logger.info(inf)
@@ -55,6 +56,7 @@ class MirrorCover(BaseSubCommand):
             logger.info(inf)
             self.info_callback['stream_5'](f'{self.id}')
             self.done = True
+            await self.param['plan_status'].upd_status(id=self.id, field='done', value=True)
             await self.journal.info(inf)
             self.info_callback['exec_json'](self.exec_json(**self.info_dict))
             return 0
@@ -71,6 +73,7 @@ class MirrorCover(BaseSubCommand):
             inf = f'{self.id} {self.name} closing done.'
             logger.info(inf)
             self.done = True
+            await self.param['plan_status'].upd_status(id=self.id, field='done', value=True)
             await self.journal.info(inf)
             self.info_callback['exec_json'](self.exec_json(**self.info_dict))
             return 0
@@ -78,6 +81,7 @@ class MirrorCover(BaseSubCommand):
             pass
         inf = f'{self.id} {self.name} skipped.'
         self.skipped = True
+        await self.param['plan_status'].upd_status(id=self.id, field='skipped', value=True)
         self.info_callback['exec_json'](self.exec_json(**self.info_dict))
         logger.info(f'{self.id} skipped')
         await self.journal.debug(inf)

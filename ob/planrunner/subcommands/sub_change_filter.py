@@ -1,5 +1,5 @@
 import datetime
-from typing import Callable, Dict
+from typing import Callable, Dict, Any
 import asyncio
 import logging
 from ob.planrunner.base_subcommand import BaseSubCommand
@@ -11,9 +11,10 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class ChangeFilter(BaseSubCommand):
 
     def __init__(self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable],
-                 filter: str, uobi: int,  name: str = 'change-filter') -> None:
+                 filter: str, uobi: int,  name: str = 'change-filter', param: Dict[str, Any] or None = None) -> None:
         self.filter = filter
-        super().__init__(id=id, info_callback=info_callback, telescope=telescope, name=name, uobi=uobi)
+        super().__init__(id=id, info_callback=info_callback, telescope=telescope,
+                         name=name, uobi=uobi, param=param)
         self.filterwheel = self.telescope.get_filterwheel()
         self.info_dict = {'filter': self.filter}
         self.create_sub_command_string(**self.info_dict)
@@ -54,6 +55,7 @@ class ChangeFilter(BaseSubCommand):
         self.info_callback['stream_1'](inf)
         await self.journal.info(inf)
         self.started = True
+        await self.param['plan_status'].upd_status(id=self.id, field='started', value=True)
         self.info_callback['exec_json'](self.exec_json(**self.info_dict))
         filter_dict = await self.filterwheel.aget_names()
         try:
@@ -65,6 +67,7 @@ class ChangeFilter(BaseSubCommand):
             await self.journal.warning(inf)
             self.info_callback['stream_5'](f'{self.id}')
             self.skipped = True
+            await self.param['plan_status'].upd_status(id=self.id, field='skipped', value=True)
             self.info_callback['exec_json'](self.exec_json(**self.info_dict))
             return 1
 
@@ -78,6 +81,7 @@ class ChangeFilter(BaseSubCommand):
             await self.journal.info(inf)
             logger.info(inf)
             self.skipped = True
+            await self.param['plan_status'].upd_status(id=self.id, field='skipped', value=True)
             self.info_callback['exec_json'](self.exec_json(**self.info_dict))
             return 0
 
@@ -90,6 +94,7 @@ class ChangeFilter(BaseSubCommand):
             logger.info(inf)
             await self.journal.error(inf)
             self.skipped = True
+            await self.param['plan_status'].upd_status(id=self.id, field='skipped', value=True)
             self.info_callback['exec_json'](self.exec_json(**self.info_dict))
             return 1
         await self._wait_to_move(pos)
@@ -99,5 +104,6 @@ class ChangeFilter(BaseSubCommand):
         self.info_callback['stream_1'](inf)
         self.info_callback['stream_5'](f'{self.id}')
         self.done = True
+        await self.param['plan_status'].upd_status(id=self.id, field='done', value=True)
         self.info_callback['exec_json'](self.exec_json(**self.info_dict))
         return 0

@@ -19,7 +19,7 @@ class AbstractBase(ABC):
               'pos', 'dither', 'wait', 'ut', 'tracking']
 
     def __init__(self, id: str, name: str, telescope: 'Telescope',
-                 info_callback: Dict[str, Callable], c_type: str) -> None:
+                 info_callback: Dict[str, Callable], c_type: str, param: Dict[str, Any] or None = None) -> None:
         self.id = id
         self.telescope = telescope
         self.info_callback = info_callback
@@ -28,8 +28,10 @@ class AbstractBase(ABC):
         self.started: bool = False
         self.done: bool = False
         self.skipped: bool = False
+        self.param = param if param is not None else {}
         self.journal: MsgJournalPublisher | None = None
         self.get_journal()
+        self.build_status()
         super().__init__()
 
     def journal_subject(self) -> str:
@@ -39,6 +41,12 @@ class AbstractBase(ABC):
 
     def get_journal(self) -> None:
         self.journal = get_journalpublisher(subject=self.journal_subject())
+
+    def build_status(self):
+        self.param['plan_status'].status_dict[self.id] = {
+            'started': self.started,
+            'done': self.done,
+            'skipped': self.skipped}
 
     @property
     def user(self):

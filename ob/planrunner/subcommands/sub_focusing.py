@@ -1,8 +1,7 @@
 import asyncio
 import logging
 from ob.planrunner.base_subcommand import BaseSubCommand
-from typing import Callable, Dict
-
+from typing import Callable, Dict, Any
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -11,9 +10,10 @@ class Focusing(BaseSubCommand):
 
 
     def __init__(self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable],
-                 position: float, uobi: int, name: str = 'focusing') -> None:
+                 position: float, uobi: int, name: str = 'focusing', param: Dict[str, Any] or None = None) -> None:
         self.position = position
-        super().__init__(id=id, info_callback=info_callback, telescope=telescope, name=name, uobi=uobi)
+        super().__init__(id=id, info_callback=info_callback, telescope=telescope,
+                         name=name, uobi=uobi, param=param)
         self.focuser = self.telescope.get_focuser()
         self.info_dict = {'position': self.position}
         self.create_sub_command_string(**self.info_dict)
@@ -32,6 +32,7 @@ class Focusing(BaseSubCommand):
 
     async def arun(self, step_id: str or None = None) -> int:
         self.started = True
+        await self.param['plan_status'].upd_status(id=self.id, field='started', value=True)
         inf = f'{self.id} {self.name} started.'
         logger.info(inf)
         await self.journal.info(inf)
@@ -49,5 +50,6 @@ class Focusing(BaseSubCommand):
         await self.journal.info(inf)
         self.info_callback['stream_5'](f'{self.id}')
         self.done = True
+        await self.param['plan_status'].upd_status(id=self.id, field='done', value=True)
         self.info_callback['exec_json'](self.exec_json())
         return 0

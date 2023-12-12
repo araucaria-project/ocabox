@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import stat
-from typing import Callable, Dict
+from typing import Callable, Dict, Any
 from ob.planrunner.base_subcommand import BaseSubCommand
 from pyaraucaria.fits import fits_header
 from pyaraucaria.date import julian_to_tuple
@@ -24,7 +24,7 @@ class CameraExposure(BaseSubCommand):
     def __init__(self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable], seq_data: 'Seq', uobi: int,
                  type: str, filter: str, light: bool, sub_exp: int, exp_no: int, auto_exposure: bool,
                  epoch: str, observer: str, obj_name: str, req_ra: float or None = None, req_dec: float or None = None,
-                 name: str = 'camera-exposure') -> None:
+                 name: str = 'camera-exposure', param: Dict[str, Any] or None = None) -> None:
 
         self.seq_data = seq_data
         self.type = type
@@ -42,7 +42,8 @@ class CameraExposure(BaseSubCommand):
         self.readout_time: float or None = None
         self.readout_time_start: float or None = None
         self.exp_time_start: str or None = None
-        super().__init__(id=id, info_callback=info_callback, telescope=telescope, name=name, uobi=uobi)
+        super().__init__(id=id, info_callback=info_callback,
+                         telescope=telescope, name=name, uobi=uobi, param=param)
         self.mount = self.telescope.get_mount()
         self.camera = self.telescope.get_camera()
         self.cover = self.telescope.get_covercalibrator()
@@ -504,6 +505,7 @@ class CameraExposure(BaseSubCommand):
                     await self.journal.info(inf)
                     self.info_callback['stream_1'](inf)
                     self.skipped = True
+                    await self.param['plan_status'].upd_status(id=self.id, field='skipped', value=True)
                     self.info_callback['exec_json'](self.exec_json(**self.info_dict))
                     self.seq_data.skip = True
                     return 0, True
@@ -514,6 +516,7 @@ class CameraExposure(BaseSubCommand):
                     await self.journal.info(inf)
                     self.info_callback['stream_1'](inf)
                     self.skipped = True
+                    await self.param['plan_status'].upd_status(id=self.id, field='skipped', value=True)
                     self.info_callback['exec_json'](self.exec_json(**self.info_dict))
                     self.seq_data.skip = True
                     return 0, True
@@ -544,8 +547,10 @@ class CameraExposure(BaseSubCommand):
     async def arun(self, step_id: str or None = None) -> int:
 
         self.started = True
+        await self.param['plan_status'].upd_status(id=self.id, field='started', value=True)
         if self.seq_data.skip:
             self.skipped = True
+            await self.param['plan_status'].upd_status(id=self.id, field='skipped', value=True)
             if self.sub_exp == self.exp_no:
                 self.seq_data.skip = False
             return 0
@@ -594,6 +599,7 @@ class CameraExposure(BaseSubCommand):
         inf = f'{self.id} {self.name} done.'
         logger.debug(inf)
         self.done = True
+        await self.param['plan_status'].upd_status(id=self.id, field='done', value=True)
         self.info_callback['exec_json'](self.exec_json(exp_time=float(exposure_time),
                                                        **self.info_dict))
         await asyncio.sleep(0.2)

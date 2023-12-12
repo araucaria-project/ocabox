@@ -3,8 +3,7 @@ import time
 from ob.planrunner.base_subcommand import BaseSubCommand
 import logging
 import asyncio
-from typing import Callable, Dict
-
+from typing import Callable, Dict, Any
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -12,11 +11,11 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class Wait(BaseSubCommand):
 
     def __init__(self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable],
-                 key: str, value: str, uobi: int, name: str = 'wait') -> None:
+                 key: str, value: str, uobi: int, name: str = 'wait', param: Dict[str, Any] or None = None) -> None:
         self.key = key
         self.value = value
         super().__init__(id=id, info_callback=info_callback,
-                         telescope=telescope, name=name, uobi=uobi)
+                         telescope=telescope, name=name, uobi=uobi, param=param)
         self.info_dict = {'key': self.key, 'value': self.value}
         self.create_sub_command_string(**self.info_dict)
 
@@ -58,6 +57,7 @@ class Wait(BaseSubCommand):
         await self.journal.info(inf)
         logger.info(inf)
         self.started = True
+        await self.param['plan_status'].upd_status(id=self.id, field='started', value=True)
         self.info_callback['exec_json'](self.exec_json(**self.info_dict))
         self.info_callback['stream_1'](inf)
         if self.key == 'wait':
@@ -75,5 +75,6 @@ class Wait(BaseSubCommand):
         self.info_callback['stream_5'](f'{self.id}')
         logger.info(inf)
         self.done = True
+        await self.param['plan_status'].upd_status(id=self.id, field='done', value=True)
         self.info_callback['exec_json'](self.exec_json(**self.info_dict))
         return 0

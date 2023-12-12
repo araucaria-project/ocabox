@@ -3,8 +3,7 @@ import logging
 from ob.planrunner.base_subcommand import BaseSubCommand
 import math
 from pyaraucaria.coordinates import site_sidereal_time, ra_dec_2_az_alt
-from typing import Callable, Dict
-
+from typing import Callable, Dict, Any
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -13,11 +12,13 @@ class DomeSlew(BaseSubCommand):
 
     def __init__(self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable],
                  uobi: int, seq_data: 'Seq' or None = None,
-                 follow_tol: float = 3.0, az: float or None = None, name: str = 'dome-slew') -> None:
+                 follow_tol: float = 3.0, az: float or None = None,
+                 name: str = 'dome-slew', param: Dict[str, Any] or None = None) -> None:
         self.seq_data = seq_data
         self.az = az
         self.follow_tol = follow_tol # TODO take from settings
-        super().__init__(id=id, info_callback=info_callback, telescope=telescope, name=name, uobi=uobi)
+        super().__init__(id=id, info_callback=info_callback, telescope=telescope,
+                         name=name, uobi=uobi, param=param)
         self.dome = self.telescope.get_dome()
         self.mount = self.telescope.get_mount()
         self.info_dict = {'az': self.az, 'follow_tol': self.follow_tol}
@@ -118,9 +119,11 @@ class DomeSlew(BaseSubCommand):
 
     async def arun(self, step_id: str or None = None) -> int:
         self.started = True
+        await self.param['plan_status'].upd_status(id=self.id, field='started', value=True)
         if self.seq_data:
             if self.seq_data.skip:
                 self.skipped = True
+                await self.param['plan_status'].upd_status(id=self.id, field='skipped', value=True)
                 return 0
         self.info_callback['exec_json'](self.exec_json(**self.info_dict))
         logger.info(f'{self.id} started')
@@ -144,6 +147,7 @@ class DomeSlew(BaseSubCommand):
                 logger.info(inf)
                 await self.journal.info(inf)
                 self.skipped = True
+                await self.param['plan_status'].upd_status(id=self.id, field='skipped', value=True)
                 self.info_callback['exec_json'](self.exec_json(**self.info_dict))
                 return 0
             else:
@@ -183,5 +187,6 @@ class DomeSlew(BaseSubCommand):
         self.info_callback['stream_5'](f'{self.id}')
         await self.journal.info(f"{self.id} {self.name} done.")
         self.done = True
+        await self.param['plan_status'].upd_status(id=self.id, field='done', value=True)
         self.info_callback['exec_json'](self.exec_json(**self.info_dict))
         return 0

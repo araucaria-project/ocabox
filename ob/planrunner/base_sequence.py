@@ -11,12 +11,13 @@ class BaseSequence(AbstractBase):
 
     def __init__(self, id: str, name: str, telescope: 'Telescope', sequence_dict: Dict[str, Any],
                  info_callback: Dict[str, Callable], c_type: str, param: Dict[str, Any]) -> None:
-        self.param = param if param is not None else {}
+
         self.subcomponents = {}
         self.sequence_dict = sequence_dict
         self.args: List = []
         self.kwargs: Dict = {}
-        super().__init__(id=id, name=name, telescope=telescope, info_callback=info_callback, c_type=c_type)
+        super().__init__(id=id, name=name, telescope=telescope,
+                         info_callback=info_callback, c_type=c_type, param=param)
 
     def build_args(self, sequence_dict: Dict[Any, Any]) -> None:
         if 'args' in sequence_dict.keys():
@@ -44,6 +45,7 @@ class BaseSequence(AbstractBase):
 
     async def _arun(self, subcomponents: Any, step_id: str or None = None) -> int:
         self.started = True
+        await self.param['plan_status'].upd_status(id=self.id, field='started', value=True)
         self.info_callback['exec_json'](self.exec_json(**self.kwargs))
         for n in subcomponents.keys():
             skip = 0
@@ -56,13 +58,16 @@ class BaseSequence(AbstractBase):
             if skip == 1:
                 self.info_callback['stream_1'](f'{self.id} skipped')
                 self.skipped = True
+                await self.param['plan_status'].upd_status(id=self.id, field='skipped', value=True)
                 self.info_callback['exec_json'](self.exec_json(**self.kwargs))
                 return 0
             if skip == 2:
                 self.skipped = True
+                await self.param['plan_status'].upd_status(id=self.id, field='skipped', value=True)
                 self.info_callback['exec_json'](self.exec_json(**self.kwargs))
                 return 2
         # self.info_callback['stream_1'](f'{self.name} {self.id} done')
         self.done = True
+        await self.param['plan_status'].upd_status(id=self.id, field='done', value=True)
         self.info_callback['exec_json'](self.exec_json(**self.kwargs))
         return 0
