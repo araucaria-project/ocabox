@@ -105,9 +105,9 @@ class CycleTimeCalc(AbstractCycleTime):
         return li
 
     def _get_params(self) -> None:
-        for t in CycleTimeCalc.get_list_telesc(file_type='train_param', base_folder=self.base_folder):
+        for t in CycleTimeCalc.get_list_telesc(file_type='train_param_last', base_folder=self.base_folder):
             self.available_param[t] = {}
-            for co in CycleTimeCalc.get_list_commands(telescope=t, file_type='train_param',
+            for co in CycleTimeCalc.get_list_commands(telescope=t, file_type='train_param_last',
                                                       base_folder=self.base_folder):
                 data = self.get_last_params(telescope=t, command=co)
                 self.available_param[t][co] = data
