@@ -6,8 +6,9 @@ import os
 from pyaraucaria.date import datetime_to_julian
 from datetime import datetime
 import math
-from serverish.messenger import get_journalpublisher
+from serverish.messenger import get_journalpublisher, get_publisher
 from serverish.messenger.msg_journal_pub import MsgJournalPublisher
+from serverish.messenger.msg_publisher import MsgPublisher
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -31,22 +32,29 @@ class AbstractBase(ABC):
         self.param = param if param is not None else {}
         self.journal: MsgJournalPublisher | None = None
         self.get_journal()
-        self.build_status()
+        self.build_plan_status()
         super().__init__()
 
+    @property
     def journal_subject(self) -> str:
         c = self.telescope.observatory.get_app_cfg('nats_subject')
         r = f'{c["journal_root"]}.{self.telescope.id}.{c["tic_comp"]["planner"]}'
         return r
 
-    def get_journal(self) -> None:
-        self.journal = get_journalpublisher(subject=self.journal_subject())
+    def get_status_subject(self, field: str) -> str:
+        c = self.telescope.observatory.get_app_cfg('nats_subject')
+        r = f'{c["status_root"]}.{self.telescope.id}.{c["tic_comp"]["planner"]}.{c["planner_status"][field]}'
+        return r
 
-    def build_status(self):
-        self.param['plan_status'].status_dict[self.id] = {
-            'started': self.started,
-            'done': self.done,
-            'skipped': self.skipped}
+    def get_journal(self) -> None:
+        self.journal = get_journalpublisher(subject=self.journal_subject)
+
+    def get_publisher(self, field: str) -> MsgPublisher:
+        subj = self.get_status_subject(field=field)
+        return get_publisher(subject=subj)
+
+    def build_plan_status(self):
+        self.param['plan_status'].build(id=self.id, name=self.name)
 
     @property
     def user(self):

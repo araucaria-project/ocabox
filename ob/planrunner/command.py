@@ -27,11 +27,13 @@ class Command(BaseSequence):
 
     def __init__(self, id: str, sequence_dict: Dict[Any, Any], telescope: 'Telescope',
                  info_callback: Dict[str, Callable], param: Dict[str, Any] or None = None) -> None:
+
         self._cycle_time_data_build = CycleTimeDataBuild(
             telescope=telescope.id,
             base_folder=telescope.observatory.get_app_cfg(key='base_cycle_time_calc_dir'))
         super().__init__(id=id, name=sequence_dict['command_name'], info_callback=info_callback,
                          telescope=telescope, sequence_dict=sequence_dict, c_type='command', param=param)
+        self.ctc_time = self.ctc_calc_time()
         self.build_args(self.sequence_dict)
         self.build_kwargs(sequence_dict=self.sequence_dict)
         self._write_subcommands()
@@ -45,11 +47,15 @@ class Command(BaseSequence):
                 kw = f'{kw} {n}={self.kwargs[n]}'
         self.info_callback['c_commands'](
             f'{self.id};'f'{self.name};'
-            f' {round(self.param["cycle_time"].calc_time(command_dict=self.sequence_dict))}s;{kw}')
+            f' {round(self.ctc_time)}s;{kw}')
         logger.info(f'{self.id} {self.name} {self.args} {self.kwargs} is written')
+
+    def ctc_calc_time(self) -> float:
+        return self.param["cycle_time"].calc_time(command_dict=self.sequence_dict)
 
     def _write_subcommands(self) -> None:
         self._create_command_string()
+        self.param["plan_status"].upd_time = self.ctc_time
 
         if self.name == 'OBJECT':
             self._write_object_skyflat_focusing()

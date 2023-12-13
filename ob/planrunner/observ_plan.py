@@ -125,7 +125,7 @@ class ObservPlan:
             logger.info(f'Night plan {nightplan_id} is written')
 
     def load_nightplan_string(self, nightplan_id: str, string: str,
-                              overwrite: bool = False, param: Dict[str, Any] or None = None) -> None:
+                              overwrite: bool = False, param: Dict[str, Any] or None = None) -> bool:
         """
         :param nightplan_id: Night plan id (default: julian night date)
         :param string:
@@ -138,13 +138,23 @@ class ObservPlan:
         if self.parsed_plan is not None:
             try:
                 self.write_nightplan(nightplan_id, self.parsed_plan, overwrite=overwrite, param=param)
+                return True
             except CantOverideNightPlanError:
                 logger.warning(f'Cannot overwrite night plan {nightplan_id}, please select overwrite=True')
                 self.info_callback['stream_1'](f'Cannot overwrite night plan {nightplan_id},'
                                                f' please select overwrite=True')
+                return False
             except SequenceTreeError:
                 logger.warning(f'Plan is wrong. Check the syntax.')
                 self.info_callback['stream_1'](f'Warning: Plan have syntax errors.')
+                return False
+
+    async def aload_nightplan_string(self, nightplan_id: str, string: str,
+                                     overwrite: bool = False, param: Dict[str, Any] or None = None) -> None:
+        self.load_nightplan_string(nightplan_id=nightplan_id, string=string, overwrite=overwrite, param=param)
+        np = self.get_nightplan(nightplan_id=nightplan_id)
+        await np.param['plan_status'].send_all_to_nats()
+
 
     def _parse_plan(self) -> None:
         if self.plan_string:
@@ -176,7 +186,8 @@ class ObservPlan:
             self.info_callback['stream_1'](f'Night plan stopped')
             self.tsk = None
         self.tsk = None
-        self.running_nightplan = None
+        # self.running_nightplan = None
+
 
     def get_loop(self) -> Any or None:
         try:
@@ -221,7 +232,9 @@ class ObservPlan:
         self.tsk = None
         if self.running_nightplan in self.subcomponents.keys():
             self.subcomponents[self.running_nightplan].skipped = True
-        self.running_nightplan = None
+        np = self.get_nightplan(nightplan_id=self.running_nightplan)
+        await np.param['plan_status'].upd_status(id=self.running_nightplan, field='skipped', value=True)
+        # self.running_nightplan = None
 
     async def arun_night(self, nightplan_id: str, step_id: str or None = None) -> None:
         await self.subcomponents[nightplan_id].arun(step_id=step_id)

@@ -21,6 +21,8 @@ class BaseSubCommand(AbstractBase):
             for n in kw.keys():
                 if n != 'seq_data':
                     k = f'{k} {n}={kw[n]}'
+                    self.param['plan_status'].upd_static_kwargs(id=self.id, field=n, value=kw[n])
+
         self.info_callback['c_subcommands'](f'{self.id};{self.name};;{k}')
 
     async def arun(self) -> int:

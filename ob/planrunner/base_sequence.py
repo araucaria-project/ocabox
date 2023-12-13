@@ -24,6 +24,7 @@ class BaseSequence(AbstractBase):
             self.args = sequence_dict['args']
         else:
             self.args = []
+        self.param['plan_status'].upd_static_args(id=self.id, args_list=self.args)
 
     def build_kwargs(self, sequence_dict: Dict[str, Any]) -> None:
         if 'kwargs' in sequence_dict.keys():
@@ -36,6 +37,7 @@ class BaseSequence(AbstractBase):
                     logger.warning(f'{self.id} kwarg:{n} wrong name')
                     raise SequenceTreeError
             self.kwargs = sequence_dict['kwargs']
+            self.param['plan_status'].upd_static_kwargs(id=self.id, value=self.kwargs)
         else:
             self.kwargs = {}
 

@@ -22,16 +22,25 @@ class NightPlan(BaseSequence):
                          telescope=telescope, sequence_dict=sequence_dict, c_type='night_plan', param=param)
         self.mount = self.telescope.get_mount()
         self.camera = self.telescope.get_camera()
+        self._cycle_time_data_build = None
+        self._init_cycle_time()
+        self._init_plan_status()
+        self._write_subcomponents()
+        self._set_r_id()
+
+    def _init_cycle_time(self):
         self.param['cycle_time'] = self.telescope.get_cycle_time_calculator()
         self.param['cycle_time'].reset_time()
-
         self._get_rm_mode()
         self._get_altaz()
         self._cycle_time_data_build = CycleTimeDataBuild(
             telescope=self.telescope.id,
             base_folder=self.telescope.observatory.get_app_cfg(key='base_cycle_time_calc_dir'))
-        self._write_subcomponents()
-        self._set_r_id()
+
+    def _init_plan_status(self):
+        self.param['plan_status'].plan_static_publisher = self.get_publisher('plan_static')
+        self.param['plan_status'].plan_status_publisher = self.get_publisher('plan_status')
+        self.param['plan_status'].plan_time_publisher = self.get_publisher('plan_time')
 
     def _get_rm_mode(self):
         crm = self.camera.readoutmode
@@ -49,7 +58,6 @@ class NightPlan(BaseSequence):
         self.param['cycle_time'].set_telescope_start_az_alt(az=az, alt=alt)
 
     def _set_r_id(self) -> None:
-
         self._r_id =  random.randint(0, 100000000)
 
     def _write_subcomponents(self):
