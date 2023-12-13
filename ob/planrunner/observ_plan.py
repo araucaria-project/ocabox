@@ -233,8 +233,9 @@ class ObservPlan:
         self.tsk = None
         if self.running_nightplan in self.subcomponents.keys():
             self.subcomponents[self.running_nightplan].skipped = True
-        np = self.get_nightplan(nightplan_id=self.running_nightplan)
-        await np.param['plan_status'].upd_status(id=self.running_nightplan, field='skipped', value=True)
+        if self.running_nightplan:
+            np = self.get_nightplan(nightplan_id=self.running_nightplan)
+            await np.param['plan_status'].upd_status(id=self.running_nightplan, field='skipped', value=True)
         # self.running_nightplan = None
 
     async def arun_night(self, nightplan_id: str, step_id: str or None = None) -> None:

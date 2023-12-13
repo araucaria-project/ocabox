@@ -65,7 +65,12 @@ class BaseSequence(AbstractBase):
                 return 0
             if skip == 2:
                 self.skipped = True
-                await self.param['plan_status'].upd_status(id=self.id, field='skipped', value=True)
+
+                if self.name == 'STOP':
+                    await self.param['plan_status'].upd_status(id=self.id, field='done', value=True)
+                else:
+                    await self.param['plan_status'].upd_status(id=self.id, field='skipped', value=True)
+
                 self.info_callback['exec_json'](self.exec_json(**self.kwargs))
                 return 2
         # self.info_callback['stream_1'](f'{self.name} {self.id} done')

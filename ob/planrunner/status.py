@@ -15,8 +15,8 @@ class PlanStatus:
         self.plan_time_publisher: MsgPublisher or None = None
         super().__init__()
 
-    def build(self, id: str, name: str) -> None:
-        self.static_dict[id] = {'name': name, 'kwargs': {}, 'args': []}
+    def build(self, id: str, name: str, ctype: str) -> None:
+        self.static_dict[id] = {'name': name, 'ctype':  ctype, 'kwargs': {}, 'args': []}
         self.status_dict[id] = {'started': False, 'done': False, 'skipped': False}
         self.time_dict[id] = {'ctc_time': 0.0}
 
@@ -52,3 +52,6 @@ class PlanStatus:
 
     def upd_static_name(self, id: str, value: str)-> None:
         self.static_dict[id]['name'] = value
+
+    def upd_static_ctype(self, id: str, value: str)-> None:
+        self.static_dict[id]['ctype'] = value

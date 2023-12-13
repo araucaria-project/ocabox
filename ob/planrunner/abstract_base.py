@@ -54,7 +54,7 @@ class AbstractBase(ABC):
         return get_publisher(subject=subj)
 
     def build_plan_status(self):
-        self.param['plan_status'].build(id=self.id, name=self.name)
+        self.param['plan_status'].build(id=self.id, name=self.name, ctype=self.c_type)
 
     @property
     def user(self):
