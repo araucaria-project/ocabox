@@ -55,7 +55,7 @@ class Command(BaseSequence):
 
     def _write_subcommands(self) -> None:
         self._create_command_string()
-        self.param["plan_status"].upd_time = self.ctc_time
+        self.param["plan_status"].upd_time(id=self.id, value=self.ctc_time)
 
         if self.name == 'OBJECT':
             self._write_object_skyflat_focusing()

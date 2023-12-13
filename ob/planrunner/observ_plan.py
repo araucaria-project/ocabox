@@ -204,7 +204,8 @@ class ObservPlan:
         :param step_id: optional, run from specified step, example: '00' or '00_01_02' or '00_02'
         :return: None
         """
-        await self.astop_nightplan()
+        if self.running_nightplan:
+            await self.astop_nightplan()
         if self.get_nightplan(nightplan_id):
             if self.tsk is None:
                 self.running_nightplan = nightplan_id

@@ -140,10 +140,10 @@ client:
           download: 'download'
           guiding: 'guiding'
           pipeline: 'pipeline'
-        tic_comp: #Journal exampl: [journal_root].[tel_id].[tic_component].[planner_sub]
+        tic_comp: #Journal exampl: [journal_root].[tel_id].[tic_comp]
           planner: 'planner'
           guider_handler: 'guider_handler'
-        planner_status:
+        planner_status: #Journal exampl: [status_root].[tel_id].[tic_comp].[plan_static]
           plan_static: 'static'
           plan_status: 'status'
           plan_time: 'time'
