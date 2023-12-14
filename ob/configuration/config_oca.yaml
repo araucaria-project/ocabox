@@ -94,28 +94,28 @@ tree:
           filters :
             - name: u
               position: 0
-              style: {color: #C4B1FC}
+              style: {color: '#C4B1FC'}
             - name: g
               position: 1
-              style: {color: #B1F9FC}
+              style: {color: '#B1F9FC'}
             - name: r
               position: 2
-              style: {color: #FCB1B1}
+              style: {color: '#FCB1B1'}
             - name: i
               position: 3
-              style: {color: #FCB1E7}
+              style: {color: '#FCB1E7'}
             - name: z
               position: 4
-              style: {color: #FEFFD9}
+              style: {color: '#FEFFD9'}
             - name: B
               position: 5
-              style: {color: #627CFC}
+              style: {color: '#627CFC'}
             - name: V
               position: 6
-              style: {color: #62FCAA}
+              style: {color: '#62FCAA'}
             - name: Ic
               position: 7
-              style: {color: #FC62CE}
+              style: {color: '#FC62CE'}
         switch:
           kind: switch
           device_number: 0
@@ -163,54 +163,70 @@ tree:
           filters:
             - name: Empty
               position: 0
-            - name: u_st
+            - name: u_s
               position: 1
-              style: {color: #4C378C}
-            - name: b_st
+              style: {color: '#4C378C'}
+              description: Strömgren u
+            - name: b_s
               position: 2
-              style: {color: #37738C}
-            - name: v_st
+              style: {color: '#37738C'}
+              description: Strömgren b
+            - name: v_s
               position: 3
-              style: {color: #37458C}
-            - name: y_st
+              style: {color: '#37458C'}
+              description: Strömgren v
+            - name: y_s
               position: 4
-              style: {color: #4F8C37}
+              description: Strömgren y
+              style: {color: '#4F8C37'}
             - name: Hb_w
               position: 5
-              style: {color: ##00FCFC}
+              style: {color: '#00FCFC'}
+              description: Hβ wide
             - name: Hb_n
               position: 6
-              style: {color: ##00B3B3}
+              style: {color: '#00B3B3'}
+              description: Hβ narrow
             - name: Ha_w
               position: 7
-              style: {color: ##FF1500}
+              style: {color: '#FF1500'}
+              description: Hɑ wide
             - name: Ha_n
               position: 8
-              style: {color: ##B30F00}
+              style: {color: '#B30F00'}
+              description: Hɑ narrow
             - name: u
               position: 9
-              style: {color: #C4B1FC}
+              style: {color: '#C4B1FC'}
+              description: Sloan u
             - name: g
               position: 10
-              style: {color: #B1F9FC}
+              style: {color: '#B1F9FC'}
+              description: Sloan g
             - name: r
               position: 11
-              style: {color: #FCB1B1}
+              style: {color: '#FCB1B1'}
+              description: Sloan r
             - name: i
               position: 12
-              style: {color: #FCB1E7}
+              style: {color: '#FCB1E7'}
+              description: Sloan i
             - name: z
               position: 13
-              style: {color: #FEFFD9}
+              style: {color: '#FEFFD9'}
+              description: Sloan z
             - name: B
               position: 14
-              style: {color: #627CFC}
+              style: {color: '#627CFC'}
+              description: Johnson B
             - name: V
               position: 15
-              style: {color: #62FCAA}
+              style: {color: '#62FCAA'}
+              description: Johnson V
             - name: Ic
               position: 16
-              style: {color: #FC62CE}
+              style: {color: '#FC62CE'}
+              description: Cousins I
         switch:
           kind: switch
           device_number: 0
