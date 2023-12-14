@@ -91,7 +91,31 @@ tree:
         filterwheel:
           kind: filterwheel
           device_number: 0
-          filters : {u: 0, g: 1, r: 2, i: 3, z: 4, B: 5, V: 6, Ic: 7}  # optional
+          filters :
+            - name: u
+              position: 0
+              style: {color: #C4B1FC}
+            - name: g
+              position: 1
+              style: {color: #B1F9FC}
+            - name: r
+              position: 2
+              style: {color: #FCB1B1}
+            - name: i
+              position: 3
+              style: {color: #FCB1E7}
+            - name: z
+              position: 4
+              style: {color: #FEFFD9}
+            - name: B
+              position: 5
+              style: {color: #627CFC}
+            - name: V
+              position: 6
+              style: {color: #62FCAA}
+            - name: Ic
+              position: 7
+              style: {color: #FC62CE}
         switch:
           kind: switch
           device_number: 0
@@ -136,7 +160,57 @@ tree:
         filterwheel:
           kind: filterwheel
           device_number: 0
-          filters: {Empty: 0, u SG: 1, b SG: 2, v SG: 3, y SG: 4, Hb_w: 5, Hb_n: 6, Ha_w: 7, Ha_n: 8, u: 9, g: 10, r: 11, i: 12, z: 13, B: 14, V: 15, iC: 16}  # optional
+          filters:
+            - name: Empty
+              position: 0
+            - name: u_st
+              position: 1
+              style: {color: #4C378C}
+            - name: b_st
+              position: 2
+              style: {color: #37738C}
+            - name: v_st
+              position: 3
+              style: {color: #37458C}
+            - name: y_st
+              position: 4
+              style: {color: #4F8C37}
+            - name: Hb_w
+              position: 5
+              style: {color: ##00FCFC}
+            - name: Hb_n
+              position: 6
+              style: {color: ##00B3B3}
+            - name: Ha_w
+              position: 7
+              style: {color: ##FF1500}
+            - name: Ha_n
+              position: 8
+              style: {color: ##B30F00}
+            - name: u
+              position: 9
+              style: {color: #C4B1FC}
+            - name: g
+              position: 10
+              style: {color: #B1F9FC}
+            - name: r
+              position: 11
+              style: {color: #FCB1B1}
+            - name: i
+              position: 12
+              style: {color: #FCB1E7}
+            - name: z
+              position: 13
+              style: {color: #FEFFD9}
+            - name: B
+              position: 14
+              style: {color: #627CFC}
+            - name: V
+              position: 15
+              style: {color: #62FCAA}
+            - name: Ic
+              position: 16
+              style: {color: #FC62CE}
         switch:
           kind: switch
           device_number: 0

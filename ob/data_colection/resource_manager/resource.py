@@ -160,8 +160,13 @@ class FilterwheelAlpaca(Resource):
         f = self._properties.get("filters", 0)
         # if filters is defined in settings
         if f and isinstance(f, dict):
+            logger.warning('Filters defined in config as a dict name->pos. This is obsolete, change for list of dicts')
             self.filters = f
             return
+        elif f and isinstance(f, list):  # new convention, TODO: maybe store additional filter info? (or del this TODO)
+            self.filters = {x['name']: x['position'] for x in f}
+            logger.info(f'Filters loaded from conf: {self.filters}')
+
         # if filters is not defined in settings - get from alpaca
         try:
             result = await api.get_async(address=f"{self.adr}.names")
