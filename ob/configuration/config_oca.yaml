@@ -21,6 +21,7 @@ tree:
       epoch: 2000
       protocol: alpaca
       address: http://wk06-tcu.oca.lan:11111/api/v1
+      style: { color: '#14AD4E' }  # green
       components:
         mount:
           kind: telescope
@@ -63,6 +64,7 @@ tree:
       epoch: 2000
       protocol: alpaca
       address: http://zb08-tcu.oca.lan:11111/api/v1
+      style: { color: '#0082E8' }  # blue
       components:
         mount:
           kind: telescope
@@ -132,6 +134,7 @@ tree:
       epoch: 2000
       protocol: alpaca
       address: http://jk15-tcu.oca.lan:11111/api/v1
+      style: { color: '#67F4F5' }  # cyan
       components:
         mount:
           kind: telescope
@@ -243,6 +246,7 @@ tree:
       epoch: 2000
       protocol: alpaca
       address: http://wg25-tcu.oca.lan:11111/api/v1
+      style: { color: '#FF8C00' }  # orange
       components:
         mount:
           kind: telescope
@@ -284,6 +288,7 @@ tree:
       elev: 2817  # m      protocol: alpaca
       epoch: 2000
       address: http://iris-tcu.oca.lan:11111/api/v1
+      style: { color: '#FF2F13' }  # red
       components:
         mount:
           kind: telescope
@@ -326,6 +331,7 @@ tree:
       epoch: 2000
       protocol: alpaca
       address: http://docker.oca.lan:8089/api/v1
+      style: { color: '#808080' }  # magenta
       components:
         mount:
           kind: telescope
@@ -365,6 +371,7 @@ tree:
       epoch: 2000
       protocol: alpaca
       address: http://localhost:80/api/v1
+      style: { color: '#FF00FF' }  # magenta
       components:
         mount:
           kind: telescope
