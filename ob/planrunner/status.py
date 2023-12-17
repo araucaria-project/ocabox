@@ -18,7 +18,7 @@ class PlanStatus:
     def build(self, id: str, name: str, ctype: str) -> None:
         self.static_dict[id] = {'name': name, 'ctype':  ctype, 'kwargs': {}, 'args': []}
         self.status_dict[id] = {'started': False, 'done': False, 'skipped': False}
-        self.time_dict[id] = {'ctc_time': 0.0, 'real_time': 0.0,}
+        self.time_dict[id] = {'ctc_time': 0.0, 'real_time': 0.0}
 
     async def reset(self)-> None:
         self.static_dict = {}
@@ -41,7 +41,7 @@ class PlanStatus:
         self.time_dict[id]['ctc_time']= value
 
     async def upd_real_time(self, id: str, value: float) -> None:
-        self.time_dict[id]['real_time']= value
+        self.time_dict[id]['real_time'] = value
         await self.send_to_nats(self.plan_time_publisher, self.time_dict)
 
     def upd_static_kwargs(self, id: str, value: Any, field: str or None = None) -> None:
