@@ -18,10 +18,10 @@ class CycleTimeDataClean(AbstractCycleTime):
         full_nights_id = {}
         line_started = None
         for n, m in enumerate(data, start=0):
-            if m['command_name'] =='Night plan' and 'done' not in m.keys():
+            if m['command_name'] == 'NIGHTPLAN' and 'done' not in m.keys():
                 random_id = m['random_id']
                 line_started = n
-            if m['command_name'] =='Night plan' and 'done' in m.keys() and random_id == m['random_id']:
+            if m['command_name'] == 'NIGHTPLAN' and 'done' in m.keys() and random_id == m['random_id']:
                 line_ended = n
                 full_nights_id[random_id] = {'started': line_started,
                                              'ended':line_ended,
