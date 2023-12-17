@@ -1,0 +1,57 @@
+from typing import Dict, Any
+from serverish.messenger.msg_publisher import MsgPublisher
+
+
+class PlanStatus:
+
+    def __init__(self, telescope: 'Telescope', info_callback) -> None:
+        self.telescope = telescope
+        self.info_callback = info_callback
+        self.static_dict: Dict = {}
+        self.time_dict: Dict = {}
+        self.status_dict: Dict = {}
+        self.plan_static_publisher: MsgPublisher or None = None
+        self.plan_status_publisher: MsgPublisher or None = None
+        self.plan_time_publisher: MsgPublisher or None = None
+        super().__init__()
+
+    def build(self, id: str, name: str, ctype: str) -> None:
+        self.static_dict[id] = {'name': name, 'ctype':  ctype, 'kwargs': {}, 'args': []}
+        self.status_dict[id] = {'started': False, 'done': False, 'skipped': False}
+        self.time_dict[id] = {'ctc_time': 0.0}
+
+    async def reset(self)-> None:
+        self.static_dict = {}
+        self.plan_time = {}
+        self.plan_status = {}
+
+    async def send_all_to_nats(self)-> None:
+        await self.send_to_nats(publisher=self.plan_static_publisher, data=self.static_dict)
+        await self.send_to_nats(publisher=self.plan_status_publisher, data=self.status_dict)
+        await self.send_to_nats(publisher=self.plan_time_publisher, data=self.time_dict)
+
+    async def send_to_nats(self, publisher: MsgPublisher, data: Dict)-> None:
+        await publisher.publish(data=data)
+
+    async def upd_status(self, id: str, field: str, value: bool)-> None:
+        self.status_dict[id][field] = value
+        await self.send_to_nats(self.plan_status_publisher, self.status_dict)
+
+    def upd_time(self, id: str, value: float, field: str = 'ctc_time')-> None:
+        self.time_dict[id][field]= value
+
+    def upd_static_kwargs(self, id: str, value: Any, field: str or None = None) -> None:
+        if isinstance(value, dict):
+            self.static_dict[id]['kwargs'] = self.static_dict[id]['kwargs'] | value
+        else:
+            self.static_dict[id]['kwargs'][field] = value
+
+    def upd_static_args(self, id: str, args_list: list) -> None:
+        for n in args_list:
+            self.static_dict[id]['args'].append(n)
+
+    def upd_static_name(self, id: str, value: str)-> None:
+        self.static_dict[id]['name'] = value
+
+    def upd_static_ctype(self, id: str, value: str)-> None:
+        self.static_dict[id]['ctype'] = value

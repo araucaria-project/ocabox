@@ -47,3 +47,8 @@ class ObservationPlan:
     def is_nightplan_running(self, nightplan_id: str) -> bool:
         return self.observ.is_nightplan_running(nightplan_id=nightplan_id)
 
+    async def aload_nightplan_string(self, nightplan_id: str, string: str, overwrite: bool = False,
+                                     param: Dict[str, Any] or None = None):
+        await self.observ.aload_nightplan_string(nightplan_id=nightplan_id, string=string,
+                                                 overwrite=overwrite, param=param)
+

@@ -33,7 +33,7 @@ client:
     delay: 0.1  # extra, not used by ocabox
     max_missed_msg: 3  # extra, not used by ocabox
     app:
-      base_fits_dir: ~/Desktop
+      base_fits_dir: /data/fits/
       base_log_toi_dir: ~/.oca/log_toi
       base_cycle_time_calc_dir: /data/misc/cycle_time_calc
       base_log_night_dir: ~/.oca/log_night
@@ -42,20 +42,27 @@ client:
         rpc_root: 'tic.rpc'
         journal_root: 'tic.journal'
         status_root: 'tic.status'
+        discovery_root: 'tic.discovery'
         service_name:
           download: 'download'
           guiding: 'guiding'
           pipeline: 'pipeline'
+        tic_comp: #Journal exampl: [journal_root].[tel_id].[tic_component].[planner_sub]
+          planner: 'planner'
+          guider_handler: 'guider_handler'
+        planner_status:
+          plan_static: 'static'
+          plan_status: 'status'
+          plan_time: 'time'
+          camera_exposure: 'camera_exposure'
         rpc_service_alive: 'alive' #Rpc service alive subject: [rpc_root].[tel_id].[service_name].[rpc_service_alive]
             # e.g.: tic.rpc.zb08.pipeline.alive
             # e.g.: tic.pipeline.zb08.alive  {timestamp: 2021-03-04T12:00:00.000000Z, next_alvie: 2021-03-04T12:00:00.000000Z, status: 1}
-        #
-        rpc_service_health: 'health' #Rpc service alive subject: [rpc_root].[tel_id].[service_name].[rpc_service_health]
+        service_health: 'health' #Rpc service health subject: [rpc_root].[tel_id].[service_name].[service_health]
             # e.g. tic.rpc.zb08.pipeline.health
             # e.g. tic.pipeline.zb08.rpc.health
             # STREM RPC TIC:  tic.*.(*).rpc.>  oraz
             # e.g. tic.rpc.tits.health
-        status_service_discovery: 'discovery' #Rpc service alive subject: [rpc_root].[tel_id].[service_name].[rpc_service_alive]
             # tic.discovery.zb08.pipeline
             # tic.discovery.zb08.tcu.tmeperture
             # discovery.>
@@ -73,7 +80,7 @@ client:
     delay: 0.1  # extra, not used by ocabox
     max_missed_msg: 3  # extra, not used by ocabox
     app:
-      base_fits_dir: ~/Desktop
+      base_fits_dir: /data/fits/
       base_log_textui_dir: ~/.oca/log_textui
       base_cycle_time_calc_dir: /data/misc/cycle_time_calc
       base_log_night_dir: ~/.oca/log_night
@@ -82,11 +89,31 @@ client:
         rpc_root: 'tic.rpc'
         journal_root: 'tic.journal'
         status_root: 'tic.status'
+        discovery_root: 'tic.discovery'
         service_name:
           download: 'download'
           guiding: 'guiding'
           pipeline: 'pipeline'
+        tic_comp: #Journal exampl: [journal_root].[tel_id].[tic_component].[planner_sub]
+          planner: 'planner'
+          guider_handler: 'guider_handler'
+        planner_status:
+          plan_static: 'static'
+          plan_status: 'status'
+          plan_time: 'time'
+          camera_exposure: 'camera_exposure'
         rpc_service_alive: 'alive' #Rpc service alive subject: [rpc_root].[tel_id].[service_name].[rpc_service_alive]
+        # e.g.: tic.rpc.zb08.pipeline.alive
+        # e.g.: tic.pipeline.zb08.alive  {timestamp: 2021-03-04T12:00:00.000000Z, next_alvie: 2021-03-04T12:00:00.000000Z, status: 1}
+        service_health: 'health' #Rpc service health subject: [rpc_root].[tel_id].[service_name].[service_health]
+          # e.g. tic.rpc.zb08.pipeline.health
+          # e.g. tic.pipeline.zb08.rpc.health
+          # STREM RPC TIC:  tic.*.(*).rpc.>  oraz
+          # e.g. tic.rpc.tits.health
+          # tic.discovery.zb08.pipeline
+          # tic.discovery.zb08.tcu.tmeperture
+        # discovery.>
+        # oca.discovery
       nats_host: nats.oca.lan
       nats_port: 4222
 
@@ -100,7 +127,7 @@ client:
     delay: 0.1  # extra, not used by ocabox
     max_missed_msg: 3  # extra, not used by ocabox
     app:
-      base_fits_dir: ~/Desktop
+      base_fits_dir: /data/fits/
       base_cycle_time_calc_dir: /data/misc/cycle_time_calc
       base_log_night_dir: ~/.oca/log_night
       base_program_dir: ~/Desktop
@@ -108,11 +135,31 @@ client:
         rpc_root: 'tic.rpc'
         journal_root: 'tic.journal'
         status_root: 'tic.status'
+        discovery_root: 'tic.discovery'
         service_name:
           download: 'download'
           guiding: 'guiding'
           pipeline: 'pipeline'
+        tic_comp: #Journal exampl: [journal_root].[tel_id].[tic_comp]
+          planner: 'planner'
+          guider_handler: 'guider_handler'
+        planner_status: #Journal exampl: [status_root].[tel_id].[tic_comp].[plan_static]
+          plan_static: 'static'
+          plan_status: 'status'
+          plan_time: 'time'
+          camera_exposure: 'camera_exposure'
         rpc_service_alive: 'alive' #Rpc service alive subject: [rpc_root].[tel_id].[service_name].[rpc_service_alive]
+        # e.g.: tic.rpc.zb08.pipeline.alive
+        # e.g.: tic.pipeline.zb08.alive  {timestamp: 2021-03-04T12:00:00.000000Z, next_alvie: 2021-03-04T12:00:00.000000Z, status: 1}
+        service_health: 'health' #Rpc service health subject: [rpc_root].[tel_id].[service_name].[service_health]
+          # e.g. tic.rpc.zb08.pipeline.health
+          # e.g. tic.pipeline.zb08.rpc.health
+          # STREM RPC TIC:  tic.*.(*).rpc.>  oraz
+          # e.g. tic.rpc.tits.health
+          # tic.discovery.zb08.pipeline
+          # tic.discovery.zb08.tcu.tmeperture
+        # discovery.>
+        # oca.discovery
       nats_host: nats.oca.lan
       nats_port: 4222
 

@@ -1,20 +1,24 @@
-
 from typing import Dict, List
-from pyaraucaria.coordinates import az_alt_2_ra_dec, ra_to_decimal, dec_to_decimal, deg_to_decimal_deg
+import logging
 import random
+
+
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class Seq:
 
     """
-    Class representing camera single sequence parameters
+    Class representing camera single sequence
     """
 
-    def __init__(self, seq: str, parent: 'Command'):
-        self._seq: str = seq
+    def __init__(self,
+                 seq: str,
+                 command_kwargs: Dict,
+                 ):
+        self.seq: str = seq
         self._focus_id: int or None = None
-        self.parent_kwargs: Dict = parent.kwargs
-        self.parent: 'Command' = parent
+        self.command_kwargs: Dict = command_kwargs
         self.skip = False
         self.set_focus_id()
 
@@ -22,19 +26,6 @@ class Seq:
     def site_coo(self) -> Dict[str, float]:
         # TODO Take this from settings
         return {'latitude': -24.598056, 'longitude': -70.196389, 'elevation': 2817}
-
-    @property
-    def if_radec(self) -> bool:
-        if self.parent.plan_ra and self.parent.plan_dec:
-            return True
-        else:
-            return False
-
-    def if_altaz(self) -> bool:
-        if self.parent.plan_az and self.parent.plan_alt:
-            return True
-        else:
-            return False
 
     @property
     def focus_id(self) -> int or None:
@@ -49,8 +40,8 @@ class Seq:
         Input format focus_target/focus_step
         :return: [focus_target/focus_step]
         """
-        if 'pos' in self.parent_kwargs.keys():
-            return list(self.parent_kwargs['pos'].split('/'))
+        if 'pos' in self.command_kwargs.keys():
+            return list(self.command_kwargs['pos'].split('/'))
         else:
             return None
 
@@ -93,7 +84,7 @@ class Seq:
 
     @property
     def seq_list(self) -> List[str]:
-        return list(self._seq.split('/'))
+        return list(self.seq.split('/'))
 
     @property
     def exp_no(self) -> int:
@@ -120,11 +111,11 @@ class Seq:
     @property
     def dither_list(self) -> List[str] or None:
         # [dither_mode, dither_every_sub, dither_distance]
-        if 'dither' in self.parent_kwargs.keys():
-            if self.parent_kwargs['dither'] == 'off':
+        if 'dither' in self.command_kwargs.keys():
+            if self.command_kwargs['dither'] == 'off':
                 return None
             else:
-                return list(self.parent_kwargs['dither'].split('/'))
+                return list(self.command_kwargs['dither'].split('/'))
         else:
             return None
 
@@ -153,7 +144,7 @@ class Seq:
             return 8.0
 
     def dither_this_exp(self, ex: int) -> bool:
-        if (ex % self.dither_every_sub == 0) and self.parent.dither_on and (ex > 0):
+        if ((ex % self.dither_every_sub) == 0):
             return True
         else:
             return False
