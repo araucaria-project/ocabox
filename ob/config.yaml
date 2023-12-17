@@ -43,6 +43,7 @@ client:
         journal_root: 'tic.journal'
         status_root: 'tic.status'
         discovery_root: 'tic.discovery'
+        telemetry_davis: 'telemetry.weather.davis'
         service_name:
           download: 'download'
           guiding: 'guiding'
@@ -90,6 +91,7 @@ client:
         journal_root: 'tic.journal'
         status_root: 'tic.status'
         discovery_root: 'tic.discovery'
+        telemetry_davis: 'telemetry.weather.davis'
         service_name:
           download: 'download'
           guiding: 'guiding'
@@ -136,6 +138,7 @@ client:
         journal_root: 'tic.journal'
         status_root: 'tic.status'
         discovery_root: 'tic.discovery'
+        telemetry_davis: 'telemetry.weather.davis'
         service_name:
           download: 'download'
           guiding: 'guiding'
