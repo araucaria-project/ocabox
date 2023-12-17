@@ -65,6 +65,11 @@ class CycleTimeTrain(AbstractCycleTime):
                                    folder=base_folder,
                                    file_name=CycleTimeTrain.train_param_file_name(telescope=telescope,
                                                                                   command=command))
+        CycleTimeTrain.add_to_file(data=CycleTimeTrain.encode_data(data=dat),
+                                   folder=base_folder,
+                                   file_name=CycleTimeTrain.train_param_last_file_name(telescope=telescope,
+                                                                                       command=command),
+                                   mode='w')
         logger.debug(f'Save train parameters for telescope:{telescope} command:{command}')
 
     @staticmethod

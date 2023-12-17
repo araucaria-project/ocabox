@@ -1,26 +1,22 @@
 import asyncio
 import logging
-from ob.planrunner.subcommand import SubCommand
+from ob.planrunner.base_subcommand import BaseSubCommand
+from typing import Callable, Dict, Any
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
-class Focusing(SubCommand):
+class Focusing(BaseSubCommand):
 
 
-    def __init__(self, id: str, parent: 'Command', subcommand_name: str = 'focusing', **kwargs) -> None:
-        self.subcommand_name = subcommand_name
-        self.telescope = parent.telescope
-        self.id = id
+    def __init__(self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable],
+                 position: float, uobi: int, name: str = 'focusing', param: Dict[str, Any] or None = None) -> None:
+        self.position = position
+        super().__init__(id=id, info_callback=info_callback, telescope=telescope,
+                         name=name, uobi=uobi, param=param)
         self.focuser = self.telescope.get_focuser()
-        self.kwargs = kwargs
-        self.ra_now: str or None = None
-        self.dec_now: str or None = None
-        self.started: bool = False
-        self.done: bool = False
-        self.skipped: bool = False
-        super().__init__(id=id, parent=parent, subcommand_name=subcommand_name,
-                         started=self.started, done=self.done, skipped=self.skipped, **kwargs)
+        self.info_dict = {'position': self.position}
+        self.create_sub_command_string(**self.info_dict)
 
     async def _wait_for_move(self, position) -> None:
         # TODO focuser_value get from config
@@ -36,23 +32,24 @@ class Focusing(SubCommand):
 
     async def arun(self, step_id: str or None = None) -> int:
         self.started = True
-        logger.info(f'{self.id} started')
+        await self.param['plan_status'].upd_status(id=self.id, field='started', value=True)
+        inf = f'{self.id} {self.name} started.'
+        logger.info(inf)
+        await self.journal.info(inf)
+
+        self.info_callback['exec_json'](self.exec_json(**self.info_dict))
+        inf = f'{self.id} {self.name} moving to {self.position}.'
+        self.info_callback['stream_1'](inf)
+        await self.journal.debug(inf)
+        logger.debug(inf)
+        await self.focuser.aput_move(int(self.position))
+        await self._wait_for_move(self.position)
+        inf = f'{self.id} {self.name} done.'
+        logger.info(inf)
+        self.info_callback['stream_1'](inf)
+        await self.journal.info(inf)
+        self.info_callback['stream_5'](f'{self.id}')
+        self.done = True
+        await self.param['plan_status'].upd_status(id=self.id, field='done', value=True)
         self.info_callback['exec_json'](self.exec_json())
-        if 'position' in self.kwargs.keys():
-            position = self.kwargs['position']
-            self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} moving to {position}')
-            logger.debug(f'{self.id} {self.subcommand_name} moving to {position}')
-            await self.focuser.aput_move(int(position))
-            await self._wait_for_move(position)
-            logger.info(f'{self.id} done')
-            self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
-            self.info_callback['stream_5'](f'{self.id}')
-            self.done = True
-            self.info_callback['exec_json'](self.exec_json())
-            return 0
-        else:
-            self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} skipping - no position')
-            logger.info(f'{self.id} skipping: no position set')
-            self.skipped = True
-            self.info_callback['exec_json'](self.exec_json())
-            return 0
+        return 0

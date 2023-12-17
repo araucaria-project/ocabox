@@ -1,25 +1,23 @@
 import datetime
 import time
-from ob.planrunner.subcommand import SubCommand
+from ob.planrunner.base_subcommand import BaseSubCommand
 import logging
 import asyncio
-
+from typing import Callable, Dict, Any
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
-class Wait(SubCommand):
+class Wait(BaseSubCommand):
 
-    def __init__(self, id: str, parent: 'Command', subcommand_name: str = 'wait', **kwargs) -> None:
-        self.subcommand_name = subcommand_name
-        self.telescope = parent.telescope
-        self.kwargs = kwargs
-        self.id = id
-        self.started: bool = False
-        self.done: bool = False
-        self.skipped: bool = False
-        super().__init__(id=id, parent=parent, subcommand_name=subcommand_name,
-                         started=self.started, done=self.done, skipped=self.skipped, **kwargs)
+    def __init__(self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable],
+                 key: str, value: str, uobi: int, name: str = 'wait', param: Dict[str, Any] or None = None) -> None:
+        self.key = key
+        self.value = value
+        super().__init__(id=id, info_callback=info_callback,
+                         telescope=telescope, name=name, uobi=uobi, param=param)
+        self.info_dict = {'key': self.key, 'value': self.value}
+        self.create_sub_command_string(**self.info_dict)
 
     async def _wait_exec(self, value: float) -> None:
         await asyncio.sleep(value)
@@ -48,31 +46,35 @@ class Wait(SubCommand):
                 break
             await asyncio.sleep(0)
 
-    async def _wait_sunrise_exec(self, value: float) -> None:
+    async def _wait_sunrise_exec(self, value: str) -> None:
         pass
 
-    async def _wait_sunset_exec(self, value: float) -> None:
+    async def _wait_sunset_exec(self, value: str) -> None:
         pass
 
     async def arun(self, step_id: str or None = None) -> int:
-        logger.info(f'{self.id} started')
+        inf = f'{self.id} {self.name} {self.key} {self.value} started.'
+        await self.journal.info(inf)
+        logger.info(inf)
         self.started = True
-        self.info_callback['exec_json'](self.exec_json())
-        self.info_callback['stream_1'](f"{self.id} {self.subcommand_name} {self.kwargs['key']} started")
-        logger.info(f'{self.id} started')
-        if self.kwargs['key'] == 'wait':
-            await self._wait_exec(float(self.kwargs['value']))
-        elif self.kwargs['key'] == 'ut':
-            await self._ut_exec(self.kwargs['value'])
-        elif self.kwargs['key'] == 'wait_sunrise':
-            await self._wait_sunrise_exec(self.kwargs['value'])
-        elif self.kwargs['key'] == 'wait_sunset':
-            await self._wait_sunset_exec(self.kwargs['value'])
+        await self.param['plan_status'].upd_status(id=self.id, field='started', value=True)
+        self.info_callback['exec_json'](self.exec_json(**self.info_dict))
+        self.info_callback['stream_1'](inf)
+        if self.key == 'wait':
+            await self._wait_exec(float(self.value))
+        elif self.key == 'ut':
+            await self._ut_exec(self.value)
+        elif self.key == 'wait_sunrise':
+            await self._wait_sunrise_exec(self.value)
+        elif self.key == 'wait_sunset':
+            await self._wait_sunset_exec(self.value)
         else:
             pass
-        self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
+        inf = f'{self.id} {self.name} done.'
+        self.info_callback['stream_1'](inf)
         self.info_callback['stream_5'](f'{self.id}')
-        logger.info(f'{self.id} done')
+        logger.info(inf)
         self.done = True
-        self.info_callback['exec_json'](self.exec_json())
+        await self.param['plan_status'].upd_status(id=self.id, field='done', value=True)
+        self.info_callback['exec_json'](self.exec_json(**self.info_dict))
         return 0
