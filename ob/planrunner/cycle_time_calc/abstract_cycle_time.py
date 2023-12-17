@@ -18,7 +18,8 @@ class AbstractCycleTime(ABC):
     """
 
     FILE_NAMES = {'raw_data': 'raw_data.txt', 'clean_data': 'clean_data.txt',
-                  'night_verif': 'night_verif.txt', 'train_param': 'train_param.txt'}
+                  'night_verif': 'night_verif.txt', 'train_param': 'train_param.txt',
+                  'train_param_last': 'train_param_last.txt'}
 
     RM_MODES_MHZ = {"zb08": [5, 3, 1, 0.05],
                     "jk15": [4, 2, 1, 1, 0.1, 0.1],
@@ -85,6 +86,10 @@ class AbstractCycleTime(ABC):
         return f'{telescope}_{command}_{AbstractCycleTime.FILE_NAMES["train_param"]}'
 
     @staticmethod
+    def train_param_last_file_name(telescope: str, command: str) -> str:
+        return f'{telescope}_{command}_{AbstractCycleTime.FILE_NAMES["train_param_last"]}'
+
+    @staticmethod
     def parse_data(data: str) -> List:
         ret = []
         s = data.split('\n')
@@ -103,9 +108,9 @@ class AbstractCycleTime(ABC):
                          f'please create folder manually and grant permissions')
 
     @staticmethod
-    def add_to_file(data: str, folder: str, file_name: str) -> None:
+    def add_to_file(data: str, folder: str, file_name: str, mode: str = "a") -> None:
         try:
-            f = open(os.path.join(folder, file_name), "a", encoding='utf-8')
+            f = open(os.path.join(folder, file_name), mode, encoding='utf-8')
             f.write(f'{data}')
             f.write('\n')
             f.close()

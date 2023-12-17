@@ -6,39 +6,55 @@ import os
 from pyaraucaria.date import datetime_to_julian
 from datetime import datetime
 import math
-from serverish.messenger import get_journalpublisher
+from serverish.messenger import get_journalpublisher, get_publisher
 from serverish.messenger.msg_journal_pub import MsgJournalPublisher
+from serverish.messenger.msg_publisher import MsgPublisher
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
-class BaseCommand(ABC):
+class AbstractBase(ABC):
 
     COMMAND_NAMES = ['SKYFLAT', 'FOCUS', 'DOMEFLAT', 'DARK', 'ZERO', 'OBJECT', 'WAIT', 'STOP', 'SNAP', 'SEQUENCE']
     KWARGS = ['uobi', 'dome_follow', 'epoch', 'mirror_cover', 'observer', 'screen_light', 'az', 'alt', 'seq',
               'pos', 'dither', 'wait', 'ut', 'tracking']
 
     def __init__(self, id: str, name: str, telescope: 'Telescope',
-                 info_callback: Dict[str, Callable], c_type: str, kwargs) -> None:
+                 info_callback: Dict[str, Callable], c_type: str, param: Dict[str, Any] or None = None) -> None:
         self.id = id
         self.telescope = telescope
         self.info_callback = info_callback
         self.name = name
-        self.kwargs = kwargs
         self.c_type: str = c_type
         self.started: bool = False
         self.done: bool = False
         self.skipped: bool = False
+        self.param = param if param is not None else {}
         self.journal: MsgJournalPublisher | None = None
+        self.get_journal()
+        self.build_plan_status()
         super().__init__()
 
+    @property
     def journal_subject(self) -> str:
         c = self.telescope.observatory.get_app_cfg('nats_subject')
         r = f'{c["journal_root"]}.{self.telescope.id}.{c["tic_comp"]["planner"]}'
         return r
 
-    def get_journal(self, tel_id) -> None:
-        self.journal = get_journalpublisher(subject=self.journal_subject())
+    def get_status_subject(self, field: str) -> str:
+        c = self.telescope.observatory.get_app_cfg('nats_subject')
+        r = f'{c["status_root"]}.{self.telescope.id}.{c["tic_comp"]["planner"]}.{c["planner_status"][field]}'
+        return r
+
+    def get_journal(self) -> None:
+        self.journal = get_journalpublisher(subject=self.journal_subject)
+
+    def get_publisher(self, field: str) -> MsgPublisher:
+        subj = self.get_status_subject(field=field)
+        return get_publisher(subject=subj)
+
+    def build_plan_status(self):
+        self.param['plan_status'].build(id=self.id, name=self.name, ctype=self.c_type)
 
     @property
     def user(self):
@@ -94,11 +110,11 @@ class BaseCommand(ABC):
 
     @staticmethod
     def get_jd_now() -> float:
-        return BaseCommand.get_julian_date(datetime.utcnow())
+        return AbstractBase.get_julian_date(datetime.utcnow())
 
     @property
     def log_file_name(self) -> str:
-        return f'log_night_{math.floor(BaseCommand.get_jd_now())}.txt'
+        return f'log_night_{math.floor(AbstractBase.get_jd_now())}.txt'
 
     def _add_to_log_night(self, log_line: Dict[str, Any], filter: Dict[str, Any] = None) -> None:
         put = True
@@ -121,15 +137,17 @@ class BaseCommand(ABC):
     def exec_json(self, **kw) -> Dict[str, Any]:
         ex_js = {}
         if kw:
-            if len(kw)>0:
-                for n in kw.keys():
-                    if n != 'seq_data':
-                        ex_js[n] = kw[n]
-        if self.kwargs:
-            if len(self.kwargs) > 0:
-                for n in self.kwargs.keys():
-                    if n != 'seq_data':
-                        ex_js[n] = self.kwargs[n]
+            for n in kw.keys():
+                if n != 'seq_data':
+                    ex_js[n] = kw[n]
+
+
+        # if self.kwargs:
+        #     if len(self.kwargs) > 0:
+        #         for n in self.kwargs.keys():
+        #             if n != 'seq_data':
+        #                 ex_js[n] = self.kwargs[n]
+
         ex_js['id'] = self.id
         ex_js['name'] = self.name
         ex_js['started'] = self.started
