@@ -1,4 +1,5 @@
 import logging
+import time
 from typing import Dict, Any, List, Callable
 from ob.planrunner.base_sequence import BaseSequence
 from ob.planrunner.subcommands.sub_mount_slew import MountSlew
@@ -55,7 +56,7 @@ class Command(BaseSequence):
 
     def _write_subcommands(self) -> None:
         self._create_command_string()
-        self.param["plan_status"].upd_time(id=self.id, value=self.ctc_time)
+        self.param["plan_status"].upd_ctc_time(id=self.id, value=self.ctc_time)
 
         if self.name == 'OBJECT':
             self._write_object_skyflat_focusing()
@@ -634,8 +635,8 @@ class Command(BaseSequence):
             return f_pos
 
     async def arun(self, step_id: str or None = None) -> int:
+        t_0 = time.time()
         self.info_callback['stream_1'](f'Command {self.id} {self.name} started.')
-
         await self.journal.info(f'{self.id} {self.name} started.')
         logger.info(f'{self.id} {self.name} started.')
         d = self.telescope.get_dome()
@@ -675,7 +676,7 @@ class Command(BaseSequence):
         self._cycle_time_data_build.insert_data(name='readoutmode', value=rm1)
         self._cycle_time_data_build.save_to_log()
         self.info_callback['stream_5'](f'{self.id}')
-
         await self.journal.info(f'{self.id} {self.name} done.')
         logger.info(f'{self.id} done')
+        await self.param['plan_status'].upd_real_time(id=self.id, value=time.time() - t_0)
         return skip
