@@ -61,6 +61,7 @@ class FilterWheel(TelescopeComponent):
         else:
             dev_dict = {}
 
+        # TODO: To już jest w konfigu
         filters_temp = {'zb08': {'u': 0, 'g': 1, 'r': 2, 'i': 3, 'z': 4, 'B': 5, 'V': 6, 'Ic': 7},
                         'jk15': {'empty': 0, 'u_s': 1, 'b_s': 2, 'v_s': 3, 'y_s': 4,
                                  'Hb_w': 5, 'Hb_n': 6, 'Ha_w': 7, 'Ha_n': 8,

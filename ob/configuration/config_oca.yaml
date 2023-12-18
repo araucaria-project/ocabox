@@ -21,6 +21,7 @@ tree:
       epoch: 2000
       protocol: alpaca
       address: http://wk06-tcu.oca.lan:11111/api/v1
+      style: { color: '#14AD4E' }  # green
       components:
         mount:
           kind: telescope
@@ -63,6 +64,7 @@ tree:
       epoch: 2000
       protocol: alpaca
       address: http://zb08-tcu.oca.lan:11111/api/v1
+      style: { color: '#0082E8' }  # blue
       components:
         mount:
           kind: telescope
@@ -91,7 +93,31 @@ tree:
         filterwheel:
           kind: filterwheel
           device_number: 0
-          filters : {u: 0, g: 1, r: 2, i: 3, z: 4, B: 5, V: 6, Ic: 7}  # optional
+          filters :
+            - name: u
+              position: 0
+              style: {color: '#C4B1FC'}
+            - name: g
+              position: 1
+              style: {color: '#B1F9FC'}
+            - name: r
+              position: 2
+              style: {color: '#FCB1B1'}
+            - name: i
+              position: 3
+              style: {color: '#FCB1E7'}
+            - name: z
+              position: 4
+              style: {color: '#FEFFD9'}
+            - name: B
+              position: 5
+              style: {color: '#627CFC'}
+            - name: V
+              position: 6
+              style: {color: '#62FCAA'}
+            - name: Ic
+              position: 7
+              style: {color: '#FC62CE'}
         switch:
           kind: switch
           device_number: 0
@@ -108,6 +134,7 @@ tree:
       epoch: 2000
       protocol: alpaca
       address: http://jk15-tcu.oca.lan:11111/api/v1
+      style: { color: '#67F4F5' }  # cyan
       components:
         mount:
           kind: telescope
@@ -136,7 +163,73 @@ tree:
         filterwheel:
           kind: filterwheel
           device_number: 0
-          filters: {Empty: 0, u SG: 1, b SG: 2, v SG: 3, y SG: 4, Hb_w: 5, Hb_n: 6, Ha_w: 7, Ha_n: 8, u: 9, g: 10, r: 11, i: 12, z: 13, B: 14, V: 15, iC: 16}  # optional
+          filters:
+            - name: Empty
+              position: 0
+            - name: u_s
+              position: 1
+              style: {color: '#4C378C'}
+              description: Strömgren u
+            - name: b_s
+              position: 2
+              style: {color: '#37738C'}
+              description: Strömgren b
+            - name: v_s
+              position: 3
+              style: {color: '#37458C'}
+              description: Strömgren v
+            - name: y_s
+              position: 4
+              description: Strömgren y
+              style: {color: '#4F8C37'}
+            - name: Hb_w
+              position: 5
+              style: {color: '#00FCFC'}
+              description: Hβ wide
+            - name: Hb_n
+              position: 6
+              style: {color: '#00B3B3'}
+              description: Hβ narrow
+            - name: Ha_w
+              position: 7
+              style: {color: '#FF1500'}
+              description: Hɑ wide
+            - name: Ha_n
+              position: 8
+              style: {color: '#B30F00'}
+              description: Hɑ narrow
+            - name: u
+              position: 9
+              style: {color: '#C4B1FC'}
+              description: Sloan u
+            - name: g
+              position: 10
+              style: {color: '#B1F9FC'}
+              description: Sloan g
+            - name: r
+              position: 11
+              style: {color: '#FCB1B1'}
+              description: Sloan r
+            - name: i
+              position: 12
+              style: {color: '#FCB1E7'}
+              description: Sloan i
+            - name: z
+              position: 13
+              style: {color: '#FEFFD9'}
+              description: Sloan z
+            - name: B
+              position: 14
+              style: {color: '#627CFC'}
+              description: Johnson B
+            - name: V
+              position: 15
+              style: {color: '#62FCAA'}
+              description: Johnson V
+            - name: Ic
+              position: 16
+              style: {color: '#FC62CE'}
+              description: Cousins I
         switch:
           kind: switch
           device_number: 0
@@ -153,6 +246,7 @@ tree:
       epoch: 2000
       protocol: alpaca
       address: http://wg25-tcu.oca.lan:11111/api/v1
+      style: { color: '#FF8C00' }  # orange
       components:
         mount:
           kind: telescope
@@ -194,6 +288,7 @@ tree:
       elev: 2817  # m      protocol: alpaca
       epoch: 2000
       address: http://iris-tcu.oca.lan:11111/api/v1
+      style: { color: '#FF2F13' }  # red
       components:
         mount:
           kind: telescope
@@ -236,6 +331,7 @@ tree:
       epoch: 2000
       protocol: alpaca
       address: http://docker.oca.lan:8089/api/v1
+      style: { color: '#808080' }  # magenta
       components:
         mount:
           kind: telescope
@@ -275,6 +371,7 @@ tree:
       epoch: 2000
       protocol: alpaca
       address: http://localhost:80/api/v1
+      style: { color: '#FF00FF' }  # magenta
       components:
         mount:
           kind: telescope
