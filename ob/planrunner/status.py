@@ -4,9 +4,8 @@ from serverish.messenger.msg_publisher import MsgPublisher
 
 class PlanStatus:
 
-    def __init__(self, telescope: 'Telescope', info_callback) -> None:
+    def __init__(self, telescope: 'Telescope') -> None:
         self.telescope = telescope
-        self.info_callback = info_callback
         self.static_dict: Dict = {}
         self.time_dict: Dict = {}
         self.status_dict: Dict = {}

@@ -17,7 +17,7 @@ class NightPlan(BaseSequence):
         self.sequence_dict = sequence_dict
         self._r_id: int
         param = param if param is not None else {}
-        param['plan_status'] = PlanStatus(telescope=telescope, info_callback=info_callback)
+        param['plan_status'] = PlanStatus(telescope=telescope)
         super().__init__(id=id, name='NIGHTPLAN', info_callback=info_callback,
                          telescope=telescope, sequence_dict=sequence_dict, c_type='night_plan', param=param)
         self.mount = self.telescope.get_mount()

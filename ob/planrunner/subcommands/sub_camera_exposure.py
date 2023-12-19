@@ -38,10 +38,12 @@ class CameraExposure(BaseSubCommand):
         self.obj_name = obj_name
         self.req_ra = req_ra
         self.req_dec = req_dec
-
+        self.target_folder: str or None = None
+        self.symlinks: List = []
         self.readout_time: float or None = None
         self.readout_time_start: float or None = None
         self.exp_time_start: str or None = None
+        self.fits_file_name: str or None = None
         super().__init__(id=id, info_callback=info_callback,
                          telescope=telescope, name=name, uobi=uobi, param=param)
         self.mount = self.telescope.get_mount()
@@ -50,12 +52,7 @@ class CameraExposure(BaseSubCommand):
         self.filter_wheel = self.telescope.get_filterwheel()
         self.focuser = self.telescope.get_focuser()
         self.rotator = self.telescope.get_rotator()
-        self.base_fits_folder = os.path.expanduser(self.telescope.observatory.get_app_cfg('base_fits_dir'))
-        self.folder = os.path.join(self.base_fits_folder, f'{self.telescope.id}')
-        self.folder_focusing = os.path.join(self.folder, f'focus')
-        self._mk_folder(self.folder)
-        self._mk_folder(self.folder_focusing)
-        os.chmod(self.folder_focusing, os.stat(self.folder_focusing).st_mode | stat.S_IWOTH)
+
         self.info_dict = {
             'type': self.type,
             'filter': filter,
@@ -120,29 +117,35 @@ class CameraExposure(BaseSubCommand):
     def _get_today_fits_folder_name(self) -> str:
         return f"{math.floor(self.get_oca_date(self.get_julian_date(str(datetime.utcnow())))):04.0f}"
 
+    def _get_fits_file_name(self):
+        if self.type == 'snap':
+            self.fits_file_name = f'snap'
+        else:
+            jd = self.get_julian_date(self.exp_time_start)
+            jd_oca = f"{self.get_oca_date(jd):010.5f}"
+            self.fits_file_name = f'{self.telescope.id}c_{jd_oca.split(".")[0]}_{jd_oca.split(".")[1]}'
+
     @property
     def rpc_subject(self) -> str:
         cfg = self.telescope.observatory.get_app_cfg('nats_subject')
         return f"{cfg['rpc_root']}.{self.telescope.id}.{cfg['service_name']['download']}"
 
     def rpc_data(self, fits_id: str, header: Dict, req: str,
-                 file_location: str, mean_points_no_stats: int, dtyp: str, symlink_location: str) -> Dict:
+                mean_points_no_stats: int, dtyp: str) -> Dict:
         return {
             'telescope_id': self.telescope.id,
             'ts': dt_utcnow_array(),
             'request': req,
             'fits_id': fits_id,
-            'file_location': file_location,
+            'file_location': self.target_folder,
             'dtyp': dtyp,
             'mean_points_no_stats': mean_points_no_stats,
-            'symlink_location': symlink_location,
+            'symlinks': self.symlinks,
             'header': header}
 
     async def rpc_request(self,
                           fits_id: str,
                           header: Dict,
-                          file_location: str,
-                          symlink_location: str,
                           req: str = 'fits_download',
                           mean_points_no_stats: int = 100,
                           dtyp: str = 'sideint16',
@@ -152,10 +155,11 @@ class CameraExposure(BaseSubCommand):
         logger.debug(inf)
         await self.journal.debug(inf)
         dat, met = await request(subject=self.rpc_subject,
-                                 data=self.rpc_data(fits_id=fits_id, header=header,
-                                                    file_location=file_location, req=req,
+                                 data=self.rpc_data(fits_id=fits_id,
+                                                    header=header,
+                                                    req=req,
                                                     mean_points_no_stats=mean_points_no_stats,
-                                                    dtyp=dtyp, symlink_location=symlink_location),
+                                                    dtyp=dtyp),
                                  timeout=timeout)
 
         inf = f'{self.id} {self.name} rpc response received.'
@@ -163,60 +167,98 @@ class CameraExposure(BaseSubCommand):
         await self.journal.debug(inf)
         return dat
 
-    def _provide_target_folder(self) -> str:
+    @property
+    def fits_main_folder(self) -> str:
+        base_fits_folder = os.path.expanduser(self.telescope.observatory.get_app_cfg('base_fits_dir'))
+        return os.path.join(base_fits_folder, f'{self.telescope.id}')
+
+    @property
+    def fits_focus_folder(self) -> str:
+        return os.path.join(self.fits_main_folder, f'focus')
+
+    def _get_folders_and_symlinks(self) -> None:
         if self.type == 'focusing':
-            lst = os.listdir(self.folder_focusing)
-            lst_2 = [int(n) for n in lst if re.fullmatch(r'\d{6}', n)]
-            if len(lst_2) == 0:
-                num_last = -1
+            if self.seq_data.focus_folder:
+                self.target_folder = self.seq_data.focus_folder
             else:
-                num_last = max(lst_2)
-            num = num_last + 1
-            if os.path.exists(os.path.join(self.folder_focusing, f'{num_last:06d}', f'{self.seq_data.focus_id}')):
-                target_folder = os.path.join(self.folder_focusing, f'{num_last:06d}')
-                os.chmod(target_folder, os.stat(target_folder).st_mode | stat.S_IWOTH)
-            else:
-                target_folder_name = f'{num:06d}'
-                target_folder = os.path.join(self.folder_focusing, target_folder_name)
-                self._mk_folder(target_folder)
-                os.chmod(target_folder, os.stat(target_folder).st_mode | stat.S_IWOTH)
-                open(os.path.join(target_folder, f'{self.seq_data.focus_id}'), 'a').close()
-                if os.path.exists(os.path.join(self.folder_focusing, f'actual')):
-                    os.remove(os.path.join(self.folder_focusing, f'actual'))
-                self._mk_symlink(target=f'./{target_folder_name}', symlink=os.path.join(self.folder_focusing,
-                                                                                        f'actual'))
+                try:
+                    lst = os.listdir(self.fits_focus_folder)
+                except FileNotFoundError:
+                    lst = []
+                lst_2 = [int(n) for n in lst if re.fullmatch(r'\d{6}', n)]
+                if len(lst_2) == 0:
+                    num_last = -1
+                else:
+                    num_last = max(lst_2)
+                num = num_last + 1
+                ff_name = f'{num:06d}'
+                self.target_folder = os.path.join(self.fits_focus_folder, ff_name)
+                self.seq_data.focus_folder = self.target_folder
+                self.symlinks.append({'target': f'./{ff_name}',
+                                      'symlink': os.path.join(self.fits_focus_folder, f'actual')})
+            self.symlinks.append({'target': os.path.join(self.target_folder, f'{self.fits_file_name}.fits'),
+                                  'symlink': os.path.join(self.fits_main_folder, 'last_shoot.fits')})
+
+                # if os.path.exists(os.path.join(self.fits_focus_folder, f'{num_last:06d}', f'{self.seq_data.focus_id}')):
+                #     self.target_folder = os.path.join(self.fits_focus_folder, f'{num_last:06d}')
+                #     #os.chmod(target_folder, os.stat(target_folder).st_mode | stat.S_IWOTH)
+                # else:
+                #     target_folder_name = f'{num:06d}'
+                #     self.target_folder = os.path.join(self.fits_focus_folder, target_folder_name)
+                # self._mk_folder(target_folder)
+                #     #os.chmod(target_folder, os.stat(target_folder).st_mode | stat.S_IWOTH)
+                #     open(os.path.join(target_folder, f'{self.seq_data.focus_id}'), 'a').close()
+                #     if os.path.exists(os.path.join(self.fits_focus_folder, f'actual')):
+                #         os.remove(os.path.join(self.fits_focus_folder, f'actual'))
+                #     symlinks.append({'target': f'./{target_folder_name}',
+                #                      'symlink': os.path.join(self.fits_focus_folder, f'actual')})
+                #     self._mk_symlink(target=f'./{target_folder_name}', symlink=os.path.join(self.fits_focus_folder,
+                #                                                                             f'actual'))
 
         elif self.type == 'snap':
-            target_folder = self.folder
+            self.target_folder = self.fits_main_folder
+            self.symlinks.append({'target': f'./{self.fits_file_name}.fits',
+                                  'symlink': os.path.join(self.fits_main_folder, 'last_shoot.fits')})
         else:
             today_symlink_name = self._get_today_symlink_name()
             today_fits_folder_name = self._get_today_fits_folder_name()
-            target_folder = os.path.join(self.folder, f'{today_fits_folder_name}')
+            self.target_folder = os.path.join(self.fits_main_folder, f'{today_fits_folder_name}')
+            self.symlinks.append({'target': f'./{today_fits_folder_name}',
+                                  'symlink': os.path.join(self.fits_main_folder, f'actual')})
+            self.symlinks.append({'target': f'./{today_fits_folder_name}',
+                                  'symlink': os.path.join(self.fits_main_folder, today_symlink_name)})
+            self.symlinks.append({'target': f'./{today_fits_folder_name}/{self.fits_file_name}.fits',
+                                  'symlink': os.path.join(self.fits_main_folder, 'last_shoot.fits')})
 
-            # Create today fits folder name (last 4 digits of julian date)
-            if not os.path.exists(target_folder):
-                self._mk_folder(target_folder)
-            os.chmod(target_folder, os.stat(target_folder).st_mode | stat.S_IWOTH)
 
-            # Create actual symlink to today fits folder
-            if os.path.exists(os.path.join(self.folder, f'actual')):
-                if not os.readlink(os.path.join(self.folder, f'actual')) == target_folder:
-                    os.remove(os.path.join(self.folder, f'actual'))
-                    self._mk_symlink(target=f'./{today_fits_folder_name}', symlink=os.path.join(self.folder, f'actual'))
-            else:
-                self._mk_symlink(target=f'./{today_fits_folder_name}', symlink=os.path.join(self.folder, f'actual'))
-
-            # Create date friendly format symlink to today fits folder
-            if not os.path.exists(os.path.join(self.folder, today_symlink_name)):
-                self._mk_symlink(target=f'./{today_fits_folder_name}', symlink=os.path.join(self.folder,
-                                                                                            today_symlink_name))
-
-        return target_folder
+            # # Create today fits folder name (last 4 digits of julian date)
+            # if not os.path.exists(target_folder):
+            #     self._mk_folder(target_folder)
+            # os.chmod(target_folder, os.stat(target_folder).st_mode | stat.S_IWOTH)
+            #
+            # # Create actual symlink to today fits folder
+            # if os.path.exists(os.path.join(self.fits_main_folder, f'actual')):
+            #     if not os.readlink(os.path.join(self.fits_main_folder, f'actual')) == target_folder:
+            #         os.remove(os.path.join(self.fits_main_folder, f'actual'))
+            #         symlinks.append({'target': f'./{today_fits_folder_name}',
+            #                          'symlink': os.path.join(self.fits_main_folder, f'actual')})
+            #         #self._mk_symlink(target=f'./{today_fits_folder_name}', symlink=os.path.join(self.fits_main_folder, f'actual'))
+            # else:
+            #     symlinks.append({'target': f'./{today_fits_folder_name}',
+            #                      'symlink': os.path.join(self.fits_main_folder, f'actual')})
+            #     #self._mk_symlink(target=f'./{today_fits_folder_name}', symlink=os.path.join(self.fits_main_folder, f'actual'))
+            #
+            # # Create date friendly format symlink to today fits folder
+            # if not os.path.exists(os.path.join(self.fits_main_folder, today_symlink_name)):
+            #     symlinks.append({'target': f'./{today_fits_folder_name}',
+            #                      'symlink': os.path.join(self.fits_main_folder, today_symlink_name)})
+            #     # self._mk_symlink(target=f'./{today_fits_folder_name}', symlink=os.path.join(self.fits_main_folder,
+            #     #                                                                             today_symlink_name))
 
     async def _wait_for_save_fits(self, sub: int, sub_time: float) -> bool:
 
-        jd = self.get_julian_date(self.exp_time_start)
-        jd_oca = f"{self.get_oca_date(jd):010.5f}"
+        self._get_fits_file_name()
+        self._get_folders_and_symlinks()
 
         gainmode = await self.value_proof_get(name='fitsh_cam_gain',
                                               awaitab=self.camera.aget_gain,
@@ -255,7 +297,7 @@ class CameraExposure(BaseSubCommand):
             obs_elev=OCA['elevation'],
             tel_id=str(self.telescope.id),
             utc_now=str(self.exp_time_start.isoformat(sep='T', timespec='auto')),
-            jd=jd,
+            jd=self.get_julian_date(self.exp_time_start),
             req_ra=req_ra,
             req_dec=req_dec,
             epoch=self.epoch,
@@ -292,10 +334,7 @@ class CameraExposure(BaseSubCommand):
             read_mod=readoutmode,
             gain_mod=gainmode
         )
-        if self.type == 'snap':
-            file_name = f'snap'
-        else:
-            file_name = f'{self.telescope.id}c_{jd_oca.split(".")[0]}_{jd_oca.split(".")[1]}'
+
 
         # array = await self.value_proof_get(name='fits_get_array',
         #                                    awaitab=self.camera.aget_imagearray, expect_type=list)
@@ -304,9 +343,7 @@ class CameraExposure(BaseSubCommand):
         #                     dtyp=self.array_bits(rmmode=readoutmode))
         try:
             # Add file_location, dtyp, symlink_location parameters on no-test
-            dat = await self.rpc_request(fits_id=file_name,
-                                         file_location=self.target_folder,
-                                         symlink_location=self.folder,
+            dat = await self.rpc_request(fits_id=self.fits_file_name,
                                          header=header,
                                          dtyp=self.array_bits(rmmode=readoutmode))
         except (MessengerRequestNoResponders, MessengerRequestNoResponse, MessengerRequestTimeout):
@@ -432,8 +469,6 @@ class CameraExposure(BaseSubCommand):
 
             try:
                 dat = await self.rpc_request(fits_id=f'{round((time.time())*10)}'[-7:],
-                                             file_location=self.target_folder,
-                                             symlink_location=self.folder,
                                              header={},
                                              req='stats_only')
             except (MessengerRequestNoResponders, MessengerRequestNoResponse, MessengerRequestTimeout):
@@ -557,7 +592,6 @@ class CameraExposure(BaseSubCommand):
         inf = f'{self.id} {self.name} started.'
         logger.debug(inf)
         await self.journal.debug(inf)
-        self.target_folder = self._provide_target_folder()
 
         exposure_time = self.seq_data.exp_time
 
@@ -575,8 +609,8 @@ class CameraExposure(BaseSubCommand):
                                                        n_exp=self.sub_exp,
                                                        **self.info_dict,
                                                        exp_time=float(exposure_time)))
-        self.exp_time_start = datetime.utcnow()
         self.readout_time_start = time.time()
+        self.exp_time_start = datetime.utcnow()
         await self.camera.aput_startexposure(float(exposure_time), self.light)
         await self._wait_for_subexposure(float(exposure_time))
         self.readout_time = time.time() - self.readout_time_start - float(exposure_time)
