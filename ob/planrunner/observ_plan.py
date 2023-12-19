@@ -133,6 +133,7 @@ class ObservPlan:
         :return:
         """
         # TODO keep nightplans in settings, only load plans for night, else delete from memory.
+        # TODO write to journal from observ_plan
         self.plan_string = string
         self._parse_plan()
         if self.parsed_plan is not None:
@@ -153,8 +154,11 @@ class ObservPlan:
                                      overwrite: bool = False, param: Dict[str, Any] or None = None) -> None:
         self.load_nightplan_string(nightplan_id=nightplan_id, string=string, overwrite=overwrite, param=param)
         np = self.get_nightplan(nightplan_id=nightplan_id)
-        await np.param['plan_status'].send_all_to_nats()
-
+        if np is not None:
+            await np.param['plan_status'].send_all_to_nats()
+        else:
+            logger.warning(f'Plan is not created. Check the syntax.')
+            self.info_callback['stream_1'](f'Warning: Plan have syntax errors.')
 
     def _parse_plan(self) -> None:
         if self.plan_string:
