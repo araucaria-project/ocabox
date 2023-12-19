@@ -19,6 +19,7 @@ class Seq:
         self.seq: str = seq
         self._focus_id: int or None = None
         self.command_kwargs: Dict = command_kwargs
+        self.focus_folder: str or None = None
         self.skip = False
         self.set_focus_id()
 
