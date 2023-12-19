@@ -32,10 +32,8 @@ class BaseSequence(AbstractBase):
                 if n in self.KWARGS:
                     pass
                 else:
-                    if self.info_callback:
-                        self.info_callback['stream_1'](f'Warning: {self.id} kwarg:{n} wrong name')
-                    logger.warning(f'{self.id} kwarg:{n} wrong name')
-                    raise SequenceTreeError
+                    self.info_callback['stream_1'](f'Warning: {self.id} kwarg:{n} wrong name')
+                    logger.error(f'{self.id} kwarg:{n} not in allowed list.')
             self.kwargs = sequence_dict['kwargs']
             self.param['plan_status'].upd_static_kwargs(id=self.id, value=self.kwargs)
         else:

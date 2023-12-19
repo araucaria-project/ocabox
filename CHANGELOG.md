@@ -1,7 +1,11 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [Unreleased
+
+### Changed
+- `sub_camera_exposure` folders creation and symlinks moved to ofp
+- `nightplan` add comment use
 
 ## [1.0.16]
 
