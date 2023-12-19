@@ -67,18 +67,6 @@ class CameraExposure(BaseSubCommand):
             'req_dec': req_dec}
         self.create_sub_command_string(**self.info_dict)
 
-
-    @staticmethod
-    def _mk_symlink(target: str, symlink: str):
-        os.symlink(src=target, dst=symlink, dir_fd = None)
-
-    def indexing_value(self, value, values):
-        if isinstance(value, int) and isinstance(values, list):
-            data = values[value]
-        else:
-            data = str(value)
-        return data
-
     @staticmethod
     def get_oca_date(jd: float) -> float:
         return jd - 2460000
@@ -198,23 +186,6 @@ class CameraExposure(BaseSubCommand):
                                       'symlink': os.path.join(self.fits_focus_folder, f'actual')})
             self.symlinks.append({'target': os.path.join(self.target_folder, f'{self.fits_file_name}.fits'),
                                   'symlink': os.path.join(self.fits_main_folder, 'last_shoot.fits')})
-
-                # if os.path.exists(os.path.join(self.fits_focus_folder, f'{num_last:06d}', f'{self.seq_data.focus_id}')):
-                #     self.target_folder = os.path.join(self.fits_focus_folder, f'{num_last:06d}')
-                #     #os.chmod(target_folder, os.stat(target_folder).st_mode | stat.S_IWOTH)
-                # else:
-                #     target_folder_name = f'{num:06d}'
-                #     self.target_folder = os.path.join(self.fits_focus_folder, target_folder_name)
-                # self._mk_folder(target_folder)
-                #     #os.chmod(target_folder, os.stat(target_folder).st_mode | stat.S_IWOTH)
-                #     open(os.path.join(target_folder, f'{self.seq_data.focus_id}'), 'a').close()
-                #     if os.path.exists(os.path.join(self.fits_focus_folder, f'actual')):
-                #         os.remove(os.path.join(self.fits_focus_folder, f'actual'))
-                #     symlinks.append({'target': f'./{target_folder_name}',
-                #                      'symlink': os.path.join(self.fits_focus_folder, f'actual')})
-                #     self._mk_symlink(target=f'./{target_folder_name}', symlink=os.path.join(self.fits_focus_folder,
-                #                                                                             f'actual'))
-
         elif self.type == 'snap':
             self.target_folder = self.fits_main_folder
             self.symlinks.append({'target': f'./{self.fits_file_name}.fits',
@@ -229,31 +200,6 @@ class CameraExposure(BaseSubCommand):
                                   'symlink': os.path.join(self.fits_main_folder, today_symlink_name)})
             self.symlinks.append({'target': f'./{today_fits_folder_name}/{self.fits_file_name}.fits',
                                   'symlink': os.path.join(self.fits_main_folder, 'last_shoot.fits')})
-
-
-            # # Create today fits folder name (last 4 digits of julian date)
-            # if not os.path.exists(target_folder):
-            #     self._mk_folder(target_folder)
-            # os.chmod(target_folder, os.stat(target_folder).st_mode | stat.S_IWOTH)
-            #
-            # # Create actual symlink to today fits folder
-            # if os.path.exists(os.path.join(self.fits_main_folder, f'actual')):
-            #     if not os.readlink(os.path.join(self.fits_main_folder, f'actual')) == target_folder:
-            #         os.remove(os.path.join(self.fits_main_folder, f'actual'))
-            #         symlinks.append({'target': f'./{today_fits_folder_name}',
-            #                          'symlink': os.path.join(self.fits_main_folder, f'actual')})
-            #         #self._mk_symlink(target=f'./{today_fits_folder_name}', symlink=os.path.join(self.fits_main_folder, f'actual'))
-            # else:
-            #     symlinks.append({'target': f'./{today_fits_folder_name}',
-            #                      'symlink': os.path.join(self.fits_main_folder, f'actual')})
-            #     #self._mk_symlink(target=f'./{today_fits_folder_name}', symlink=os.path.join(self.fits_main_folder, f'actual'))
-            #
-            # # Create date friendly format symlink to today fits folder
-            # if not os.path.exists(os.path.join(self.fits_main_folder, today_symlink_name)):
-            #     symlinks.append({'target': f'./{today_fits_folder_name}',
-            #                      'symlink': os.path.join(self.fits_main_folder, today_symlink_name)})
-            #     # self._mk_symlink(target=f'./{today_fits_folder_name}', symlink=os.path.join(self.fits_main_folder,
-            #     #                                                                             today_symlink_name))
 
     async def _wait_for_save_fits(self, sub: int, sub_time: float) -> bool:
 
@@ -335,14 +281,7 @@ class CameraExposure(BaseSubCommand):
             gain_mod=gainmode
         )
 
-
-        # array = await self.value_proof_get(name='fits_get_array',
-        #                                    awaitab=self.camera.aget_imagearray, expect_type=list)
-        #stat = fits_stat(array, size=100, median=False, std=False, min=False, max=False)
-        #save_fits_from_array(array, self.target_folder, file_name, header, overwrite=True,
-        #                     dtyp=self.array_bits(rmmode=readoutmode))
         try:
-            # Add file_location, dtyp, symlink_location parameters on no-test
             dat = await self.rpc_request(fits_id=self.fits_file_name,
                                          header=header,
                                          dtyp=self.array_bits(rmmode=readoutmode))
@@ -403,21 +342,11 @@ class CameraExposure(BaseSubCommand):
             await asyncio.sleep(0.1)
 
     async def get_array_autoexp(self, test_exp_time: float) -> List:
-        #if self.telescope.id == 'dev':
-        #    test_mode = True
-        #else:
-        #    test_mode = False
-        #if not test_mode:
         await self.camera.aput_startexposure(test_exp_time, self.light)
         await self._wait_for_subexposure(test_exp_time)
         return await self.value_proof_get(name='autoexp_get_array',
                                          awaitab=self.camera.aget_imagearray,
                                          expect_type=list)
-        #else:
-        #    with open(os.path.expanduser('~/.oca/camera_sim.txt'), 'r') as f:
-        #        arr = json.load(f)
-        #        f.close()
-        #        return arr
 
     async def _autoexposure_exec(self) -> Tuple[float, bool]:
         """
@@ -455,14 +384,6 @@ class CameraExposure(BaseSubCommand):
             await self.journal.info(inf)
             self.info_callback['stream_1'](inf)
             auto_exp_sub_no += 1
-            #self.info_callback['exec_json'](self.exec_json(auto_exp_start=True,
-            #                                               auto_exp_finnished=False,
-            #                                               auto_exp_sub_no=auto_exp_sub_no,
-            #                                               auto_exp_time=test_exposure_time))
-            # Make exposure
-            #arr = await self.get_array_autoexp(test_exp_time=test_exposure_time)
-            # Calculate mean from exposure (plus some info)
-            #mean = fits_stat(arr, size=100, median=False, std=False, min=False, max=False)['mean']
 
             await self.camera.aput_startexposure(test_exposure_time, self.light)
             await self._wait_for_subexposure(test_exposure_time)
@@ -577,7 +498,6 @@ class CameraExposure(BaseSubCommand):
 
                     return exposure_time, False
             await asyncio.sleep(test_time_interval)
-
 
     async def arun(self, step_id: str or None = None) -> int:
 
