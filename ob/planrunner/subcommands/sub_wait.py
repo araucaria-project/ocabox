@@ -73,7 +73,6 @@ class Wait(BaseSubCommand):
             if sun_rise is True and value > al or sun_rise is False and value < al:
                 break
             await asyncio.sleep(1)
-        pass
 
     async def arun(self, step_id: str or None = None) -> int:
         inf = f'{self.id} {self.name} {self.key} {self.value} started.'
