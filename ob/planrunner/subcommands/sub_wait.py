@@ -69,8 +69,8 @@ class Wait(BaseSubCommand):
             sun = get_sun(t)
             sun_altaz = sun.transform_to(AltAz(location=lo))
             al = sun_altaz.alt.deg
+            await self.journal.debug(f'Sun position is {al}.')
             if sun_rise is True and value > al or sun_rise is False and value < al:
-                await self.journal.debug(f'Sun position is {al}.')
                 break
             await asyncio.sleep(1)
         pass
