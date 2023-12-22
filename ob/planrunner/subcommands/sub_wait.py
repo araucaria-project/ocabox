@@ -4,6 +4,10 @@ from ob.planrunner.base_subcommand import BaseSubCommand
 import logging
 import asyncio
 from typing import Callable, Dict, Any
+import astropy.units as u
+from astropy.coordinates import AltAz, EarthLocation, get_sun, get_body
+from astropy.time import Time
+
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -11,9 +15,11 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class Wait(BaseSubCommand):
 
     def __init__(self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable],
-                 key: str, value: str, uobi: int, name: str = 'wait', param: Dict[str, Any] or None = None) -> None:
+                 key: str, value: str, uobi: int,
+                 name: str = 'wait', param: Dict[str, Any] or None = None) -> None:
         self.key = key
         self.value = value
+        self.loc = {'latitude': -24.598056, 'longitude': -70.196389, 'elevation': 2817}
         super().__init__(id=id, info_callback=info_callback,
                          telescope=telescope, name=name, uobi=uobi, param=param)
         self.info_dict = {'key': self.key, 'value': self.value}
@@ -46,10 +52,25 @@ class Wait(BaseSubCommand):
                 break
             await asyncio.sleep(0)
 
-    async def _wait_sunrise_exec(self, value: str) -> None:
-        pass
-
-    async def _wait_sunset_exec(self, value: str) -> None:
+    async def _wait_sun_exec(self, value: str, sun_rise: bool) -> bool:
+        # TODO take loc from settings
+        lo = EarthLocation(lat=self.loc['latitude'] * u.deg,
+                           lon=self.loc['longitude'] * u.deg,
+                           height=self.loc['elevation'] * u.m)
+        try:
+            val = float(value)
+        except ValueError:
+            inf = 'Wait sun alt value error, put float.'
+            await self.journal.error(inf)
+            logger.info(inf)
+            return False
+        while True:
+            t = Time.now()
+            sun = get_sun(t)
+            sun_altaz = sun.transform_to(AltAz(location=lo))
+            if sun_rise is True and value > sun_altaz.alt.deg or sun_rise is False and value < sun_altaz.alt.deg:
+                break
+            await asyncio.sleep(1)
         pass
 
     async def arun(self, step_id: str or None = None) -> int:
@@ -65,9 +86,9 @@ class Wait(BaseSubCommand):
         elif self.key == 'ut':
             await self._ut_exec(self.value)
         elif self.key == 'wait_sunrise':
-            await self._wait_sunrise_exec(self.value)
+            await self._wait_sun_exec(self.value, sun_rise=True)
         elif self.key == 'wait_sunset':
-            await self._wait_sunset_exec(self.value)
+            await self._wait_sun_exec(self.value, sun_rise=False)
         else:
             pass
         inf = f'{self.id} {self.name} done.'
