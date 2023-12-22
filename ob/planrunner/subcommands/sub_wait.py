@@ -64,15 +64,18 @@ class Wait(BaseSubCommand):
             await self.journal.error(inf)
             logger.error(inf)
             return False
+        w = 0
         while True:
             t = Time.now()
             sun = get_sun(t)
             sun_altaz = sun.transform_to(AltAz(location=lo))
             al = sun_altaz.alt.deg
-            await self.journal.debug(f'Sun position is {al}.')
+            if w % 60 == 0:
+                await self.journal.debug(f'Sun position is {round(al, 2)}.')
             if sun_rise is True and val < al or sun_rise is False and val > al:
                 break
             await asyncio.sleep(1)
+            w += 1
 
     async def arun(self, step_id: str or None = None) -> int:
         inf = f'{self.id} {self.name} {self.key} {self.value} started.'
