@@ -62,7 +62,7 @@ class Wait(BaseSubCommand):
         except ValueError:
             inf = 'Wait sun alt value error, put float.'
             await self.journal.error(inf)
-            logger.info(inf)
+            logger.error(inf)
             return False
         while True:
             t = Time.now()
