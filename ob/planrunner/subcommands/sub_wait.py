@@ -71,7 +71,7 @@ class Wait(BaseSubCommand):
             sun_altaz = sun.transform_to(AltAz(location=lo))
             al = sun_altaz.alt.deg
             if w % 60 == 0:
-                await self.journal.debug(f'Sun position is {round(al, 2)}.')
+                await self.journal.info(f'Wait sun pos.: {round(al, 2)} -> {val}')
             if sun_rise is True and val < al or sun_rise is False and val > al:
                 break
             await asyncio.sleep(1)
