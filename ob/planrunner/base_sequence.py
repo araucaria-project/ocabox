@@ -47,6 +47,13 @@ class BaseSequence(AbstractBase):
         self.started = True
         await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.running)
         self.info_callback['exec_json'](self.exec_json(**self.kwargs))
+        if self.c_type == 'command':
+            for c in subcomponents:
+                if step_id is not None:
+                    if step_id[: len(subcomponents[c].id)] <= subcomponents[c].id:
+                        c.param['plan_status'].upd_status(id=c.id, value=PlanStatusEnum.loaded)
+                else:
+                    c.param['plan_status'].upd_status(id=c.id, value=PlanStatusEnum.loaded)
         for n in subcomponents.keys():
             skip = 0
             if step_id is None:
