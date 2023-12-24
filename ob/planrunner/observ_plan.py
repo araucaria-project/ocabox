@@ -155,9 +155,9 @@ class ObservPlan:
     async def aload_nightplan_string(self, nightplan_id: str, string: str,
                                      overwrite: bool = False, param: Dict[str, Any] or None = None) -> None:
         self.load_nightplan_string(nightplan_id=nightplan_id, string=string, overwrite=overwrite, param=param)
-        np = self.get_nightplan(nightplan_id=nightplan_id)
-        if np is not None:
-            await np.param['plan_status'].send_all_to_nats()
+        night = self.get_nightplan(nightplan_id=nightplan_id)
+        if night is not None:
+            await night.param['plan_status'].send_all_to_nats()
         else:
             logger.warning(f'Plan is not created. Check the syntax.')
             self.info_callback['stream_1'](f'Warning: Plan have syntax errors.')
@@ -242,8 +242,8 @@ class ObservPlan:
         if self.running_nightplan:
             night = self.get_nightplan(nightplan_id=self.running_nightplan)
             await night.param['plan_status'].upd_status(id=self.running_nightplan, value=PlanStatusEnum.stop)
-            for n, m in night.param['plan_status']:
-                if night.param['plan_status'][n] == PlanStatusEnum.running:
+            for n, m in night.param['plan_status'].plan_status_publisher:
+                if m['status'] == PlanStatusEnum.running:
                     night.param['plan_status'][n].upd_status(id=self.running_nightplan, value=PlanStatusEnum.stop)
         # self.running_nightplan = None
 
