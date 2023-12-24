@@ -2,7 +2,7 @@ from typing import Dict, List, Any, Callable
 import logging
 from ob.planrunner.abstract_base import AbstractBase
 from ob.planrunner.coded_error import SequenceTreeError
-
+from ob.planrunner.status import PlanStatusEnum
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -45,8 +45,15 @@ class BaseSequence(AbstractBase):
 
     async def _arun(self, subcomponents: Any, step_id: str or None = None) -> int:
         self.started = True
-        await self.param['plan_status'].upd_status(id=self.id, field='started', value=True)
+        await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.running)
         self.info_callback['exec_json'](self.exec_json(**self.kwargs))
+        if self.c_type == 'command':
+            for id, su in subcomponents.items():
+                if step_id is not None:
+                    if step_id[: len(subcomponents[id].id)] <= subcomponents[id].id:
+                        su.param['plan_status'].upd_status(id=su.id, value=PlanStatusEnum.loaded)
+                else:
+                    su.param['plan_status'].upd_status(id=su.id, value=PlanStatusEnum.loaded)
         for n in subcomponents.keys():
             skip = 0
             if step_id is None:
@@ -58,21 +65,21 @@ class BaseSequence(AbstractBase):
             if skip == 1:
                 self.info_callback['stream_1'](f'{self.id} skipped')
                 self.skipped = True
-                await self.param['plan_status'].upd_status(id=self.id, field='skipped', value=True)
+                await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.skipped)
                 self.info_callback['exec_json'](self.exec_json(**self.kwargs))
                 return 0
             if skip == 2:
                 self.skipped = True
 
                 if self.name == 'STOP':
-                    await self.param['plan_status'].upd_status(id=self.id, field='done', value=True)
+                    await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.done)
                 else:
-                    await self.param['plan_status'].upd_status(id=self.id, field='skipped', value=True)
+                    await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.skipped)
 
                 self.info_callback['exec_json'](self.exec_json(**self.kwargs))
                 return 2
         # self.info_callback['stream_1'](f'{self.name} {self.id} done')
         self.done = True
-        await self.param['plan_status'].upd_status(id=self.id, field='done', value=True)
+        await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.done)
         self.info_callback['exec_json'](self.exec_json(**self.kwargs))
         return 0

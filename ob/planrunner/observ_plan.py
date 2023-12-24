@@ -5,6 +5,8 @@ import asyncio
 from ob.planrunner.coded_error import CantOverideNightPlanError, SequenceTreeError
 from pyaraucaria.obs_plan.obs_plan_parser import ObsPlanParser
 
+from ob.planrunner.status import PlanStatusEnum
+
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
@@ -153,9 +155,9 @@ class ObservPlan:
     async def aload_nightplan_string(self, nightplan_id: str, string: str,
                                      overwrite: bool = False, param: Dict[str, Any] or None = None) -> None:
         self.load_nightplan_string(nightplan_id=nightplan_id, string=string, overwrite=overwrite, param=param)
-        np = self.get_nightplan(nightplan_id=nightplan_id)
-        if np is not None:
-            await np.param['plan_status'].send_all_to_nats()
+        night = self.get_nightplan(nightplan_id=nightplan_id)
+        if night is not None:
+            await night.param['plan_status'].send_all_to_nats()
         else:
             logger.warning(f'Plan is not created. Check the syntax.')
             self.info_callback['stream_1'](f'Warning: Plan have syntax errors.')
@@ -238,8 +240,11 @@ class ObservPlan:
         if self.running_nightplan in self.subcomponents.keys():
             self.subcomponents[self.running_nightplan].skipped = True
         if self.running_nightplan:
-            np = self.get_nightplan(nightplan_id=self.running_nightplan)
-            await np.param['plan_status'].upd_status(id=self.running_nightplan, field='skipped', value=True)
+            night = self.get_nightplan(nightplan_id=self.running_nightplan)
+            await night.param['plan_status'].upd_status(id=self.running_nightplan, value=PlanStatusEnum.stop)
+            for n, m in night.param['plan_status'].status_dict.items():
+                if m['status'] == PlanStatusEnum.running:
+                    await night.param['plan_status'].upd_status(id=n, value=PlanStatusEnum.stop)
         # self.running_nightplan = None
 
     async def arun_night(self, nightplan_id: str, step_id: str or None = None) -> None:

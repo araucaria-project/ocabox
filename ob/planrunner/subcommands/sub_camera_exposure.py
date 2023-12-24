@@ -15,6 +15,7 @@ from serverish.messenger import request
 from serverish.base.datetime import dt_utcnow_array
 from serverish.base.exceptions import MessengerRequestNoResponders, MessengerRequestNoResponse, MessengerRequestTimeout
 
+from ob.planrunner.status import PlanStatusEnum
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -461,7 +462,7 @@ class CameraExposure(BaseSubCommand):
                     await self.journal.info(inf)
                     self.info_callback['stream_1'](inf)
                     self.skipped = True
-                    await self.param['plan_status'].upd_status(id=self.id, field='skipped', value=True)
+                    await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.skipped)
                     self.info_callback['exec_json'](self.exec_json(**self.info_dict))
                     self.seq_data.skip = True
                     return 0, True
@@ -472,7 +473,7 @@ class CameraExposure(BaseSubCommand):
                     await self.journal.info(inf)
                     self.info_callback['stream_1'](inf)
                     self.skipped = True
-                    await self.param['plan_status'].upd_status(id=self.id, field='skipped', value=True)
+                    await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.skipped)
                     self.info_callback['exec_json'](self.exec_json(**self.info_dict))
                     self.seq_data.skip = True
                     return 0, True
@@ -502,10 +503,10 @@ class CameraExposure(BaseSubCommand):
     async def arun(self, step_id: str or None = None) -> int:
 
         self.started = True
-        await self.param['plan_status'].upd_status(id=self.id, field='started', value=True)
+        await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.running)
         if self.seq_data.skip:
             self.skipped = True
-            await self.param['plan_status'].upd_status(id=self.id, field='skipped', value=True)
+            await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.skipped)
             if self.sub_exp == self.exp_no:
                 self.seq_data.skip = False
             return 0
@@ -553,7 +554,7 @@ class CameraExposure(BaseSubCommand):
         inf = f'{self.id} {self.name} done.'
         logger.debug(inf)
         self.done = True
-        await self.param['plan_status'].upd_status(id=self.id, field='done', value=True)
+        await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.done)
         self.info_callback['exec_json'](self.exec_json(exp_time=float(exposure_time),
                                                        **self.info_dict))
         await asyncio.sleep(0.2)
