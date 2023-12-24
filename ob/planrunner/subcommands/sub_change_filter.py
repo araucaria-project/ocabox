@@ -3,7 +3,7 @@ from typing import Callable, Dict, Any
 import asyncio
 import logging
 from ob.planrunner.base_subcommand import BaseSubCommand
-
+from ob.planrunner.status import PlanStatusEnum
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -55,7 +55,7 @@ class ChangeFilter(BaseSubCommand):
         self.info_callback['stream_1'](inf)
         await self.journal.info(inf)
         self.started = True
-        await self.param['plan_status'].upd_status(id=self.id, field='started', value=True)
+        await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.running)
         self.info_callback['exec_json'](self.exec_json(**self.info_dict))
         filter_dict = await self.filterwheel.aget_names()
         try:
@@ -67,7 +67,7 @@ class ChangeFilter(BaseSubCommand):
             await self.journal.warning(inf)
             self.info_callback['stream_5'](f'{self.id}')
             self.skipped = True
-            await self.param['plan_status'].upd_status(id=self.id, field='skipped', value=True)
+            await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.skipped)
             self.info_callback['exec_json'](self.exec_json(**self.info_dict))
             return 1
 
@@ -81,7 +81,7 @@ class ChangeFilter(BaseSubCommand):
             await self.journal.info(inf)
             logger.info(inf)
             self.skipped = True
-            await self.param['plan_status'].upd_status(id=self.id, field='skipped', value=True)
+            await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.skipped)
             self.info_callback['exec_json'](self.exec_json(**self.info_dict))
             return 0
 
@@ -94,7 +94,7 @@ class ChangeFilter(BaseSubCommand):
             logger.info(inf)
             await self.journal.error(inf)
             self.skipped = True
-            await self.param['plan_status'].upd_status(id=self.id, field='skipped', value=True)
+            await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.skipped)
             self.info_callback['exec_json'](self.exec_json(**self.info_dict))
             return 1
         await self._wait_to_move(pos)
@@ -104,6 +104,6 @@ class ChangeFilter(BaseSubCommand):
         self.info_callback['stream_1'](inf)
         self.info_callback['stream_5'](f'{self.id}')
         self.done = True
-        await self.param['plan_status'].upd_status(id=self.id, field='done', value=True)
+        await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.done)
         self.info_callback['exec_json'](self.exec_json(**self.info_dict))
         return 0

@@ -5,6 +5,8 @@ import asyncio
 from ob.planrunner.coded_error import CantOverideNightPlanError, SequenceTreeError
 from pyaraucaria.obs_plan.obs_plan_parser import ObsPlanParser
 
+from ob.planrunner.status import PlanStatusEnum
+
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
@@ -239,7 +241,7 @@ class ObservPlan:
             self.subcomponents[self.running_nightplan].skipped = True
         if self.running_nightplan:
             np = self.get_nightplan(nightplan_id=self.running_nightplan)
-            await np.param['plan_status'].upd_status(id=self.running_nightplan, field='skipped', value=True)
+            await np.param['plan_status'].upd_status(id=self.running_nightplan, value=PlanStatusEnum.stop)
         # self.running_nightplan = None
 
     async def arun_night(self, nightplan_id: str, step_id: str or None = None) -> None:

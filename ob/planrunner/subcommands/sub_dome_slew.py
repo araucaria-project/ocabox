@@ -5,6 +5,8 @@ import math
 from pyaraucaria.coordinates import site_sidereal_time, ra_dec_2_az_alt
 from typing import Callable, Dict, Any
 
+from ob.planrunner.status import PlanStatusEnum
+
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
@@ -119,11 +121,11 @@ class DomeSlew(BaseSubCommand):
 
     async def arun(self, step_id: str or None = None) -> int:
         self.started = True
-        await self.param['plan_status'].upd_status(id=self.id, field='started', value=True)
+        await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.running)
         if self.seq_data:
             if self.seq_data.skip:
                 self.skipped = True
-                await self.param['plan_status'].upd_status(id=self.id, field='skipped', value=True)
+                await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.skipped)
                 return 0
         self.info_callback['exec_json'](self.exec_json(**self.info_dict))
         logger.info(f'{self.id} started')
@@ -147,7 +149,7 @@ class DomeSlew(BaseSubCommand):
                 logger.info(inf)
                 await self.journal.info(inf)
                 self.skipped = True
-                await self.param['plan_status'].upd_status(id=self.id, field='skipped', value=True)
+                await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.skipped)
                 self.info_callback['exec_json'](self.exec_json(**self.info_dict))
                 return 0
             else:
@@ -187,6 +189,6 @@ class DomeSlew(BaseSubCommand):
         self.info_callback['stream_5'](f'{self.id}')
         await self.journal.info(f"{self.id} {self.name} done.")
         self.done = True
-        await self.param['plan_status'].upd_status(id=self.id, field='done', value=True)
+        await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.done)
         self.info_callback['exec_json'](self.exec_json(**self.info_dict))
         return 0

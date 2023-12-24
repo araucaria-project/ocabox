@@ -1,5 +1,20 @@
+from enum import StrEnum
 from typing import Dict, Any
 from serverish.messenger.msg_publisher import MsgPublisher
+
+
+class PlanStatusEnum(StrEnum):
+    """
+     Plan status enum
+    Statuses:
+
+    """
+    loaded = 'loaded'
+    running = 'running'
+    done = 'done'
+    skipped = 'skipped'
+    stop = 'stop'
+    error = 'error'
 
 
 class PlanStatus:
@@ -16,7 +31,7 @@ class PlanStatus:
 
     def build(self, id: str, name: str, ctype: str) -> None:
         self.static_dict[id] = {'name': name, 'ctype':  ctype, 'kwargs': {}, 'args': []}
-        self.status_dict[id] = {'started': False, 'done': False, 'skipped': False}
+        self.status_dict[id] = {'status': PlanStatusEnum.loaded}
         self.time_dict[id] = {'ctc_time': 0.0, 'real_time': 0.0}
 
     async def reset(self)-> None:
@@ -32,7 +47,7 @@ class PlanStatus:
     async def send_to_nats(self, publisher: MsgPublisher, data: Dict)-> None:
         await publisher.publish(data=data)
 
-    async def upd_status(self, id: str, field: str, value: bool)-> None:
+    async def upd_status(self, id: str, value: PlanStatusEnum, field: str = 'status') -> None:
         self.status_dict[id][field] = value
         await self.send_to_nats(self.plan_status_publisher, self.status_dict)
 

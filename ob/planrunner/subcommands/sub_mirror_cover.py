@@ -3,6 +3,8 @@ import logging
 from ob.planrunner.base_subcommand import BaseSubCommand
 from typing import Callable, Dict, Any
 
+from ob.planrunner.status import PlanStatusEnum
+
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
@@ -31,7 +33,7 @@ class MirrorCover(BaseSubCommand):
 
     async def arun(self, step_id: str or None = None) -> int:
         self.started = True
-        await self.param['plan_status'].upd_status(id=self.id, field='started', value=True)
+        await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.running)
         inf = f'{self.id} {self.name} started.'
         self.info_callback['exec_json'](self.exec_json(**self.info_dict))
         logger.info(inf)
@@ -56,7 +58,7 @@ class MirrorCover(BaseSubCommand):
             logger.info(inf)
             self.info_callback['stream_5'](f'{self.id}')
             self.done = True
-            await self.param['plan_status'].upd_status(id=self.id, field='done', value=True)
+            await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.done)
             await self.journal.info(inf)
             self.info_callback['exec_json'](self.exec_json(**self.info_dict))
             return 0
@@ -73,7 +75,7 @@ class MirrorCover(BaseSubCommand):
             inf = f'{self.id} {self.name} closing done.'
             logger.info(inf)
             self.done = True
-            await self.param['plan_status'].upd_status(id=self.id, field='done', value=True)
+            await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.done)
             await self.journal.info(inf)
             self.info_callback['exec_json'](self.exec_json(**self.info_dict))
             return 0
@@ -81,7 +83,7 @@ class MirrorCover(BaseSubCommand):
             pass
         inf = f'{self.id} {self.name} skipped.'
         self.skipped = True
-        await self.param['plan_status'].upd_status(id=self.id, field='skipped', value=True)
+        await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.skipped)
         self.info_callback['exec_json'](self.exec_json(**self.info_dict))
         logger.info(f'{self.id} skipped')
         await self.journal.debug(inf)

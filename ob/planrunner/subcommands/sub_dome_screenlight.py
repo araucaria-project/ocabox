@@ -3,6 +3,8 @@ import logging
 from ob.planrunner.base_subcommand import BaseSubCommand
 from typing import Callable, Dict, Any
 
+from ob.planrunner.status import PlanStatusEnum
+
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
@@ -23,7 +25,7 @@ class DomeScreenLight(BaseSubCommand):
 
     async def arun(self, step_id: str or None = None) -> int:
         self.started = True
-        await self.param['plan_status'].upd_status(id=self.id, field='started', value=True)
+        await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.running)
         inf = f'{self.id} {self.name} started.'
         self.info_callback['exec_json'](self.exec_json(**self.info_dict))
         logger.info(inf)
@@ -55,6 +57,6 @@ class DomeScreenLight(BaseSubCommand):
         logger.info(inf)
         await self.journal.info(inf)
         self.done = True
-        await self.param['plan_status'].upd_status(id=self.id, field='done', value=True)
+        await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.done)
         self.info_callback['exec_json'](self.exec_json(**self.info_dict))
         return 0

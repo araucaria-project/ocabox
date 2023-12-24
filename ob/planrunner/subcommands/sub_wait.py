@@ -8,6 +8,7 @@ import astropy.units as u
 from astropy.coordinates import AltAz, EarthLocation, get_sun, get_body
 from astropy.time import Time
 
+from ob.planrunner.status import PlanStatusEnum
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -82,7 +83,7 @@ class Wait(BaseSubCommand):
         await self.journal.info(inf)
         logger.info(inf)
         self.started = True
-        await self.param['plan_status'].upd_status(id=self.id, field='started', value=True)
+        await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.running)
         self.info_callback['exec_json'](self.exec_json(**self.info_dict))
         self.info_callback['stream_1'](inf)
         if self.key == 'wait':
@@ -100,6 +101,6 @@ class Wait(BaseSubCommand):
         self.info_callback['stream_5'](f'{self.id}')
         logger.info(inf)
         self.done = True
-        await self.param['plan_status'].upd_status(id=self.id, field='done', value=True)
+        await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.done)
         self.info_callback['exec_json'](self.exec_json(**self.info_dict))
         return 0
