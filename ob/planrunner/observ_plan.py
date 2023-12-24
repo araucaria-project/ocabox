@@ -242,7 +242,7 @@ class ObservPlan:
         if self.running_nightplan:
             night = self.get_nightplan(nightplan_id=self.running_nightplan)
             await night.param['plan_status'].upd_status(id=self.running_nightplan, value=PlanStatusEnum.stop)
-            for n, m in night.param['plan_status'].status_dict:
+            for n, m in night.param['plan_status'].status_dict.items():
                 if m['status'] == PlanStatusEnum.running:
                     night.param['plan_status'].upd_status(id=n, value=PlanStatusEnum.stop)
         # self.running_nightplan = None
