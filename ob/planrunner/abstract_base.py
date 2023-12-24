@@ -17,7 +17,7 @@ class AbstractBase(ABC):
 
     COMMAND_NAMES = ['SKYFLAT', 'FOCUS', 'DOMEFLAT', 'DARK', 'ZERO', 'OBJECT', 'WAIT', 'STOP', 'SNAP', 'SEQUENCE']
     KWARGS = ['uobi', 'dome_follow', 'epoch', 'mirror_cover', 'observer', 'screen_light', 'az', 'alt', 'seq',
-              'pos', 'dither', 'wait', 'ut', 'tracking', 'comment']
+              'pos', 'dither', 'wait', 'ut', 'tracking', 'comment', 'wait_sunrise', 'wait_sunset']
 
     def __init__(self, id: str, name: str, telescope: 'Telescope',
                  info_callback: Dict[str, Callable], c_type: str, param: Dict[str, Any] or None = None) -> None:
