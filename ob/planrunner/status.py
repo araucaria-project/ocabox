@@ -1,7 +1,12 @@
-from enum import StrEnum
+from enum import Enum
 from typing import Dict, Any
 from serverish.messenger.msg_publisher import MsgPublisher
 
+try:
+    from enum import StrEnum
+except ImportError:
+    class StrEnum(str, Enum):
+        pass
 
 class PlanStatusEnum(StrEnum):
     """
