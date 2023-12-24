@@ -14,7 +14,7 @@ class PlanStatusEnum(StrEnum):
     Statuses:
 
     """
-    loaded = 'loaded'
+    loaded = '...'
     running = 'running'
     done = 'done'
     skipped = 'skipped'
