@@ -70,12 +70,22 @@ class Focusing(BaseSubCommand):
                 await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.skipped)
                 self.info_callback['exec_json'](self.exec_json())
                 return 2
-            inf = f'{self.id} {self.name} calculated focus position {round(sharp)}.'
-            self.info_callback['stream_1'](inf)
-            await self.journal.info(inf)
-            logger.info(inf)
-            await self.focuser.aput_move(round(sharp))
-            await self._wait_for_move(sharp)
+            if rang[1] > sharp > rang[0]:
+                inf = f'{self.id} {self.name} calculated focus position {round(sharp)}.'
+                self.info_callback['stream_1'](inf)
+                await self.journal.info(inf)
+                logger.info(inf)
+                await self.focuser.aput_move(round(sharp))
+                await self._wait_for_move(sharp)
+            else:
+                inf = f'{self.id} {self.name} wrong focus calculation: {sharp}.'
+                self.info_callback['stream_1'](inf)
+                await self.journal.warning(inf)
+                logger.warning(inf)
+                self.skipped = True
+                await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.skipped)
+                self.info_callback['exec_json'](self.exec_json())
+                return 2
         else:
             inf = f'{self.id} {self.name} wrong input.'
             self.info_callback['stream_1'](inf)
