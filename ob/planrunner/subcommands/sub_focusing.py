@@ -20,7 +20,7 @@ class Focusing(BaseSubCommand):
                          name=name, uobi=uobi, param=param)
         self.focuser = self.telescope.get_focuser()
         self.auto = auto
-        self.info_dict = {'position': self.position}
+        self.info_dict = {'position': self.position, 'auto_focus': self.auto}
         self.create_sub_command_string(**self.info_dict)
 
     async def _wait_for_move(self, position) -> None:
