@@ -33,6 +33,7 @@ class Focusing(BaseSubCommand):
                                                       expect_type=int)
             if foc_position is not None:
                 if (abs(int(foc_position) - int(position))) < focuser_value:
+                    await asyncio.sleep(1)
                     break
 
     async def arun(self, step_id: str or None = None) -> int:
@@ -69,11 +70,11 @@ class Focusing(BaseSubCommand):
                 await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.skipped)
                 self.info_callback['exec_json'](self.exec_json())
                 return 2
-            inf = f'{self.id} {self.name} calculated focus position {sharp}.'
+            inf = f'{self.id} {self.name} calculated focus position {round(sharp)}.'
             self.info_callback['stream_1'](inf)
             await self.journal.info(inf)
             logger.info(inf)
-            await self.focuser.aput_move(int(sharp))
+            await self.focuser.aput_move(round(sharp))
             await self._wait_for_move(sharp)
         else:
             inf = f'{self.id} {self.name} wrong input.'
