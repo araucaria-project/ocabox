@@ -1,4 +1,6 @@
 import logging
+import os
+
 from ob.planrunner.abstract_base import AbstractBase
 from datetime import datetime
 from typing import Dict, List, Any, Callable
@@ -27,3 +29,16 @@ class BaseSubCommand(AbstractBase):
 
     async def arun(self) -> int:
         raise NotImplementedError
+
+    @property
+    def fits_main_folder(self) -> str:
+        base_fits_folder = os.path.expanduser(self.telescope.observatory.get_app_cfg('base_fits_dir'))
+        return os.path.join(base_fits_folder, f'{self.telescope.id}')
+
+    @property
+    def fits_focus_folder(self) -> str:
+        return os.path.join(self.fits_main_folder, f'focus')
+
+    @property
+    def fits_focus_folder_actual(self) -> str:
+        return os.path.join(self.fits_focus_folder, f'actual')

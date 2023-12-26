@@ -258,6 +258,13 @@ class Command(BaseSequence):
             return None
 
     @property
+    def auto_focus(self) -> bool:
+        if 'auto_focus' in self.kwargs.keys():
+            if self.kwargs['auto_focus'] == 'on':
+                return True
+        return False
+
+    @property
     def domeflat_mount_alt(self) -> float or None:
         # TODO take this value from settings
         if self.exp_type == 'flat':
@@ -535,6 +542,15 @@ class Command(BaseSequence):
                                                             seq_data=seq_data,
                                                             param=self.param,
                                                             uobi=self.uobi), id_next=id_next)
+
+        # Focusig
+        if self.name == 'FOCUS' and self.auto_focus is True:
+            id_next = self._add_comp(Focusing(id=self._op_id(id_next=id_next),
+                                              telescope=self.telescope,
+                                              info_callback=self.info_callback,
+                                              auto=True,
+                                              param=self.param,
+                                              uobi=self.uobi), id_next=id_next)
 
         # Mirror cover close
         if self.mirror_cover_mode in ['close']:
