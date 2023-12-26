@@ -30,7 +30,6 @@ class BaseSubCommand(AbstractBase):
     async def arun(self) -> int:
         raise NotImplementedError
 
-
     @property
     def fits_main_folder(self) -> str:
         base_fits_folder = os.path.expanduser(self.telescope.observatory.get_app_cfg('base_fits_dir'))

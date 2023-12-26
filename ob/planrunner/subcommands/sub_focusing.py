@@ -53,13 +53,13 @@ class Focusing(BaseSubCommand):
 
         elif self.position is None and self.auto is True:
             # TODO take range values from settings
-            range = [14000, 17000]
-            inf = f'{self.id} {self.name} calculate focus position.'
+            rang = [14000, 17000]
+            inf = f'{self.id} {self.name} calculate focus position from {self.fits_focus_folder_actual}.'
             self.info_callback['stream_1'](inf)
             await self.journal.debug(inf)
             logger.debug(inf)
             try:
-                sharp, calc_metadata = Focus.calculate(fits_path=self.fits_focus_folder_actual, range=range)
+                sharp, calc_metadata = Focus.calculate(fits_path=self.fits_focus_folder_actual, range=rang)
             except TypeError:
                 inf = f'{self.id} {self.name} wrong focus calculation.'
                 self.info_callback['stream_1'](inf)
