@@ -2,6 +2,7 @@ import asyncio
 import logging
 from ob.planrunner.base_subcommand import BaseSubCommand
 from typing import Callable, Dict, Any
+from pyaraucaria.focus import Focus
 
 from ob.planrunner.status import PlanStatusEnum
 
@@ -12,11 +13,13 @@ class Focusing(BaseSubCommand):
 
 
     def __init__(self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable],
-                 position: float, uobi: int, name: str = 'focusing', param: Dict[str, Any] or None = None) -> None:
+                 uobi: int, position: float = None, auto: bool = False, name: str = 'focusing',
+                 param: Dict[str, Any] or None = None) -> None:
         self.position = position
         super().__init__(id=id, info_callback=info_callback, telescope=telescope,
                          name=name, uobi=uobi, param=param)
         self.focuser = self.telescope.get_focuser()
+        self.auto = auto
         self.info_dict = {'position': self.position}
         self.create_sub_command_string(**self.info_dict)
 
@@ -37,15 +40,51 @@ class Focusing(BaseSubCommand):
         await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.running)
         inf = f'{self.id} {self.name} started.'
         logger.info(inf)
+        self.info_callback['exec_json'](self.exec_json(**self.info_dict))
         await self.journal.info(inf)
 
-        self.info_callback['exec_json'](self.exec_json(**self.info_dict))
-        inf = f'{self.id} {self.name} moving to {self.position}.'
-        self.info_callback['stream_1'](inf)
-        await self.journal.debug(inf)
-        logger.debug(inf)
-        await self.focuser.aput_move(int(self.position))
-        await self._wait_for_move(self.position)
+        if self.position is not None and self.auto is False:
+            inf = f'{self.id} {self.name} moving to {self.position}.'
+            self.info_callback['stream_1'](inf)
+            await self.journal.debug(inf)
+            logger.debug(inf)
+            await self.focuser.aput_move(int(self.position))
+            await self._wait_for_move(self.position)
+
+        elif self.position is None and self.auto is True:
+            # TODO take range values from settings
+            range = [14000, 17000]
+            inf = f'{self.id} {self.name} calculate focus position.'
+            self.info_callback['stream_1'](inf)
+            await self.journal.debug(inf)
+            logger.debug(inf)
+            try:
+                sharp, calc_metadata = Focus.calculate(fits_path=self.fits_focus_folder_actual, range=range)
+            except TypeError:
+                inf = f'{self.id} {self.name} wrong focus calculation.'
+                self.info_callback['stream_1'](inf)
+                await self.journal.warning(inf)
+                logger.warning(inf)
+                self.skipped = True
+                await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.skipped)
+                self.info_callback['exec_json'](self.exec_json())
+                return 2
+            inf = f'{self.id} {self.name} calculated focus position {sharp}.'
+            self.info_callback['stream_1'](inf)
+            await self.journal.info(inf)
+            logger.info(inf)
+            await self.focuser.aput_move(int(sharp))
+            await self._wait_for_move(sharp)
+        else:
+            inf = f'{self.id} {self.name} wrong input.'
+            self.info_callback['stream_1'](inf)
+            await self.journal.warning(inf)
+            logger.warning(inf)
+            self.skipped = True
+            await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.skipped)
+            self.info_callback['exec_json'](self.exec_json())
+            return 0
+
         inf = f'{self.id} {self.name} done.'
         logger.info(inf)
         self.info_callback['stream_1'](inf)

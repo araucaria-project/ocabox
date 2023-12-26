@@ -156,15 +156,6 @@ class CameraExposure(BaseSubCommand):
         await self.journal.debug(inf)
         return dat
 
-    @property
-    def fits_main_folder(self) -> str:
-        base_fits_folder = os.path.expanduser(self.telescope.observatory.get_app_cfg('base_fits_dir'))
-        return os.path.join(base_fits_folder, f'{self.telescope.id}')
-
-    @property
-    def fits_focus_folder(self) -> str:
-        return os.path.join(self.fits_main_folder, f'focus')
-
     def _get_folders_and_symlinks(self) -> None:
         if self.type == 'focusing':
             if self.seq_data.focus_folder:
