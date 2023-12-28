@@ -105,6 +105,11 @@ class TreeAlpacaObservatory(TreeBaseProvider):
         try:
             result = await wait_for_psce(method(alpaca_method_name, **request_arguments),
                                          timeout=(request_timeout-time.time())*self._timeout_multiplier)
+        except asyncio.CancelledError:
+            # todo do usunięcia po rozwiązaniu issue #151
+            logger.error(f"Ocabox request is stop handled because alpaca get/put was canceled \n"
+                         f"request_timeout = {request_timeout}, time.time() = {time.time()}, self._timeout_multiplier = {self._timeout_multiplier}")
+            raise
         except AlpacaHttp400Error as e:
             # if server alpaca return 400 error
             logger.warning(f"Alpaca throw error 400 for request {address}")
