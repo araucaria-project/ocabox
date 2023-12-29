@@ -21,13 +21,15 @@ import math
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
+
 class GuiderHandler:
 
     STATUSES = ['idle', 'dark', 'calibration', 'guiding', 'preview', 'error']
     DIRECTIONS = [0, 1, 2, 3]
 
-    def __init__(self) -> None:
-        self.rs: TelescopeComponentManagerAlpaca | None = None # Validate if rs not null
+    def __init__(self, guider_source_name: str) -> None:
+        self._guider_source_name: str = guider_source_name
+        self.rs: Optional[TelescopeComponentManagerAlpaca] = None # Validate if rs not null
         self.api = None
         self.nats = None
         self.status: str = 'idle'
@@ -35,12 +37,12 @@ class GuiderHandler:
         self.period: float = 6.0 # in seconds
         self.calib_step: float = 1000.0 # in milliseconds
         self.calib_no_of_steps: int = 6
-        self.calib_data: Dict | None = None
+        self.calib_data: Optional[Dict] = None
         self.preview_single: bool = False
         self.sequence_id: str = ''
         self.loop_dark: int = 0
         self.nloops_dark: int = 0
-        self.star_select: Dict | None = None
+        self.star_select: Optional[Dict] = None
         self.mount_follow: bool = True
         self.darks: Dict = {}
         self.rpc_req = None
@@ -50,20 +52,15 @@ class GuiderHandler:
     def _telescope_id(self) -> str:
         return self.rs.get_observatory_name()
 
-    def _get_mount_comm(self, command: str) -> str | None:
+    def _get_mount_comm(self, command: str) -> Optional[str]:
         res_mount = self.rs.get_resource(self.rs.MOUNT)
         if res_mount is not None:
             return f'{res_mount.adr}.{command}'
         else:
             return None
 
-    def _get_camera_comm(self, command: str) -> str | None:
-        # TODO for Ernest change get_resource(... nr=1) -> do not take nr but some "guider" name or else
-        if self._telescope_id == 'dev':
-            nr = 0
-        else:
-            nr = 1
-        res_cam = self.rs.get_resource(self.rs.CAMERA, nr=nr)
+    def _get_camera_comm(self, command: str) -> Optional[str]:
+        res_cam = self.rs.get_resource_by_source_name(self._guider_source_name, self.rs.CAMERA)
         if res_cam is not None:
             return f'{res_cam.adr}.{command}'
         else:
@@ -415,7 +412,7 @@ class GuiderHandler:
         await self._take_control(80000)
         self.status = 'dark'
 
-    async def guiding(self, star_select: List | None = None, mount_follow: bool = True) -> None:
+    async def guiding(self, star_select: Optional[List] = None, mount_follow: bool = True) -> None:
         # TODO TALK TO JOURNAL
         if self.calib_data is not None:
             try:
@@ -463,12 +460,13 @@ class TreeCustomGuiderHandler(TreeProvider):
     """
 
     COMPONENT_DEFAULT_NAME: str = 'TreeCustomGuiderHandler'
+    _CFG_PRP_GDR_SRC_NAME = "guider_source_name"
 
     def __init__(self, component_name: str, source_name: str, target_alpaca: TreeAlpacaObservatory, **kwargs):
         super().__init__(component_name=component_name, source_name=source_name, **kwargs)
         self._target_alpaca: TreeAlpacaObservatory = target_alpaca
         self.rs = None
-        self.gh: GuiderHandler = GuiderHandler()
+        self.gh: GuiderHandler = GuiderHandler(self._get_cfg(TreeCustomGuiderHandler._CFG_PRP_GDR_SRC_NAME))
 
     async def get_value(self, request: ValueRequest, **kwargs) -> Optional[Value]:
 

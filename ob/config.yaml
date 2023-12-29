@@ -214,6 +214,8 @@ data_collection:
     udm_port: 443
     udm_user: 'api'
     udm_password: ''
+  GuiderHandler:
+    guider_source_name: guider
 
 tree:
   test_sample_blocker:
@@ -286,6 +288,9 @@ tree:
         safetymonitor:
           kind: safetymonitor
           device_number: 0
+        guider:
+          kind: camera
+          device_number: 1
 
   test_observatory_down:
     observatory:

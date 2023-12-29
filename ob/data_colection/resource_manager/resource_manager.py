@@ -1,6 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 from ob.comunication.internal_client_api import InternalClientAPI
 from ob.data_colection.alpaca_api.standard_telescope_components import StandardTelescopeComponents
@@ -30,9 +30,9 @@ class TelescopeComponentManager(StandardTelescopeComponents, ABC):
     def get_observatory_name(self):
         return self._observatory_name
 
-    def get_resource(self, name, nr: int = 0):
+    def get_resource(self, name, nr: int = 0) -> Optional[Resource]:
         """
-        This method returns for sub from resource manager. Resources are searched by alpaca resource type name
+        This method returns resources from resource manager. Resources are searched by alpaca resource type name
         and number, names may be repeated.
 
         :param name: name type of resource, one of provided types by manager
@@ -42,6 +42,23 @@ class TelescopeComponentManager(StandardTelescopeComponents, ABC):
         out = None
         for res in self._resources:
             if res.name == name and res.nr == nr:
+                out = res
+                break
+        return out
+
+    def get_resource_by_source_name(self, source_name: str, typ: str = None) -> Optional[Resource]:
+        """
+        NOT RECOMMENDED METHOD
+        This method returns resource from resource manager. Resource are searched by source name  (address of block)
+        and optional for alpaca resource type names also.
+
+        :param source_name: source name (address)
+        :param typ: name type of resource, one of provided types by manager
+        :return: resource
+        """
+        out = None
+        for res in self._resources:
+            if res.source_name == source_name and (typ is None or res.name == typ):
                 out = res
                 break
         return out

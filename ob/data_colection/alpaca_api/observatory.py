@@ -5,6 +5,7 @@ from typing import Optional, Union, List, MutableMapping, Dict, Coroutine, Calla
 from ob.data_colection.alpaca_api.connector import Connector
 from ob.data_colection.alpaca_api.coo import check_equatorial_coordinates, \
     check_horizontal_coordinates
+from ob.data_colection.alpaca_api.standard_telescope_components import StandardTelescopeComponents
 from ob.ob_config import SingletonConfig
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -275,37 +276,37 @@ class Device(Component):
 
 class Switch(Device):
     """Switch specific methods."""
-    KIND = "switch"
+    KIND = StandardTelescopeComponents.SWITCH
 
 
 class CoverCalibrator(Device):
     """CoverCalibrator specific methods."""
-    KIND = "covercalibrator"
+    KIND = StandardTelescopeComponents.COVERCALIBRATOR
 
 
 class SafetyMonitor(Device):
     """Safety monitor specific methods."""
-    KIND = "safetymonitor"
+    KIND = StandardTelescopeComponents.SAFETYMONITOR
 
 
 class Dome(Device):
     """Dome specific methods."""
-    KIND = "dome"
+    KIND = StandardTelescopeComponents.DOME
 
 
 class Camera(Device):
     """Camera specific methods."""
-    KIND = "camera"
+    KIND = StandardTelescopeComponents.CAMERA
 
 
 class FilterWheel(Device):
     """Filter wheel specific methods."""
-    KIND = "filterwheel"
+    KIND = StandardTelescopeComponents.FILTERWHEEL
 
 
 class Telescope(Device):
     """Telescope specific methods."""
-    KIND = "telescope"
+    KIND = StandardTelescopeComponents.MOUNT
 
     def __init__(self, sys_id: str, parent: Union['Component', None]) -> None:
         super().__init__(sys_id=sys_id, parent=parent)
@@ -402,7 +403,7 @@ class Telescope(Device):
 
 class Focuser(Device):
     """Focuser specific methods."""
-    KIND = "focuser"
+    KIND = StandardTelescopeComponents.FOCUSER
 
     async def fansturnon_put(self, **kwargs):
         return await self._put("action", Action="fansturnon", Parameters="")
@@ -416,7 +417,7 @@ class Focuser(Device):
 
 class Rotator(Device):
     """Rotator specific methods."""
-    KIND = "rotator"
+    KIND = StandardTelescopeComponents.ROTATOR
 
 
 class CoverCalibratorOCA(CoverCalibrator):

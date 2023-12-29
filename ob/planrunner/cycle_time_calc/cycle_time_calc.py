@@ -1,4 +1,4 @@
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Union
 import logging
 from ob.planrunner.cycle_time_calc.abstract_cycle_time import AbstractCycleTime
 import datetime
@@ -256,7 +256,7 @@ class CycleTimeCalc(AbstractCycleTime):
         mydate = f"{day} {time_str}"
         return time.mktime(datetime.datetime.strptime(mydate, "%Y-%m-%d %H:%M:%S").timetuple())
 
-    def calc_time(self, command_dict: Dict[str, Any] | str) -> float or None:
+    def calc_time(self, command_dict: Union[Dict[str, Any], str]) -> float or None:
         """
         Method calculate time for one command and adds it to self._time_length
         :param command_dict: command_dict parsed by pyaraucaria obs_plan_parser

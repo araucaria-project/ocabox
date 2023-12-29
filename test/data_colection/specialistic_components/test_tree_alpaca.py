@@ -117,14 +117,15 @@ class TreeAlpacaTest(unittest.TestCase, BaseAsyncTest):
                                      ('focuser_RESOURCE', ['focuser']),
                                      ('derotator_RESOURCE', ['derotator']),
                                      ('switch_RESOURCE', ['switch']),
-                                     ('safetymonitor_RESOURCE', ['safetymonitor'])])
+                                     ('safetymonitor_RESOURCE', ['safetymonitor']),
+                                     ('guider_RESOURCE', ['guider'])])
 
     def test_get_res_manager(self):
         """Test method get_resource_manager()"""
         from ob.data_colection.resource_manager.resource_manager import TelescopeComponentManager
         manager: TelescopeComponentManager = asyncio.run(self.tao.get_res_manager())
         self.assertTrue(isinstance(manager, TelescopeComponentManager))
-        self.assertEqual(len(manager._resources), 10)
+        self.assertEqual(len(manager._resources), 11)
 
     def test_alpaca_not_response(self):
         """Test situation when alpaca server is down."""
