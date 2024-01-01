@@ -49,7 +49,7 @@ class Wait(BaseSubCommand):
             utc = datetime.datetime.utcnow()
             if utc.hour == h:
                 if utc.minute >= m:
-                    if utc.second > s:
+                    if utc.second >= s:
                         break
             await asyncio.sleep(0.1)
 
