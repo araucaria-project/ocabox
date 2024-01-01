@@ -5,6 +5,9 @@ import datetime
 from pyaraucaria.coordinates import ra_dec_2_az_alt, ra_to_decimal, dec_to_decimal
 from pyaraucaria.obs_plan.obs_plan_parser import ObsPlanParser
 import time
+from astropy import units as u
+from astropy.time import Time
+from astroplan import Observer
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -212,14 +215,27 @@ class CycleTimeCalc(AbstractCycleTime):
         self._time_length += comm_time
         return comm_time
 
+    @staticmethod
+    def calculate_sun(date, value: float, sunrise: bool, location: Dict):
+        date = Time(val=date)
+        obs = Observer(latitude=location['latitude'],
+                       longitude=location['longitude'],
+                       elevation=location['elevation'] * u.m)
+        if sunrise:
+            return obs.sun_rise_time(date, which='next', horizon=value * u.deg).to_datetime()
+        else:
+            return obs.sun_set_time(date, which='next', horizon=value * u.deg).to_datetime()
+
     def _calc_time_wait_command(self, command_dict: Dict[str, Any]) -> float or None:
         if command_dict['command_name'] == 'WAIT':
             if 'kwargs' in command_dict.keys():
+
                 if 'wait' in command_dict['kwargs'].keys():
                     t = float(command_dict['kwargs']['wait'])
                     self._time_length += t
                     return t
-                if 'ut' in command_dict['kwargs'].keys():
+
+                elif 'ut' in command_dict['kwargs'].keys():
                     dat_0 = self._start_time.timestamp() + self._time_length
                     target_t = self._that_day_time(date_time_stamp=dat_0, time_str=command_dict['kwargs']['ut'])
                     if target_t >= (self._start_time.timestamp() + self._time_length):
@@ -233,6 +249,19 @@ class CycleTimeCalc(AbstractCycleTime):
                         t = float(target_t - (self._start_time.timestamp() + self._time_length))
                         self._time_length += t
                         return t
+
+                elif 'wait_sunrise' in command_dict['kwargs'].keys():
+                    now = datetime.datetime.utcnow()
+                    sun = self.calculate_sun(date=now, value=command_dict['kwargs']['wait_sunrise'],
+                                             sunrise=True, location=self._observatory_location)
+                    return (sun - now).seconds
+
+                elif 'wait_sunset' in command_dict['kwargs'].keys():
+                    now = datetime.datetime.utcnow()
+                    sun = self.calculate_sun(date=now, value=command_dict['kwargs']['wait_sunset'],
+                                             sunrise=False, location=self._observatory_location)
+                    return (sun - now).seconds
+
                 else:
                     logger.debug(f'Cannot calculate time, no kwarg')
                     return 0.0
