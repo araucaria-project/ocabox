@@ -29,29 +29,41 @@ class Wait(BaseSubCommand):
     async def _wait_exec(self, value: float) -> None:
         await asyncio.sleep(value)
 
-    def _that_day_time(self, date: datetime, time_str: str) -> float:
-        """
-        Metgod gives time of time_str for day given by date_time_stamp (no matter what time in this date_time_stamp)
-        :param date_time_stamp: day red from this timestamp
-        :param time_str: time in str format
-        :return: timestamp of date(date_time_stamp) and time(time_str)
-        """
-        d = date.strftime('%Y-%m-%d')
-        myDate = f"{d} {time_str}"
-        return time.mktime(datetime.datetime.strptime(myDate, "%Y-%m-%d %H:%M:%S").timetuple())
+    # def _that_day_time(self, date: datetime, time_str: str) -> float:
+    #     """
+    #     Metgod gives time of time_str for day given by date_time_stamp (no matter what time in this date_time_stamp)
+    #     :param date_time_stamp: day red from this timestamp
+    #     :param time_str: time in str format
+    #     :return: timestamp of date(date_time_stamp) and time(time_str)
+    #     """
+    #     d = date.strftime('%Y-%m-%d')
+    #     myDate = f"{d} {time_str}"
+    #     return time.mktime(datetime.datetime.strptime(myDate, "%Y-%m-%d %H:%M:%S").timetuple())
 
     async def _ut_exec(self, value: str) -> None:
-        today = datetime.datetime.utcnow()
-        target_t = self._that_day_time(date=today, time_str=value)
-        now_t = time.mktime(datetime.datetime.utcnow().timetuple())
-        if now_t >= target_t:
-            tomorow = today + datetime.timedelta(days=1)
-            target_t = self._that_day_time(date=tomorow, time_str=value)
+        val = value.split(':')
+        h = int(val[0])
+        m = int(val[1])
+        s = int(val[2])
         while True:
-            now_t = time.mktime(datetime.datetime.utcnow().timetuple())
-            if now_t >= target_t:
-                break
-            await asyncio.sleep(0)
+            utc = datetime.datetime.utcnow()
+            if utc.hour == h:
+                if utc.minute >= m:
+                    if utc.second > s:
+                        break
+            await asyncio.sleep(0.1)
+
+        # today = datetime.datetime.utcnow()
+        # target_t = self._that_day_time(date=today, time_str=value)
+        # now_t = time.mktime(datetime.datetime.utcnow().timetuple())
+        # if now_t >= target_t:
+        #     tomorow = today + datetime.timedelta(days=1)
+        #     target_t = self._that_day_time(date=tomorow, time_str=value)
+        # while True:
+        #     now_t = time.mktime(datetime.datetime.utcnow().timetuple())
+        #     if now_t >= target_t:
+        #         break
+        #     await asyncio.sleep(0.01)
 
     async def _wait_sun_exec(self, value: str, sun_rise: bool) -> bool:
         # TODO take loc from settings
