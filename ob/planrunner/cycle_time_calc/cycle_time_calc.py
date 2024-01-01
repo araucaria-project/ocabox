@@ -217,15 +217,15 @@ class CycleTimeCalc(AbstractCycleTime):
 
     @staticmethod
     def calculate_sun(date, value: float, sunrise: bool, location: Dict):
-        utc = TimezoneInfo(utc_offset=0 * u.hour, tzname='UTC')
+        # utc = TimezoneInfo(utc_offset=0 * u.hour, tzname='UTC')
         date = Time(val=date)
         obs = Observer(latitude=location['latitude'],
                        longitude=location['longitude'],
                        elevation=location['elevation'] * u.m)
         if sunrise:
-            return obs.sun_rise_time(date, which='next', horizon=value * u.deg).to_datetime(timezone=utc)
+            return obs.sun_rise_time(date, which='next', horizon=value * u.deg).to_datetime()
         else:
-            return obs.sun_set_time(date, which='next', horizon=value * u.deg).to_datetime(timezone=utc)
+            return obs.sun_set_time(date, which='next', horizon=value * u.deg).to_datetime()
 
     def _calc_time_wait_command(self, command_dict: Dict[str, Any]) -> float or None:
         if command_dict['command_name'] == 'WAIT':
