@@ -5,7 +5,7 @@ from typing import Callable, Dict, Any
 from ob.planrunner.base_subcommand import BaseSubCommand
 from pyaraucaria.fits import fits_header
 from pyaraucaria.date import julian_to_tuple
-from datetime import datetime
+import datetime
 import time
 import os
 from typing import Dict, List, Tuple
@@ -98,13 +98,13 @@ class CameraExposure(BaseSubCommand):
         Create name for symlink, name is user-friendly date format YYYY_MM_DD with date when night is started
         @return: Str in format YYYY_MM_DD
         """
-        jd_tuple = julian_to_tuple(math.floor(self.get_julian_date(str(datetime.utcnow()))) + 0.1)
+        jd_tuple = julian_to_tuple(math.floor(self.get_julian_date(str(datetime.datetime.utcnow()))) + 0.1)
         mnth = self.add_zero(jd_tuple[1])
         day = self.add_zero(jd_tuple[2])
         return f'{jd_tuple[0]}_{mnth}_{day}'
 
     def _get_today_fits_folder_name(self) -> str:
-        return f"{math.floor(self.get_oca_date(self.get_julian_date(str(datetime.utcnow())))):04.0f}"
+        return f"{math.floor(self.get_oca_date(self.get_julian_date(str(datetime.datetime.utcnow())))):04.0f}"
 
     def _get_fits_file_name(self):
         if self.type == 'snap':
@@ -364,7 +364,11 @@ class CameraExposure(BaseSubCommand):
         evening_factor = 1.11 # Evening factor to set comparable values from morning and evening
 
         # Get inf if it is evening or morning and set ev_factor
-        if datetime.utcnow().hour > 14:
+        # TODO calculate according to location -
+        lognitude = -70.196389
+        s = lognitude / abs(lognitude)
+        h = (datetime.datetime.utcnow() + s * datetime.timedelta(minutes=abs(lognitude) * 4)).hour
+        if h > 12:
             evening = True
             ev_fact = evening_factor
         else:
@@ -522,7 +526,7 @@ class CameraExposure(BaseSubCommand):
                                                        **self.info_dict,
                                                        exp_time=float(exposure_time)))
         self.readout_time_start = time.time()
-        self.exp_time_start = datetime.utcnow()
+        self.exp_time_start = datetime.datetime.utcnow()
         await self.camera.aput_startexposure(float(exposure_time), self.light)
         await self._wait_for_subexposure(float(exposure_time))
         self.readout_time = time.time() - self.readout_time_start - float(exposure_time)
