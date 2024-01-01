@@ -6,7 +6,7 @@ from pyaraucaria.coordinates import ra_dec_2_az_alt, ra_to_decimal, dec_to_decim
 from pyaraucaria.obs_plan.obs_plan_parser import ObsPlanParser
 import time
 from astropy import units as u
-from astropy.time import Time
+from astropy.time import Time, TimezoneInfo
 from astroplan import Observer
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -217,14 +217,15 @@ class CycleTimeCalc(AbstractCycleTime):
 
     @staticmethod
     def calculate_sun(date, value: float, sunrise: bool, location: Dict):
+        utc = TimezoneInfo(utc_offset=0 * u.hour, tzname='UTC')
         date = Time(val=date)
         obs = Observer(latitude=location['latitude'],
                        longitude=location['longitude'],
                        elevation=location['elevation'] * u.m)
         if sunrise:
-            return obs.sun_rise_time(date, which='next', horizon=value * u.deg).to_datetime()
+            return obs.sun_rise_time(date, which='next', horizon=value * u.deg).to_datetime(timezone=utc)
         else:
-            return obs.sun_set_time(date, which='next', horizon=value * u.deg).to_datetime()
+            return obs.sun_set_time(date, which='next', horizon=value * u.deg).to_datetime(timezone=utc)
 
     def _calc_time_wait_command(self, command_dict: Dict[str, Any]) -> float or None:
         if command_dict['command_name'] == 'WAIT':
