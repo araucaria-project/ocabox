@@ -251,13 +251,13 @@ class CycleTimeCalc(AbstractCycleTime):
                         return t
 
                 elif 'wait_sunrise' in command_dict['kwargs'].keys():
-                    now = datetime.datetime.utcnow()
+                    now = datetime.datetime.utcnow() + datetime.timedelta(seconds=self._time_length)
                     sun = self.calculate_sun(date=now, value=float(command_dict['kwargs']['wait_sunrise']),
                                              sunrise=True, location=self._observatory_location)
                     return (sun - now).seconds
 
                 elif 'wait_sunset' in command_dict['kwargs'].keys():
-                    now = datetime.datetime.utcnow()
+                    now = datetime.datetime.utcnow() + datetime.timedelta(seconds=self._time_length)
                     sun = self.calculate_sun(date=now, value=float(command_dict['kwargs']['wait_sunset']),
                                              sunrise=False, location=self._observatory_location)
                     return (sun - now).seconds
