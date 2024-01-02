@@ -12,7 +12,7 @@ from test.data_colection.base_async_test import BaseAsyncTest
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
-class TreeBaseRequestBlockerTest(unittest.TestCase, BaseAsyncTest):
+class TreeBaseRequestBlockerTest(unittest.IsolatedAsyncioTestCase):
     class SampleTestValueProvider(TreeProvider):
         async def get_value(self, request: ValueRequest, **kwargs) -> Value or None:
             if request.index < len(request.address) and request.address[request.index] in {'some_val',
@@ -32,76 +32,54 @@ class TreeBaseRequestBlockerTest(unittest.TestCase, BaseAsyncTest):
         self.provider_name = 'provider_sample_name'
         self.provider_source_name = 'provider_source_sample_name'
         self.provider = TreeProvider(self.provider_name, self.provider_source_name, self.blocker)
-        self._setUpLoop()
 
-    def tearDown(self) -> None:
-        self._tearDownLoop()
-        super().tearDown()
-
-    def test_access_granted_get_request(self):
+    async def test_access_granted_get_request(self):
         """Test access granted for GET request"""
+        # GET request always go through
+        req = ValueRequest('.'.join([self.provider_source_name, self.sample_provider_source_name, 'some_val']))
+        result = await self.provider.get_response(request=req)
+        self.assertIsNotNone(result.value.v)
 
-        async def coro():
-            # GET request always go through
-            req = ValueRequest('.'.join([self.provider_source_name, self.sample_provider_source_name, 'some_val']))
-            result = await self.provider.get_response(request=req)
-            self.assertIsNotNone(result.value.v)
-
-        self.loop.run_until_complete(coro())
-
-    def test_access_denied_put_request(self):
+    async def test_access_denied_put_request(self):
         """Test when access denied"""
+        # PUT request stop
+        user = TreeServiceUser(name='some_user')
+        req = ValueRequest('.'.join([self.provider_source_name, self.sample_provider_source_name, 'some_val']),
+                           request_type='PUT', user=user)
+        result = await self.provider.get_response(request=req)
+        self.assertIsNone(result.value)
+        self.assertTrue(result.error.code == 1004)
 
-        async def coro():
-            # PUT request stop
-            req = ValueRequest('.'.join([self.provider_source_name, self.sample_provider_source_name, 'some_val']),
-                               request_type='PUT')
-            result = await self.provider.get_response(request=req)
-            self.assertIsNone(result.value)
-            self.assertTrue(result.error.code == 1004)
-
-        self.loop.run_until_complete(coro())
-
-    def test_access_granted_put_request(self):
+    async def test_access_granted_put_request(self):
         """Test when access granted for user"""
+        # PUT request when access granted
+        user = TreeServiceUser(name='some_user')
+        self.blocker.make_reservation(user=user, timeout_reservation=time.time() + 60)
+        req = ValueRequest('.'.join([self.provider_source_name, self.sample_provider_source_name, 'some_val']),
+                           request_type='PUT', user=user)
+        result = await self.provider.get_response(request=req)
+        self.assertIsNotNone(result.value)
+        self.assertIsNone(result.error)
 
-        async def coro():
-            # PUT request when access granted
-            user = TreeServiceUser(name='some_user')
-            self.blocker.make_reservation(user=user, timeout_reservation=time.time() + 60)
-            req = ValueRequest('.'.join([self.provider_source_name, self.sample_provider_source_name, 'some_val']),
-                               request_type='PUT', user=user)
-            result = await self.provider.get_response(request=req)
-            self.assertIsNotNone(result.value)
-            self.assertIsNone(result.error)
+    async def test_wrong_type_request(self):
+        """Test when comes request witch unrecognised type"""
+        # wrong type request
+        req = ValueRequest('.'.join([self.provider_source_name, self.sample_provider_source_name, 'some_val']),
+                           request_type='EXECUTE')
+        result = await self.provider.get_response(request=req)
+        self.assertIsNone(result.value)
+        self.assertTrue(result.error.code == 4001)
 
-        self.loop.run_until_complete(coro())
-
-    def test_wrong_type_request(self):
-        async def coro():
-            # wrong type request
-            req = ValueRequest('.'.join([self.provider_source_name, self.sample_provider_source_name, 'some_val']),
-                               request_type='EXECUTE')
-            result = await self.provider.get_response(request=req)
-            self.assertIsNone(result.value)
-            self.assertTrue(result.error.code == 4001)
-
-        self.loop.run_until_complete(coro())
-
-    def test_access_timeout_put_request(self):
+    async def test_access_timeout_put_request(self):
         """Test when user lost access by timeout"""
-
-        async def coro():
-            # PUT request when access denied by timeout
-            user = TreeServiceUser(name='some_user')
-            self.blocker.make_reservation(user=user, timeout_reservation=time.time() - 2)
-            req = ValueRequest('.'.join([self.provider_source_name, self.sample_provider_source_name, 'some_val']),
-                               request_type='PUT', user=user)
-            result = await self.provider.get_response(request=req)
-            self.assertIsNone(result.value)
-            self.assertTrue(result.error.code == 1004)
-
-        self.loop.run_until_complete(coro())
+        # PUT request when access denied by timeout
+        user = TreeServiceUser(name='some_user')
+        self.blocker.make_reservation(user=user, timeout_reservation=time.time() - 2)
+        req = ValueRequest('.'.join([self.provider_source_name, self.sample_provider_source_name, 'some_val']),
+                           request_type='PUT', user=user)
+        result = await self.provider.get_response(request=req)
+        self.assertIsNone(result.value)
+        self.assertTrue(result.error.code == 1004)
 
     def test_double_reservation(self):
         """test whether the reservation will not be overwritten before the end of the previous one. """
@@ -113,66 +91,55 @@ class TreeBaseRequestBlockerTest(unittest.TestCase, BaseAsyncTest):
         self.assertEqual(user, self.blocker.get_current_user())
         self.assertNotEqual(user2, self.blocker.get_current_user())
 
-    def test_white_list(self):
+    async def test_white_list(self):
         """Test request from white list"""
+        req_address = '.'.join([self.provider_source_name, self.sample_provider_source_name, 'some_other_val'])
+        req = ValueRequest(req_address, request_type='PUT')
+        result = await self.provider.get_response(request=req)
+        # first check if white list is empty
+        self.assertIsNone(result.value)
+        self.assertTrue(result.error.code == 1004)
 
-        async def coro():
-            req_address = '.'.join([self.provider_source_name, self.sample_provider_source_name, 'some_other_val'])
-            req = ValueRequest(req_address, request_type='PUT')
-            result = await self.provider.get_response(request=req)
-            # first check if white list is empty
-            self.assertIsNone(result.value)
-            self.assertTrue(result.error.code == 1004)
+        # add address to white list
+        self.blocker.add_to_white_list('.'.join([self.sample_provider_source_name, 'some_other_val']), 'PUT')
+        req = ValueRequest(req_address, request_type='PUT')
+        result = await self.provider.get_response(request=req)
+        self.assertIsNotNone(result.value)
+        self.assertIsNone(result.error)
 
-            # add address to white list
-            self.blocker.add_to_white_list('.'.join([self.sample_provider_source_name, 'some_other_val']), 'PUT')
-            req = ValueRequest(req_address, request_type='PUT')
-            result = await self.provider.get_response(request=req)
-            self.assertIsNotNone(result.value)
-            self.assertIsNone(result.error)
-
-        self.loop.run_until_complete(coro())
-
-    def test_black_list(self):
+    async def test_black_list(self):
         """Test request from black list"""
+        req_address = '.'.join([self.provider_source_name, self.sample_provider_source_name, 'some_other_val'])
+        req = ValueRequest(req_address, request_type='GET')
+        result = await self.provider.get_response(request=req)
+        # first check if black list is empty
+        self.assertIsNotNone(result.value)
+        self.assertIsNone(result.error)
 
-        async def coro():
-            req_address = '.'.join([self.provider_source_name, self.sample_provider_source_name, 'some_other_val'])
-            req = ValueRequest(req_address, request_type='GET')
-            result = await self.provider.get_response(request=req)
-            # first check if black list is empty
-            self.assertIsNotNone(result.value)
-            self.assertIsNone(result.error)
+        # add address to black list
+        self.blocker.add_to_black_list('.'.join([self.sample_provider_source_name, 'some_other_val']), 'GET')
+        req = ValueRequest(req_address, request_type='GET')
+        result = await self.provider.get_response(request=req)
+        self.assertIsNone(result.value)
+        self.assertTrue(result.error.code == 1004)
 
-            # add address to black list
-            self.blocker.add_to_black_list('.'.join([self.sample_provider_source_name, 'some_other_val']), 'GET')
-            req = ValueRequest(req_address, request_type='GET')
-            result = await self.provider.get_response(request=req)
-            self.assertIsNone(result.value)
-            self.assertTrue(result.error.code == 1004)
-
-        self.loop.run_until_complete(coro())
-
-    def test_black_list_type_request(self):
+    async def test_black_list_type_request(self):
         """Test black list can recognise type request"""
         user = TreeServiceUser(name='some_user')
         self.blocker.make_reservation(user=user, timeout_reservation=time.time() + 60)
         self.blocker.add_to_black_list('.'.join([self.sample_provider_source_name, 'some_other_val']), 'GET')
 
-        async def coro():
-            req_address = '.'.join([self.provider_source_name, self.sample_provider_source_name, 'some_other_val'])
-            req = ValueRequest(req_address, request_type='PUT', user=user)
-            result = await self.provider.get_response(request=req)
-            # first check if black list is empty
-            self.assertIsNotNone(result.value)
-            self.assertIsNone(result.error)
+        req_address = '.'.join([self.provider_source_name, self.sample_provider_source_name, 'some_other_val'])
+        req = ValueRequest(req_address, request_type='PUT', user=user)
+        result = await self.provider.get_response(request=req)
+        # first check if black list is empty
+        self.assertIsNotNone(result.value)
+        self.assertIsNone(result.error)
 
-            req = ValueRequest(req_address, request_type='GET', user=user)
-            result = await self.provider.get_response(request=req)
-            self.assertIsNone(result.value)
-            self.assertTrue(result.error.code == 1004)
-
-        self.loop.run_until_complete(coro())
+        req = ValueRequest(req_address, request_type='GET', user=user)
+        result = await self.provider.get_response(request=req)
+        self.assertIsNone(result.value)
+        self.assertTrue(result.error.code == 1004)
 
     def test__init_lists_of_special_requests(self):
         """Test initial black/white list"""
@@ -186,6 +153,24 @@ class TreeBaseRequestBlockerTest(unittest.TestCase, BaseAsyncTest):
         self.assertTrue(white_lists.get('PUT'))
         for key, val in expected_white_list.items():
             self.assertTrue(all(item in white_lists.get(key) for item in val))
+
+    async def test_permit_request_with_special_param(self):
+        """Test situation when request coming witch special permission param was set"""
+        user = TreeServiceUser(name='some_user')
+        # without param
+        request_data = {}
+        req = ValueRequest('.'.join([self.provider_source_name, self.sample_provider_source_name, 'some_val']),
+                           request_type='PUT', user=user, request_data=request_data)
+        result = await self.provider.get_response(request=req)
+        self.assertIsNone(result.value)
+        self.assertTrue(result.error.code == 1004)
+        # with param
+        request_data = {TreeBaseRequestBlocker.SPECIAL_PERMISSION_PARAM: True}
+        req = ValueRequest('.'.join([self.provider_source_name, self.sample_provider_source_name, 'some_val']),
+                           request_type='PUT', user=user, request_data=request_data)
+        result = await self.provider.get_response(request=req)
+        self.assertIsNotNone(result.value)
+        self.assertIsNone(result.error)
 
 
 if __name__ == '__main__':

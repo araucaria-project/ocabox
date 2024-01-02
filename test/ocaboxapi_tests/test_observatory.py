@@ -16,7 +16,7 @@ class ClientAPITest(unittest.TestCase):
         self.assertEqual(r, "test_dir22")
         # test default value from DefaultClient
         r = o.get_app_cfg("base_fits_dir")
-        self.assertEqual(r, "~/Desktop")
+        self.assertEqual(r, "/data/fits/")
         # test no existing value
         r = o.get_app_cfg("no_existing_value")
         self.assertIsNone(r)

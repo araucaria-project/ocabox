@@ -21,6 +21,7 @@ class TreeBaseRequestBlocker(TreeBaseProvider):
     """
 
     COMPONENT_DEFAULT_NAME: str = 'TreeBaseRequestBlocker'
+    SPECIAL_PERMISSION_PARAM: str = "request_special_permission_param"  # use only for requesting inside ocabox
 
     def __init__(self, component_name: str, subcontractor: ProvidesResponseProtocol = None, **kwargs):
         super().__init__(component_name=component_name, subcontractor=subcontractor, **kwargs)
@@ -42,12 +43,16 @@ class TreeBaseRequestBlocker(TreeBaseProvider):
         if request.request_type == 'GET':
             raise TreeStructureError
 
+        if request.request_type != 'PUT':
+            raise TreeOtherError(code=4001, message='Unrecognized request type')
+
         # white list always can go ahead
         if self._check_white_list(request=request):
             raise TreeStructureError
 
-        if request.request_type != 'PUT':
-            raise TreeOtherError(code=4001, message='Unrecognized request type')
+        # request witch special flag - can go ahead
+        if self._check_has_param(request=request):
+            raise TreeStructureError
 
         current_user = self._get_current_reservation()
         if current_user and request.user == current_user:
@@ -162,6 +167,10 @@ class TreeBaseRequestBlocker(TreeBaseProvider):
         initial_data = self._get_cfg('black_list', {})
         for key, val in self._black_lists.items():
             val.extend(initial_data.get(key, []))
+
+    def _check_has_param(self, request: ValueRequest) -> bool:
+        param = request.request_data.get(self.SPECIAL_PERMISSION_PARAM, None)
+        return param is not None and isinstance(param, bool) and param
 
 
 class ReservationError(Exception):
