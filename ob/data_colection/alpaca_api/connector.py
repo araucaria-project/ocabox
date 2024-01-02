@@ -292,7 +292,7 @@ class AlpacaConnector(Connector):
     def _url(component: 'Component', variable: str, kind=None):
         url = '/'.join([
             component.get_option_recursive('address'),
-            kind if kind else component.component_options['kind'],
+            kind if kind else component.kind,
             str(component.device_nr),
             variable
         ])
