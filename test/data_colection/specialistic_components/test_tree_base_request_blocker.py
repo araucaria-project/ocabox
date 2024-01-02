@@ -3,7 +3,7 @@ import time
 import unittest
 from ob.data_colection.base_components.tree_provider import TreeProvider
 from ob.data_colection.specialistic_components.tree_base_request_blocker import ReservationError, TreeBaseRequestBlocker
-from ob.data_colection.tree_user import TreeServiceUser
+from ob.data_colection.tree_user import TreeServiceUser, TreeUser
 from ob.data_colection.value import TreeValueError, Value
 from ob.data_colection.value_call import ValueRequest
 from ob.ob_config import SingletonConfig
@@ -164,13 +164,23 @@ class TreeBaseRequestBlockerTest(unittest.IsolatedAsyncioTestCase):
         result = await self.provider.get_response(request=req)
         self.assertIsNone(result.value)
         self.assertTrue(result.error.code == 1004)
-        # with param
+        # with param and service user
         request_data = {TreeBaseRequestBlocker.SPECIAL_PERMISSION_PARAM: True}
         req = ValueRequest('.'.join([self.provider_source_name, self.sample_provider_source_name, 'some_val']),
                            request_type='PUT', user=user, request_data=request_data)
         result = await self.provider.get_response(request=req)
         self.assertIsNotNone(result.value)
         self.assertIsNone(result.error)
+
+        # with param and normal user
+        user = TreeUser(name='some_user')
+        user.socket_id = b'qweet234'
+        request_data = {TreeBaseRequestBlocker.SPECIAL_PERMISSION_PARAM: True}
+        req = ValueRequest('.'.join([self.provider_source_name, self.sample_provider_source_name, 'some_val']),
+                           request_type='PUT', user=user, request_data=request_data)
+        result = await self.provider.get_response(request=req)
+        self.assertIsNone(result.value)
+        self.assertTrue(result.error.code == 1004)
 
 
 if __name__ == '__main__':

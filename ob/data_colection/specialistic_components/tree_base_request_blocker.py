@@ -7,7 +7,7 @@ from ob.data_colection.address import AddressError
 from ob.data_colection.base_components.tree_base_provider import TreeBaseProvider
 from ob.data_colection.base_components.tree_component import ProvidesResponseProtocol
 from ob.data_colection.coded_error import TreeStructureError, TreeOtherError
-from ob.data_colection.tree_user import BaseTreeUser
+from ob.data_colection.tree_user import BaseTreeUser, TreeServiceUser
 from ob.data_colection.value import Value
 from ob.data_colection.value_call import ValueRequest
 
@@ -51,7 +51,7 @@ class TreeBaseRequestBlocker(TreeBaseProvider):
             raise TreeStructureError
 
         # request witch special flag - can go ahead
-        if self._check_has_param(request=request):
+        if self._check_has_param(request=request) and isinstance(request.user, TreeServiceUser):
             logger.debug("Retrieved a message with a flag was bypassing the TreeBaseRequestBlocker")
             raise TreeStructureError
 
