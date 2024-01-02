@@ -29,7 +29,8 @@ class CycleTimeDataClean(AbstractCycleTime):
                 else:
                     random_id = m['random_id']
                     line_started = n
-            if m['command_name'] == 'NIGHTPLAN' and ('done' or 'skipped' in m.keys()) and random_id == m['random_id']:
+            if m['command_name'] == 'NIGHTPLAN' and ('done' in m.keys() or 'skipped' in m.keys()) \
+                    and random_id == m['random_id']:
                 line_ended = n
                 full_nights_id[random_id] = {'started': line_started,
                                              'ended':line_ended,
