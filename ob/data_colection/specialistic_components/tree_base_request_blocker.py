@@ -52,6 +52,7 @@ class TreeBaseRequestBlocker(TreeBaseProvider):
 
         # request witch special flag - can go ahead
         if self._check_has_param(request=request):
+            logger.debug("Retrieved a message with a flag was bypassing the TreeBaseRequestBlocker")
             raise TreeStructureError
 
         current_user = self._get_current_reservation()
