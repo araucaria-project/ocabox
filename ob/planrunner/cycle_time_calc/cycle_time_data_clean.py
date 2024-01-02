@@ -13,20 +13,29 @@ class CycleTimeDataClean(AbstractCycleTime):
     """
 
     @staticmethod
-    def find_full_nights_id(data: List[Any]) -> Dict[str, Dict[str, Any]]:
+    def find_nights_id(data: List[Any]) -> Dict[str, Dict[str, Any]]:
         random_id = ''
         full_nights_id = {}
         line_started = None
         for n, m in enumerate(data, start=0):
-            if m['command_name'] == 'NIGHTPLAN' and 'done' not in m.keys():
-                random_id = m['random_id']
-                line_started = n
-            if m['command_name'] == 'NIGHTPLAN' and 'done' in m.keys() and random_id == m['random_id']:
+            if m['command_name'] == 'NIGHTPLAN' and 'done' not in m.keys() and \
+                    'skipped' not in m.keys() and random_id != m['random_id']:
+                if line_started is not None:
+                    line_ended = n - 1
+                    full_nights_id[random_id] = {'started': line_started,
+                                                 'ended': line_ended,
+                                                 'utc_time_stamp': m["utc_time_stamp"]}
+                    line_started = None
+                else:
+                    random_id = m['random_id']
+                    line_started = n
+            if m['command_name'] == 'NIGHTPLAN' and ('done' or 'skipped' in m.keys()) and random_id == m['random_id']:
                 line_ended = n
                 full_nights_id[random_id] = {'started': line_started,
                                              'ended':line_ended,
                                              'utc_time_stamp': m["utc_time_stamp"]}
-        logger.debug(f'Full nights id find: {full_nights_id}')
+                line_started = None
+        logger.debug(f'Nights id found: {full_nights_id}')
         return full_nights_id
 
     @staticmethod
@@ -147,7 +156,7 @@ class CycleTimeDataClean(AbstractCycleTime):
         str_dat = CycleTimeDataClean.read_file(base_folder,
                                             CycleTimeDataClean.raw_file_name(telescope=telescope))
         parsed_data = CycleTimeDataClean.parse_data(str_dat)
-        full_nights_id = CycleTimeDataClean.find_full_nights_id(parsed_data)
+        full_nights_id = CycleTimeDataClean.find_nights_id(parsed_data)
         full_nights_id = CycleTimeDataClean.verify_nights(full_nights_id=full_nights_id,
                                                           telescope=telescope, base_folder=base_folder)
         commands_data = CycleTimeDataClean.build_commands_data(data=parsed_data,

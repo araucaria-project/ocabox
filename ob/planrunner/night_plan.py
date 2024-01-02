@@ -58,7 +58,7 @@ class NightPlan(BaseSequence):
         self.param['cycle_time'].set_telescope_start_az_alt(az=az, alt=alt)
 
     def _set_r_id(self) -> None:
-        self._r_id =  random.randint(0, 100000000)
+        self._r_id =  round(self.get_julian_date(str(datetime.datetime.utcnow())), 2) * 100
 
     def _write_subcomponents(self):
         self.info_callback['stream_1'](f'{self.id} {self.name} written.')
