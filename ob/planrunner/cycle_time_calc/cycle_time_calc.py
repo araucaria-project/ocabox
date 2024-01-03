@@ -3,10 +3,11 @@ import logging
 from ob.planrunner.cycle_time_calc.abstract_cycle_time import AbstractCycleTime
 import datetime
 from pyaraucaria.coordinates import ra_dec_2_az_alt, ra_to_decimal, dec_to_decimal
+from pyaraucaria.ephemeris import calculate_sun_rise_set
 from pyaraucaria.obs_plan.obs_plan_parser import ObsPlanParser
 import time
 from astropy import units as u
-from astropy.time import Time, TimezoneInfo
+from astropy.time import Time
 from astroplan import Observer
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -215,18 +216,6 @@ class CycleTimeCalc(AbstractCycleTime):
         self._time_length += comm_time
         return comm_time
 
-    @staticmethod
-    def calculate_sun(date, value: float, sunrise: bool, location: Dict):
-        # utc = TimezoneInfo(utc_offset=0 * u.hour, tzname='UTC')
-        date = Time(val=date)
-        obs = Observer(latitude=location['latitude'],
-                       longitude=location['longitude'],
-                       elevation=location['elevation'] * u.m)
-        if sunrise:
-            return obs.sun_rise_time(date, which='next', horizon=value * u.deg).to_datetime()
-        else:
-            return obs.sun_set_time(date, which='next', horizon=value * u.deg).to_datetime()
-
     def _calc_time_wait_command(self, command_dict: Dict[str, Any]) -> float or None:
         if command_dict['command_name'] == 'WAIT':
             if 'kwargs' in command_dict.keys():
@@ -253,18 +242,35 @@ class CycleTimeCalc(AbstractCycleTime):
 
                 elif 'wait_sunrise' in command_dict['kwargs'].keys():
                     now = self._start_time + datetime.timedelta(seconds=self._time_length)
-                    sun = self.calculate_sun(date=now, value=float(command_dict['kwargs']['wait_sunrise']),
-                                             sunrise=True, location=self._observatory_location)
+                    sun = calculate_sun_rise_set(date=now,
+                                                 horiz_height=float(command_dict['kwargs']['wait_sunrise']),
+                                                 sunrise=True,
+                                                 latitude=self._observatory_location['latitude'],
+                                                 longitude=self._observatory_location['longitude'],
+                                                 elevation=self._observatory_location['elevation']
+                                                 )
                     t = (sun - now).seconds
-                    self._time_length += t
+                    if t / 3600 > 18:
+                        t = 0
+                    else:
+                        self._time_length += t
                     return t
 
                 elif 'wait_sunset' in command_dict['kwargs'].keys():
                     now = self._start_time + datetime.timedelta(seconds=self._time_length)
-                    sun = self.calculate_sun(date=now, value=float(command_dict['kwargs']['wait_sunset']),
-                                             sunrise=False, location=self._observatory_location)
+                    sun = calculate_sun_rise_set(date=now,
+                                                 horiz_height=float(command_dict['kwargs']['wait_sunset']),
+                                                 sunrise=False,
+                                                 latitude=self._observatory_location['latitude'],
+                                                 longitude=self._observatory_location['longitude'],
+                                                 elevation=self._observatory_location['elevation']
+                                                 )
                     t = (sun - now).seconds
-                    self._time_length += t
+                    t = (sun - now).seconds
+                    if t / 3600 > 12:
+                        t = 0
+                    else:
+                        self._time_length += t
                     return t
 
                 else:
