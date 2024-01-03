@@ -82,7 +82,7 @@ tree:
           kind: dome
           device_number: 0
         covercalibrator:
-          kind: covercalibratorOCA
+          kind: covercalibrator
           device_number: 0
         camera:
           kind: camera
