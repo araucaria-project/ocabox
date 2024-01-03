@@ -49,13 +49,14 @@ class CycleTimeDataClean(AbstractCycleTime):
                     if q_data['command_name'] not in commands_data.keys():
                         commands_data[q_data['command_name']] = []
                     if 'done' not in q_data.keys():
-                        if data[p_no + 1]['skipped'] == 'False':
-                            dat = CycleTimeDataClean._build_command_data(data=data,
-                                                                         telescope=telescope,
-                                                                         night_id=n_id,
-                                                                         line_start=p_no)
-                            if dat is not None:
-                                commands_data[q_data['command_name']].append(dat)
+                        if q_data['command_name'] not in AbstractCycleTime.NO_TRAIN_COMMANDS:
+                            if data[p_no + 1]['skipped'] == 'False':
+                                dat = CycleTimeDataClean._build_command_data(data=data,
+                                                                             telescope=telescope,
+                                                                             night_id=n_id,
+                                                                             line_start=p_no)
+                                if dat is not None:
+                                    commands_data[q_data['command_name']].append(dat)
         return commands_data
 
     @staticmethod
