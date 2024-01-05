@@ -1,11 +1,28 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## [Unreleased
+## [Unreleased]
+### Added
+### Changed
+### Fixed
+
+
+## [1.0.17]
+
+### Added
+- `cycle_time_calc` added sunrise and sunset
+- `planrunner` added sunrise and sunset wait, seq is possible to write seq=12x(...) now
+- `astroplan` add to poetry
 
 ### Changed
 - `sub_camera_exposure` folders creation and symlinks moved to ofp
 - `nightplan` add comment use
+- `planrunner` numering is 000 instead of 00
+- `cycle_time_calc` is training not only full nights, night id is jd now
+
+### Fixed
+- evening and morning autoflat canceling
+- fixed `planrunner` wait ut
 
 ## [1.0.16]
 

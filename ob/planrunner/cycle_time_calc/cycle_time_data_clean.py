@@ -13,20 +13,30 @@ class CycleTimeDataClean(AbstractCycleTime):
     """
 
     @staticmethod
-    def find_full_nights_id(data: List[Any]) -> Dict[str, Dict[str, Any]]:
+    def find_nights_id(data: List[Any]) -> Dict[str, Dict[str, Any]]:
         random_id = ''
         full_nights_id = {}
         line_started = None
         for n, m in enumerate(data, start=0):
-            if m['command_name'] == 'NIGHTPLAN' and 'done' not in m.keys():
-                random_id = m['random_id']
-                line_started = n
-            if m['command_name'] == 'NIGHTPLAN' and 'done' in m.keys() and random_id == m['random_id']:
+            if m['command_name'] == 'NIGHTPLAN' and 'done' not in m.keys() and \
+                    'skipped' not in m.keys() and random_id != m['random_id']:
+                if line_started is not None:
+                    line_ended = n - 1
+                    full_nights_id[random_id] = {'started': line_started,
+                                                 'ended': line_ended,
+                                                 'utc_time_stamp': m["utc_time_stamp"]}
+                    line_started = None
+                else:
+                    random_id = m['random_id']
+                    line_started = n
+            if m['command_name'] == 'NIGHTPLAN' and ('done' in m.keys() or 'skipped' in m.keys()) \
+                    and random_id == m['random_id']:
                 line_ended = n
                 full_nights_id[random_id] = {'started': line_started,
                                              'ended':line_ended,
                                              'utc_time_stamp': m["utc_time_stamp"]}
-        logger.debug(f'Full nights id find: {full_nights_id}')
+                line_started = None
+        logger.debug(f'Nights id found: {full_nights_id}')
         return full_nights_id
 
     @staticmethod
@@ -39,12 +49,14 @@ class CycleTimeDataClean(AbstractCycleTime):
                     if q_data['command_name'] not in commands_data.keys():
                         commands_data[q_data['command_name']] = []
                     if 'done' not in q_data.keys():
-                        if data[p_no + 1]['skipped'] == 'False':
-                            commands_data[q_data['command_name']].append(CycleTimeDataClean._build_command_data(
-                                data=data,
-                                telescope=telescope,
-                                night_id=n_id,
-                                line_start=p_no))
+                        if q_data['command_name'] not in AbstractCycleTime.NO_TRAIN_COMMANDS:
+                            if data[p_no + 1]['skipped'] == 'False':
+                                dat = CycleTimeDataClean._build_command_data(data=data,
+                                                                             telescope=telescope,
+                                                                             night_id=n_id,
+                                                                             line_start=p_no)
+                                if dat is not None:
+                                    commands_data[q_data['command_name']].append(dat)
         return commands_data
 
     @staticmethod
@@ -91,52 +103,55 @@ class CycleTimeDataClean(AbstractCycleTime):
         second = data[line_start + 1]
         third = data[line_start + 2]
 
-        if 'dome_az_end' in third.keys():
-            index_dome = 'dome_az_end'
+        if third['command_name'] == 'NIGHTPLAN' and 'done' not in third.keys() and 'skipped' not in third.keys():
+            dat = None
         else:
-            index_dome = 'dome_az_begin'
+            if 'dome_az_end' in third.keys():
+                index_dome = 'dome_az_end'
+            else:
+                index_dome = 'dome_az_begin'
 
-        if 'mount_alt_end' in third.keys():
-            index_mount_alt = 'mount_alt_end'
-        else:
-            index_mount_alt = 'mount_alt_begin'
+            if 'mount_alt_end' in third.keys():
+                index_mount_alt = 'mount_alt_end'
+            else:
+                index_mount_alt = 'mount_alt_begin'
 
-        if 'mount_az_end' in third.keys():
-            index_mount_az = 'mount_az_end'
-        else:
-            index_mount_az = 'mount_az_begin'
+            if 'mount_az_end' in third.keys():
+                index_mount_az = 'mount_az_end'
+            else:
+                index_mount_az = 'mount_az_begin'
 
-        dat = OrderedDict({
-            CycleTimeDataClean.DATA_CLEAN_ORDER[0]:
-                night_id,
-            CycleTimeDataClean.DATA_CLEAN_ORDER[1]:
-                first['command_name'],
-            CycleTimeDataClean.DATA_CLEAN_ORDER[2]:
-                first['utc_date_stamp'],
-            CycleTimeDataClean.DATA_CLEAN_ORDER[3]:
-                float(third['utc_time_stamp']) - float(first['utc_time_stamp']),
-            CycleTimeDataClean.DATA_CLEAN_ORDER[4]:
-                CycleTimeDataClean.az_distance(start=float(first['dome_az_begin']),
-                                                                     end=float(third[index_dome])),
-            CycleTimeDataClean.DATA_CLEAN_ORDER[5]:
-                CycleTimeDataClean.alt_az_distance(start_alt=float(first['mount_alt_begin']),
-                                                                     end_alt=float(third[index_mount_alt]),
-                                                                     start_az=float(first['mount_az_begin']),
-                                                                     end_az=float(third[index_mount_az])),
-            CycleTimeDataClean.DATA_CLEAN_ORDER[6]:
-                CycleTimeDataClean.exposure_time_sum(first),
-            CycleTimeDataClean.DATA_CLEAN_ORDER[7]:
-                CycleTimeDataClean.filter_changes(record=first),
-            CycleTimeDataClean.DATA_CLEAN_ORDER[8]:
-                CycleTimeDataClean.rm_mode_inverse_mhz(rm_mode=CycleTimeDataClean.rm_mode(second),
-                                                       telescope=telescope)*CycleTimeDataClean.exposure_number(first),
-            CycleTimeDataClean.DATA_CLEAN_ORDER[9]:
-                CycleTimeDataClean.dither(first)*CycleTimeDataClean.exposure_number(first),
-            # 'dome_follow': '',
-            # 'focus_distance': '',
-            # 'mirror_cover_on': '',
-            # 'focusing': '',
-        })
+            dat = OrderedDict({
+                CycleTimeDataClean.DATA_CLEAN_ORDER[0]:
+                    night_id,
+                CycleTimeDataClean.DATA_CLEAN_ORDER[1]:
+                    first['command_name'],
+                CycleTimeDataClean.DATA_CLEAN_ORDER[2]:
+                    first['utc_date_stamp'],
+                CycleTimeDataClean.DATA_CLEAN_ORDER[3]:
+                    float(third['utc_time_stamp']) - float(first['utc_time_stamp']),
+                CycleTimeDataClean.DATA_CLEAN_ORDER[4]:
+                    CycleTimeDataClean.az_distance(start=float(first['dome_az_begin']),
+                                                                         end=float(third[index_dome])),
+                CycleTimeDataClean.DATA_CLEAN_ORDER[5]:
+                    CycleTimeDataClean.alt_az_distance(start_alt=float(first['mount_alt_begin']),
+                                                                         end_alt=float(third[index_mount_alt]),
+                                                                         start_az=float(first['mount_az_begin']),
+                                                                         end_az=float(third[index_mount_az])),
+                CycleTimeDataClean.DATA_CLEAN_ORDER[6]:
+                    CycleTimeDataClean.exposure_time_sum(first),
+                CycleTimeDataClean.DATA_CLEAN_ORDER[7]:
+                    CycleTimeDataClean.filter_changes(record=first),
+                CycleTimeDataClean.DATA_CLEAN_ORDER[8]:
+                    CycleTimeDataClean.rm_mode_inverse_mhz(rm_mode=CycleTimeDataClean.rm_mode(second),
+                                                           telescope=telescope)*CycleTimeDataClean.exposure_number(first),
+                CycleTimeDataClean.DATA_CLEAN_ORDER[9]:
+                    CycleTimeDataClean.dither(first)*CycleTimeDataClean.exposure_number(first),
+                # 'dome_follow': '',
+                # 'focus_distance': '',
+                # 'mirror_cover_on': '',
+                # 'focusing': '',
+            })
         return dat
 
     @staticmethod
@@ -147,7 +162,7 @@ class CycleTimeDataClean(AbstractCycleTime):
         str_dat = CycleTimeDataClean.read_file(base_folder,
                                             CycleTimeDataClean.raw_file_name(telescope=telescope))
         parsed_data = CycleTimeDataClean.parse_data(str_dat)
-        full_nights_id = CycleTimeDataClean.find_full_nights_id(parsed_data)
+        full_nights_id = CycleTimeDataClean.find_nights_id(parsed_data)
         full_nights_id = CycleTimeDataClean.verify_nights(full_nights_id=full_nights_id,
                                                           telescope=telescope, base_folder=base_folder)
         commands_data = CycleTimeDataClean.build_commands_data(data=parsed_data,

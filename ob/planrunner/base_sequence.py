@@ -41,7 +41,7 @@ class BaseSequence(AbstractBase):
 
     @staticmethod
     def numb(number: int) -> str:
-        return f'{number:02d}'
+        return f'{number:03d}'
 
     async def _arun(self, subcomponents: Any, step_id: str or None = None) -> int:
         self.started = True
