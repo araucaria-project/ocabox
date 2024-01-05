@@ -3,8 +3,12 @@ import logging
 from ob.planrunner.cycle_time_calc.abstract_cycle_time import AbstractCycleTime
 import datetime
 from pyaraucaria.coordinates import ra_dec_2_az_alt, ra_to_decimal, dec_to_decimal
+from pyaraucaria.ephemeris import calculate_sun_rise_set
 from pyaraucaria.obs_plan.obs_plan_parser import ObsPlanParser
 import time
+from astropy import units as u
+from astropy.time import Time
+from astroplan import Observer
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -215,11 +219,13 @@ class CycleTimeCalc(AbstractCycleTime):
     def _calc_time_wait_command(self, command_dict: Dict[str, Any]) -> float or None:
         if command_dict['command_name'] == 'WAIT':
             if 'kwargs' in command_dict.keys():
+
                 if 'wait' in command_dict['kwargs'].keys():
                     t = float(command_dict['kwargs']['wait'])
                     self._time_length += t
                     return t
-                if 'ut' in command_dict['kwargs'].keys():
+
+                elif 'ut' in command_dict['kwargs'].keys():
                     dat_0 = self._start_time.timestamp() + self._time_length
                     target_t = self._that_day_time(date_time_stamp=dat_0, time_str=command_dict['kwargs']['ut'])
                     if target_t >= (self._start_time.timestamp() + self._time_length):
@@ -233,6 +239,46 @@ class CycleTimeCalc(AbstractCycleTime):
                         t = float(target_t - (self._start_time.timestamp() + self._time_length))
                         self._time_length += t
                         return t
+
+                elif 'wait_sunrise' in command_dict['kwargs'].keys():
+                    now = self._start_time + datetime.timedelta(seconds=self._time_length)
+                    try:
+                        sun = calculate_sun_rise_set(date=now,
+                                                     horiz_height=float(command_dict['kwargs']['wait_sunrise']),
+                                                     sunrise=True,
+                                                     latitude=self._observatory_location['latitude'],
+                                                     longitude=self._observatory_location['longitude'],
+                                                     elevation=self._observatory_location['elevation']
+                                                     )
+                    except AttributeError:
+                        return 0
+                    t = (sun - now).seconds
+                    if t / 3600 > 18:
+                        t = 0
+                    else:
+                        self._time_length += t
+                    return t
+
+                elif 'wait_sunset' in command_dict['kwargs'].keys():
+                    now = self._start_time + datetime.timedelta(seconds=self._time_length)
+                    try:
+                        sun = calculate_sun_rise_set(date=now,
+                                                     horiz_height=float(command_dict['kwargs']['wait_sunset']),
+                                                     sunrise=False,
+                                                     latitude=self._observatory_location['latitude'],
+                                                     longitude=self._observatory_location['longitude'],
+                                                     elevation=self._observatory_location['elevation']
+                                                     )
+                    except AttributeError:
+                        return 0
+                    t = (sun - now).seconds
+                    t = (sun - now).seconds
+                    if t / 3600 > 12:
+                        t = 0
+                    else:
+                        self._time_length += t
+                    return t
+
                 else:
                     logger.debug(f'Cannot calculate time, no kwarg')
                     return 0.0

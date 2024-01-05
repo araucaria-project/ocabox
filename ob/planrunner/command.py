@@ -1,5 +1,6 @@
 import logging
 import time
+import re
 from typing import Dict, Any, List, Callable
 from ob.planrunner.base_sequence import BaseSequence
 from ob.planrunner.subcommands.sub_mount_slew import MountSlew
@@ -234,12 +235,45 @@ class Command(BaseSequence):
         else:
             return None
 
+    @staticmethod
+    def multiple_seq(seq_string: str):
+        spl_x = seq_string.split('x')
+        repeat = int(spl_x[0])
+        se = spl_x[1][1:-1]
+        seq_res = ''
+        for n in range(0, repeat):
+            seq_res += f'{se},'
+        return seq_res[:-1]
+
     @property
     def plan_seq(self):
         if 'seq' in self.kwargs.keys():
-            return self._split_seq(self.kwargs['seq'])
+            if re.fullmatch(pattern='\d*x\(.*\)', string=self.kwargs['seq']):
+                seq_res = self.multiple_seq(self.kwargs['seq'])
+            else:
+                seq_res = self.kwargs['seq']
+            return self._split_seq(seq_res)
         else:
             return None
+
+    @staticmethod
+    def _split_seq(seq):
+        if str(seq).find(','):
+            seq_list = list(seq.split(','))
+        else:
+            seq_list = list(seq)
+        return seq_list
+
+    @staticmethod
+    def fw_named(f_pos: int, f_names: Dict) -> str or int:
+        if f_names is not None:
+            inv_f_map = {v: k for k, v in f_names.items()}
+        else:
+            inv_f_map = {}
+        if f_pos in inv_f_map.keys():
+            return inv_f_map[f_pos]
+        else:
+            return f_pos
 
     @property
     def domeflat_dome_az(self) -> float or None:
@@ -611,6 +645,7 @@ class Command(BaseSequence):
 
     def _write_wait(self):
         id_next = 0
+        self.param["plan_status"].upd_dynamic_time(id=self.id, value=True)
         if len(self.kwargs.keys()) == 1:
             key = list(self.kwargs.keys())[0]
             id_next = self._add_comp(Wait(id=self._op_id(id_next=id_next),
@@ -630,25 +665,6 @@ class Command(BaseSequence):
                                       info_callback=self.info_callback,
                                       param=self.param,
                                       uobi=self.uobi), id_next=id_next)
-
-    @staticmethod
-    def _split_seq(seq):
-        if str(seq).find(','):
-            seq_list = list(seq.split(','))
-        else:
-            seq_list = list(seq)
-        return seq_list
-
-    @staticmethod
-    def fw_named(f_pos: int, f_names: Dict) -> str or int:
-        if f_names is not None:
-            inv_f_map = {v: k for k, v in f_names.items()}
-        else:
-            inv_f_map = {}
-        if f_pos in inv_f_map.keys():
-            return inv_f_map[f_pos]
-        else:
-            return f_pos
 
     async def arun(self, step_id: str or None = None) -> int:
         t_0 = time.time()
