@@ -251,7 +251,8 @@ class AbstractCycleTime(ABC):
         ret = 0
         if 'kwargs' in record.keys():
             if 'seq' in record['kwargs']:
-                s = record['kwargs']['seq'].split(',')
+                seq_res = AbstractCycleTime.solve_multiple_seq(seq_string=record['kwargs']['seq'])
+                s = seq_res.split(',')
                 for n in s:
                     ret += 1
         logger.debug(f'Record:{record}, seq_number:{ret}')
@@ -269,14 +270,18 @@ class AbstractCycleTime(ABC):
         return seq_res[:-1]
 
     @staticmethod
+    def solve_multiple_seq(seq_string: str) -> str:
+        if re.fullmatch(pattern='\d*x\(.*\)', string=seq_string):
+            return AbstractCycleTime.multiple_seq(seq_string)
+        else:
+            return seq_string
+
+    @staticmethod
     def exposure_number(record: Dict[str, Any]) -> int:
         ret = 0
         if 'kwargs' in record.keys():
             if 'seq' in record['kwargs']:
-                if re.fullmatch(pattern='\d*x\(.*\)', string=record['kwargs']['seq']):
-                    seq_res = AbstractCycleTime.multiple_seq(record['kwargs']['seq'])
-                else:
-                    seq_res = record['kwargs']['seq']
+                seq_res = AbstractCycleTime.solve_multiple_seq(seq_string=record['kwargs']['seq'])
                 s = seq_res.split(',')
                 for n in s:
                     ret += int(n.split('/')[0])
