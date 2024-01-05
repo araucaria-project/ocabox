@@ -37,7 +37,7 @@ class PlanStatus:
     def build(self, id: str, name: str, ctype: str) -> None:
         self.static_dict[id] = {'name': name, 'ctype':  ctype, 'kwargs': {}, 'args': []}
         self.status_dict[id] = {'status': PlanStatusEnum.loaded}
-        self.time_dict[id] = {'ctc_time': 0.0, 'real_time': 0.0}
+        self.time_dict[id] = {'ctc_time': 0.0, 'real_time': 0.0, 'dynamic': False}
 
     async def reset(self)-> None:
         self.static_dict = {}
@@ -57,7 +57,10 @@ class PlanStatus:
         await self.send_to_nats(self.plan_status_publisher, self.status_dict)
 
     def upd_ctc_time(self, id: str, value: float) -> None:
-        self.time_dict[id]['ctc_time']= value
+        self.time_dict[id]['ctc_time'] = value
+
+    def upd_dynamic_time(self, id: str, value: bool) -> None:
+        self.time_dict[id]['dynamic'] = value
 
     async def upd_real_time(self, id: str, value: float) -> None:
         self.time_dict[id]['real_time'] = value

@@ -645,6 +645,7 @@ class Command(BaseSequence):
 
     def _write_wait(self):
         id_next = 0
+        self.param["plan_status"].upd_dynamic_time(id=self.id, value=True)
         if len(self.kwargs.keys()) == 1:
             key = list(self.kwargs.keys())[0]
             id_next = self._add_comp(Wait(id=self._op_id(id_next=id_next),
