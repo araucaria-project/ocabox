@@ -242,13 +242,16 @@ class CycleTimeCalc(AbstractCycleTime):
 
                 elif 'wait_sunrise' in command_dict['kwargs'].keys():
                     now = self._start_time + datetime.timedelta(seconds=self._time_length)
-                    sun = calculate_sun_rise_set(date=now,
-                                                 horiz_height=float(command_dict['kwargs']['wait_sunrise']),
-                                                 sunrise=True,
-                                                 latitude=self._observatory_location['latitude'],
-                                                 longitude=self._observatory_location['longitude'],
-                                                 elevation=self._observatory_location['elevation']
-                                                 )
+                    try:
+                        sun = calculate_sun_rise_set(date=now,
+                                                     horiz_height=float(command_dict['kwargs']['wait_sunrise']),
+                                                     sunrise=True,
+                                                     latitude=self._observatory_location['latitude'],
+                                                     longitude=self._observatory_location['longitude'],
+                                                     elevation=self._observatory_location['elevation']
+                                                     )
+                    except AttributeError:
+                        return 0
                     t = (sun - now).seconds
                     if t / 3600 > 18:
                         t = 0
@@ -258,13 +261,16 @@ class CycleTimeCalc(AbstractCycleTime):
 
                 elif 'wait_sunset' in command_dict['kwargs'].keys():
                     now = self._start_time + datetime.timedelta(seconds=self._time_length)
-                    sun = calculate_sun_rise_set(date=now,
-                                                 horiz_height=float(command_dict['kwargs']['wait_sunset']),
-                                                 sunrise=False,
-                                                 latitude=self._observatory_location['latitude'],
-                                                 longitude=self._observatory_location['longitude'],
-                                                 elevation=self._observatory_location['elevation']
-                                                 )
+                    try:
+                        sun = calculate_sun_rise_set(date=now,
+                                                     horiz_height=float(command_dict['kwargs']['wait_sunset']),
+                                                     sunrise=False,
+                                                     latitude=self._observatory_location['latitude'],
+                                                     longitude=self._observatory_location['longitude'],
+                                                     elevation=self._observatory_location['elevation']
+                                                     )
+                    except AttributeError:
+                        return 0
                     t = (sun - now).seconds
                     t = (sun - now).seconds
                     if t / 3600 > 12:
