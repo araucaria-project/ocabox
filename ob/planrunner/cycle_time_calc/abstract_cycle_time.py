@@ -235,7 +235,8 @@ class AbstractCycleTime(ABC):
         ret = 0
         if 'kwargs' in record.keys():
             if 'seq' in record['kwargs']:
-                s = record['kwargs']['seq'].split(',')
+                seq_res = AbstractCycleTime.solve_multiple_seq(seq_string=record['kwargs']['seq'])
+                s = seq_res.split(',')
                 for n in s:
                     z = n.split('/')
                     if z[2] == 'a':
