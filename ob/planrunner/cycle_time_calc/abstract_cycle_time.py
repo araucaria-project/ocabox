@@ -258,11 +258,26 @@ class AbstractCycleTime(ABC):
         return ret
 
     @staticmethod
+    def multiple_seq(seq_string: str):
+        # TODO boilerplate - rethink
+        spl_x = seq_string.split('x')
+        repeat = int(spl_x[0])
+        se = spl_x[1][1:-1]
+        seq_res = ''
+        for n in range(0, repeat):
+            seq_res += f'{se},'
+        return seq_res[:-1]
+
+    @staticmethod
     def exposure_number(record: Dict[str, Any]) -> int:
         ret = 0
         if 'kwargs' in record.keys():
             if 'seq' in record['kwargs']:
-                s = record['kwargs']['seq'].split(',')
+                if re.fullmatch(pattern='\d*x\(.*\)', string=record['kwargs']['seq']):
+                    seq_res = AbstractCycleTime.multiple_seq(record['kwargs']['seq'])
+                else:
+                    seq_res = record['kwargs']['seq']
+                s = seq_res.split(',')
                 for n in s:
                     ret += int(n.split('/')[0])
         logger.debug(f'Record:{record}, seq_number:{ret}')
