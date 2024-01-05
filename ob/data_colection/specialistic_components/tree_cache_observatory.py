@@ -93,7 +93,11 @@ class TreeCache(TreeBaseProvider):
         # not found but someone asks about it and waiting for answer
         if task and not task.done():
             if recall < self._max_recall:
-                await task
+                # TODO potęcjalnie tutaj może zostawać niezamknięty task po wyłączeniu routera, patrz TreeConditionalFreezer patrz ref101
+                try:
+                    await asyncio.shield(task)
+                except asyncio.CancelledError:
+                    raise
                 return await self.get_value(request, recall=recall + 1)
         logger.info(f"stop waiting for other task and try ask by yourself")
         raise TreeStructureError

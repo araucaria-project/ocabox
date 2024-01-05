@@ -71,14 +71,7 @@ class TreeConditionalFreezer(TreeBaseProvider):
         # wait some before doing anything, no send message to fast
         # At this level, we do not check if there is a timeout because we assume that the client has configured the
         # query correctly. If not then he will get a no answer error
-
-        # todo todo do usunięcia 'try' po rozwiązaniu issue #151
-        try:
-            await self._delayer(wait_to=wait_to, waiting_timeout=waiting_timeout)
-        except asyncio.CancelledError:
-            logger.error("Ocabox request is stop handled because _delayer() was canceled \n"
-                         f"wait_to = {wait_to}, waiting_timeout = {waiting_timeout}, self._alarm_timeout_offset = {self._alarm_timeout_offset}, time.time() = {time.time()}, request.address = {request.address}")
-            raise
+        await self._delayer(wait_to=wait_to, waiting_timeout=waiting_timeout)
         k_value: KnownValueProtocol or None = None
         highest_update_error_severity = None
 
@@ -103,41 +96,25 @@ class TreeConditionalFreezer(TreeBaseProvider):
 
             # whether the number of re-refreshes has been exceeded
             if nr_of_unsuccessful_refreshes >= self._max_unsuccessful_refreshes:
-                # todo todo do usunięcia po rozwiązaniu issue #151
-                logger.warning(f'Too many failed attempts to refresh a value {request.address}')
                 logger.info(f'Too many failed attempts to refresh a value {request.address}')
                 raise TreeValueError(code=2003, severity=highest_update_error_severity)
 
             await asyncio.sleep(0)  # let other tasks do work
             # waiting logic
-
-            # todo todo do usunięcia 'try' po rozwiązaniu issue #151
-            try:
-                result_waiter = await self._waiter(k_value=k_value,
+            result_waiter = await self._waiter(k_value=k_value,
                                                t_tolerance=t_tolerance,
                                                waiting_timeout=waiting_timeout,
                                                min_wait=wait_offset_error)  # can raise TreeValueError
-            except asyncio.CancelledError:
-                logger.error("Ocabox request is stop handled because _waiter() was canceled \n"
-                             f"k_value = {k_value}, t_tolerance = {t_tolerance}, waiting_timeout = {self._alarm_timeout_offset}, min_wait = {wait_offset_error}, time.time() = {time.time()}, request.address = {request.address}")
-                raise
-                # if event was call - that mean some other task refreshes value
+            # if event was call - that mean some other task refreshes value
             if result_waiter:
                 continue  # continue because event was call so is not necessary to update value again
 
             # check is time to return anything because timeout is coming
-            # todo todo do usunięcia 'try' po rozwiązaniu issue #151  -  może jego warto przerobić na nie async
-            try:
-                await self._expire_checker(waiting_timeout, nr_of_unsuccessful_refreshes)  # can raise TreeOtherError
-            except asyncio.CancelledError:
-                logger.error("Ocabox request is stop handled because _waiter() was canceled \n"
-                             f"nr_of_unsuccessful_refreshes = {nr_of_unsuccessful_refreshes}, waiting_timeout = {waiting_timeout}, time.time() = {time.time()}, request.address = {request.address}")
-                raise
+            await self._expire_checker(waiting_timeout, nr_of_unsuccessful_refreshes)  # can raise TreeOtherError
 
             # update value
             try:
                 logger.debug(f"Update value ({request.address})")
-                # todo potencjalnie niema tu offsetu
                 status_update, err = await wait_for_psce(self._update_value(request), waiting_timeout - time.time())
             except asyncio.CancelledError:
                 # todo todo do usunięcia po rozwiązaniu issue #151
@@ -145,6 +122,12 @@ class TreeConditionalFreezer(TreeBaseProvider):
                              f"k_value = {k_value}, waiting_timeout = {waiting_timeout}, time.time() = {time.time()}, request.address = {request.address} , timeout = {timeout}, self._alarm_timeout_offset = {self._alarm_timeout_offset}")
                 raise
             except asyncio.TimeoutError:
+                # TODO potęcjalnie tutaj może zostawać niezamknięty task po wyłączeniu routera UWAGA patrz TreeCache ref101
+                # UWAGA!! w momęci wywołania wait_for_psce() tworzy się nowy task który odpowiada za aktualizowanie
+                # wartości, jeśli tutaj wystąpi timeout to nie anulujemy tego taska, zostawiamy go może inne taski będą go potrzebować.
+                # Potęcjalnie jest to problem bo przy wyłączeniu servera ten task nie jest uwzględniany przez router. Ale zostawienie tego
+                # taska chroni przed anulowaniem wszystkich innych request (tasków głównych) które pytały o tę samom wartośc i czekały na wynik
+                # z pierwszego taska (patrz: mechanizm ograniczania ilości zapytań jednoczesnych).
                 logger.debug(f"A timeout occurred while waiting for a value update")
                 await self._expire_checker(waiting_timeout, nr_of_unsuccessful_refreshes)  # can raise TreeOtherError
                 logger.error(f"An attempt to refresh the content was interrupted by timeout but the timeout condition "
