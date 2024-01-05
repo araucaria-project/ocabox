@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import stat
 from typing import Callable, Dict, Any
 from ob.planrunner.base_subcommand import BaseSubCommand
 from pyaraucaria.fits import fits_header
@@ -77,6 +76,7 @@ class CameraExposure(BaseSubCommand):
         return f'{numb:02d}'
 
     def array_bits(self, rmmode) -> str:
+        # TODO Take from settings
         if self.telescope.id == 'jk15':
             if rmmode in [3, 5]:
                 return 'int32'
