@@ -122,12 +122,6 @@ class TreeConditionalFreezer(TreeBaseProvider):
                              f"k_value = {k_value}, waiting_timeout = {waiting_timeout}, time.time() = {time.time()}, request.address = {request.address} , timeout = {timeout}, self._alarm_timeout_offset = {self._alarm_timeout_offset}")
                 raise
             except asyncio.TimeoutError:
-                # TODO potęcjalnie tutaj może zostawać niezamknięty task po wyłączeniu routera UWAGA patrz TreeCache ref101
-                # UWAGA!! w momęci wywołania wait_for_psce() tworzy się nowy task który odpowiada za aktualizowanie
-                # wartości, jeśli tutaj wystąpi timeout to nie anulujemy tego taska, zostawiamy go może inne taski będą go potrzebować.
-                # Potęcjalnie jest to problem bo przy wyłączeniu servera ten task nie jest uwzględniany przez router. Ale zostawienie tego
-                # taska chroni przed anulowaniem wszystkich innych request (tasków głównych) które pytały o tę samom wartośc i czekały na wynik
-                # z pierwszego taska (patrz: mechanizm ograniczania ilości zapytań jednoczesnych).
                 logger.debug(f"A timeout occurred while waiting for a value update")
                 await self._expire_checker(waiting_timeout, nr_of_unsuccessful_refreshes)  # can raise TreeOtherError
                 logger.error(f"An attempt to refresh the content was interrupted by timeout but the timeout condition "

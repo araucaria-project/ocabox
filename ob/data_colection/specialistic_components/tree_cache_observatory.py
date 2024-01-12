@@ -93,11 +93,12 @@ class TreeCache(TreeBaseProvider):
         # not found but someone asks about it and waiting for answer
         if task and not task.done():
             if recall < self._max_recall:
-                # TODO potęcjalnie tutaj może zostawać niezamknięty task po wyłączeniu routera, patrz TreeConditionalFreezer patrz ref101
-                try:
-                    await asyncio.shield(task)
-                except asyncio.CancelledError:
-                    raise
+                # Here we're waiting for task but by using asyncio.wait(). which makes us wait for the task to
+                # finish, but we are not interested in the result or whether it throws an error. Only we wait for end.
+                # -----
+                # Other way to do this is created Future object and make the task set future to True after end and
+                # wait for Future not for task.
+                await asyncio.wait([task])
                 return await self.get_value(request, recall=recall + 1)
         logger.info(f"stop waiting for other task and try ask by yourself")
         raise TreeStructureError
