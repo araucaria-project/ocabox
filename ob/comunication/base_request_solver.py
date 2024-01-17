@@ -2,6 +2,8 @@ import asyncio
 import logging
 from typing import List
 from abc import ABC, abstractmethod
+
+import confuse
 from serverish.base import dt_utcnow_array
 from serverish.messenger import get_publisher
 from ob.comunication.nats_streams import NatsStreams
@@ -159,12 +161,24 @@ class BaseRequestSolver(ABC):
                 li = li + self._find_alpacas(config=val.get("child", []))
         return li
 
+    def _get_site_cfg(self) -> dict:
+        out = {}
+        try:
+            site = SingletonConfig.get_config()['site'].get()
+            if site is not None and isinstance(site, dict):
+                out = site
+        except confuse.exceptions.NotFoundError:
+            logger.warning("Can not find key: site  in configuration")
+        return out
+
     async def _nats_update_config_alpaca(self):
         publisher = get_publisher(NatsStreams.ALPACA_CONFIG)
         cfg = self._get_alpaca_modules_configuration()
+        site_cfg = self._get_site_cfg()
         await publisher.publish(data={'version': "",  # todo uzupełnić
                                       'published': dt_utcnow_array(),
-                                      'config': cfg},
+                                      'config': {'observatory': cfg,
+                                                 'site': site_cfg}},
                                 meta={
                                     "message_type": "config",  # IMPORTANT type message, one of pre declared types
                                     "tags": ["config_alpaca"],
