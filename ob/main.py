@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import asyncio
 import importlib
+import importlib.util
 import logging
 import os
 import sys
@@ -20,7 +21,12 @@ def load_from_file(filename, method_name):
     method_inst = None
     mod_name, file_ext = os.path.splitext(os.path.split(filename)[-1])
     if file_ext.lower() == '.py':
-        py_mod = importlib.import_module('ob.configuration.' + mod_name, __name__)
+        if os.path.isabs(filename):
+            spec = importlib.util.spec_from_file_location(mod_name, filename)
+            py_mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(py_mod)
+        else:
+            py_mod = importlib.import_module('ob.configuration.' + mod_name, __name__)
     else:
         logger.error(f"wrong file type witch tree build. Expected '.py' file got: {filename}")
         raise RuntimeError

@@ -217,6 +217,10 @@ data_collection:
   GuiderHandler:
     guider_source_name: guider
 
+# todo to wrzucić do NATS
+site:
+  sample_key: 123
+
 tree:
   test_sample_blocker:
     white_list:

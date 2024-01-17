@@ -118,7 +118,8 @@ More about this in the `TreeAlpacaObservatory` class documentation.
 #### OCABOX_BUILD_FILE_NAME
 This parameter indicates the name of the tree building script. The script should be in directory `ob/configuration/`.
 There should be a method `tree_build()` in the script that returns a router object with a complete tree. An example 
-script is in the file `ob/configuration/tree_build_example.py`.
+script is in the file `ob/configuration/tree_build_example.py`. It is possible to provide an absolute path to the file, 
+in which case the file can be located anywhere.
 
 ### Client
 
