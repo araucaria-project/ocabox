@@ -157,6 +157,7 @@ class CameraExposure(BaseSubCommand):
         return dat
 
     def _get_folders_and_symlinks(self) -> None:
+        self.symlinks = []
         if self.type == 'focusing':
             if self.seq_data.focus_folder:
                 self.target_folder = self.seq_data.focus_folder
