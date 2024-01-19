@@ -2,13 +2,8 @@ import asyncio
 import logging
 from typing import List
 from abc import ABC, abstractmethod
-<<<<<<< HEAD
-from serverish.base import dt_utcnow_array, MessengerNotConnected
-=======
-
 import confuse
-from serverish.base import dt_utcnow_array
->>>>>>> ocabox_development
+from serverish.base import dt_utcnow_array, MessengerNotConnected
 from serverish.messenger import get_publisher
 from ob.comunication.nats_streams import NatsStreams
 from ob.data_colection.response_error import ResponseError
@@ -17,7 +12,6 @@ from ob.data_colection.tree_user import TreeUser, TreeServiceUser
 from ob.data_colection.value_call import ValueRequest, ValueResponse
 from ob.data_colection.base_components.tree_component import ProvidesResponseProtocol
 from ob.ob_config import SingletonConfig
-from ob.util_functions.asyncio_util_functions import wait_for_psce
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
