@@ -2,9 +2,8 @@ import asyncio
 import logging
 from typing import List
 from abc import ABC, abstractmethod
-
 import confuse
-from serverish.base import dt_utcnow_array
+from serverish.base import dt_utcnow_array, MessengerNotConnected
 from serverish.messenger import get_publisher
 from ob.comunication.nats_streams import NatsStreams
 from ob.data_colection.response_error import ResponseError
@@ -13,7 +12,6 @@ from ob.data_colection.tree_user import TreeUser, TreeServiceUser
 from ob.data_colection.value_call import ValueRequest, ValueResponse
 from ob.data_colection.base_components.tree_component import ProvidesResponseProtocol
 from ob.ob_config import SingletonConfig
-from ob.util_functions.asyncio_util_functions import wait_for_psce
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -63,11 +61,12 @@ class BaseRequestSolver(ABC):
 
         :return:
         """
-        try:
-            await wait_for_psce(self._tree_data.nats_messenger.open(host=self._nats_host, port=self._nats_port), 10)
-        except asyncio.TimeoutError:
-            logger.error(f"Can not connect to server NATS")
-            raise RuntimeError("Can not connect to server NATS")
+        await self._tree_data.nats_messenger.open(host=self._nats_host, port=self._nats_port, wait=10)
+        # try:
+        #     await wait_for_psce(self._tree_data.nats_messenger.open(host=self._nats_host, port=self._nats_port), 10)
+        # except asyncio.TimeoutError:
+        #     logger.error(f"Can not connect to server NATS")
+        #     raise RuntimeError("Can not connect to server NATS")
         await self.data_provider.run()
         await self._nats_update_config_alpaca()
 
@@ -175,12 +174,15 @@ class BaseRequestSolver(ABC):
         publisher = get_publisher(NatsStreams.ALPACA_CONFIG)
         cfg = self._get_alpaca_modules_configuration()
         site_cfg = self._get_site_cfg()
-        await publisher.publish(data={'version': "",  # todo uzupełnić
-                                      'published': dt_utcnow_array(),
-                                      'config': {'telescopes': cfg,
-                                                 'site': site_cfg}},
-                                meta={
-                                    "message_type": "config",  # IMPORTANT type message, one of pre declared types
-                                    "tags": ["config_alpaca"],
-                                    'sender': 'Ocabox server',
-                                })
+        try:
+            await publisher.publish(data={'version': "",  # todo uzupełnić
+                                          'published': dt_utcnow_array(),
+                                          'config': {'telescopes': cfg,
+                                                     'site': site_cfg}},
+                                    meta={
+                                        "message_type": "config",  # IMPORTANT type message, one of pre declared types
+                                        "tags": ["config_alpaca"],
+                                        'sender': 'Ocabox server',
+                                    })
+        except MessengerNotConnected as e:
+            logger.error(f"Can not publish config alpaca to nats, error: {e}")
