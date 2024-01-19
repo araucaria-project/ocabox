@@ -96,6 +96,7 @@ def main(argv=None):
             else:
                 logger.error('Some of the tasks in current loop is still running')
                 # This is not a good solution, some tasks may be still running, the loop is not canceling yet. (mka)
+                # For now, we stick to the main task closing mechanism, so this shouldn't happen. If we change something, it will be changed
                 raise RuntimeError
 
 
