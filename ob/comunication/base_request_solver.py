@@ -177,7 +177,7 @@ class BaseRequestSolver(ABC):
         site_cfg = self._get_site_cfg()
         await publisher.publish(data={'version': "",  # todo uzupełnić
                                       'published': dt_utcnow_array(),
-                                      'config': {'observatory': cfg,
+                                      'config': {'telescopes': cfg,
                                                  'site': site_cfg}},
                                 meta={
                                     "message_type": "config",  # IMPORTANT type message, one of pre declared types
