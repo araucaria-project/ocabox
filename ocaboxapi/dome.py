@@ -1,6 +1,6 @@
 from __future__ import annotations
 import logging
-from typing import Callable
+from typing import Callable, Optional
 
 from ocaboxapi.telescopecomponent import TelescopeComponent, OcaBoxParam
 
@@ -106,22 +106,20 @@ class Dome(TelescopeComponent):
 
     async def aput_dome_fans_turn_on(self) -> None:
         logger.debug(f'Putting dome ventilators on to {self.tel_addr}')
-        await self.aput_value('commandblind', Command='DomeFansTurnOn', Raw='')
+        await self.aput_value('domefansturnon')
 
     async def aput_fans_turn_off(self) -> None:
         logger.debug(f'Putting dome ventilators off to {self.tel_addr}')
-        await self.aput_value('commandblind', Command='DomeFansTurnOff', Raw='')
+        await self.aput_value('domefansturnoff')
 
     async def aget_dome_fans_running(self) -> bool:
         logger.debug(f'Getting dome ventilators are running from {self.tel_addr}')
-        ret = await self.aget_value('commandbool', Command='DomeFansRunning', Raw='')
+        ret = await self.aget_value('domefansrunning')
         return ret
 
-    async def asubscribe_dome_fans_running(self, callback: Callable | None = None,
-                                           time_of_data_tolerance: float | None = None):
+    async def asubscribe_dome_fans_running(self, callback: Optional[Callable] = None,
+                                           time_of_data_tolerance: Optional[float] = None):
         logger.debug(f'Subscribing dome ventilators are running from {self.tel_addr}')
-        return await self.subscribe('commandbool',
+        return await self.subscribe('domefansrunning',
                                     callback=callback,
-                                    time_of_data_tolerance=time_of_data_tolerance,
-                                    Command='DomeFansRunning',
-                                    Raw='')
+                                    time_of_data_tolerance=time_of_data_tolerance)

@@ -293,6 +293,15 @@ class Dome(Device):
     """Dome specific methods."""
     KIND = StandardTelescopeComponents.DOME
 
+    async def domefansrunning(self, **kwargs):
+        return await self._put("commandbool", Command='DomeFansRunning', Raw='False')
+
+    async def domefansturnon_put(self, **kwargs):
+        return await self._put("commandblind", Command='DomeFansTurnOn', Raw='False')
+
+    async def domefansturnoff_put(self, **kwargs):
+        return await self._put("commandblind", Command='DomeFansTurnOff', Raw='False')
+
 
 class Camera(Device):
     """Camera specific methods."""

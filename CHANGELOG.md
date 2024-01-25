@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 ### Added
+- add new methods to alpaca dome driver: `domefansrunning`, `domefansrunning`, `domefansturnoff`
 ### Changed
 - A site section has been added to the configuration, which contains the configuration of external applications. 
 It will be sent to nats together with the alpacas configuration. From now on, alpaca configurations will be 
