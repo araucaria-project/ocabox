@@ -2,7 +2,7 @@ import asyncio
 
 from ob.comunication.client import Client
 from ocaboxapi.client_api import ClientAPI
-from ob.comunication.comunication_error import CommunicationRuntimeError
+from obcom.comunication.comunication_error import CommunicationRuntimeError
 
 
 def main():

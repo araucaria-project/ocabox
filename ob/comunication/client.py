@@ -6,10 +6,12 @@ from contextlib import suppress
 import zmq
 from typing import List
 
-from ob.comunication.base_zmq_communication_object import BaseZmqCommunicationObject
-from ob.comunication.comunication_error import CommunicationRuntimeError, CommunicationTimeoutError
-from ob.comunication.message_serializer import MessageSerializer
-from ob.comunication.multipart_structure import MultipartStructure
+from obcom.comunication.base_zmq_communication_object import BaseZmqCommunicationObject
+from obcom.comunication.comunication_error import CommunicationRuntimeError, CommunicationTimeoutError
+from obcom.comunication.message_serializer import MessageSerializer
+from obcom.comunication.multipart_structure import MultipartStructure
+
+from ob.ob_config import SingletonConfig
 from ob.util_functions.asyncio_util_functions import wait_for_psce
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -18,6 +20,7 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class Client(BaseZmqCommunicationObject):
     DEFAULT_NAME = 'DefaultClient'
     TYPE = 'client'
+    _SING_CONF = SingletonConfig
 
     def __init__(self, name: str = None, port: int = None, **kwargs):
         super().__init__(name=name, port=port, **kwargs)

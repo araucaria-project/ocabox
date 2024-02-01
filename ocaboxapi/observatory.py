@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-import confuse
 import logging
 import asyncio
 
-from ob.comunication.base_client_api import BaseClientAPI
-from ob.ob_config import SingletonConfig
+from obcom.comunication.base_client_api import BaseClientAPI
 from time import time
 import os
 import pwd
@@ -13,7 +11,7 @@ import socket
 from typing import TYPE_CHECKING
 
 from ob.util_functions.asyncio_util_functions import wait_for_psce
-from ob.comunication.comunication_error import CommunicationTimeoutError, CommunicationRuntimeError
+from obcom.comunication.comunication_error import CommunicationTimeoutError, CommunicationRuntimeError
 
 from ocaboxapi import ClientAPI
 from ocaboxapi.exceptions import OcaboxServerError, OcaboxAccessDenied

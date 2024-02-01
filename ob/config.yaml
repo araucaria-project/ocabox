@@ -1,6 +1,5 @@
 LOG_LEVEL: INFO
 
-OCABOX_BUILD_FILE_NAME: "tree_build_example.py"   # file name witch tree build plans, this property can be set only in configuration/config.yaml or environment property
 
 nats:
   host: "localhost"
@@ -9,18 +8,6 @@ nats:
     alpaca_config: "tic.config.observatory"
     plan_stream: "tic.status.{}.program.current"  # current loaded program
     status_stream: "tic.status.{}.program.state"  # actual state of current loaded stream
-
-router:
-  DefaultRouter:
-    port: 5559
-    url: '*'
-    protocol: tcp
-    timeout: 30
-  SampleTestRouter:
-    port: 5560
-    url: '*'
-    protocol: tcp
-    timeout: 1
 
 client:
   TOI_Client:
@@ -174,52 +161,6 @@ client:
     app:
       base_fits_dir_test_default: test_dir22
 
-comunication:
-  ConditionalCycleQuery:
-    default_delay: 5
-    max_missed_msg: 3
-    request_timeout: 30
-  PeriodicCycleQuery:
-    default_delay: 5
-    max_missed_msg: 3
-    request_timeout: 30
-    min_delay: 0.5
-
-data_collection:
-  ValueRequest:
-    default_request_timeout: 30
-    time_of_data_tolerance: 60
-  TreeAlpacaObservatory:
-    timeout_multiplier: 0.8  # this should be 0 < x < 1
-    api_version: 1
-  TreeBaseRequestBlocker:
-    default_control_time: 60
-    max_control_time: 86400 # 24h
-    white_list:
-      GET: []
-      PUT: []
-    black_list:
-      GET: []
-      PUT: []
-  TreeConditionalFreezer:
-    max_unsuccessful_refreshes: 10
-    alarm_timeout: 2 # WARNING, the value should be greater than the overall timeout
-    min_time_of_data_tolerance: 0.2 # !!! Never set to 0 or less
-  TreeCache:
-    no_cachable_regex:
-      - .*\.is_access$
-  TreeCCTV:   # Ubiquity CCTV camera
-    udm_camera_id: ''
-    udm_host: ''
-    udm_port: 443
-    udm_user: 'api'
-    udm_password: ''
-  GuiderHandler:
-    guider_source_name: guider
-
-# todo to wrzucić do NATS
-site:
-  sample_key: 123
 
 tree:
   test_sample_blocker:
@@ -315,9 +256,3 @@ tree:
               kind: rotator
               device_number: 0
 
-#  cctv-zb08: # Ubiquity CCTV cameras configured inob/configuration/config_oca.yaml
-#    udm_camera_id: CD08
-#    udm_host: ''
-#    udm_port: 443
-#    udm_user: 'api'
-#    udm_password: ''

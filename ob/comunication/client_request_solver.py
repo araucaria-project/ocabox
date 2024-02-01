@@ -1,12 +1,12 @@
 import logging
 from typing import List, Optional
 
-from ob.comunication.base_client_request_solver import BaseClientRequestSolver
+from obcom.comunication.base_client_request_solver import BaseClientRequestSolver
 from ob.comunication.client import Client
-from ob.comunication.comunication_error import CommunicationRuntimeError, CommunicationTimeoutError
-from ob.data_colection.address import AddressError
-from ob.data_colection.response_error import ResponseError
-from ob.data_colection.value_call import ValueRequest, ValueResponse
+from obcom.comunication.comunication_error import CommunicationRuntimeError, CommunicationTimeoutError
+from obcom.data_colection.address import AddressError
+from obcom.data_colection.response_error import ResponseError
+from obcom.data_colection.value_call import ValueRequest, ValueResponse
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 

@@ -16,7 +16,7 @@ from ocaboxapi.exceptions import OcaboxServerError
 from ocaboxapi.cycle_time import CycleTime
 from ocaboxapi.guiding_controller import GuidingController
 from typing import Dict
-from ob.comunication.comunication_error import CommunicationTimeoutError, CommunicationRuntimeError
+from obcom.comunication.comunication_error import CommunicationTimeoutError, CommunicationRuntimeError
 
 logger = logging.getLogger("telescope")
 

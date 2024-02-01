@@ -1,11 +1,10 @@
 import logging
 from typing import List
 
-from ob.comunication.base_client_api import BaseClientAPI
+from obcom.comunication.base_client_api import BaseClientAPI
 from ob.comunication.client import Client
 from ob.comunication.client_request_solver import ClientRequestSolver
-from ob.data_colection.tree_user import TreeUser, BaseTreeUser
-from ob.ob_config import SingletonConfig
+from obcom.data_colection.tree_user import TreeUser, BaseTreeUser
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 

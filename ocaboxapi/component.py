@@ -7,7 +7,7 @@ from typing import Any, List
 
 import param
 
-from ob.data_colection.value_call import ValueResponse
+from obcom.data_colection.value_call import ValueResponse
 from ocaboxapi import Observatory
 from ocaboxapi.exceptions import OcaboxServerError
 
