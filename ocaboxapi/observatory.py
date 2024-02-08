@@ -41,21 +41,6 @@ class Observatory:
             value = default
         return value
 
-    # def get_client_config(self, client_cfg: Optional[str] = None):
-    #     """
-    #     Gets OCABOX client config subtree for specified client name entry.
-    #
-    #     Do not confuze with ocabox-cli settings
-    #     If `client_cfg`  not provided, we will try to take it form
-    #     settings `ocabox/client_cfg` or take default `DefaultClient`
-    #     """
-    #     if client_cfg is None:
-    #         try:
-    #             client_cfg = settings.ocabox.client_cfg
-    #         except LookupError:
-    #             client_cfg = 'DefaultClient'
-    #     return ClientAPI.client_config()['client'][client_cfg]
-
     def connect(self, client: BaseClientAPI | None = None):
         if client is None:
             host = socket.gethostname()
