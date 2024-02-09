@@ -1,3 +1,3 @@
 from obcom.comunication.comunication_error import *
-
-__all__ = ["CommunicationTimeoutError", "CommunicationRuntimeError"]
+from obcom.comunication.cycle_query import *
+__all__ = ["CommunicationTimeoutError", "CommunicationRuntimeError", "PeriodicCycleQuery", "ConditionalCycleQuery"]
