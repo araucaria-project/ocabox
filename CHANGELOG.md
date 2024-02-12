@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+
+## [2.0.0]
+- The project was divided into `ocabox-server`, `ocabox-common` and `ocabox` (client part) parts
+
+## [1.0.18]
+
 ### Added
 - add new methods to alpaca dome driver: `domefansrunning`, `domefansrunning`, `domefansturnoff`
 ### Changed
@@ -9,7 +15,6 @@ All notable changes to this project will be documented in this file.
 It will be sent to nats together with the alpacas configuration. From now on, alpaca configurations will be 
 wrapped in `telescopes` sections. 
 ### Fixed
-
 
 ## [1.0.17]
 
