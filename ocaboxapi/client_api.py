@@ -37,7 +37,7 @@ class ClientAPI(BaseClientAPI):
         return self._CRS.client.get_cfg_deep(name_cfg=name_cfg, default=default,
                                              use_default_settings=use_default_settings)
 
-    async def server_is_alive(self, request_timeout: float = None):
+    async def server_is_alive(self, request_timeout: float = None) -> bool:
         """
         The method checks if the server responds
 
@@ -45,3 +45,12 @@ class ClientAPI(BaseClientAPI):
         :return: True if server responds
         """
         return await self._CRS.ping_server(request_timeout=request_timeout)
+
+    async def server_reload_nats_config(self, request_timeout: float = None) -> bool:
+        """
+        The method sends a request to the server to resend the configuration to nats.
+
+        :param request_timeout: waiting for answer timeout
+        :return: True if success
+        """
+        return await self._CRS.reload_nats_config(request_timeout=request_timeout)

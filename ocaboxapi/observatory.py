@@ -318,3 +318,6 @@ class Observatory:
         finally:
             asyncio.set_event_loop(oldloop)
         return ret
+
+    async def reload_nats_config(self) -> bool:
+        return await self.client.server_reload_nats_config()

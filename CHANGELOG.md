@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.0.1]
+- Added support for new server method `reload_config`.
+
 ## [2.0.0]
 - The project was divided into `ocabox-server`, `ocabox-common` and `ocabox` (client part) parts
 

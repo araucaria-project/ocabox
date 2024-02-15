@@ -320,6 +320,33 @@ class Client(BaseZmqCommunicationObject):
             logger.warning(f"the server returned corrupted data")
         return r
 
+    async def reload_nats_config(self, request_timeout: float = None) -> bool:
+        """
+        The method sends a request to the server to resend the configuration to nats.
+
+        :param request_timeout: waiting for answer timeout
+        :return: result of request
+        """
+        out = False
+        request = {"command": "reload_config"}
+        list_part = [MessageSerializer.pack_b(request)]
+        try:
+            response = await self._send_multipart(list_part=list_part, request_timeout=request_timeout,
+                                                  service_msg=True, no_wait=False)
+        except (CommunicationTimeoutError, CommunicationRuntimeError):
+            logger.warning(f"the server not response for reload_config request")
+            return False
+
+        if response and isinstance(response, list) and len(response) > 0:
+            result = MessageSerializer.unpack_b(response[0])
+
+            logger.debug(f"the server returned '{result.get('response')}' for reload_config request ")
+            out = result.get('response', False)
+        else:
+            out = False
+            logger.warning(f"the server returned corrupted data for request reload_config")
+        return out
+
     async def send_singlepart(self, part: bytes, request_timeout: float = None, no_wait: bool = False) -> bytes:
         """
         This method send request to server witch one sub-request and return answer.

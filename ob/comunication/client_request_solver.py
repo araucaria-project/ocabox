@@ -53,7 +53,7 @@ class ClientRequestSolver(BaseClientRequestSolver):
                 vr.append(ValueResponse('', None, False, re))
         return vr
 
-    async def ping_server(self, request_timeout: float = None):
+    async def ping_server(self, request_timeout: float = None) -> bool:
         """
         The method checks if the server responds
 
@@ -62,6 +62,15 @@ class ClientRequestSolver(BaseClientRequestSolver):
         """
         result = await self.client.ping_server(request_timeout=request_timeout)
         return result is not None
+
+    async def reload_nats_config(self, request_timeout: float = None) -> bool:
+        """
+        The method sends a request to the server to resend the configuration to nats.
+
+        :param request_timeout: waiting for answer timeout
+        :return: True if success
+        """
+        return await self.client.reload_nats_config(request_timeout=request_timeout)
 
     def get_cfg(self, name_cfg: str, default=None, use_default_settings=True):
         return self.client.get_cfg(name_cfg=name_cfg, default=default, use_default_settings=use_default_settings)
