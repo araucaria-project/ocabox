@@ -3,6 +3,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.0.2]
+### Changed
+- Removed application configuration system using `confuse` and configuration files. From now on, creating a rare 
+client will require providing appropriate configuration parameters in the constructor. 
+- `Observatory` will search NATS for a predefined configuration. The existence of an open connection to nats is 
+required before using the API
+
 ## [2.0.1]
 - Added support for new server method `reload_config`.
 

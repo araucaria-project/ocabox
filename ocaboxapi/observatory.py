@@ -8,8 +8,10 @@ from time import time
 import os
 import pwd
 import socket
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
+from ob.comunication.client import Client
+from ob.comunication.nats_cfg_loader import NatsCfgLoader
 from ob.util_functions.asyncio_util_functions import wait_for_psce
 from obcom.comunication.comunication_error import CommunicationTimeoutError, CommunicationRuntimeError
 
@@ -26,17 +28,42 @@ logger = logging.getLogger("observatory")
 class Observatory:
     """The Observatory maintains connection to the single observatory server using `ocabox.Client`"""
 
-    def __init__(self, client_name='DefaultClient', software_id=None) -> None:
+    def __init__(self, client_name='DefaultClient', software_id=None, config_stream: str = None) -> None:
         self._client = None
         self.client_name = client_name
         self.software_id = software_id
         self.telescopes = {}
         self.ephemeris = None
         self._subscribers = []
+        self._nats_cfg_loader = None if not config_stream else NatsCfgLoader(config_stream)
         super().__init__()
 
+    async def load_client_cfg(self):
+        """
+        Method load config of Client from nats server. This method should be run once after create Observatory object.
+        """
+        if not self._nats_cfg_loader:
+            logger.info(f"Config stream is not given. Config from nats can not be loaded")
+            return
+        await self._nats_cfg_loader.load_cfg()
+
+    # def get_client_configuration(self) -> dict:
+    #     """
+    #     Method return configuration of client. First looking configuration in NATS if not find return default
+    #     local configuration
+    #     """
+    #     if self._nats_cfg_loader and self._nats_cfg_loader.get_cfg():
+    #         return self._nats_cfg_loader.get_cfg()
+    #     return {}
+
+    def _get_client_connection_cfg_from_nats(self) -> dict:
+        return self._nats_cfg_loader.get_cfg_connection_client(
+            self.client_name) if self._nats_cfg_loader is not None else {}
+
+    # TODO ta metoda będzie do przeróbki albo usunięcia
     def get_app_cfg(self, key: str, default=None):
-        value = self.client.get_cfg_deep(["app", key])  # no use default option because we need a different order
+        cfg = self._nats_cfg_loader.get_cfg_client(self.client_name) if self._nats_cfg_loader is not None else {}
+        value = cfg.get("app", {}).get(key)
         if value is None:
             value = default
         return value
@@ -45,7 +72,10 @@ class Observatory:
         if client is None:
             host = socket.gethostname()
             user = pwd.getpwuid(os.getuid())[0]
+            cfg = self._get_client_connection_cfg_from_nats()
+            c = Client(name=self.client_name, port=cfg.get("port", None), host=cfg.get("url", None))
             self._client = ClientAPI(name=self.client_name,
+                                     client=c,
                                      user_name=f'{user}@{host}' + (
                                          f' [{self.software_id}]' if self.software_id else ''))
         else:
@@ -57,9 +87,10 @@ class Observatory:
             self.connect()
         return self._client
 
+    # TODO to do usunięcia
     @property
     def time_of_data_tolerance(self):
-        return self.client.get_cfg('time_of_data_tolerance', 0.5)
+        return 0.5
 
     def get_telescope(self, telescope_id: str):
         """Creates and gets telescope of specified id
@@ -291,33 +322,33 @@ class Observatory:
         logger.error('Synchronous get from `TelescopeComponent` and derived classes is not supported by '
                      'ocabox yet. Use `async_get` instead.')
         return 'n/a'
-        raise CriticalErrorAbort(f'Synchronous get from `TelescopeComponent` and derived classes is not supported by '
-                                 f'ocabox yet. Use `async_get` for {address} instead.')
-
-        oldloop = asyncio.get_event_loop()
-        try:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            future = asyncio.run(self.get_async(address,
-                                                time_of_data=time_of_data,
-                                                time_of_data_tolerance=time_of_data_tolerance,
-                                                request_timeout=request_timeout,
-                                                parameters_dict=parameters_dict))
-            ret = future.result()
-
-            # loop = asyncio.get_event_loop()
-            # tsk  = loop.create_task(self.get_async(address,
-            #                                   time_of_data=time_of_data,
-            #                                   time_of_data_tolerance=time_of_data_tolerance,
-            #                                   request_timeout=request_timeout,
-            #                                   parameters_dict=parameters_dict)
-            #                    )
-        except Exception as e:
-            logger.error(f'Error getting value from {address}: {e}')
-            raise e
-        finally:
-            asyncio.set_event_loop(oldloop)
-        return ret
+        # raise CriticalErrorAbort(f'Synchronous get from `TelescopeComponent` and derived classes is not supported by '
+        #                          f'ocabox yet. Use `async_get` for {address} instead.')
+        #
+        # oldloop = asyncio.get_event_loop()
+        # try:
+        #     loop = asyncio.new_event_loop()
+        #     asyncio.set_event_loop(loop)
+        #     future = asyncio.run(self.get_async(address,
+        #                                         time_of_data=time_of_data,
+        #                                         time_of_data_tolerance=time_of_data_tolerance,
+        #                                         request_timeout=request_timeout,
+        #                                         parameters_dict=parameters_dict))
+        #     ret = future.result()
+        #
+        #     # loop = asyncio.get_event_loop()
+        #     # tsk  = loop.create_task(self.get_async(address,
+        #     #                                   time_of_data=time_of_data,
+        #     #                                   time_of_data_tolerance=time_of_data_tolerance,
+        #     #                                   request_timeout=request_timeout,
+        #     #                                   parameters_dict=parameters_dict)
+        #     #                    )
+        # except Exception as e:
+        #     logger.error(f'Error getting value from {address}: {e}')
+        #     raise e
+        # finally:
+        #     asyncio.set_event_loop(oldloop)
+        # return ret
 
     async def reload_nats_config(self) -> bool:
         return await self.client.server_reload_nats_config()

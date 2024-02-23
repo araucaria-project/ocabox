@@ -7,10 +7,6 @@ poetry.lock
 
 ocabox.egg-info/
 
-ob/configuration/*
-!ob/configuration/.gitkeep
-!ob/configuration/__init__.py
-
 venv/
 .venv/
 .ipynb_checkpoints/

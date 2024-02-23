@@ -1,17 +1,14 @@
 import asyncio
 import logging
 import time
-from contextlib import suppress
-
 import zmq
+from contextlib import suppress
 from typing import List
-
 from obcom.comunication.base_zmq_communication_object import BaseZmqCommunicationObject
 from obcom.comunication.comunication_error import CommunicationRuntimeError, CommunicationTimeoutError
 from obcom.comunication.message_serializer import MessageSerializer
 from obcom.comunication.multipart_structure import MultipartStructure
 
-from ob.ob_config import SingletonConfig
 from ob.util_functions.asyncio_util_functions import wait_for_psce
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -20,15 +17,27 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class Client(BaseZmqCommunicationObject):
     DEFAULT_NAME = 'DefaultClient'
     TYPE = 'client'
-    _SING_CONF = SingletonConfig
+    DEFAULT_HOST = "localhost"
+    DEFAULT_PORT = "5559"
+    DEFAULT_PROTOCOL = "tcp"
 
-    def __init__(self, name: str = None, port: int = None, **kwargs):
+    def __init__(self, name: str = None, port: int = None, host: str = None, **kwargs):
+        port = port if port is not None else self.DEFAULT_PORT
         super().__init__(name=name, port=port, **kwargs)
+        # connection data
+        self._host = host if host else self.DEFAULT_HOST
+        if not self._host or not isinstance(self._host, str):
+            logger.error(f"Can not get correct host ({self._host}) for {self.TYPE}")
+            raise RuntimeError
+        self._protocol = self.DEFAULT_PROTOCOL
+        if not self._host or not isinstance(self._host, str):
+            logger.error(f"Can not get correct protocol ({self._protocol}) for {self.TYPE}")
+            raise RuntimeError
         # OMQ
         self._front_socket = self.context.socket(zmq.DEALER)
         # IMPORTANT Pending messages shall be discarded immediately when the socket is closed
         self._front_socket.setsockopt(zmq.LINGER, 0)
-        connect_string = f"{self._get_cfg('protocol')}://{self._get_cfg('url')}:{self._port}"
+        connect_string = f"{self._protocol}://{self._host}:{self._port}"
         self._front_socket.connect(connect_string)
         logger.info(f'Connecting to TIC server at {connect_string}')
         # message service

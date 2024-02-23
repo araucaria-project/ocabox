@@ -2,8 +2,6 @@ import logging
 import argparse
 import threading
 from functools import cached_property
-
-from ob.ob_config import SingletonConfig
 from ocabox_bases import __version__
 
 
@@ -52,9 +50,7 @@ class OBApp(object):
 
     def create_commandline_parser(self, description=None, epilog=None, add_help=False):
         if epilog is None:
-            epilog = ("configuration files order: \n  " +
-                      "\n  ".join(SingletonConfig.get_config_files()) +
-                      "\n\nOB: ocabox {} by Araucaria Project, AkondLab, CAMK (mkalusz@camk.edu.pl)"
+            epilog = ("\n\nOB: ocabox {} by Araucaria Project, AkondLab, CAMK (mkalusz@camk.edu.pl)"
                       .format(__version__)
                       )
         elif not epilog:

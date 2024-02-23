@@ -71,6 +71,3 @@ class ClientRequestSolver(BaseClientRequestSolver):
         :return: True if success
         """
         return await self.client.reload_nats_config(request_timeout=request_timeout)
-
-    def get_cfg(self, name_cfg: str, default=None, use_default_settings=True):
-        return self.client.get_cfg(name_cfg=name_cfg, default=default, use_default_settings=use_default_settings)
