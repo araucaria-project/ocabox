@@ -550,7 +550,7 @@ class Command(BaseSequence):
                                                            uobi=self.uobi), id_next=id_next)
 
                     # Dome follow between exposures
-                    if self._dome_follow is True and (ex > 1):
+                    if self._dome_follow is True:
                         id_next = self._add_comp(DomeSlew(id=self._op_id(id_next=id_next),
                                                           telescope=self.telescope,
                                                           info_callback=self.info_callback,

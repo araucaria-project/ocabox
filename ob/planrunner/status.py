@@ -1,12 +1,15 @@
 from enum import Enum
 from typing import Dict, Any
 from serverish.messenger.msg_publisher import MsgPublisher
+import logging
 
 try:
     from enum import StrEnum
 except ImportError:
     class StrEnum(str, Enum):
         pass
+
+logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class PlanStatusEnum(StrEnum):
     """
@@ -50,7 +53,10 @@ class PlanStatus:
         await self.send_to_nats(publisher=self.plan_time_publisher, data=self.time_dict)
 
     async def send_to_nats(self, publisher: MsgPublisher, data: Dict)-> None:
-        await publisher.publish(data=data)
+        try:
+            await publisher.publish(data=data)
+        except TimeoutError:
+            logger.error(f'Nats publish get timeout error')
 
     async def upd_status(self, id: str, value: PlanStatusEnum, field: str = 'status') -> None:
         self.status_dict[id][field] = value
