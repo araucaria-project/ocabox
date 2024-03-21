@@ -28,7 +28,8 @@ class Mount(TelescopeComponent):
 
     async def asubscribe_ra(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing mount RA from {self.tel_addr}')
-        return await self.subscribe('rightascension', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
+        return await self.subscribe('rightascension', callback=callback,
+                                    time_of_data_tolerance=time_of_data_tolerance)
 
     async def aget_dec(self) -> float:
         logger.debug(f'Getting mount DEC from {self.tel_addr}')
@@ -37,7 +38,8 @@ class Mount(TelescopeComponent):
 
     async def asubscribe_dec(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing mount DEC from {self.tel_addr}')
-        return await self.subscribe('declination', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
+        return await self.subscribe('declination', callback=callback,
+                                    time_of_data_tolerance=time_of_data_tolerance)
 
     async def aget_az(self) -> float:
         logger.debug(f'Getting mount AZ from {self.tel_addr}')
@@ -46,7 +48,8 @@ class Mount(TelescopeComponent):
 
     async def asubscribe_az(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing mount AZ from {self.tel_addr}')
-        return await self.subscribe('azimuth', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
+        return await self.subscribe('azimuth', callback=callback,
+                                    time_of_data_tolerance=time_of_data_tolerance)
 
     async def aget_alt(self) -> float:
         logger.debug(f'Getting mount ALT from {self.tel_addr}')
@@ -55,7 +58,8 @@ class Mount(TelescopeComponent):
 
     async def asubscribe_alt(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing mount ALT from {self.tel_addr}')
-        return await self.subscribe('altitude', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
+        return await self.subscribe('altitude', callback=callback,
+                                    time_of_data_tolerance=time_of_data_tolerance)
 
     async def aget_athome(self) -> bool:
         logger.debug(f'Getting mount athome from {self.tel_addr}')
@@ -64,7 +68,8 @@ class Mount(TelescopeComponent):
 
     async def asubscribe_athome(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing mount athome from {self.tel_addr}')
-        return await self.subscribe('athome', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
+        return await self.subscribe('athome', callback=callback,
+                                    time_of_data_tolerance=time_of_data_tolerance)
 
     async def aget_atpark(self) -> bool:
         logger.debug(f'Getting mount atpark from {self.tel_addr}')
@@ -73,7 +78,8 @@ class Mount(TelescopeComponent):
 
     async def asubscribe_atpark(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing mount atpark from {self.tel_addr}')
-        return await self.subscribe('atpark', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
+        return await self.subscribe('atpark', callback=callback,
+                                    time_of_data_tolerance=time_of_data_tolerance)
 
     async def aget_slewing(self) -> bool:
         logger.debug(f'Getting mount slewing from {self.tel_addr}')
@@ -82,7 +88,8 @@ class Mount(TelescopeComponent):
 
     async def asubscribe_slewing(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing mount slewing from {self.tel_addr}')
-        return await self.subscribe('slewing', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
+        return await self.subscribe('slewing', callback=callback,
+                                    time_of_data_tolerance=time_of_data_tolerance)
 
     async def aget_tracking(self) -> bool:
         logger.debug(f'Getting mount tracking from {self.tel_addr}')
@@ -91,7 +98,8 @@ class Mount(TelescopeComponent):
 
     async def asubscribe_tracking(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing mount tracking from {self.tel_addr}')
-        return await self.subscribe('tracking', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
+        return await self.subscribe('tracking', callback=callback,
+                                    time_of_data_tolerance=time_of_data_tolerance)
 
     async def aget_ispulseguiding(self) -> bool:
         logger.debug(f'Getting mount ispulseguiding from {self.tel_addr}')
@@ -127,6 +135,17 @@ class Mount(TelescopeComponent):
         logger.debug(f'Subscribing telescope errorstring from {self.tel_addr}')
         return await self.subscribe('errorstring',
                                     callback=callback,
+                                    time_of_data_tolerance=time_of_data_tolerance)
+
+    async def aget_sideofpier(self) -> bool:
+        logger.debug(f'Getting eq mount sideofpier from {self.tel_addr}')
+        ret = await self.aget_value('sideofpier')
+        return ret
+
+    async def asubscribe_sideofpier(self, callback: Callable | None = None,
+                                    time_of_data_tolerance: float | None = None):
+        logger.debug(f'Subscribing mount sideofpier from {self.tel_addr}')
+        return await self.subscribe('sideofpier', callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
     async def aput_slewtocoo(self, ra: float, dec: float) -> None:

@@ -366,9 +366,9 @@ class CameraExposure(BaseSubCommand):
 
         # Get inf if it is evening or morning and set ev_factor
         # TODO calculate according to location -
-        lognitude = -70.196389
-        s = lognitude / abs(lognitude)
-        h = (datetime.datetime.utcnow() + s * datetime.timedelta(minutes=abs(lognitude) * 4)).hour
+        longitude = -70.196389
+        s = longitude / abs(longitude)
+        h = (datetime.datetime.utcnow() + s * datetime.timedelta(minutes=abs(longitude) * 4)).hour
         if h > 12:
             evening = True
             ev_fact = evening_factor
