@@ -332,7 +332,7 @@ class CameraExposure(BaseSubCommand):
                                                           expect_type=bool)
             if subexposure_done is True:
                 if self.telescope.id == 'jk15':
-                    await asyncio.sleep(15)
+                    await asyncio.sleep(35)
                 break
             await asyncio.sleep(0.1)
 
