@@ -138,7 +138,7 @@ class CameraExposure(BaseSubCommand):
                           req: str = 'fits_download',
                           mean_points_no_stats: int = 100,
                           dtyp: str = 'sideint16',
-                          timeout: float = 120):
+                          timeout: float or None = None):
 
         inf = f'{self.id} {self.name} send rpc request {self.rpc_subject}'
         logger.debug(inf)
