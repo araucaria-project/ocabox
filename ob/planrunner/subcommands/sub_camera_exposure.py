@@ -278,7 +278,7 @@ class CameraExposure(BaseSubCommand):
             dat = await self.rpc_request(fits_id=self.fits_file_name,
                                          header=header,
                                          dtyp=self.array_bits(rmmode=readoutmode),
-                                         timeout=20)
+                                         timeout=30)
         except (MessengerRequestNoResponders, MessengerRequestNoResponse, MessengerRequestTimeout):
             inf = f'{self.id} {self.name} nats rpc guider msg can not reach responder.'
             logger.error(inf)
