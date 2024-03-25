@@ -3,7 +3,7 @@ import logging
 from ob.planrunner.base_subcommand import BaseSubCommand
 import math
 from pyaraucaria.coordinates import site_sidereal_time, ra_dec_2_az_alt
-from typing import Callable, Dict, Any
+from typing import Callable, Dict, Any, Tuple
 
 from ob.planrunner.status import PlanStatusEnum
 
@@ -26,86 +26,67 @@ class DomeSlew(BaseSubCommand):
         self.info_dict = {'az': self.az, 'follow_tol': self.follow_tol}
         self.create_sub_command_string(**self.info_dict)
 
-    def dome_eq_azimuth(self, ra: float, dec: float, r_dome: float, spx: float, spy: float,
-                               gem: float, latitude: float, longitude: float, elevation: float) -> float:
-        """
-        Func calculate dome azimuth for eq mounts.
-        :param ra: mount ra
-        :param dec: mount dec
-        :param r_dome: dome radius
-        :param spx: ra/dec point location E(+), W(-) (in Sequence soft. "Scope position Y" - be aware of +/-)
-        :param spy: ra/dec point location N(+), S(-) (in Sequence soft. "Scope position X" - be aware of +/-)
-        :param gem: distance from ra/dec point to telescope axis (in Sequence soft. "GEM Axis Offset - r")
-        :param latitude: site latitude
-        :param longitude: site longitude
-        :param elevation: site elevation
-        :return: corrected dome azimuth
-        """
+    @staticmethod
+    def dome_eq_azimuth(ra: float, dec: float, r_dome: float, spx: float, spy: float, gem: float,
+                        side_of_pier: int, latitude: float, longitude: float,
+                        elevation: float, epoch: str = '2000') -> Tuple[float, Dict]:
 
-        # Azimuth calc
-        _, az = ra_dec_2_az_alt(ra=ra,
-                                dec=dec,
-                                longitude=longitude,
-                                latitude=latitude,
-                                elevation=elevation,
-                                epoch='2000')
+        # Calc. az alt from ra, dec and epoch
+        az, alt = ra_dec_2_az_alt(ra=ra,
+                                  dec=dec,
+                                  longitude=longitude,
+                                  latitude=latitude,
+                                  elevation=elevation,
+                                  epoch=epoch)
 
-        logger.info(f'Dome_eq_azimuth az:{az}')
-
-        # Calculating dome vector
+        # Calc. dome azimuth vector
         az_rad = math.radians(az)
-        vector_dome_x = math.sin(az_rad) * r_dome
-        vector_dome_y = math.cos(az_rad) * r_dome
-        vector_dome = [vector_dome_x, vector_dome_y]
-        logger.info(f'Dome_eq_azimuth vector_dome:{vector_dome}')
+        dome_azimuth_vector_x = math.sin(az_rad) * r_dome
+        dome_azimuth_vector_y = math.cos(az_rad) * r_dome
+        dome_azimuth_vector = [dome_azimuth_vector_x, dome_azimuth_vector_y]
 
-        # Calculating gem vector
-        # Get sidereal for site
+        # Calc. alt az target point on xy plane (as vector)
+        target_point = [r_dome * math.cos(math.radians(-(az - 90))) * math.sin(math.radians(90 - alt)),
+                        r_dome * math.sin(math.radians(-(az - 90))) * math.sin(math.radians(90 - alt))]
+
+        # Get sidereal tome for site
         s_sidereal = site_sidereal_time(longitude=longitude,
                                         latitude=latitude,
                                         elevation=elevation)
-        logger.info(f'Dome_eq_azimuth site_sidereal:{s_sidereal}')
 
-        # +/- rotation for north/south hemisphere
-        if latitude > 0:
-            side = -1
-        else:
-            side = 1
-        logger.info(f'Dome_eq_azimuth site +/- rotation for north/south hemisphere:{side}')
+        # Calc. angle between ra and sidereal
+        ra_to_sidereal_angle = abs(ra - s_sidereal)
 
-        ra_from_north_angle = s_sidereal + (side * 90) - ra
-        if ra_from_north_angle > 360:
-            ra_from_north_angle = ra_from_north_angle - 360
-        logger.info(f'Dome_eq_azimuth ra_from_north_angle:{ra_from_north_angle}')
-
-        vector_gem_xy_x = -math.sin(math.radians(ra_from_north_angle)) * gem
-        vector_gem_xy_y = -math.cos(math.radians(ra_from_north_angle)) * gem * \
-                          math.sin(math.radians(abs(latitude)))
-        vector_gem = [vector_gem_xy_x, vector_gem_xy_y]
-        logger.info(f'Dome_eq_azimuth vector_gem:{vector_gem}')
-
-        # Calculating spx_spy vector
+        # TODO HERE ADD PIER SIDE IF NECESSARY?
+        # Calc. vector gem
+        x = math.cos(math.radians(ra_to_sidereal_angle)) * gem
+        y = math.sin(math.radians(ra_to_sidereal_angle)) * gem
+        vector_gem = [x, y * math.cos(math.radians(abs(latitude)))]
         vector_spx_spy = [spx, spy]
-        logger.info(f'Dome_eq_azimuth vector_spx_spy:{vector_spx_spy}')
 
-        # Sum vectors
-        vector_final = [vector_dome[0] + vector_spx_spy[0] + vector_gem[0],
-                        vector_dome[1] + vector_spx_spy[1] + vector_gem[1]]
-        logger.info(f'Dome_eq_azimuth vector_final:{vector_final}')
+        # Calc. new dome vector
+        new_dome_vector = [target_point[0] + vector_spx_spy[0] + vector_gem[0],
+                           target_point[1] + vector_spx_spy[1] + vector_gem[1]]
 
         # Final azimuth calculation
-        if vector_final[0] >= 0 and vector_final[1] >= 0:
-            new_dome_az = math.degrees(math.atan(vector_final[0] / vector_final[1]))
-        elif vector_final[0] >= 0 and vector_final[1] < 0:
-            new_dome_az = math.degrees(math.atan(vector_final[0] / vector_final[1])) + 180
-        elif vector_final[0] < 0 and vector_final[1] < 0:
-            new_dome_az = math.degrees(math.atan(vector_final[0] / vector_final[1])) + 180
+        if new_dome_vector[0] >= 0 and new_dome_vector[1] >= 0:
+            new_dome_az = math.degrees(math.atan(new_dome_vector[0] / new_dome_vector[1]))
+        elif new_dome_vector[0] >= 0 > new_dome_vector[1]:
+            new_dome_az = math.degrees(math.atan(new_dome_vector[0] / new_dome_vector[1])) + 180
+        elif new_dome_vector[0] < 0 and new_dome_vector[1] < 0:
+            new_dome_az = math.degrees(math.atan(new_dome_vector[0] / new_dome_vector[1])) + 180
         else:
-            new_dome_az = math.degrees(math.atan(vector_final[0] / vector_final[1])) + 360
+            new_dome_az = math.degrees(math.atan(new_dome_vector[0] / new_dome_vector[1])) + 360
 
-        logger.info(f'Dome_eq_azimuth new_dome_az:{new_dome_az}')
-        return new_dome_az
+        info_dict = {
+            'vector_final': new_dome_vector,
+            'dome_azimuth_vector': dome_azimuth_vector,
+            'vector_gem': vector_gem,
+            'target_point': target_point,
+            's_sidereal': s_sidereal
+        }
 
+        return new_dome_az, info_dict
 
     async def _wait_to_slew(self, azimuth) -> None:
 
@@ -157,26 +138,23 @@ class DomeSlew(BaseSubCommand):
 
         # TODO config? At lest in final server-side version...
         if self.telescope.id == 'wk06':
-        #if self.telescope.id=='dev':
+
             OCA = {'latitude': -24.598056, 'longitude': -70.196389, 'elevation': 2817}
 
             ra = await self.value_proof_get(name='mount_ra', awaitab=self.mount.aget_ra, expect_type=float)
             dec = await self.value_proof_get(name='mount_dec', awaitab=self.mount.aget_dec, expect_type=float)
+            side_of_pier = await self.value_proof_get(name='mount_dec', awaitab=self.mount.aget_sideofpier,
+                                                      expect_type=int)
             logger.info(f'Dome_eq_azimuth for ra:{ra} dec:{dec}')
             r_dome = 3500.0
             spx = -250.0
             spy = 200.0
             gem = 680.0
-            az = self.dome_eq_azimuth(ra=ra,
-                                      dec=dec,
-                                      r_dome=r_dome,
-                                      spx=spx,
-                                      spy=spy,
-                                      gem=gem,
-                                      latitude=OCA['latitude'],
-                                      longitude=OCA['longitude'],
-                                      elevation=OCA['elevation']
-                                      )
+            az, _ = self.dome_eq_azimuth(
+                ra=ra, dec=dec, r_dome=r_dome, spx=spx, spy=spy,
+                gem=gem, side_of_pier=side_of_pier, latitude=OCA['latitude'],
+                longitude=OCA['longitude'], elevation=OCA['elevation']
+            )
             logger.info(f'After Dome_eq_azimuth az:{az}')
         else:
             pass
