@@ -138,7 +138,7 @@ class CameraExposure(BaseSubCommand):
                           req: str = 'fits_download',
                           mean_points_no_stats: int = 100,
                           dtyp: str = 'sideint16',
-                          timeout: float = 10):
+                          timeout: float = 120):
 
         inf = f'{self.id} {self.name} send rpc request {self.rpc_subject}'
         logger.debug(inf)
@@ -277,8 +277,7 @@ class CameraExposure(BaseSubCommand):
         try:
             dat = await self.rpc_request(fits_id=self.fits_file_name,
                                          header=header,
-                                         dtyp=self.array_bits(rmmode=readoutmode),
-                                         timeout=60)
+                                         dtyp=self.array_bits(rmmode=readoutmode))
         except (MessengerRequestNoResponders, MessengerRequestNoResponse, MessengerRequestTimeout):
             inf = f'{self.id} {self.name} nats rpc guider msg can not reach responder.'
             logger.error(inf)
@@ -322,10 +321,10 @@ class CameraExposure(BaseSubCommand):
     async def _wait_for_subexposure(self, sub_time: float) -> None:
         # TODO In final version, i.e. on server-side exposures, I would avoid asyncio.sleep and subscibe on imagerady
         #  and camerastate. (exposures may be aborted earlier, no imagerady then)
-        if sub_time >= 1.0:
+        if sub_time >= 0.6:
             sub_t = sub_time
         else:
-            sub_t = 1.5
+            sub_t = 1.0
         await asyncio.sleep(float(sub_t))
         while True:
             subexposure_done = await self.value_proof_get(name='wait_subexp',
