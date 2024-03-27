@@ -138,7 +138,7 @@ class CameraExposure(BaseSubCommand):
                           req: str = 'fits_download',
                           mean_points_no_stats: int = 100,
                           dtyp: str = 'sideint16',
-                          timeout: float = 10):
+                          timeout: float or None = None):
 
         inf = f'{self.id} {self.name} send rpc request {self.rpc_subject}'
         logger.debug(inf)
@@ -277,8 +277,7 @@ class CameraExposure(BaseSubCommand):
         try:
             dat = await self.rpc_request(fits_id=self.fits_file_name,
                                          header=header,
-                                         dtyp=self.array_bits(rmmode=readoutmode),
-                                         timeout=30)
+                                         dtyp=self.array_bits(rmmode=readoutmode))
         except (MessengerRequestNoResponders, MessengerRequestNoResponse, MessengerRequestTimeout):
             inf = f'{self.id} {self.name} nats rpc guider msg can not reach responder.'
             logger.error(inf)
@@ -332,6 +331,8 @@ class CameraExposure(BaseSubCommand):
                                                           awaitab=self.camera.aget_imageready,
                                                           expect_type=bool)
             if subexposure_done is True:
+                # if self.telescope.id == 'jk15':
+                #     await asyncio.sleep(60)
                 break
             await asyncio.sleep(0.1)
 

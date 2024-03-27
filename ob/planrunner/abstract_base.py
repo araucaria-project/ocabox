@@ -9,6 +9,7 @@ import math
 from serverish.messenger import get_journalpublisher, get_publisher
 from serverish.messenger.msg_journal_pub import MsgJournalPublisher
 from serverish.messenger.msg_publisher import MsgPublisher
+from ob.planrunner.config_general import ConfigGeneral
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -33,6 +34,7 @@ class AbstractBase(ABC):
         self.journal: MsgJournalPublisher | None = None
         self.get_journal()
         self.build_plan_status()
+        self.gen_conf = ConfigGeneral(telescope_id=self.telescope.id)
         super().__init__()
 
     @property
