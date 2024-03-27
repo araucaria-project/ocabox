@@ -409,7 +409,7 @@ class Command(BaseSequence):
         # Camera exposure sequences
         if self.plan_seq:
             for s in self.plan_seq:
-                seq_data = Seq(seq=s, command_kwargs=self.kwargs)
+                seq_data = Seq(seq=s, command_kwargs=self.kwargs, gen_conf=self.gen_conf)
 
                 # Change filter
                 id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),
@@ -512,7 +512,7 @@ class Command(BaseSequence):
         # Camera exposure sequences
         if self.plan_seq:
             for s in self.plan_seq:
-                seq_data = Seq(seq=s, command_kwargs=self.kwargs)
+                seq_data = Seq(seq=s, command_kwargs=self.kwargs, gen_conf=self.gen_conf)
 
                 # Change filter
                 id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),
@@ -611,7 +611,7 @@ class Command(BaseSequence):
         # Camera exposure sequences
         if self.plan_seq:
             for s in self.plan_seq:
-                seq_data = Seq(seq=s, command_kwargs=self.kwargs)
+                seq_data = Seq(seq=s, command_kwargs=self.kwargs, gen_conf=self.gen_conf)
 
                 # Change filter
                 id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),
