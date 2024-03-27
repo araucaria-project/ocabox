@@ -33,14 +33,16 @@ class ConfigGeneral:
                     'DW936_BV': {
                         'gains': ['x1', 'x2', 'x4'],
                         'readoutmodes': ["5Mhz", "3Mhz", "1Mhz", "0.05Mhz"],
-                        'temp_range': [-70, 10]
+                        'temp_range': [-70, 10],
+                        'autoflats_evening_factor': 1.11,
+                        'zero_mean': 290.0,
                     }
                 },
                 'mount': {
                     'type': 'az'
                 },
                 'focuser': {
-                    'focusing_range': [14000, 17000]
+                    'focusing_range': [14000, 17000],
                 }
             },
             'jk15': {

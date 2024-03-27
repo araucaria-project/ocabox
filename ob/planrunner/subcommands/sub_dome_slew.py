@@ -12,13 +12,13 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class DomeSlew(BaseSubCommand):
 
-    def __init__(self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable],
+    def __init__(self, id: str, telescope: 'Telescope', info_callback: Dict[str, Callable],
                  uobi: int, seq_data: 'Seq' or None = None,
                  follow_tol: float = 3.0, az: float or None = None,
                  name: str = 'dome-slew', param: Dict[str, Any] or None = None) -> None:
         self.seq_data = seq_data
         self.az = az
-        self.follow_tol = follow_tol # TODO take from settings
+        self.follow_tol = follow_tol  # TODO take from settings
         super().__init__(id=id, info_callback=info_callback, telescope=telescope,
                          name=name, uobi=uobi, param=param)
         self.dome = self.telescope.get_dome()
@@ -96,8 +96,8 @@ class DomeSlew(BaseSubCommand):
                                                       awaitab=self.dome.aget_slewing,
                                                       expect_type=bool)
             await asyncio.sleep(0.5)
-            if dome_az is not None and dome_slewing==False:
-                if (abs(azimuth - float(dome_az)))<2.0 or (abs(azimuth - float(dome_az)))>358.0:
+            if dome_az is not None and dome_slewing is False:
+                if (abs(azimuth - float(dome_az))) < 2.0 or (abs(azimuth - float(dome_az))) > 358.0:
                     break
 
     async def arun(self, step_id: str or None = None) -> int:
@@ -112,17 +112,34 @@ class DomeSlew(BaseSubCommand):
         logger.info(f'{self.id} started')
         self.info_callback['stream_1'](f'{self.id} {self.name} started.')
         await self.journal.info(f"{self.id} {self.name} started.")
-
+        mount_type = self.gen_conf.get_value([self.telescope.id, 'mount', 'type'])
         # TODO get mount kind and parameters from settings
         if self.az is not None:
             az = self.az
         else:
-            mount_az = await self.value_proof_get(name='sub_dome_mount_az',
-                                                  awaitab=self.mount.aget_az, expect_type=float)
+            if mount_type == 'az':
+                observ_loc = self.gen_conf.get_value(['observatory_location'])
+                ra = await self.value_proof_get(name='mount_ra', awaitab=self.mount.aget_ra, expect_type=float)
+                dec = await self.value_proof_get(name='mount_dec', awaitab=self.mount.aget_dec, expect_type=float)
+                side_of_pier = await self.value_proof_get(name='mount_dec', awaitab=self.mount.aget_sideofpier,
+                                                          expect_type=int)
+                logger.info(f'Dome_eq_azimuth for ra:{ra} dec:{dec}')
+                r_dome = 3500.0
+                spx = -250.0
+                spy = 200.0
+                gem = 680.0
+                mount_az, _ = self.dome_eq_azimuth(
+                    ra=ra, dec=dec, r_dome=r_dome, spx=spx, spy=spy,
+                    gem=gem, side_of_pier=side_of_pier, latitude=observ_loc['latitude'],
+                    longitude=observ_loc['longitude'], elevation=observ_loc['elevation']
+                )
+            else:
+                mount_az = await self.value_proof_get(name='sub_dome_mount_az',
+                                                      awaitab=self.mount.aget_az, expect_type=float)
             dome_az = await self.value_proof_get(name='sub_dome_az', awaitab=self.dome.aget_az, expect_type=float)
 
             if (360 > abs(mount_az - dome_az) > (360 - self.follow_tol)) or \
-                0 < (abs(mount_az - dome_az) < self.follow_tol):
+                    0 < (abs(mount_az - dome_az) < self.follow_tol):
                 az = mount_az
                 inf = f'{self.id} {self.name} in position tolerance, skipping.'
                 self.info_callback['stream_1'](inf)
@@ -137,28 +154,25 @@ class DomeSlew(BaseSubCommand):
                 az = mount_az
 
         # TODO config? At lest in final server-side version...
-        if self.telescope.id == 'wk06':
 
-            OCA = {'latitude': -24.598056, 'longitude': -70.196389, 'elevation': 2817}
+        # if mount_type == 'az':
+        #     observ_loc = self.gen_conf.get_value(['observatory_location'])
+        #     ra = await self.value_proof_get(name='mount_ra', awaitab=self.mount.aget_ra, expect_type=float)
+        #     dec = await self.value_proof_get(name='mount_dec', awaitab=self.mount.aget_dec, expect_type=float)
+        #     side_of_pier = await self.value_proof_get(name='mount_dec', awaitab=self.mount.aget_sideofpier,
+        #                                               expect_type=int)
+        #     logger.info(f'Dome_eq_azimuth for ra:{ra} dec:{dec}')
+        #     r_dome = 3500.0
+        #     spx = -250.0
+        #     spy = 200.0
+        #     gem = 680.0
+        #     az, _ = self.dome_eq_azimuth(
+        #         ra=ra, dec=dec, r_dome=r_dome, spx=spx, spy=spy,
+        #         gem=gem, side_of_pier=side_of_pier, latitude=observ_loc['latitude'],
+        #         longitude=observ_loc['longitude'], elevation=observ_loc['elevation']
+        #     )
+        #     logger.info(f'After Dome_eq_azimuth az:{az}')
 
-            ra = await self.value_proof_get(name='mount_ra', awaitab=self.mount.aget_ra, expect_type=float)
-            dec = await self.value_proof_get(name='mount_dec', awaitab=self.mount.aget_dec, expect_type=float)
-            side_of_pier = await self.value_proof_get(name='mount_dec', awaitab=self.mount.aget_sideofpier,
-                                                      expect_type=int)
-            logger.info(f'Dome_eq_azimuth for ra:{ra} dec:{dec}')
-            r_dome = 3500.0
-            spx = -250.0
-            spy = 200.0
-            gem = 680.0
-            az, _ = self.dome_eq_azimuth(
-                ra=ra, dec=dec, r_dome=r_dome, spx=spx, spy=spy,
-                gem=gem, side_of_pier=side_of_pier, latitude=OCA['latitude'],
-                longitude=OCA['longitude'], elevation=OCA['elevation']
-            )
-            logger.info(f'After Dome_eq_azimuth az:{az}')
-        else:
-            pass
-        # TODO maybe use synctoazimuth (if yes add to ocaboxapi)
         await self.journal.debug(f"{self.id} {self.name} slewing az: {az}")
         await self.dome.aput_slewtoazimuth(az)
         await self._wait_to_slew(az)
