@@ -113,11 +113,10 @@ class DomeSlew(BaseSubCommand):
         self.info_callback['stream_1'](f'{self.id} {self.name} started.')
         await self.journal.info(f"{self.id} {self.name} started.")
         mount_type = self.gen_conf.get_value([self.telescope.id, 'mount', 'type'])
-        # TODO get mount kind and parameters from settings
         if self.az is not None:
             az = self.az
         else:
-            if mount_type == 'az':
+            if mount_type == 'eq':
                 observ_loc = self.gen_conf.get_value(['observatory_location'])
                 ra = await self.value_proof_get(name='mount_ra', awaitab=self.mount.aget_ra, expect_type=float)
                 dec = await self.value_proof_get(name='mount_dec', awaitab=self.mount.aget_dec, expect_type=float)
