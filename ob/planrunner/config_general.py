@@ -52,20 +52,20 @@ class ConfigGeneral:
                         'gains': ["gain_range"],
                         'readoutmodes': ['16-bit'],
                         'temp_range': {'min': -25, 'max': 10},
-                        'pixel_scale': 0
+                        'pixel_scale': 0.14 # on 2x2 binning
                     },
                     'XL230A_84,BV': {
                         'gains': ["Gain 1", "Gain 2", "Gain 3"],
                         'readoutmodes': ['4MHz 16-bit', '2MHz 16-bit', '1MHz 16-bit',
                                          '1MHz 18-bit', '0,1MHz 16-bit', '0,1MHz 18-bit'],
                         'temp_range': {'min': -70, 'max': 10},
-                        'pixel_scale': 0
+                        'pixel_scale': 0.29
                     }},
                 'mount': {
                     'type': 'az'
                 },
                 'focuser': {
-                    'focusing_range': [14000, 17000]
+                    'focusing_range': [23000, 27000]
                 }
             },
             'wk06': {
@@ -74,7 +74,7 @@ class ConfigGeneral:
                         'gains': ['x1', 'x2', 'x4'],
                         'readoutmodes': ["5Mhz", "3Mhz", "1Mhz", "0.05Mhz"],
                         'temp_range': {'min': -70, 'max': 10},
-                        'pixel_scale': 0
+                        'pixel_scale': 0.66
                     }
                 },
                 'mount': {
