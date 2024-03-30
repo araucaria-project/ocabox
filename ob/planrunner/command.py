@@ -409,7 +409,7 @@ class Command(BaseSequence):
         # Camera exposure sequences
         if self.plan_seq:
             for s in self.plan_seq:
-                seq_data = Seq(seq=s, command_kwargs=self.kwargs)
+                seq_data = Seq(seq=s, command_kwargs=self.kwargs, gen_conf=self.gen_conf)
 
                 # Change filter
                 id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),
@@ -512,7 +512,7 @@ class Command(BaseSequence):
         # Camera exposure sequences
         if self.plan_seq:
             for s in self.plan_seq:
-                seq_data = Seq(seq=s, command_kwargs=self.kwargs)
+                seq_data = Seq(seq=s, command_kwargs=self.kwargs, gen_conf=self.gen_conf)
 
                 # Change filter
                 id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),
@@ -550,7 +550,7 @@ class Command(BaseSequence):
                                                            uobi=self.uobi), id_next=id_next)
 
                     # Dome follow between exposures
-                    if self._dome_follow is True and (ex > 1):
+                    if self._dome_follow is True:
                         id_next = self._add_comp(DomeSlew(id=self._op_id(id_next=id_next),
                                                           telescope=self.telescope,
                                                           info_callback=self.info_callback,
@@ -611,7 +611,7 @@ class Command(BaseSequence):
         # Camera exposure sequences
         if self.plan_seq:
             for s in self.plan_seq:
-                seq_data = Seq(seq=s, command_kwargs=self.kwargs)
+                seq_data = Seq(seq=s, command_kwargs=self.kwargs, gen_conf=self.gen_conf)
 
                 # Change filter
                 id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),

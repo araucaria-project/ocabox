@@ -138,7 +138,7 @@ class CameraExposure(BaseSubCommand):
                           req: str = 'fits_download',
                           mean_points_no_stats: int = 100,
                           dtyp: str = 'sideint16',
-                          timeout: float = 10):
+                          timeout: float or None = None):
 
         inf = f'{self.id} {self.name} send rpc request {self.rpc_subject}'
         logger.debug(inf)
@@ -228,12 +228,23 @@ class CameraExposure(BaseSubCommand):
         else:
             req_dec = self.req_dec
 
-        # TODO This OCA should be taken from settings
-        OCA = {'latitude': -24.598056, 'longitude': -70.196389, 'elevation': 2817}
+        mount_type = self.gen_conf.get_value([self.telescope.id, 'mount', 'type'])
+        if mount_type == 'eq':
+            rot_pos = ''
+        else:
+            rot_pos = await self.value_proof_get(name='fitsh_rot_pos',
+                                                 awaitab=self.rotator.aget_position,
+                                                 expect_type=float)
+        instrument_name = str(await self.value_proof_get(name='fitsh_cam_sens_name',
+                                                         awaitab=self.camera.aget_sensorname,
+                                                         expect_type=str))
+        if self.telescope.id == 'dev':
+            instrument_name = 'simul'
+        observatory_location = self.gen_conf.get_value(['observatory_location'])
         header = fits_header(
-            obs_lat=OCA['latitude'],
-            obs_lon=OCA['longitude'],
-            obs_elev=OCA['elevation'],
+            obs_lat=observatory_location['latitude'],
+            obs_lon=observatory_location['longitude'],
+            obs_elev=observatory_location['elevation'],
             tel_id=str(self.telescope.id),
             utc_now=str(self.exp_time_start.isoformat(sep='T', timespec='auto')),
             jd=self.get_julian_date(self.exp_time_start),
@@ -247,9 +258,7 @@ class CameraExposure(BaseSubCommand):
             focus=await self.value_proof_get(name='fitsh_focus_pos',
                                              awaitab=self.focuser.aget_position,
                                              expect_type=int),
-            rotator_pos=await self.value_proof_get(name='fitsh_rot_pos',
-                                                   awaitab=self.rotator.aget_position,
-                                                   expect_type=float),
+            rotator_pos=rot_pos,
             observer=str(self.observer),
             image_type=str(self.type),
             obs_type=self.obs_type,
@@ -258,9 +267,7 @@ class CameraExposure(BaseSubCommand):
             loop=sub,
             filter=filter_str,
             exp_time=sub_time,
-            instrume_name=str(await self.value_proof_get(name='fitsh_cam_sens_name',
-                                                         awaitab=self.camera.aget_sensorname,
-                                                         expect_type=str)),
+            instrume_name=instrument_name,
             ccd_temp=await self.value_proof_get(name='fitsh_cam_temp',
                                                 awaitab=self.camera.aget_ccdtemperature,
                                                 expect_type=float),
@@ -271,7 +278,8 @@ class CameraExposure(BaseSubCommand):
                                             awaitab=self.camera.aget_biny,
                                             expect_type=int),
             read_mod=readoutmode,
-            gain_mod=gainmode
+            gain_mod=gainmode,
+            scale=self.gen_conf.get_value([self.telescope.id, 'camera', instrument_name, 'pixel_scale'])
         )
 
         try:
@@ -331,6 +339,8 @@ class CameraExposure(BaseSubCommand):
                                                           awaitab=self.camera.aget_imageready,
                                                           expect_type=bool)
             if subexposure_done is True:
+                # if self.telescope.id == 'jk15':
+                #     await asyncio.sleep(60)
                 break
             await asyncio.sleep(0.1)
 
@@ -366,9 +376,9 @@ class CameraExposure(BaseSubCommand):
 
         # Get inf if it is evening or morning and set ev_factor
         # TODO calculate according to location -
-        lognitude = -70.196389
-        s = lognitude / abs(lognitude)
-        h = (datetime.datetime.utcnow() + s * datetime.timedelta(minutes=abs(lognitude) * 4)).hour
+        longitude = -70.196389
+        s = longitude / abs(longitude)
+        h = (datetime.datetime.utcnow() + s * datetime.timedelta(minutes=abs(longitude) * 4)).hour
         if h > 12:
             evening = True
             ev_fact = evening_factor
