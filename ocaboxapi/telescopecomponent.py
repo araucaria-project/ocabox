@@ -14,7 +14,7 @@ logger = logging.getLogger('telcomponent')
 class TelescopeComponent(Component):
     id = param.String()
     connected = OcaBoxParam(default=False, doc="Is component connected")
-    name = OcaBoxParam(default='', doc="Component name")
+    # name = OcaBoxParam(default='', doc="Component name")
     description = OcaBoxParam(default='', doc="Component description")
 
     def __init__(self, **params):
