@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class Camera(TelescopeComponent):
 
-    name = OcaBoxParam(default='', doc="Camera name")
+    # name = OcaBoxParam(default='', doc="Camera name")  # name is already defined in Parametrized
     sensorname = OcaBoxParam(default='', doc="Camera sensor name")
     ccdtemperature = OcaBoxParam(default=0.0, doc="Camera ccd temperature")
     setccdtemperature = OcaBoxParam(default=0.0, doc="Camera set ccd temperature")
