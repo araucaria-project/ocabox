@@ -49,7 +49,9 @@ class ClientAPI(BaseClientAPI):
         return await self._CRS.reload_nats_config(request_timeout=request_timeout)
 
     def get_cfg(self, name_cfg: str, default=None, use_default_settings=True):
-        raise NotImplementedError('Not implemented, deprecated method')
+        #TODO: deprecated method
+        return default
 
     def get_cfg_deep(self, name_cfg: List[str], default=None, use_default_settings=True):
-        raise NotImplementedError('Not implemented, deprecated method')
+        #TODO: deprecated method
+        return default
