@@ -54,10 +54,11 @@ class DomeSlew(BaseSubCommand):
                                         latitude=latitude,
                                         elevation=elevation)
 
-        # Calc. angle between ra and sidereal
-        ra_to_sidereal_angle = abs(ra - s_sidereal)
+        # Calc. angle between ra and sidereal + side of pier
+        if int(side_of_pier) not in [0, 1]:
+            side_of_pier = 0
+        ra_to_sidereal_angle = abs(ra - s_sidereal) + int(side_of_pier) * 180
 
-        # TODO HERE ADD PIER SIDE IF NECESSARY?
         # Calc. vector gem
         x = math.cos(math.radians(ra_to_sidereal_angle)) * gem
         y = math.sin(math.radians(ra_to_sidereal_angle)) * gem
@@ -120,9 +121,8 @@ class DomeSlew(BaseSubCommand):
                 observ_loc = self.gen_conf.get_value(['observatory_location'])
                 ra = await self.value_proof_get(name='mount_ra', awaitab=self.mount.aget_ra, expect_type=float)
                 dec = await self.value_proof_get(name='mount_dec', awaitab=self.mount.aget_dec, expect_type=float)
-                # side_of_pier = await self.value_proof_get(name='mount_dec', awaitab=self.mount.aget_sideofpier,
-                #                                           expect_type=int)
-                side_of_pier = 0
+                side_of_pier = await self.value_proof_get(name='mount_sideofpier', awaitab=self.mount.aget_sideofpier,
+                                                          expect_type=int)
                 logger.info(f'Dome_eq_azimuth for ra:{ra} dec:{dec}')
                 r_dome = 3500.0
                 spx = -250.0
