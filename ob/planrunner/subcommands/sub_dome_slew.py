@@ -121,7 +121,7 @@ class DomeSlew(BaseSubCommand):
                 observ_loc = self.gen_conf.get_value(['observatory_location'])
                 ra = await self.value_proof_get(name='mount_ra', awaitab=self.mount.aget_ra, expect_type=float)
                 dec = await self.value_proof_get(name='mount_dec', awaitab=self.mount.aget_dec, expect_type=float)
-                side_of_pier = await self.value_proof_get(name='mount_dec', awaitab=self.mount.aget_sideofpier,
+                side_of_pier = await self.value_proof_get(name='mount_sideofpier', awaitab=self.mount.aget_sideofpier,
                                                           expect_type=int)
                 logger.info(f'Dome_eq_azimuth for ra:{ra} dec:{dec}')
                 r_dome = 3500.0
