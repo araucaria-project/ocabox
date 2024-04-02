@@ -63,22 +63,22 @@ class AbstractBase(ABC):
         return pwd.getpwuid(os.getuid())[0]
 
     async def _value_proof_get(self, name: str, awaitab: Callable, expect_type) -> Any:
-        # try:
-        res = await awaitab()
-        if expect_type == float and isinstance(res, int):
-            try:
-                res = float(res)
-            except ValueError:
-                pass
-        if isinstance(res, expect_type):
-            logger.debug(f"Get {name} value done: {res}")
-            return res
-        else:
-            logger.warning(f"Can't get {name} value, result is {res}")
+        try:
+            res = await awaitab()
+            if expect_type == float and isinstance(res, int):
+                try:
+                    res = float(res)
+                except ValueError:
+                    pass
+            if isinstance(res, expect_type):
+                logger.debug(f"Get {name} value done: {res}")
+                return res
+            else:
+                logger.warning(f"Can't get {name} value, result is {res}")
+                return None
+        except Exception as e:
+            logger.warning(f"Can't get {name} value: {e}")
             return None
-        # except Exception as e:
-        #     logger.warning(f"Can't get {name} value: {e}")
-        #     return None
 
     async def value_proof_get(self, name: str, awaitab: Callable, expect_type: type, n_times: int = 5) -> Any:
         for n in range(1, n_times+1):

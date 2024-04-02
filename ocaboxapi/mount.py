@@ -20,6 +20,7 @@ class Mount(TelescopeComponent):
     motorstatus = OcaBoxParam(default='', doc="Mount motorstatus")
     commandstring = OcaBoxParam(default='', doc="Mount motorstatus")
     errorstring = OcaBoxParam(default='', doc="Telescope errorstring")
+    sideofpier = OcaBoxParam(default=False, doc="Telescope eq side of pier")
 
     async def aget_ra(self) -> float:
         logger.debug(f'Getting mount RA from {self.tel_addr}')

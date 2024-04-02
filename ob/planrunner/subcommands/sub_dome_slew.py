@@ -119,6 +119,7 @@ class DomeSlew(BaseSubCommand):
             az = self.az
         else:
             if mount_type == 'eq':
+                await self.journal.info(f"For eq started")
                 observ_loc = self.gen_conf.get_value(['observatory_location'])
                 ra = await self.value_proof_get(name='mount_ra', awaitab=self.mount.aget_ra, expect_type=float)
                 dec = await self.value_proof_get(name='mount_dec', awaitab=self.mount.aget_dec, expect_type=float)
