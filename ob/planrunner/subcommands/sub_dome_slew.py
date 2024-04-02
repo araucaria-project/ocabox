@@ -128,11 +128,13 @@ class DomeSlew(BaseSubCommand):
                 spx = -250.0
                 spy = 200.0
                 gem = 680.0
-                mount_az, _ = self.dome_eq_azimuth(
+                mount_az, info_dict = self.dome_eq_azimuth(
                     ra=ra, dec=dec, r_dome=r_dome, spx=spx, spy=spy,
                     gem=gem, side_of_pier=side_of_pier, latitude=observ_loc['latitude'],
                     longitude=observ_loc['longitude'], elevation=observ_loc['elevation']
                 )
+                logger.info(f'Calculated eq dome az:{mount_az}')
+                logger.info(f'Calculated info dict eq dome az:{info_dict}')
             else:
                 mount_az = await self.value_proof_get(name='sub_dome_mount_az',
                                                       awaitab=self.mount.aget_az, expect_type=float)
@@ -152,26 +154,6 @@ class DomeSlew(BaseSubCommand):
                 return 0
             else:
                 az = mount_az
-
-        # TODO config? At lest in final server-side version...
-
-        # if mount_type == 'az':
-        #     observ_loc = self.gen_conf.get_value(['observatory_location'])
-        #     ra = await self.value_proof_get(name='mount_ra', awaitab=self.mount.aget_ra, expect_type=float)
-        #     dec = await self.value_proof_get(name='mount_dec', awaitab=self.mount.aget_dec, expect_type=float)
-        #     side_of_pier = await self.value_proof_get(name='mount_dec', awaitab=self.mount.aget_sideofpier,
-        #                                               expect_type=int)
-        #     logger.info(f'Dome_eq_azimuth for ra:{ra} dec:{dec}')
-        #     r_dome = 3500.0
-        #     spx = -250.0
-        #     spy = 200.0
-        #     gem = 680.0
-        #     az, _ = self.dome_eq_azimuth(
-        #         ra=ra, dec=dec, r_dome=r_dome, spx=spx, spy=spy,
-        #         gem=gem, side_of_pier=side_of_pier, latitude=observ_loc['latitude'],
-        #         longitude=observ_loc['longitude'], elevation=observ_loc['elevation']
-        #     )
-        #     logger.info(f'After Dome_eq_azimuth az:{az}')
 
         await self.journal.debug(f"{self.id} {self.name} slewing az: {az}")
         await self.dome.aput_slewtoazimuth(az)
