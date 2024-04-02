@@ -81,7 +81,13 @@ class ConfigGeneral:
                     'type': 'eq'
                 },
                 'focuser': {
-                    'focusing_range': [21000, 23000]
+                    'focusing_range': [20000, 23000]
+                },
+                'dome': {
+                    'r_dome': 3500.0,
+                    'spx': -250.0,
+                    'spy': 200.0,
+                    'gem': 680.0
                 }
             },
             'dev': {
