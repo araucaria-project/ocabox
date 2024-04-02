@@ -137,7 +137,7 @@ class Mount(TelescopeComponent):
                                     callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_sideofpier(self) -> bool:
+    async def aget_sideofpier(self) -> int:
         logger.debug(f'Getting eq mount sideofpier from {self.tel_addr}')
         ret = await self.aget_value('sideofpier')
         return ret

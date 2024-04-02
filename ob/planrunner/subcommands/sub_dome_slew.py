@@ -38,37 +38,38 @@ class DomeSlew(BaseSubCommand):
                                   latitude=latitude,
                                   elevation=elevation,
                                   epoch=epoch)
-
+        logger.info(f'dome_eq_azimuth az, alt: {az}, {alt}')
         # Calc. dome azimuth vector
         az_rad = math.radians(az)
         dome_azimuth_vector_x = math.sin(az_rad) * r_dome
         dome_azimuth_vector_y = math.cos(az_rad) * r_dome
         dome_azimuth_vector = [dome_azimuth_vector_x, dome_azimuth_vector_y]
+        logger.info(f'dome_eq_azimuth dome_azimuth_vector: {dome_azimuth_vector}')
 
         # Calc. alt az target point on xy plane (as vector)
         target_point = [r_dome * math.cos(math.radians(-(az - 90))) * math.sin(math.radians(90 - alt)),
                         r_dome * math.sin(math.radians(-(az - 90))) * math.sin(math.radians(90 - alt))]
-
+        logger.info(f'dome_eq_azimuth target_point: {target_point}')
         # Get sidereal tome for site
         s_sidereal = site_sidereal_time(longitude=longitude,
                                         latitude=latitude,
                                         elevation=elevation)
-
+        logger.info(f'dome_eq_azimuth s_sidereal: {s_sidereal}')
         # Calc. angle between ra and sidereal + side of pier
         if int(side_of_pier) not in [0, 1]:
             side_of_pier = 0
         ra_to_sidereal_angle = abs(ra - s_sidereal) + int(side_of_pier) * 180
-
+        logger.info(f'dome_eq_azimuth ra_to_sidereal_angle: {ra_to_sidereal_angle}')
         # Calc. vector gem
         x = math.cos(math.radians(ra_to_sidereal_angle)) * gem
         y = math.sin(math.radians(ra_to_sidereal_angle)) * gem
         vector_gem = [x, y * math.cos(math.radians(abs(latitude)))]
         vector_spx_spy = [spx, spy]
-
+        logger.info(f'dome_eq_azimuth vector_gem: {vector_gem}')
         # Calc. new dome vector
         new_dome_vector = [target_point[0] + vector_spx_spy[0] + vector_gem[0],
                            target_point[1] + vector_spx_spy[1] + vector_gem[1]]
-
+        logger.info(f'dome_eq_azimuth new_dome_vector: {new_dome_vector}')
         # Final azimuth calculation
         if new_dome_vector[0] >= 0 and new_dome_vector[1] >= 0:
             new_dome_az = math.degrees(math.atan(new_dome_vector[0] / new_dome_vector[1]))
