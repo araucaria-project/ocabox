@@ -65,7 +65,7 @@ class AbstractBase(ABC):
     async def _value_proof_get(self, name: str, awaitab: Callable, expect_type) -> Any:
         try:
             res = await awaitab()
-            if expect_type==float and isinstance(res, int):
+            if expect_type == float and isinstance(res, int):
                 try:
                     res = float(res)
                 except ValueError:
