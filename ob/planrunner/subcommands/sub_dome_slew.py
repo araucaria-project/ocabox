@@ -1,11 +1,14 @@
 import asyncio
 import logging
-from ob.planrunner.base_subcommand import BaseSubCommand
 import math
-from pyaraucaria.coordinates import site_sidereal_time, ra_dec_2_az_alt
-from typing import Callable, Dict, Any, Tuple
 
+from pyaraucaria.coordinates import ra_dec_2_az_alt, site_sidereal_time
+
+from ob.planrunner.base_subcommand import BaseSubCommand
+# from pyaraucaria.dome_eq import dome_eq_azimuth
+from typing import Callable, Dict, Any, Tuple
 from ob.planrunner.status import PlanStatusEnum
+
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -30,6 +33,21 @@ class DomeSlew(BaseSubCommand):
     def dome_eq_azimuth(ra: float, dec: float, r_dome: float, spx: float, spy: float, gem: float,
                         side_of_pier: int, latitude: float, longitude: float,
                         elevation: float, epoch: str = '2000') -> Tuple[float, Dict]:
+        """
+        Func. calculate dome position for eq mount.
+        @param ra: Ra of telescope [deg]
+        @param dec: Dec of telescope [deg]
+        @param r_dome: Radius of dome [mm]
+        @param spx: X distance from dome center to intersection of ra - dec axes: (+) when on E, (-) when on W [mm]
+        @param spy: Y distance from dome center to intersection of ra - dec axes: (+) when on N, (-) when on S [mm]
+        @param gem: Distance from intersection of ra - dec axes point to telescope optical axis (absolute value) [mm]
+        @param side_of_pier: Side of telescope pier position. On east = 0, on west = 1
+        @param latitude: Site latitude [deg]
+        @param longitude: Site longitude [deg]
+        @param elevation: Site elevation [m]
+        @param epoch: Epoch for radec, example: '2000'
+        @return: Eq mount dome azimuth [deg]
+        """
 
         # Calc. az alt from ra, dec and epoch
         az, alt = ra_dec_2_az_alt(ra=ra,
@@ -54,14 +72,17 @@ class DomeSlew(BaseSubCommand):
                                         latitude=latitude,
                                         elevation=elevation)
 
-        # Calc. angle between ra and sidereal
-        ra_to_sidereal_angle = abs(ra - s_sidereal)
+        # Calc. angle between ra and sidereal + side of pier
+        if int(side_of_pier) not in [0, 1]:
+            side_of_pier = 0
+        ra_to_sidereal_angle = abs(ra - s_sidereal) + int(side_of_pier) * 180
 
-        # TODO HERE ADD PIER SIDE IF NECESSARY?
         # Calc. vector gem
         x = math.cos(math.radians(ra_to_sidereal_angle)) * gem
         y = math.sin(math.radians(ra_to_sidereal_angle)) * gem
-        vector_gem = [x, y * math.cos(math.radians(abs(latitude)))]
+        # North or south hemisphere location
+        n_s = - (latitude / abs(latitude))
+        vector_gem = [x, n_s * y * math.cos(math.radians(abs(latitude)))]
         vector_spx_spy = [spx, spy]
 
         # Calc. new dome vector
@@ -78,6 +99,7 @@ class DomeSlew(BaseSubCommand):
         else:
             new_dome_az = math.degrees(math.atan(new_dome_vector[0] / new_dome_vector[1])) + 360
 
+        # Compose info dict
         info_dict = {
             'vector_final': new_dome_vector,
             'dome_azimuth_vector': dome_azimuth_vector,
@@ -117,22 +139,24 @@ class DomeSlew(BaseSubCommand):
             az = self.az
         else:
             if mount_type == 'eq':
+                await self.journal.info(f"For eq started")
                 observ_loc = self.gen_conf.get_value(['observatory_location'])
                 ra = await self.value_proof_get(name='mount_ra', awaitab=self.mount.aget_ra, expect_type=float)
                 dec = await self.value_proof_get(name='mount_dec', awaitab=self.mount.aget_dec, expect_type=float)
-                # side_of_pier = await self.value_proof_get(name='mount_dec', awaitab=self.mount.aget_sideofpier,
-                #                                           expect_type=int)
-                side_of_pier = 0
+                side_of_pier = await self.value_proof_get(name='mount_sideofpier', awaitab=self.mount.aget_sideofpier,
+                                                          expect_type=int)
                 logger.info(f'Dome_eq_azimuth for ra:{ra} dec:{dec}')
-                r_dome = 3500.0
-                spx = -250.0
-                spy = 200.0
-                gem = 680.0
-                mount_az, _ = self.dome_eq_azimuth(
+                r_dome = self.gen_conf.get_value([self.telescope.id, 'dome', 'r_dome'])
+                spx = self.gen_conf.get_value([self.telescope.id, 'dome', 'spx'])
+                spy = self.gen_conf.get_value([self.telescope.id, 'dome', 'spy'])
+                gem = self.gen_conf.get_value([self.telescope.id, 'dome', 'gem'])
+                mount_az, info_dict = self.dome_eq_azimuth(
                     ra=ra, dec=dec, r_dome=r_dome, spx=spx, spy=spy,
                     gem=gem, side_of_pier=side_of_pier, latitude=observ_loc['latitude'],
                     longitude=observ_loc['longitude'], elevation=observ_loc['elevation']
                 )
+                logger.info(f'Calculated eq dome az:{mount_az}')
+                logger.info(f'Calculated info dict eq dome az:{info_dict}')
             else:
                 mount_az = await self.value_proof_get(name='sub_dome_mount_az',
                                                       awaitab=self.mount.aget_az, expect_type=float)
@@ -152,26 +176,6 @@ class DomeSlew(BaseSubCommand):
                 return 0
             else:
                 az = mount_az
-
-        # TODO config? At lest in final server-side version...
-
-        # if mount_type == 'az':
-        #     observ_loc = self.gen_conf.get_value(['observatory_location'])
-        #     ra = await self.value_proof_get(name='mount_ra', awaitab=self.mount.aget_ra, expect_type=float)
-        #     dec = await self.value_proof_get(name='mount_dec', awaitab=self.mount.aget_dec, expect_type=float)
-        #     side_of_pier = await self.value_proof_get(name='mount_dec', awaitab=self.mount.aget_sideofpier,
-        #                                               expect_type=int)
-        #     logger.info(f'Dome_eq_azimuth for ra:{ra} dec:{dec}')
-        #     r_dome = 3500.0
-        #     spx = -250.0
-        #     spy = 200.0
-        #     gem = 680.0
-        #     az, _ = self.dome_eq_azimuth(
-        #         ra=ra, dec=dec, r_dome=r_dome, spx=spx, spy=spy,
-        #         gem=gem, side_of_pier=side_of_pier, latitude=observ_loc['latitude'],
-        #         longitude=observ_loc['longitude'], elevation=observ_loc['elevation']
-        #     )
-        #     logger.info(f'After Dome_eq_azimuth az:{az}')
 
         await self.journal.debug(f"{self.id} {self.name} slewing az: {az}")
         await self.dome.aput_slewtoazimuth(az)
