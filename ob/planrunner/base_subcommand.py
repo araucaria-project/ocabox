@@ -36,6 +36,10 @@ class BaseSubCommand(AbstractBase):
         return os.path.join(base_fits_folder, f'{self.telescope.id}')
 
     @property
+    def fits_raw_folder_name(self) -> str:
+        return os.path.expanduser(self.telescope.observatory.get_app_cfg('raw_dir'))
+
+    @property
     def fits_focus_folder(self) -> str:
         return os.path.join(self.fits_main_folder, f'focus')
 
