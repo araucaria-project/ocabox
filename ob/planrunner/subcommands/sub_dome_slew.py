@@ -2,7 +2,7 @@ import asyncio
 import logging
 from pyaraucaria.dome_eq import dome_eq_azimuth
 from ob.planrunner.base_subcommand import BaseSubCommand
-from typing import Callable, Dict, Any, Tuple
+from typing import Callable, Dict, Any
 from ob.planrunner.status import PlanStatusEnum
 
 
@@ -26,15 +26,16 @@ class DomeSlew(BaseSubCommand):
         self.create_sub_command_string(**self.info_dict)
 
     async def _wait_to_slew(self, azimuth) -> None:
-
+        logger.info(f'Starting wait_to slew az: {azimuth}')
         while True:
             dome_az = await self.value_proof_get(name='sub_dome_az', awaitab=self.dome.aget_az, expect_type=float)
             dome_slewing = await self.value_proof_get(name='sub_dome_slew',
                                                       awaitab=self.dome.aget_slewing,
                                                       expect_type=bool)
             await asyncio.sleep(0.5)
-            if dome_az is not None and dome_slewing is False:
+            if dome_slewing is False:
                 if (abs(azimuth - float(dome_az))) < 2.0 or (abs(azimuth - float(dome_az))) > 358.0:
+                    logger.info(f'Dome on position set: {azimuth} real: {dome_az}')
                     break
 
     async def arun(self, step_id: str or None = None) -> int:
@@ -70,8 +71,8 @@ class DomeSlew(BaseSubCommand):
                     gem=gem, side_of_pier=side_of_pier, latitude=observ_loc['latitude'],
                     longitude=observ_loc['longitude'], elevation=observ_loc['elevation']
                 )
-                logger.info(f'Calculated eq dome az:{mount_az}')
-                logger.info(f'Calculated info dict eq dome az:{info_dict}')
+                logger.info(f'Calculated eq dome az: {mount_az}')
+                logger.info(f'Calculated info dict eq dome az: {info_dict}')
             else:
                 mount_az = await self.value_proof_get(name='sub_dome_mount_az',
                                                       awaitab=self.mount.aget_az, expect_type=float)
@@ -79,8 +80,7 @@ class DomeSlew(BaseSubCommand):
 
             if (360 > abs(mount_az - dome_az) > (360 - self.follow_tol)) or \
                     0 < (abs(mount_az - dome_az) < self.follow_tol):
-                az = mount_az
-                inf = f'{self.id} {self.name} in position tolerance, skipping.'
+                inf = f'{self.id} {self.name} in position tolerance (set az: {mount_az} dome az: {dome_az}), skipping.'
                 self.info_callback['stream_1'](inf)
                 self.info_callback['stream_5'](f'{self.id}')
                 logger.info(inf)
@@ -92,7 +92,7 @@ class DomeSlew(BaseSubCommand):
             else:
                 az = mount_az
 
-        await self.journal.debug(f"{self.id} {self.name} slewing az: {az}")
+        await self.journal.info(f"{self.id} {self.name} slewing az: {az}")
         await self.dome.aput_slewtoazimuth(az)
         await self._wait_to_slew(az)
         logger.info(f'{self.id} done')
