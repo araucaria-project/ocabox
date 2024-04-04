@@ -34,6 +34,7 @@ client:
     max_missed_msg: 3  # extra, not used by ocabox
     app:
       base_fits_dir: /data/fits/
+      raw_dir: raw
       base_log_toi_dir: ~/.oca/log_toi
       base_cycle_time_calc_dir: /data/misc/cycle_time_calc
       base_log_night_dir: ~/.oca/log_night
@@ -82,6 +83,7 @@ client:
     max_missed_msg: 3  # extra, not used by ocabox
     app:
       base_fits_dir: /data/fits/
+      raw_dir: raw
       base_log_textui_dir: ~/.oca/log_textui
       base_cycle_time_calc_dir: /data/misc/cycle_time_calc
       base_log_night_dir: ~/.oca/log_night
@@ -130,6 +132,7 @@ client:
     max_missed_msg: 3  # extra, not used by ocabox
     app:
       base_fits_dir: /data/fits/
+      raw_dir: raw
       base_cycle_time_calc_dir: /data/misc/cycle_time_calc
       base_log_night_dir: ~/.oca/log_night
       base_program_dir: ~/Desktop
