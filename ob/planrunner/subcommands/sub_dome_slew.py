@@ -34,7 +34,7 @@ class DomeSlew(BaseSubCommand):
                                                       expect_type=bool)
             await asyncio.sleep(0.5)
             if dome_az is not None and dome_slewing is False:
-                if (abs(azimuth - float(dome_az))) < 2.0 or (abs(azimuth - float(dome_az))) > 358.0:
+                if (abs(azimuth - float(dome_az))) < 3.0 or (abs(azimuth - float(dome_az))) > 357.0:
                     logger.info(f'Dome on position set: {azimuth} real: {dome_az}')
                     break
 
