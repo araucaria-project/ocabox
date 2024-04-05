@@ -164,11 +164,10 @@ class ObservPlan:
 
     def _parse_plan(self) -> None:
         if self.plan_string:
-            try:
-                self.parsed_plan = ObsPlanParser.convert_from_string(self.plan_string)
-                logger.debug(f'Parsed: {self.parsed_plan}')
-            except Exception as e:
-                logger.error(f'Cannot parse plan - please check the syntax')
+            # try:
+            self.parsed_plan = ObsPlanParser.convert_from_string(self.plan_string)
+            # except Exception as e:
+            #     logger.error(f'Cannot parse plan - please check the syntax, error {e}')
         else:
             logger.error(f'No plan to parse.')
 
