@@ -93,14 +93,14 @@ class AbstractBase(ABC):
     @staticmethod
     def _mk_folder(folder: str):
         if not os.path.exists(folder):
-            try:
-                os.makedirs(folder, exist_ok=True)
-                logger.info(f'Creating folder {folder}')
-            except Exception as e:
-                logger.warning(
-                    f'Folder creation failed, please create folder {folder} manually '
-                    f'or adjust config key "app.base_fits_dir". Error: {e}'
-                )
+            # try:
+            os.makedirs(folder, exist_ok=True)
+            logger.info(f'Creating folder {folder}')
+            # except Exception as e:
+            #     logger.warning(
+            #         f'Folder creation failed, please create folder {folder} manually '
+            #         f'or adjust config key "app.base_fits_dir". Error: {e}'
+            #     )
 
     @staticmethod
     def get_julian_date(date: str or datetime) -> float:

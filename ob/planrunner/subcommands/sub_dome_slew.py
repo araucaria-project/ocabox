@@ -13,11 +13,14 @@ class DomeSlew(BaseSubCommand):
 
     def __init__(self, id: str, telescope: 'Telescope', info_callback: Dict[str, Callable],
                  uobi: int, seq_data: 'Seq' or None = None,
-                 follow_tol: float = 3.0, az: float or None = None,
+                 follow_tol: float = 3.0,
+                 az: float or None = None,
+                 slew_tolerance: float = 3.0,
                  name: str = 'dome-slew', param: Dict[str, Any] or None = None) -> None:
         self.seq_data = seq_data
         self.az = az
-        self.follow_tol = follow_tol  # TODO take from settings
+        self.follow_tol = follow_tol # TODO take from settings
+        self.slew_tolerance = slew_tolerance # TODO take from settings
         super().__init__(id=id, info_callback=info_callback, telescope=telescope,
                          name=name, uobi=uobi, param=param)
         self.dome = self.telescope.get_dome()
@@ -34,7 +37,8 @@ class DomeSlew(BaseSubCommand):
                                                       expect_type=bool)
             await asyncio.sleep(0.5)
             if dome_az is not None and dome_slewing is False:
-                if (abs(azimuth - float(dome_az))) < 3.0 or (abs(azimuth - float(dome_az))) > 357.0:
+                if (abs(azimuth - float(dome_az))) < self.slew_tolerance \
+                        or (abs(azimuth - float(dome_az))) > 360.0 - self.slew_tolerance:
                     logger.info(f'Dome on position set: {azimuth} real: {dome_az}')
                     break
 
