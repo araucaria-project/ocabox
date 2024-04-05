@@ -119,9 +119,9 @@ class Component(param.Parameterized):
         self.unsubscribe_all()
 
     def _initialize(self):
-        for n, p in self.param.params().items():
-            if isinstance(p, OcaBoxParam):
-                self._connect_variables(n)
+        to_connect = [n for n, p in self.param.params().items() if isinstance(p, OcaBoxParam)]
+        for n in to_connect:
+            self._connect_variables(n)
 
     def _connect_variables(self, param_name):
         logger.debug(f'Connecting {param_name} to {self.id}')
