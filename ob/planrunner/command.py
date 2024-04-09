@@ -248,7 +248,7 @@ class Command(BaseSequence):
     @property
     def plan_seq(self):
         if 'seq' in self.kwargs.keys():
-            if re.fullmatch(pattern='\d*x\(.*\)', string=self.kwargs['seq']):
+            if re.fullmatch(pattern=r'\d*x\(.*\)', string=self.kwargs['seq']):
                 seq_res = self.multiple_seq(self.kwargs['seq'])
             else:
                 seq_res = self.kwargs['seq']
