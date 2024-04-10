@@ -304,7 +304,7 @@ class CameraExposure(BaseSubCommand):
         if dat:
             try:
                 if dat['response'] == 'fits_saved':
-                    inf = f'{self.id} {self.name} exp:{sub}/{self.exp_no} done.'
+                    inf = f'{self.id} {self.name} exp:{sub}/{self.exp_no} done. Fits id: {self.fits_file_name}.'
                     logger.info(inf)
                     await self.journal.info(inf)
                     self.info_callback['stream_1'](inf)
