@@ -275,7 +275,7 @@ class AbstractCycleTime(ABC):
 
     @staticmethod
     def solve_multiple_seq(seq_string: str) -> str:
-        if re.fullmatch(pattern='\d*x\(.*\)', string=seq_string):
+        if re.fullmatch(pattern=r'\d*x\(.*\)', string=seq_string):
             return AbstractCycleTime.multiple_seq(seq_string)
         else:
             return seq_string
@@ -315,7 +315,8 @@ class AbstractCycleTime(ABC):
         f = record['filter_pos']
         if 'kwargs' in record.keys():
             if 'seq' in record['kwargs']:
-                s = record['kwargs']['seq'].split(',')
+                seq_res = AbstractCycleTime.solve_multiple_seq(seq_string=record['kwargs']['seq'])
+                s = seq_res.split(',')
                 for n in s:
                     z = n.split('/')
                     if f != z[1]:
