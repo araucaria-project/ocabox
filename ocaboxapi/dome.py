@@ -15,6 +15,7 @@ class Dome(TelescopeComponent):
     slewing = OcaBoxParam(default=False, doc="Dome is moving")
     slave_on = OcaBoxParam(default=False, doc="Slave to telescope on")
     atpark = OcaBoxParam(default=False, doc="Dome at park position")
+    domefansrunning = OcaBoxParam(default=False, doc="Dome fans running")
 
 
     shutter_status_to_code = {
