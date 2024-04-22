@@ -4,8 +4,8 @@ from typing import List, Any, Callable, Dict
 import asyncio
 from ob.planrunner.coded_error import CantOverideNightPlanError, SequenceTreeError
 from pyaraucaria.obs_plan.obs_plan_parser import ObsPlanParser
-
 from ob.planrunner.status import PlanStatusEnum
+
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -149,26 +149,28 @@ class ObservPlan:
                 return False
             except SequenceTreeError:
                 logger.warning(f'Plan is wrong. Check the syntax.')
-                self.info_callback['stream_1'](f'Warning: Plan have syntax errors.')
+                self.info_callback['stream_1'](f'Plan have syntax errors.')
                 return False
 
     async def aload_nightplan_string(self, nightplan_id: str, string: str,
-                                     overwrite: bool = False, param: Dict[str, Any] or None = None) -> None:
+                                     overwrite: bool = False, param: Dict[str, Any] or None = None) -> bool:
         self.load_nightplan_string(nightplan_id=nightplan_id, string=string, overwrite=overwrite, param=param)
         night = self.get_nightplan(nightplan_id=nightplan_id)
         if night is not None:
             await night.param['plan_status'].send_all_to_nats()
+            return True
         else:
-            logger.warning(f'Plan is not created. Check the syntax.')
-            self.info_callback['stream_1'](f'Warning: Plan have syntax errors.')
+            info = f'Plan is not created. Check the syntax.'
+            logger.warning(info)
+            self.info_callback['stream_1'](info)
+            return False
 
     def _parse_plan(self) -> None:
         if self.plan_string:
-            try:
-                self.parsed_plan = ObsPlanParser.convert_from_string(self.plan_string)
-                logger.debug(f'Parsed: {self.parsed_plan}')
-            except Exception as e:
-                logger.error(f'Cannot parse plan - please check the syntax')
+            # try:
+            self.parsed_plan = ObsPlanParser.convert_from_string(self.plan_string)
+            # except Exception as e:
+            #     logger.error(f'Cannot parse plan - please check the syntax, error {e}')
         else:
             logger.error(f'No plan to parse.')
 

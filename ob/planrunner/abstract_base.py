@@ -62,26 +62,23 @@ class AbstractBase(ABC):
     def user(self):
         return pwd.getpwuid(os.getuid())[0]
 
-    async def _value_proof_get(self, name: str, awaitab: Callable, expect_type) -> Any:
-        try:
-            res = await awaitab()
-            if expect_type==float and isinstance(res, int):
-                try:
-                    res = float(res)
-                except ValueError:
-                    pass
-            if isinstance(res, expect_type):
-                logger.debug(f"Get {name} value done: {res}")
-                return res
-            else:
-                logger.warning(f"Can't get {name} value, result is {res}")
-                return None
-        except Exception as e:
-            logger.warning(f"Can't get {name} value: {e}")
+    @staticmethod
+    async def _value_proof_get(name: str, awaitab: Callable, expect_type) -> Any:
+        res = await awaitab()
+        if expect_type == float and isinstance(res, int):
+            try:
+                res = float(res)
+            except ValueError:
+                pass
+        if isinstance(res, expect_type):
+            logger.debug(f"Get {name} value done: {res}")
+            return res
+        else:
+            logger.warning(f"Can't get {name} value, result is {res}")
             return None
 
     async def value_proof_get(self, name: str, awaitab: Callable, expect_type: type, n_times: int = 5) -> Any:
-        for n in range(1, n_times+1):
+        for n in range(1, n_times + 1):
             res = await self._value_proof_get(name=name, awaitab=awaitab, expect_type=expect_type)
             if res is not None:
                 return res
@@ -93,14 +90,8 @@ class AbstractBase(ABC):
     @staticmethod
     def _mk_folder(folder: str):
         if not os.path.exists(folder):
-            try:
-                os.makedirs(folder, exist_ok=True)
-                logger.info(f'Creating folder {folder}')
-            except Exception as e:
-                logger.warning(
-                    f'Folder creation failed, please create folder {folder} manually '
-                    f'or adjust config key "app.base_fits_dir". Error: {e}'
-                )
+            os.makedirs(folder, exist_ok=True)
+            logger.info(f'Creating folder {folder}')
 
     @staticmethod
     def get_julian_date(date: str or datetime) -> float:
@@ -142,14 +133,6 @@ class AbstractBase(ABC):
             for n in kw.keys():
                 if n != 'seq_data':
                     ex_js[n] = kw[n]
-
-
-        # if self.kwargs:
-        #     if len(self.kwargs) > 0:
-        #         for n in self.kwargs.keys():
-        #             if n != 'seq_data':
-        #                 ex_js[n] = self.kwargs[n]
-
         ex_js['id'] = self.id
         ex_js['name'] = self.name
         ex_js['started'] = self.started

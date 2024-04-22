@@ -7,7 +7,7 @@ from typing import Callable, Dict, Any
 import astropy.units as u
 from astropy.coordinates import AltAz, EarthLocation, get_sun, get_body
 from astropy.time import Time
-
+from ob.planrunner.coded_error import SequenceTreeError
 from ob.planrunner.status import PlanStatusEnum
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -20,20 +20,29 @@ class Wait(BaseSubCommand):
                  name: str = 'wait', param: Dict[str, Any] or None = None) -> None:
         self.key = key
         self.value = value
-        self.loc = {'latitude': -24.598056, 'longitude': -70.196389, 'elevation': 2817}
         super().__init__(id=id, info_callback=info_callback,
                          telescope=telescope, name=name, uobi=uobi, param=param)
         self.info_dict = {'key': self.key, 'value': self.value}
         self.create_sub_command_string(**self.info_dict)
+        self.loc = self.gen_conf.get_value(['observatory_location'])
 
-    async def _wait_exec(self, value: float) -> None:
+    @staticmethod
+    async def _wait_exec(value: float) -> None:
         await asyncio.sleep(value)
 
-    async def _ut_exec(self, value: str) -> None:
+    @staticmethod
+    async def _ut_exec(value: str) -> None:
         val = value.split(':')
-        h = int(val[0])
-        m = int(val[1])
-        s = int(val[2])
+        if len(val) == 2:
+            h = int(val[0])
+            m = int(val[1])
+            s = 0
+        elif len(val) == 3:
+            h = int(val[0])
+            m = int(val[1])
+            s = int(val[2])
+        else:
+            raise SequenceTreeError
         while True:
             utc = datetime.datetime.utcnow()
             if utc.hour == h:

@@ -184,15 +184,24 @@ class CameraExposure(BaseSubCommand):
             self.symlinks.append({'target': f'./{self.fits_file_name}.fits',
                                   'symlink': os.path.join(self.fits_main_folder, 'last_shoot.fits')})
         else:
+
             today_symlink_name = self._get_today_symlink_name()
             today_fits_folder_name = self._get_today_fits_folder_name()
-            self.target_folder = os.path.join(self.fits_main_folder, f'{today_fits_folder_name}')
-            self.symlinks.append({'target': f'./{today_fits_folder_name}',
-                                  'symlink': os.path.join(self.fits_main_folder, f'actual')})
-            self.symlinks.append({'target': f'./{today_fits_folder_name}',
-                                  'symlink': os.path.join(self.fits_main_folder, today_symlink_name)})
-            self.symlinks.append({'target': f'./{today_fits_folder_name}/{self.fits_file_name}.fits',
-                                  'symlink': os.path.join(self.fits_main_folder, 'last_shoot.fits')})
+            self.target_folder = os.path.join(
+                self.fits_main_folder, self.fits_raw_folder_name, f'{today_fits_folder_name}'
+            )
+            self.symlinks.append({
+                'target': f'./{self.fits_raw_folder_name}/{today_fits_folder_name}',
+                'symlink': os.path.join(self.fits_main_folder, f'actual')
+            })
+            self.symlinks.append({
+                'target': f'./{today_fits_folder_name}',
+                'symlink': os.path.join(self.fits_main_folder, self.fits_raw_folder_name, today_symlink_name)
+            })
+            self.symlinks.append({
+                'target': f'./{self.fits_raw_folder_name}/{today_fits_folder_name}/{self.fits_file_name}.fits',
+                'symlink': os.path.join(self.fits_main_folder, 'last_shoot.fits')
+            })
 
     async def _wait_for_save_fits(self, sub: int, sub_time: float) -> bool:
 
@@ -295,7 +304,7 @@ class CameraExposure(BaseSubCommand):
         if dat:
             try:
                 if dat['response'] == 'fits_saved':
-                    inf = f'{self.id} {self.name} exp:{sub}/{self.exp_no} done.'
+                    inf = f'{self.id} {self.name} exp:{sub}/{self.exp_no} done. Fits id: {self.fits_file_name}.'
                     logger.info(inf)
                     await self.journal.info(inf)
                     self.info_callback['stream_1'](inf)

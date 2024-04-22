@@ -41,8 +41,9 @@ class Sequence(BaseSequence):
                             self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = com
                             id_next += 1
                     else:
-                        self.info_callback['stream_1'](f'Wrong command name {case["command_name"]}')
-                        logger.warning(f'Wrong command name {case["command_name"]}')
+                        info = f'Wrong command name {case["command_name"]}'
+                        self.info_callback['stream_1'](info)
+                        logger.warning(info)
                         raise SequenceTreeError
                 else:
                     raise SequenceTreeError

@@ -1,6 +1,7 @@
 from typing import Dict, List, Any
 import logging
 import random
+from ob.planrunner.coded_error import SequenceTreeError
 
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -90,7 +91,12 @@ class Seq:
 
     @property
     def exp_no(self) -> int:
-        return int(self.seq_list[0])
+        try:
+            ret = int(self.seq_list[0])
+        except (ValueError, IndexError):
+            logger.error(f'Plan syntax error in: {self.seq}')
+            raise SequenceTreeError
+        return ret
 
     @property
     def filter(self) -> str or int:
