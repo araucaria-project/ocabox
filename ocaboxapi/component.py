@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import logging
 import time
 from typing import Any, List
 
 import param
+from obcom.comunication.cycle_query import BaseCycleQuery
 
 from obcom.data_colection.value_call import ValueResponse
 from ocaboxapi import Observatory
@@ -24,9 +26,15 @@ class Component(param.Parameterized):
     id = param.String()
     observatory: Observatory = param.ClassSelector(class_=Observatory)
 
+    @dataclasses.dataclass
+    class CQHolder:
+        cq: BaseCycleQuery
+        id: str
+
     def __init__(self, **params):
         super().__init__(**params)
-        self.subscribed = []
+        self.subscribed: List[Component.CQHolder] = []
+        self._watchers: list = []
         self._initialize()
 
     async def aget_value(self, param_name, request_timeout: float = None, **parameters_dict):
@@ -58,6 +66,7 @@ class Component(param.Parameterized):
         `watch` does not subscribe for value change on OCABOX, it just watches local value change. """
         logger.debug(f'Setting watcher on {param_names}: {callback}')
         watcher = self.param.watch(callback, param_names, queued=queued)
+        self._watchers.append(watcher)
         return watcher
 
     def unwatch(self, watcher):
@@ -65,6 +74,14 @@ class Component(param.Parameterized):
 
         `watcher` is returned by `watch` method."""
         self.param.unwatch(watcher)
+
+    def unwatch_all(self):
+        """ Remove all watcher
+
+        `watcher` is returned by `watch` method."""
+        for w in self._watchers:
+            self.param.unwatch(w)
+        self._watchers = []
 
     def my_address(self):
         """ Return address of this component """
@@ -98,7 +115,7 @@ class Component(param.Parameterized):
                                                     parameters_dict=parameters_dict
                                                     )
 
-        self.subscribed.append(cq)
+        self.subscribed.append(Component.CQHolder(cq, param_name))
         if callback is not None:
             # self.watch(param_name=param_name, callback=lambda event: callback(getattr(event.obj, param_name)))
             watcher = self.watch(param_names=param_name, callback=callback)
@@ -108,11 +125,17 @@ class Component(param.Parameterized):
 
     def unsubscribe(self, cq):
         self.observatory.unsubscribe(cq)
-        self.subscribed.remove(cq)
+        to_remove = None
+        for cq_holder in self.subscribed:
+            if cq == cq_holder.cq:
+                to_remove = cq_holder
+                break
+        if to_remove is not None:
+            self.subscribed.remove(to_remove)
 
     def unsubscribe_all(self):
-        for cq in self.subscribed:
-            self.observatory.unsubscribe(cq)
+        for cq_holder in self.subscribed:
+            self.observatory.unsubscribe(cq_holder.cq)
         self.subscribed = []
 
     def __del__(self):
