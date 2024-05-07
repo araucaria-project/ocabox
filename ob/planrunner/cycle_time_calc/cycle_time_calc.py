@@ -227,7 +227,12 @@ class CycleTimeCalc(AbstractCycleTime):
 
                 elif 'ut' in command_dict['kwargs'].keys():
                     dat_0 = self._start_time.timestamp() + self._time_length
-                    target_t = self._that_day_time(date_time_stamp=dat_0, time_str=command_dict['kwargs']['ut'])
+                    val = (command_dict['kwargs']['ut']).split(':')
+                    if len(val) == 2:
+                        ut_str = f'{val[0]}:{val[1]}:00'
+                    else:
+                        ut_str = command_dict['kwargs']['ut']
+                    target_t = self._that_day_time(date_time_stamp=dat_0, time_str=ut_str)
                     if target_t >= (self._start_time.timestamp() + self._time_length):
                         t = float(target_t - (self._start_time.timestamp() + self._time_length))
                         self._time_length += t

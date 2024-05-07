@@ -41,7 +41,7 @@ class AbstractCycleTime(ABC):
             l_dir = os.listdir(base_folder)
 
             for n in l_dir:
-                if AbstractCycleTime.FILE_NAMES[file_type] in n and re.fullmatch(pattern='\w\w..?_.*.txt', string=n):
+                if AbstractCycleTime.FILE_NAMES[file_type] in n and re.fullmatch(pattern=r'\w\w..?_.*.txt', string=n):
                     tel = n.split('_')[0]
                     if tel not in tel_lst:
                         tel_lst.append(tel)
@@ -243,7 +243,10 @@ class AbstractCycleTime(ABC):
                         t = 5
                     else:
                         t = z[2]
-                    ret += int(z[0]) * float(t)
+                    try:
+                        ret += int(z[0]) * float(t)
+                    except (ValueError, IndexError):
+                        ret += 1
         logger.debug(f'Record:{record}, exposure_time_sum:{ret}')
         return ret
 
@@ -272,7 +275,7 @@ class AbstractCycleTime(ABC):
 
     @staticmethod
     def solve_multiple_seq(seq_string: str) -> str:
-        if re.fullmatch(pattern='\d*x\(.*\)', string=seq_string):
+        if re.fullmatch(pattern=r'\d*x\(.*\)', string=seq_string):
             return AbstractCycleTime.multiple_seq(seq_string)
         else:
             return seq_string
@@ -285,7 +288,10 @@ class AbstractCycleTime(ABC):
                 seq_res = AbstractCycleTime.solve_multiple_seq(seq_string=record['kwargs']['seq'])
                 s = seq_res.split(',')
                 for n in s:
-                    ret += int(n.split('/')[0])
+                    try:
+                        ret += int(n.split('/')[0])
+                    except (ValueError, IndexError):
+                        ret += 1
         logger.debug(f'Record:{record}, seq_number:{ret}')
         return ret
 
@@ -309,7 +315,8 @@ class AbstractCycleTime(ABC):
         f = record['filter_pos']
         if 'kwargs' in record.keys():
             if 'seq' in record['kwargs']:
-                s = record['kwargs']['seq'].split(',')
+                seq_res = AbstractCycleTime.solve_multiple_seq(seq_string=record['kwargs']['seq'])
+                s = seq_res.split(',')
                 for n in s:
                     z = n.split('/')
                     if f != z[1]:

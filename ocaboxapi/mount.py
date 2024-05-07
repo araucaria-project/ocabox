@@ -20,6 +20,7 @@ class Mount(TelescopeComponent):
     motorstatus = OcaBoxParam(default='', doc="Mount motorstatus")
     commandstring = OcaBoxParam(default='', doc="Mount motorstatus")
     errorstring = OcaBoxParam(default='', doc="Telescope errorstring")
+    sideofpier = OcaBoxParam(default=0, doc="Telescope eq side of pier")
 
     async def aget_ra(self) -> float:
         logger.debug(f'Getting mount RA from {self.tel_addr}')
@@ -137,7 +138,7 @@ class Mount(TelescopeComponent):
                                     callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_sideofpier(self) -> bool:
+    async def aget_sideofpier(self) -> int:
         logger.debug(f'Getting eq mount sideofpier from {self.tel_addr}')
         ret = await self.aget_value('sideofpier')
         return ret
@@ -188,15 +189,15 @@ class Mount(TelescopeComponent):
         logger.debug(f'Putting action to {self.tel_addr}')
         await self.aput_value('action', Action=action, Parameters=param)
 
-    async def aput_opencover(self) -> None:
-        #TODO TO REMOVE
-        logger.debug(f'Putting telescope opencover to {self.tel_addr}')
-        await self.aput_value('action', Action='telescope:opencover', Parameters='')
-
-    async def aput_closecover(self) -> None:
-        # TODO TO REMOVE
-        logger.debug(f'Putting telescope closecover to {self.tel_addr}')
-        await self.aput_value('action', Action='telescope:closecover', Parameters='')
+    # async def aput_opencover(self) -> None:
+    #     #TODO TO REMOVE
+    #     logger.debug(f'Putting telescope opencover to {self.tel_addr}')
+    #     await self.aput_value('action', Action='telescope:opencover', Parameters='')
+    #
+    # async def aput_closecover(self) -> None:
+    #     # TODO TO REMOVE
+    #     logger.debug(f'Putting telescope closecover to {self.tel_addr}')
+    #     await self.aput_value('action', Action='telescope:closecover', Parameters='')
 
     async def aput_motoron(self) -> None:
         logger.debug(f'Putting telescope motoron to {self.tel_addr}')

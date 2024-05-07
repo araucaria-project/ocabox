@@ -11,7 +11,7 @@ class Focuser(TelescopeComponent):
     position = OcaBoxParam(default=0, doc="Focuser position")
     tempcomp = OcaBoxParam(default=False, doc="Focuser temperature compensation")
     ismoving = OcaBoxParam(default=False, doc="Focuser is moving")
-    fansstatus = OcaBoxParam(default=0, doc="Dome fans status")
+    fansstatus = OcaBoxParam(default=0, doc="Mirror fans status")
 
     async def aget_position(self) -> int:
         logger.debug(f'Getting focuser position from {self.tel_addr}')

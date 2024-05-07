@@ -38,15 +38,15 @@ class ChangeFilter(BaseSubCommand):
             logger.info(f'{self.id} {self.name} filter position done in {datetime.datetime.now()-t}')
         except Exception as e:
             logger.error(f'{self.id} {self.name} filter position error after {datetime.datetime.now()-t}: {e}')
+            logger.warning(f'{self.id} filter change 2-nd try')
             try:
-                logger.warning(f'{self.id} filter change 2-nd try')
                 await self.filterwheel.aput_position(pos)
-            except:
+            except Exception as e:
+                logger.warning(f'{self.id} filter change 3-rd try, error: {e}')
                 try:
-                    logger.warning(f'{self.id} filter change 3-rd try')
                     await self.filterwheel.aput_position(pos)
-                except:
-                    logger.error(f'{self.id} filter aput_position error')
+                except Exception as e:
+                    logger.error(f'{self.id} filter aput_position error, error: {e}')
                     return 1
 
     async def arun(self, step_id: str or None = None) -> int:

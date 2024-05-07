@@ -20,6 +20,7 @@ from obcom.comunication.comunication_error import CommunicationTimeoutError, Com
 
 logger = logging.getLogger("telescope")
 
+
 class Telescope(AbstractTelescope):
     """The Telescope maintains components of signgle telescope"""
 
@@ -34,11 +35,12 @@ class Telescope(AbstractTelescope):
         self.cameras = {}
         self.cctvs = {}
         self.covercalibrators = {}
-        self.rotators = {}
         self._access_grantor = None
         self._observation_plan = None
         self._cycle_time_calculator = None
         self._guiding_controller = None
+        # !!! po dodaniu nowego komponentu który dziedziczy po TelescopeComponent lub Component należy uzupełnić
+        # metody unwatch_all_component() i unsubscribe_all_component()
 
     def get_mount(self, id='mount') -> Mount:
         try:
@@ -196,3 +198,47 @@ class Telescope(AbstractTelescope):
         await m.aput_motoroff()
         if await d.aget_slewing():
             await d.aput_abortslew()
+
+    def unsubscribe_all_component(self):
+        for comp in self.mounts.values():
+            comp.unsubscribe_all()
+        for comp in self.domes.values():
+            comp.unsubscribe_all()
+        for comp in self.rotators.values():
+            comp.unsubscribe_all()
+        for comp in self.focusers.values():
+            comp.unsubscribe_all()
+        for comp in self.filterwheels.values():
+            comp.unsubscribe_all()
+        for comp in self.cameras.values():
+            comp.unsubscribe_all()
+        for comp in self.cctvs.values():
+            comp.unsubscribe_all()
+        for comp in self.covercalibrators.values():
+            comp.unsubscribe_all()
+        if self._access_grantor:
+            self._access_grantor.unsubscribe_all()
+        if self._guiding_controller:
+            self._guiding_controller.unsubscribe_all()
+
+    def unwatch_all_component(self):
+        for comp in self.mounts.values():
+            comp.unwatch_all()
+        for comp in self.domes.values():
+            comp.unwatch_all()
+        for comp in self.rotators.values():
+            comp.unwatch_all()
+        for comp in self.focusers.values():
+            comp.unwatch_all()
+        for comp in self.filterwheels.values():
+            comp.unwatch_all()
+        for comp in self.cameras.values():
+            comp.unwatch_all()
+        for comp in self.cctvs.values():
+            comp.unwatch_all()
+        for comp in self.covercalibrators.values():
+            comp.unwatch_all()
+        if self._access_grantor:
+            self._access_grantor.unwatch_all()
+        if self._guiding_controller:
+            self._guiding_controller.unwatch_all()
