@@ -350,5 +350,12 @@ class Observatory:
         #     asyncio.set_event_loop(oldloop)
         # return ret
 
-    async def reload_nats_config(self) -> bool:
+    async def reload_server_config(self) -> bool:
+        """ On the server side, the configuration is reloaded from the config file and sends new configuration to NATS
+
+        This is server admin operation. It is not intended to be used by clients. It does not read the
+        client configuration from the NATS server.
+
+        To reload the client configuration from the NATS server, use the `load_client_cfg` method.
+        """
         return await self.client.server_reload_nats_config()
