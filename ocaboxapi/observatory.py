@@ -47,20 +47,23 @@ class Observatory:
             return
         await self._nats_cfg_loader.load_cfg()
 
-    # def get_client_configuration(self) -> dict:
-    #     """
-    #     Method return configuration of client. First looking configuration in NATS if not find return default
-    #     local configuration
-    #     """
-    #     if self._nats_cfg_loader and self._nats_cfg_loader.get_cfg():
-    #         return self._nats_cfg_loader.get_cfg()
-    #     return {}
+    def get_client_configuration(self) -> dict:
+        """
+        Method return configuration of client. First looking configuration in NATS if not find return default
+        local configuration
+        """
+        if self._nats_cfg_loader and self._nats_cfg_loader.get_cfg():
+            return self._nats_cfg_loader.get_cfg()
+        return {}
+
+    def get_telescopes_configuration(self) -> dict:
+        """"Method return configuration for all telescopes. Return section telescopes from configuration from nats"""
+        return self.get_client_configuration().get("telescopes", {})
 
     def _get_client_connection_cfg_from_nats(self) -> dict:
         return self._nats_cfg_loader.get_cfg_connection_client(
             self.client_name) if self._nats_cfg_loader is not None else {}
 
-    # TODO ta metoda będzie do przeróbki albo usunięcia
     def get_app_cfg(self, key: str, default=None):
         cfg = self._nats_cfg_loader.get_cfg_client(self.client_name) if self._nats_cfg_loader is not None else {}
         value = cfg.get("app", {}).get(key)
