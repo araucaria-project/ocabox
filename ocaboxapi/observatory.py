@@ -64,8 +64,11 @@ class Observatory:
         return self._nats_cfg_loader.get_cfg_connection_client(
             self.client_name) if self._nats_cfg_loader is not None else {}
 
+    def _get_client_config(self) -> dict:
+        return self._nats_cfg_loader.get_cfg_client(self.client_name) if self._nats_cfg_loader is not None else {}
+
     def get_app_cfg(self, key: str, default=None):
-        cfg = self._nats_cfg_loader.get_cfg_client(self.client_name) if self._nats_cfg_loader is not None else {}
+        cfg = self._get_client_config()
         value = cfg.get("app", {}).get(key)
         if value is None:
             value = default
@@ -126,12 +129,12 @@ class Observatory:
         @return:
         """
         if request_timeout is None:
-            request_timeout = time() + self.client.get_cfg('request_timeout', default=2.01)
+            request_timeout = time() + self._get_client_config().get('request_timeout', 2.01)
 
         try:
             res = await self.client.put_async(f'{address}',
                                               time_of_data=time_of_data,
-                                              # time_of_data_tolerance=time_of_data_tolerance,
+                                              time_of_data_tolerance=time_of_data_tolerance,
                                               request_timeout=request_timeout,
                                               parameters_dict=parameters_dict,
                                               no_wait=False
@@ -168,11 +171,10 @@ class Observatory:
         """
 
         if time_of_data_tolerance is None:
-            time_of_data_tolerance = self.client.get_cfg('time_of_data_tolerance', default=None)
+            time_of_data_tolerance = self._get_client_config().get('time_of_data_tolerance', None)
         if request_timeout is None:
-            request_timeout = time() + self.client.get_cfg('request_timeout', default=2.02)
+            request_timeout = time() + self._get_client_config().get('request_timeout', 2.02)
 
-        # TODO: Something with timeouts with default parameters
         try:
             res = await self.client.get_async(f'{address}',
                                               time_of_data=time_of_data,
@@ -211,13 +213,13 @@ class Observatory:
         """
 
         if time_of_data_tolerance is None:
-            time_of_data_tolerance = self.client.get_cfg('time_of_data_tolerance', default=None)
+            time_of_data_tolerance = self._get_client_config().get('time_of_data_tolerance', None)
         if delay is None:
-            delay = self.client.get_cfg('delay', default=None)
+            delay = self._get_client_config().get('delay', None)
         if name is None:
             name = f'Sub: {address}'
         if max_missed_msg is None:
-            max_missed_msg = self.client.get_cfg('max_missed_msg', default=None)
+            max_missed_msg = self._get_client_config().get('max_missed_msg', None)
 
         cq = await self.client.subscribe_with_callback(address,
                                                        time_of_data_tolerance=time_of_data_tolerance,
@@ -280,13 +282,13 @@ class Observatory:
         """
 
         if time_of_data_tolerance is None:
-            time_of_data_tolerance = self.client.get_cfg('time_of_data_tolerance', default=None)
+            time_of_data_tolerance = self._get_client_config().get('time_of_data_tolerance', None)
         if delay is None:
-            delay = self.client.get_cfg('delay', default=None)
+            delay = self._get_client_config().get('delay', None)
         if name is None:
             name = f'Sub: {address}'
         if max_missed_msg is None:
-            max_missed_msg = self.client.get_cfg('max_missed_msg', default=None)
+            max_missed_msg = self._get_client_config().get('max_missed_msg', None)
 
         cq = await self.client.subscribe(address,
                                          time_of_data_tolerance=time_of_data_tolerance,
