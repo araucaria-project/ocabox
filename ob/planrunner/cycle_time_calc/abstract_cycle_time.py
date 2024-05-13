@@ -136,7 +136,10 @@ class AbstractCycleTime(ABC):
 
     @staticmethod
     def rm_mode(record: Dict[str, Any]) -> int:
-        return int(record['readoutmode'])
+        try:
+            return int(record['readoutmode'])
+        except KeyError:
+            return 1
 
     @staticmethod
     def rm_mode_inverse_mhz(rm_mode: int, telescope: str) -> float or int or None:

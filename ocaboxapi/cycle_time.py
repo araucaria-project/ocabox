@@ -14,7 +14,7 @@ class CycleTime(CycleTimeCalc):
 
     def _provide_telescope_id_base_folder(self, telescope, telescope_id, base_folder):
         if telescope is not None and telescope_id == None and base_folder == None:
-            return telescope.id, telescope.observatory.get_app_cfg(key='base_cycle_time_calc_dir')
+            return telescope.id, '/data/misc/cycle_time_calc' #telescope.observatory.get_app_cfg(key='base_cycle_time_calc_dir')
         elif telescope is None and telescope_id is not None and base_folder is not None:
             return telescope_id, base_folder
         if telescope is None and telescope_id == None or \
