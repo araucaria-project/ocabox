@@ -17,7 +17,6 @@ class MirrorCover(BaseSubCommand):
         self.dec_now: str or None = None
         super().__init__(id=id, info_callback=info_callback, telescope=telescope,
                          name=name, uobi=uobi, param=param)
-        self.mount = self.telescope.get_mount('mount')
         self.cover = self.telescope.get_covercalibrator()
         self.info_dict = {'open': self.open}
         self.create_sub_command_string(**self.info_dict)
@@ -51,7 +50,7 @@ class MirrorCover(BaseSubCommand):
             if self.telescope.id == 'dev':
                 pass
             else:
-                await self.mount.aput_opencover()
+                await self.cover.aput_opencover()
                 await self._wait_for_move(expected_status="3")
             inf = f'{self.id} {self.name} opening done.'
             self.info_callback['stream_1'](inf)
@@ -70,7 +69,7 @@ class MirrorCover(BaseSubCommand):
             if self.telescope.id == 'dev':
                 pass
             else:
-                await self.mount.aput_closecover()
+                await self.cover.aput_closecover()
                 await self._wait_for_move(expected_status="1")
             inf = f'{self.id} {self.name} closing done.'
             logger.info(inf)

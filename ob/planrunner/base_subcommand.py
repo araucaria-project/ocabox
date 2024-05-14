@@ -37,7 +37,7 @@ class BaseSubCommand(AbstractBase):
 
     @property
     def fits_raw_folder_name(self) -> str:
-        return os.path.expanduser(self.telescope.observatory.get_app_cfg('raw_dir'))
+        return 'raw'
 
     @property
     def fits_focus_folder(self) -> str:

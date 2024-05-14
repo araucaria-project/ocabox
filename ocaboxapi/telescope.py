@@ -163,7 +163,7 @@ class Telescope(AbstractTelescope):
         if await d.aget_slewing():
             await d.aput_abortslew()
         await m.aput_tracking(False)
-        await m.aput_closecover()
+        await c.aput_closecover()
         while True:
             current = await c.aget_coverstate()
             if current == 1:
@@ -188,7 +188,7 @@ class Telescope(AbstractTelescope):
             await d.aput_abortslew()
         await m.aput_tracking(False)
         await m.aput_park()
-        await m.aput_closecover()
+        await c.aput_closecover()
         while True:
             current = await c.aget_coverstate()
             if current == 1:
