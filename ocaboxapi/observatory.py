@@ -202,7 +202,8 @@ class Observatory:
                               max_missed_msg: int | None = None,
                               parameters_dict: dict = None,
                               callback_method=None,
-                              async_callback_method=None
+                              async_callback_method=None,
+                              ignore_errors:bool = False
                               ):
         """Subscribes to specified address
         Blocks!
@@ -228,7 +229,8 @@ class Observatory:
                                                        name=name,
                                                        max_missed_msg=max_missed_msg,
                                                        callback_method=callback_method,
-                                                       async_callback_method=async_callback_method
+                                                       async_callback_method=async_callback_method,
+                                                       ignore_errors=ignore_errors
                                                        )
         self._subscribers.append(cq)
         return cq
@@ -272,7 +274,8 @@ class Observatory:
                                   delay: float | None = None,
                                   name: str | None = None,
                                   max_missed_msg: int | None = None,
-                                  parameters_dict: dict = None):
+                                  parameters_dict: dict = None,
+                                  ignore_errors:bool = False):
         """Subscribes to specified address
         Blocks!
         @param address: Address of requested value
@@ -295,7 +298,8 @@ class Observatory:
                                          delay=delay,
                                          parameters_dict=parameters_dict,
                                          name=name,
-                                         max_missed_msg=max_missed_msg
+                                         max_missed_msg=max_missed_msg,
+                                         ignore_errors=ignore_errors
                                          )
         cq.start()
         try:
