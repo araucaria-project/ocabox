@@ -120,38 +120,42 @@ class CycleTimeDataClean(AbstractCycleTime):
                 index_mount_az = 'mount_az_end'
             else:
                 index_mount_az = 'mount_az_begin'
+            try:
+                dat = OrderedDict({
+                    CycleTimeDataClean.DATA_CLEAN_ORDER[0]:
+                        night_id,
+                    CycleTimeDataClean.DATA_CLEAN_ORDER[1]:
+                        first['command_name'],
+                    CycleTimeDataClean.DATA_CLEAN_ORDER[2]:
+                        first['utc_date_stamp'],
+                    CycleTimeDataClean.DATA_CLEAN_ORDER[3]:
+                        float(third['utc_time_stamp']) - float(first['utc_time_stamp']),
+                    CycleTimeDataClean.DATA_CLEAN_ORDER[4]:
+                        CycleTimeDataClean.az_distance(
+                            start=float(first['dome_az_begin']),end=float(third[index_dome])
+                        ),
+                    CycleTimeDataClean.DATA_CLEAN_ORDER[5]:
+                        CycleTimeDataClean.alt_az_distance(
+                            start_alt=float(first['mount_alt_begin']),
+                            end_alt=float(third[index_mount_alt]),
+                            start_az=float(first['mount_az_begin']),
+                            end_az=float(third[index_mount_az])
+                        ),
+                    CycleTimeDataClean.DATA_CLEAN_ORDER[6]:
+                        CycleTimeDataClean.exposure_time_sum(first),
+                    CycleTimeDataClean.DATA_CLEAN_ORDER[7]:
+                        CycleTimeDataClean.filter_changes(record=first),
+                    CycleTimeDataClean.DATA_CLEAN_ORDER[8]:
+                        CycleTimeDataClean.rm_mode_inverse_mhz(
+                            rm_mode=CycleTimeDataClean.rm_mode(second),
+                            telescope=telescope
+                        ) * CycleTimeDataClean.exposure_number(first),
+                    CycleTimeDataClean.DATA_CLEAN_ORDER[9]:
+                        CycleTimeDataClean.dither(first)*CycleTimeDataClean.exposure_number(first),
 
-            dat = OrderedDict({
-                CycleTimeDataClean.DATA_CLEAN_ORDER[0]:
-                    night_id,
-                CycleTimeDataClean.DATA_CLEAN_ORDER[1]:
-                    first['command_name'],
-                CycleTimeDataClean.DATA_CLEAN_ORDER[2]:
-                    first['utc_date_stamp'],
-                CycleTimeDataClean.DATA_CLEAN_ORDER[3]:
-                    float(third['utc_time_stamp']) - float(first['utc_time_stamp']),
-                CycleTimeDataClean.DATA_CLEAN_ORDER[4]:
-                    CycleTimeDataClean.az_distance(start=float(first['dome_az_begin']),
-                                                                         end=float(third[index_dome])),
-                CycleTimeDataClean.DATA_CLEAN_ORDER[5]:
-                    CycleTimeDataClean.alt_az_distance(start_alt=float(first['mount_alt_begin']),
-                                                                         end_alt=float(third[index_mount_alt]),
-                                                                         start_az=float(first['mount_az_begin']),
-                                                                         end_az=float(third[index_mount_az])),
-                CycleTimeDataClean.DATA_CLEAN_ORDER[6]:
-                    CycleTimeDataClean.exposure_time_sum(first),
-                CycleTimeDataClean.DATA_CLEAN_ORDER[7]:
-                    CycleTimeDataClean.filter_changes(record=first),
-                CycleTimeDataClean.DATA_CLEAN_ORDER[8]:
-                    CycleTimeDataClean.rm_mode_inverse_mhz(rm_mode=CycleTimeDataClean.rm_mode(second),
-                                                           telescope=telescope)*CycleTimeDataClean.exposure_number(first),
-                CycleTimeDataClean.DATA_CLEAN_ORDER[9]:
-                    CycleTimeDataClean.dither(first)*CycleTimeDataClean.exposure_number(first),
-                # 'dome_follow': '',
-                # 'focus_distance': '',
-                # 'mirror_cover_on': '',
-                # 'focusing': '',
-            })
+                })
+            except (KeyError, IndexError, ValueError, TypeError):
+                dat = None
         return dat
 
     @staticmethod
