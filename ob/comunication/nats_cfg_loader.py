@@ -4,6 +4,7 @@ from typing import Optional
 
 import nats
 import yaml
+
 from serverish.messenger import Messenger, get_singlereader
 
 logger = logging.getLogger("NatsCfgLoader")
@@ -21,14 +22,14 @@ class NatsCfgLoader:
         """Return all configuration"""
         return self._cfg_all
 
-    async def load_cfg(self):
+    async def load_cfg(self, timeout: Optional[float] = None):
         nats_messenger = Messenger()
         if not nats_messenger.is_open:
             logger.warning(f"Loading configuration from nats FAILED. Can not find opened connection to NATS server.")
             return
         reader = get_singlereader(self._stream)
         try:
-            data, meta = await reader.read()
+            data, meta = await reader.read(wait=timeout)
             self._cfg_all = data.get("config", {})
         except Exception as e:
             if self.fallback_file:
