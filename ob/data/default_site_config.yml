@@ -1,0 +1,69 @@
+config:
+  telescopes:
+    dev:
+      observatory:
+        address: http://localhost:80/api/v1
+        comment: ASCOM Simulator at localhost:80
+        components:
+          camera:
+            device_number: 0
+            kind: camera
+          covercalibrator:
+            device_number: 0
+            kind: covercalibrator
+          derotator:
+            device_number: 0
+            kind: rotator
+          dome:
+            device_number: 0
+            kind: dome
+          filterwheel:
+            device_number: 0
+            filters: {}
+            kind: filterwheel
+          focuser:
+            device_number: 0
+            focus_tolerance: 5
+            kind: focuser
+          guider:
+            device_number: 0
+            kind: camera
+          mount:
+            device_number: 0
+            kind: telescope
+          safetymonitor:
+            device_number: 0
+            kind: safetymonitor
+          switch:
+            device_number: 0
+            kind: switch
+        elev: 2817
+        epoch: 2000
+        lat: -70.19638
+        lon: -24.59806
+        protocol: alpaca
+
+  'site':
+    'sample_key': 123
+    'client':
+      'CliClient':
+        'opcja_ktora_nie_istnieje': False
+        'ticconnection':
+          'port': 5558
+          'url': 'localhost'
+          'protocol': 'tcp'
+          'timeout': 30
+        'time_of_data_tolerance': 0.5
+        'request_timeout': 2.16
+        'delay': 0.1
+        'max_missed_msg': 3
+
+published:
+- 2024
+- 5
+- 27
+- 0
+- 0
+- 0
+- 0
+version: 'default_site_config'
