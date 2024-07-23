@@ -19,7 +19,7 @@ python = "^3.9"
 pyzmq = "^25.0.2"
 ocabox-common = {git = "https://github.com/araucaria-project/ocabox-common.git"}
 confuse = ">=1.7.0,<1.8.0"
-astropy = "^5.0.4"
+astropy = "^6.0.0"
 qasync = { version = ">=0.23.0", optional = true }
 PyQt5 = { version = ">=5.15.7,<5.16.0", optional = true }
 pylint = {version = "^2.16.2", optional = true}
