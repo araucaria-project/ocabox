@@ -244,9 +244,9 @@ class CameraExposure(BaseSubCommand):
                 name='mount_sideofpier', awaitab=self.mount.aget_sideofpier, expect_type=int
             )
         else:
-            rot_pos = await self.value_proof_get(
-                name='fitsh_rot_pos', awaitab=self.rotator.aget_position, expect_type=float
-            )
+            rot_pos = await self.value_proof_get(name='fitsh_rot_pos',
+                                                 awaitab=self.rotator.aget_position,
+                                                 expect_type=float)
             side_of_pier = ''
         instrument_name = str(await self.value_proof_get(name='fitsh_cam_sens_name',
                                                          awaitab=self.camera.aget_sensorname,
@@ -268,9 +268,9 @@ class CameraExposure(BaseSubCommand):
             tel_dec=await self.value_proof_get(name='fitsh_tel_dec', awaitab=self.mount.aget_dec, expect_type=float),
             tel_alt=await self.value_proof_get(name='fitsh_tel_alt', awaitab=self.mount.aget_alt, expect_type=float),
             tel_az=await self.value_proof_get(name='fitsh_tel_az', awaitab=self.mount.aget_az, expect_type=float),
-            focus=await self.value_proof_get(
-                name='fitsh_focus_pos', awaitab=self.focuser.aget_position, expect_type=int
-            ),
+            focus=await self.value_proof_get(name='fitsh_focus_pos',
+                                             awaitab=self.focuser.aget_position,
+                                             expect_type=int),
             rotator_pos=rot_pos,
             observer=str(self.observer),
             image_type=str(self.type),
