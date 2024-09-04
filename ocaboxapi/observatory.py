@@ -28,23 +28,22 @@ logger = logging.getLogger("observatory")
 class Observatory:
     """The Observatory maintains connection to the single observatory server using `ocabox.Client`"""
 
-    def __init__(self, client_name='DefaultClient', software_id=None, config_stream: str = None) -> None:
+    def __init__(self, client_name='DefaultClient', software_id=None, config_stream: str = None,
+                 use_fallback_file=False, fallback_file_for_config: str = None) -> None:
         self._client = None
         self.client_name = client_name
         self.software_id = software_id
         self.telescopes = {}
         self.ephemeris = None
         self._subscribers = []
-        self._nats_cfg_loader = None if not config_stream else NatsCfgLoader(config_stream)
+        self._nats_cfg_loader = NatsCfgLoader(config_stream, use_file=use_fallback_file,
+                                              fallback_file=fallback_file_for_config)
         super().__init__()
 
     async def load_client_cfg(self, timeout: Optional[float] = None):
         """
         Method load config of Client from nats server. This method should be run once after create Observatory object.
         """
-        if not self._nats_cfg_loader:
-            logger.info(f"Config stream is not given. Config from nats can not be loaded")
-            return
         await self._nats_cfg_loader.load_cfg(timeout=timeout)
 
     def get_client_configuration(self) -> dict:
@@ -203,7 +202,7 @@ class Observatory:
                               parameters_dict: dict = None,
                               callback_method=None,
                               async_callback_method=None,
-                              ignore_errors:bool = False
+                              ignore_errors: bool = False
                               ):
         """Subscribes to specified address
         Blocks!
@@ -275,7 +274,7 @@ class Observatory:
                                   name: str | None = None,
                                   max_missed_msg: int | None = None,
                                   parameters_dict: dict = None,
-                                  ignore_errors:bool = False):
+                                  ignore_errors: bool = False):
         """Subscribes to specified address
         Blocks!
         @param address: Address of requested value
