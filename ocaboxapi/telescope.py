@@ -237,23 +237,34 @@ class Telescope(AbstractTelescope):
     def unwatch_all_component(self):
         for comp in self.mounts.values():
             comp.unwatch_all()
+            comp.reset_params_values()
         for comp in self.domes.values():
             comp.unwatch_all()
+            comp.reset_params_values()
         for comp in self.rotators.values():
             comp.unwatch_all()
+            comp.reset_params_values()
         for comp in self.focusers.values():
             comp.unwatch_all()
+            comp.reset_params_values()
         for comp in self.filterwheels.values():
             comp.unwatch_all()
+            comp.reset_params_values()
         for comp in self.cameras.values():
             comp.unwatch_all()
+            comp.reset_params_values()
         for comp in self.cctvs.values():
             comp.unwatch_all()
+            comp.reset_params_values()
         for comp in self.covercalibrators.values():
             comp.unwatch_all()
+            comp.reset_params_values()
         for comp in self.tertiarys.values():
             comp.unsubscribe_all()
+            comp.reset_params_values()
         if self._access_grantor:
             self._access_grantor.unwatch_all()
+            self._access_grantor.reset_params_values()
         if self._guiding_controller:
             self._guiding_controller.unwatch_all()
+            self._guiding_controller.reset_params_values()

@@ -8,6 +8,8 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class Dome(TelescopeComponent):
+    # INFO default values in param is only for class getting value e.g. Dome.slewing return default, but instance
+    # return None
 
     azimuth = OcaBoxParam(default=0.0, doc="Dome azimuth")
     shutterstatus = OcaBoxParam(default=0, doc="Dome shutter status")

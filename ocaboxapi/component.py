@@ -138,6 +138,11 @@ class Component(param.Parameterized):
             self.observatory.unsubscribe(cq_holder.cq)
         self.subscribed = []
 
+    def reset_params_values(self):
+        to_reset = [n for n, p in self.param.params().items() if isinstance(p, OcaBoxParam)]
+        for n in to_reset:
+            setattr(self, f'_{n}_value', None)
+
     def __del__(self):
         self.unsubscribe_all()
 
