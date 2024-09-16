@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from abc import ABC
 from typing import Dict, List, Any, Callable
@@ -10,6 +11,10 @@ from serverish.messenger import get_journalpublisher, get_publisher
 from serverish.messenger.msg_journal_pub import MsgJournalPublisher
 from serverish.messenger.msg_publisher import MsgPublisher
 from ob.planrunner.config_general import ConfigGeneral
+from ocaboxapi.exceptions import OcaboxServerError
+from obcom.comunication.comunication_error import CommunicationTimeoutError
+
+
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -77,15 +82,33 @@ class AbstractBase(ABC):
             logger.warning(f"Can't get {name} value, result is {res}")
             return None
 
-    async def value_proof_get(self, name: str, awaitab: Callable, expect_type: type, n_times: int = 5) -> Any:
-        for n in range(1, n_times + 1):
+    async def value_proof_get(self, name: str, awaitab: Callable, expect_type: type, n_times: int = 5,
+                              wait: float = 2.0) -> Any:
+        for n in range(n_times):
             res = await self._value_proof_get(name=name, awaitab=awaitab, expect_type=expect_type)
             if res is not None:
                 return res
             else:
                 logger.warning(f"Can't get {name}, (is None)")
+                await asyncio.sleep(wait)
             if n == n_times:
                 return None
+
+    async def proof_put(self, awaitab: Callable, name: str = '', n_times: int = 5, wait: float = 3.0, **kwargs) -> bool:
+        for n in range(n_times):
+            try:
+                await awaitab(kwargs)
+            except OcaboxServerError:
+                logger.warning(f'Ocabox server not reachable')
+                await asyncio.sleep(wait)
+                continue
+            except CommunicationTimeoutError:
+                logger.warning(f'Tic CommunicationTimeoutError')
+                await asyncio.sleep(wait)
+                continue
+            return True
+        logger.error(f'Sending {name} to telescope failed')
+        return False
 
     @staticmethod
     def _mk_folder(folder: str):
