@@ -5,7 +5,7 @@ import logging
 import asyncio
 from typing import Callable, Dict, Any
 import astropy.units as u
-from astropy.coordinates import AltAz, EarthLocation, get_sun, get_body
+from astropy.coordinates import AltAz, EarthLocation, get_sun
 from astropy.time import Time
 from ob.planrunner.coded_error import SequenceTreeError
 from ob.planrunner.status import PlanStatusEnum

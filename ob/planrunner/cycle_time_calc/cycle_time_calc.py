@@ -6,9 +6,6 @@ from pyaraucaria.coordinates import ra_dec_2_az_alt, ra_to_decimal, dec_to_decim
 from pyaraucaria.ephemeris import calculate_sun_rise_set
 from pyaraucaria.obs_plan.obs_plan_parser import ObsPlanParser
 import time
-from astropy import units as u
-from astropy.time import Time
-from astroplan import Observer
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
