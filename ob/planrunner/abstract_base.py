@@ -61,8 +61,11 @@ class AbstractBase(ABC):
     def get_journal(self) -> None:
         self.journal = get_journalpublisher(subject=self.journal_subject)
 
-    def get_publisher(self, field: str) -> MsgPublisher:
+    def get_publisher(self, field: str) -> MsgPublisher or None:
         subj = self.get_status_subject(field=field)
+        if subj is None:
+            logger.error(f'Wrong subject for field {field}')
+            return None
         return get_publisher(subject=subj)
 
     def build_plan_status(self):

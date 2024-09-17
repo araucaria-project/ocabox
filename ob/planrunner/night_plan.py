@@ -17,8 +17,8 @@ class NightPlan(BaseSequence):
         self.sequence_dict = sequence_dict
         self._r_id: int
         param = param if param is not None else {}
-        param['plan_status'] = PlanStatus(telescope=telescope)
         param['cfg_gen'] = ConfigGeneral(telescope=telescope)
+        param['plan_status'] = PlanStatus(telescope=telescope)
         super().__init__(id=id, name='NIGHTPLAN', info_callback=info_callback,
                          telescope=telescope, sequence_dict=sequence_dict, c_type='night_plan', param=param)
         self.mount = self.telescope.get_mount()
@@ -39,9 +39,9 @@ class NightPlan(BaseSequence):
             base_folder=self.telescope.observatory.get_app_cfg(key='base_cycle_time_calc_dir'))
 
     def _init_plan_status(self):
-        self.param['plan_status'].plan_static_publisher = self.get_publisher('plan_static')
-        self.param['plan_status'].plan_status_publisher = self.get_publisher('plan_status')
-        self.param['plan_status'].plan_time_publisher = self.get_publisher('plan_time')
+        self.param['plan_status'].plan_static_publisher = self.get_publisher('planner_static')
+        self.param['plan_status'].plan_status_publisher = self.get_publisher('planner_status')
+        self.param['plan_status'].plan_time_publisher = self.get_publisher('planner_time')
 
     def _get_rm_mode(self):
         crm = self.camera.readoutmode
