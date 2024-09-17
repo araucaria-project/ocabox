@@ -37,20 +37,23 @@ class AbstractBase(ABC):
         self.param = param if param is not None else {}
         self.journal: MsgJournalPublisher | None = None
         self.gen_conf = ConfigGeneral(telescope=self.telescope)
-        self.cfg_gen = ConfigGeneral(telescope=self.telescope)
         self.get_journal()
         self.build_plan_status()
         super().__init__()
 
     @property
     def journal_subject(self) -> str:
-        r = self.cfg_gen.get_value(seq=['site', 'global', 'nats', 'subjects', 'journal', 'planner'], source='nats')
+        r = self.param['cfg_gen'].get_value(
+            seq=['site', 'global', 'nats', 'subjects', 'journal', 'planner'], source='nats'
+        )
+        logger.info(f'Journal subject {r}')
         # c = self.telescope.observatory.get_app_cfg('nats_subject')
         # r = f'{c["journal_root"]}.{self.telescope.id}.{c["tic_comp"]["planner"]}'
         return r
 
     def get_status_subject(self, field: str) -> str:
-        r = self.cfg_gen.get_value(seq=['site', 'global', 'nats', 'subjects', 'status', field], source='nats')
+        r = self.param['cfg_gen'].get_value(seq=['site', 'global', 'nats', 'subjects', 'status', field], source='nats')
+        logger.info(f'Status subject {r}')
         # c = self.telescope.observatory.get_app_cfg('nats_subject')
         # r = f'{c["status_root"]}.{self.telescope.id}.{c["tic_comp"]["planner"]}.{c["planner_status"][field]}'
         return r

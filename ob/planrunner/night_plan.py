@@ -4,7 +4,7 @@ from typing import List, Any, Dict, Callable
 from ob.planrunner.base_sequence import BaseSequence
 from ob.planrunner.sequence import Sequence
 from ob.planrunner.cycle_time_calc.cycle_time_data_build import CycleTimeDataBuild
-import random
+from ob.planrunner.config_general import ConfigGeneral
 
 from ob.planrunner.status import PlanStatus
 
@@ -18,6 +18,7 @@ class NightPlan(BaseSequence):
         self._r_id: int
         param = param if param is not None else {}
         param['plan_status'] = PlanStatus(telescope=telescope)
+        param['cfg_gen'] = ConfigGeneral(telescope=telescope)
         super().__init__(id=id, name='NIGHTPLAN', info_callback=info_callback,
                          telescope=telescope, sequence_dict=sequence_dict, c_type='night_plan', param=param)
         self.mount = self.telescope.get_mount()
