@@ -239,7 +239,7 @@ class CameraExposure(BaseSubCommand):
             req_dec = ''
         else:
             req_dec = self.req_dec
-        mount_type = self.gen_conf.get_value([self.telescope.id, 'mount', 'type'])
+        mount_type = self.gen_conf.get_value([])[self.telescope.id]['mount']['type']
         if mount_type == 'eq':
             rot_pos = ''
             side_of_pier = await self.value_proof_get(
@@ -255,7 +255,7 @@ class CameraExposure(BaseSubCommand):
                                                          expect_type=str))
         if self.telescope.id == 'dev':
             instrument_name = 'simul'
-        observatory_location = self.gen_conf.get_value(['observatory_location'])
+        observatory_location = self.gen_conf.get_value([])['observatory_location']
 
         header = fits_header(
             obs_lat=observatory_location['latitude'],
