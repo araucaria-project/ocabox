@@ -94,7 +94,10 @@ class AbstractBase(ABC):
             if n == n_times:
                 return None
 
-    async def proof_put(self, awaitab: Callable, name: str = '', n_times: int = 5, wait: float = 2.0, **kwargs) -> bool:
+    async def proof_put(self, awaitab: Callable,  **kwargs) -> bool:
+        name: str = ''
+        n_times: int = 5
+        wait: float = 2.0
         for n in range(1, n_times + 1):
             try:
                 await awaitab(kwargs)
