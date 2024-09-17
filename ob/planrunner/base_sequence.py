@@ -51,9 +51,9 @@ class BaseSequence(AbstractBase):
             for id, su in subcomponents.items():
                 if step_id is not None:
                     if step_id[: len(subcomponents[id].id)] <= subcomponents[id].id:
-                        su.param['plan_status'].upd_status(id=su.id, value=PlanStatusEnum.loaded)
+                        await su.param['plan_status'].upd_status(id=su.id, value=PlanStatusEnum.loaded)
                 else:
-                    su.param['plan_status'].upd_status(id=su.id, value=PlanStatusEnum.loaded)
+                    await su.param['plan_status'].upd_status(id=su.id, value=PlanStatusEnum.loaded)
         for n in subcomponents.keys():
             skip = 0
             if step_id is None:
