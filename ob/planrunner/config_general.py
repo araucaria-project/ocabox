@@ -17,7 +17,6 @@ class ConfigGeneral:
             ret = self.config_body
         elif source == 'nats':
             ret = self.config_body_nats
-            log.info(ret)
         else:
             ret = self.config_body
         for n in seq:
