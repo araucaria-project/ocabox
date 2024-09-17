@@ -73,6 +73,11 @@ class DomeSlew(BaseSubCommand):
                 spx = self.gen_conf.get_value([self.telescope.id, 'dome', 'spx'])
                 spy = self.gen_conf.get_value([self.telescope.id, 'dome', 'spy'])
                 gem = self.gen_conf.get_value([self.telescope.id, 'dome', 'gem'])
+
+                logger.info(r_dome)
+                logger.info(spx)
+                logger.info(spy)
+                logger.info(gem)
                 mount_az, info_dict = dome_eq_azimuth(
                     ra=ra, dec=dec, r_dome=r_dome, spx=spx, spy=spy,
                     gem=gem, side_of_pier=side_of_pier, latitude=observ_loc['latitude'],
