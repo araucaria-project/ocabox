@@ -36,21 +36,24 @@ class AbstractBase(ABC):
         self.skipped: bool = False
         self.param = param if param is not None else {}
         self.journal: MsgJournalPublisher | None = None
+        self.gen_conf = ConfigGeneral(telescope=self.telescope)
         self.get_journal()
         self.build_plan_status()
-        self.gen_conf = ConfigGeneral(telescope=self.telescope)
-        self.cfg_gen = ConfigGeneral(telescope=self.telescope)
         super().__init__()
 
     @property
     def journal_subject(self) -> str:
-        r = self.cfg_gen.get_value(seq=['site', 'global', 'nats', 'subjects', 'journal', 'planner'], source='nats')
+        r = self.param['cfg_gen'].get_value(
+            seq=['site', 'global', 'nats', 'subjects', 'journal', 'planner'], source='nats'
+        )
+        logger.debug(f'Journal subject {r}')
         # c = self.telescope.observatory.get_app_cfg('nats_subject')
         # r = f'{c["journal_root"]}.{self.telescope.id}.{c["tic_comp"]["planner"]}'
         return r
 
     def get_status_subject(self, field: str) -> str:
-        r = self.cfg_gen.get_value(seq=['site', 'global', 'nats', 'subjects', 'status', field], source='nats')
+        r = self.param['cfg_gen'].get_value(seq=['site', 'global', 'nats', 'subjects', 'status', field], source='nats')
+        logger.debug(f'Status subject {r}')
         # c = self.telescope.observatory.get_app_cfg('nats_subject')
         # r = f'{c["status_root"]}.{self.telescope.id}.{c["tic_comp"]["planner"]}.{c["planner_status"][field]}'
         return r
@@ -58,8 +61,11 @@ class AbstractBase(ABC):
     def get_journal(self) -> None:
         self.journal = get_journalpublisher(subject=self.journal_subject)
 
-    def get_publisher(self, field: str) -> MsgPublisher:
+    def get_publisher(self, field: str) -> MsgPublisher or None:
         subj = self.get_status_subject(field=field)
+        if subj is None:
+            logger.error(f'Wrong subject for field {field}')
+            return None
         return get_publisher(subject=subj)
 
     def build_plan_status(self):

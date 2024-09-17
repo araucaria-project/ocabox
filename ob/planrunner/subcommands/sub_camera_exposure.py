@@ -116,8 +116,13 @@ class CameraExposure(BaseSubCommand):
 
     @property
     def rpc_subject(self) -> str:
-        cfg = self.telescope.observatory.get_app_cfg('nats_subject')
-        return f"{cfg['rpc_root']}.{self.telescope.id}.{cfg['service_name']['download']}"
+        r = self.param['cfg_gen'].get_value(
+            seq=['site', 'global', 'nats', 'subjects', 'rpc', 'download'],
+            source='nats'
+        )
+        # cfg = self.telescope.observatory.get_app_cfg('nats_subject')
+        # return f"{cfg['rpc_root']}.{self.telescope.id}.{cfg['service_name']['download']}"
+        return r
 
     def rpc_data(self, fits_id: str, header: Dict, req: str,
                 mean_points_no_stats: int, dtyp: str) -> Dict:
@@ -141,7 +146,7 @@ class CameraExposure(BaseSubCommand):
                           timeout: float or None = None):
 
         inf = f'{self.id} {self.name} send rpc request {self.rpc_subject}'
-        logger.debug(inf)
+        logger.info(inf)
         await self.journal.debug(inf)
         dat, met = await request(subject=self.rpc_subject,
                                  data=self.rpc_data(fits_id=fits_id,
@@ -204,7 +209,6 @@ class CameraExposure(BaseSubCommand):
             })
 
     async def _wait_for_save_fits(self, sub: int, sub_time: float) -> bool:
-
         self._get_fits_file_name()
         self._get_folders_and_symlinks()
 
@@ -220,7 +224,6 @@ class CameraExposure(BaseSubCommand):
         filters = await self.value_proof_get(name='fitsh_filters',
                                              awaitab=self.filter_wheel.aget_names,
                                              expect_type=dict)
-
         try:
             inv_f_map = {v: k for k, v in filters.items()}
             filter_str = inv_f_map[filter]
@@ -236,7 +239,6 @@ class CameraExposure(BaseSubCommand):
             req_dec = ''
         else:
             req_dec = self.req_dec
-
         mount_type = self.gen_conf.get_value([self.telescope.id, 'mount', 'type'])
         if mount_type == 'eq':
             rot_pos = ''
@@ -254,6 +256,7 @@ class CameraExposure(BaseSubCommand):
         if self.telescope.id == 'dev':
             instrument_name = 'simul'
         observatory_location = self.gen_conf.get_value(['observatory_location'])
+
         header = fits_header(
             obs_lat=observatory_location['latitude'],
             obs_lon=observatory_location['longitude'],
@@ -292,10 +295,9 @@ class CameraExposure(BaseSubCommand):
                                             expect_type=int),
             read_mod=readoutmode,
             gain_mod=gainmode,
-            scale=self.gen_conf.get_value([self.telescope.id, 'camera', instrument_name, 'pixel_scale']),
+            # scale=self.gen_conf.get_value([self.telescope.id, 'camera', instrument_name, 'pixel_scale']),
             pierside=side_of_pier
         )
-
         try:
             dat = await self.rpc_request(fits_id=self.fits_file_name,
                                          header=header,
