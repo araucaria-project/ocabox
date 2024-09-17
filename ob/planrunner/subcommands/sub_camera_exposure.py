@@ -261,6 +261,7 @@ class CameraExposure(BaseSubCommand):
         if self.telescope.id == 'dev':
             instrument_name = 'simul'
         observatory_location = self.gen_conf.get_value(['observatory_location'])
+
         logger.info(6)
         try:
             header = fits_header(
@@ -273,13 +274,13 @@ class CameraExposure(BaseSubCommand):
                 req_ra=req_ra,
                 req_dec=req_dec,
                 epoch=self.epoch,
-                tel_ra=await self.value_proof_get(name='fitsh_tel_ra', awaitab=self.mount.aget_ra, expect_type=float),
-                tel_dec=await self.value_proof_get(name='fitsh_tel_dec', awaitab=self.mount.aget_dec, expect_type=float),
-                tel_alt=await self.value_proof_get(name='fitsh_tel_alt', awaitab=self.mount.aget_alt, expect_type=float),
-                tel_az=await self.value_proof_get(name='fitsh_tel_az', awaitab=self.mount.aget_az, expect_type=float),
-                focus=await self.value_proof_get(name='fitsh_focus_pos',
-                                                 awaitab=self.focuser.aget_position,
-                                                 expect_type=int),
+                # tel_ra=await self.value_proof_get(name='fitsh_tel_ra', awaitab=self.mount.aget_ra, expect_type=float),
+                # tel_dec=await self.value_proof_get(name='fitsh_tel_dec', awaitab=self.mount.aget_dec, expect_type=float),
+                # tel_alt=await self.value_proof_get(name='fitsh_tel_alt', awaitab=self.mount.aget_alt, expect_type=float),
+                # tel_az=await self.value_proof_get(name='fitsh_tel_az', awaitab=self.mount.aget_az, expect_type=float),
+                # focus=await self.value_proof_get(name='fitsh_focus_pos',
+                #                                  awaitab=self.focuser.aget_position,
+                #                                  expect_type=int),
                 rotator_pos=rot_pos,
                 observer=str(self.observer),
                 image_type=str(self.type),
@@ -290,15 +291,15 @@ class CameraExposure(BaseSubCommand):
                 filter=filter_str,
                 exp_time=sub_time,
                 instrume_name=instrument_name,
-                ccd_temp=await self.value_proof_get(name='fitsh_cam_temp',
-                                                    awaitab=self.camera.aget_ccdtemperature,
-                                                    expect_type=float),
-                binx=await self.value_proof_get(name='fitsh_cam_binx',
-                                                awaitab=self.camera.aget_binx,
-                                                expect_type=int),
-                biny=await self.value_proof_get(name='fitsh_cam_biny',
-                                                awaitab=self.camera.aget_biny,
-                                                expect_type=int),
+                # ccd_temp=await self.value_proof_get(name='fitsh_cam_temp',
+                #                                     awaitab=self.camera.aget_ccdtemperature,
+                #                                     expect_type=float),
+                # binx=await self.value_proof_get(name='fitsh_cam_binx',
+                #                                 awaitab=self.camera.aget_binx,
+                #                                 expect_type=int),
+                # biny=await self.value_proof_get(name='fitsh_cam_biny',
+                #                                 awaitab=self.camera.aget_biny,
+                #                                 expect_type=int),
                 read_mod=readoutmode,
                 gain_mod=gainmode,
                 scale=self.gen_conf.get_value([self.telescope.id, 'camera', instrument_name, 'pixel_scale']),
