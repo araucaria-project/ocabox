@@ -24,7 +24,7 @@ class Wait(BaseSubCommand):
                          telescope=telescope, name=name, uobi=uobi, param=param)
         self.info_dict = {'key': self.key, 'value': self.value}
         self.create_sub_command_string(**self.info_dict)
-        self.loc = self.gen_conf.get_value(['observatory_location'])
+        self.loc = self.gen_conf.get_value([])['observatory_location']
 
     @staticmethod
     async def _wait_exec(value: float) -> None:

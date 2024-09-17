@@ -60,7 +60,7 @@ class Focusing(BaseSubCommand):
                 return 2
             await self._wait_for_move(self.position)
         elif self.position is None and self.auto is True:
-            rang = self.gen_conf.get_value([self.telescope.id, 'focuser', 'focusing_range'])
+            rang = self.gen_conf.get_value([])[self.telescope.id]['focuser']['focusing_range']
             #rang = [14000, 17000]
             inf = f'{self.id} {self.name} calculate focus position from {self.fits_focus_folder_actual}.'
             self.info_callback['stream_1'](inf)

@@ -56,7 +56,8 @@ class DomeSlew(BaseSubCommand):
         logger.info(f'{self.id} started')
         self.info_callback['stream_1'](f'{self.id} {self.name} started.')
         await self.journal.info(f"{self.id} {self.name} started.")
-        mount_type = self.gen_conf.get_value([self.telescope.id, 'mount', 'type'])
+        mount_type = self.gen_conf.get_value([])[self.telescope.id]['mount']['type']
+        logger.info(mount_type)
         if self.az is not None:
             az = self.az
         else:
@@ -68,10 +69,15 @@ class DomeSlew(BaseSubCommand):
                 side_of_pier = await self.value_proof_get(name='mount_sideofpier', awaitab=self.mount.aget_sideofpier,
                                                           expect_type=int)
                 logger.info(f'Dome_eq_azimuth for ra:{ra} dec:{dec}')
-                r_dome = self.gen_conf.get_value([self.telescope.id, 'dome', 'r_dome'])
-                spx = self.gen_conf.get_value([self.telescope.id, 'dome', 'spx'])
-                spy = self.gen_conf.get_value([self.telescope.id, 'dome', 'spy'])
-                gem = self.gen_conf.get_value([self.telescope.id, 'dome', 'gem'])
+                r_dome = self.gen_conf.get_value([])[self.telescope.id]['dome']['r_dome']
+                spx = self.gen_conf.get_value([])[self.telescope.id]['dome']['spx']
+                spy = self.gen_conf.get_value([])[self.telescope.id]['dome']['spy']
+                gem = self.gen_conf.get_value([])[self.telescope.id]['dome']['gem']
+
+                logger.info(r_dome)
+                logger.info(spx)
+                logger.info(spy)
+                logger.info(gem)
                 mount_az, info_dict = dome_eq_azimuth(
                     ra=ra, dec=dec, r_dome=r_dome, spx=spx, spy=spy,
                     gem=gem, side_of_pier=side_of_pier, latitude=observ_loc['latitude'],
