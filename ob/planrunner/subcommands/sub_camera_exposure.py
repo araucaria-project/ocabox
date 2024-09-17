@@ -303,7 +303,8 @@ class CameraExposure(BaseSubCommand):
             scale=self.gen_conf.get_value([self.telescope.id, 'camera', instrument_name, 'pixel_scale']),
             pierside=side_of_pier
         )
-
+        logger.info(header)
+        logger.info(7)
         try:
             dat = await self.rpc_request(fits_id=self.fits_file_name,
                                          header=header,
