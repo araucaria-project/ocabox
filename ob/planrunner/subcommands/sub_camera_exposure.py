@@ -146,7 +146,7 @@ class CameraExposure(BaseSubCommand):
                           timeout: float or None = None):
 
         inf = f'{self.id} {self.name} send rpc request {self.rpc_subject}'
-        logger.debug(inf)
+        logger.info(inf)
         await self.journal.debug(inf)
         dat, met = await request(subject=self.rpc_subject,
                                  data=self.rpc_data(fits_id=fits_id,
