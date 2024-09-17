@@ -94,13 +94,10 @@ class AbstractBase(ABC):
             if n == n_times:
                 return None
 
-    async def proof_put(self, awaitab: Callable,  **args) -> bool:
-        name: str = ''
-        n_times: int = 5
-        wait: float = 2.0
+    async def proof_put(self, awaitab: Callable, name: str = '', n_times: int = 5, wait: float = 2.0, **kwargs) -> bool:
         for n in range(1, n_times + 1):
             try:
-                await awaitab(args)
+                await awaitab(**kwargs)
                 return True
             except OcaboxServerError:
                 logger.warning(f'Ocabox server not reachable')
