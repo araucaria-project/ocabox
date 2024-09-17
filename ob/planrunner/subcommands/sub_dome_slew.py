@@ -68,6 +68,7 @@ class DomeSlew(BaseSubCommand):
                 side_of_pier = await self.value_proof_get(name='mount_sideofpier', awaitab=self.mount.aget_sideofpier,
                                                           expect_type=int)
                 logger.info(f'Dome_eq_azimuth for ra:{ra} dec:{dec}')
+                logger.info(self.gen_conf.get_value([]))
                 r_dome = self.gen_conf.get_value([self.telescope.id, 'dome', 'r_dome'])
                 spx = self.gen_conf.get_value([self.telescope.id, 'dome', 'spx'])
                 spy = self.gen_conf.get_value([self.telescope.id, 'dome', 'spy'])
