@@ -44,22 +44,6 @@ class DomeSlew(BaseSubCommand):
                     logger.info(f'Dome on position set: {azimuth} real: {dome_az}')
                     break
 
-    async def dome_slew(self, az: float, name: str = 'dome az slew', n_times: int = 5, wait: float = 2.0) -> bool:
-        for n in range(1, n_times + 1):
-            try:
-                await self.dome.aput_slewtoazimuth(az=az)
-                return True
-            except OcaboxServerError:
-                logger.warning(f'Ocabox server not reachable')
-                await asyncio.sleep(wait)
-                continue
-            except CommunicationTimeoutError:
-                logger.warning(f'Tic CommunicationTimeoutError')
-                await asyncio.sleep(wait)
-                continue
-        logger.error(f'Sending {name} to telescope failed')
-        return False
-
     async def arun(self, step_id: str or None = None) -> int:
         self.started = True
         await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.running)
@@ -114,8 +98,8 @@ class DomeSlew(BaseSubCommand):
             else:
                 az = mount_az
         await self.journal.info(f"{self.id} {self.name} slewing az: {az}")
-        slew = await self.proof_put(awaitab=self.dome.aput_slewtoazimuth, az=az)
-        if not slew:
+        ds = await self.proof_put(awaitab=self.dome.aput_slewtoazimuth, az=az)
+        if not ds:
             self.skipped = True
             await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
             inf = f'Can not execute dome slew, program stopping'

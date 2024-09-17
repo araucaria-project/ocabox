@@ -66,10 +66,13 @@ class MountSlew(BaseSubCommand):
             slew = await self.value_proof_get(name='mount_slew', awaitab=self.mount.aget_slewing, expect_type=bool)
 
             if ((abs(az - az_in) > 359.0) or (abs(az - az_in) < 1.0)) and (abs(alt - alt_in) < 1.0) and (slew is False):
-                await self.mount.aput_tracking(False)
-                await self.mount.aput_slewtoaltaz_async(az=az_in, alt=alt_in)
+                # await self.mount.aput_tracking(False)
+                await self.proof_put(awaitab=self.mount.aput_tracking, track=False)
+                # await self.mount.aput_slewtoaltaz_async(az=az_in, alt=alt_in)
+                await self.proof_put(awaitab=self.mount.aput_slewtoaltaz_async, az=az_in, alt=alt_in)
                 await asyncio.sleep(0.5)
-                await self.mount.aput_tracking(False)
+                # await self.mount.aput_tracking(False)
+                await self.proof_put(awaitab=self.mount.aput_tracking, track=False)
                 break
             await asyncio.sleep(0.1)
 
@@ -128,13 +131,45 @@ class MountSlew(BaseSubCommand):
                     await self.journal.error(f"{self.id} {self.name} wrong az alt format.")
                     return 1
             if alt > mount_min_alt:
-                await self.mount.aput_tracking(False)
-                await self.mount.aput_slewtoaltaz_async(az=az, alt=alt)
-                await self.mount.aput_tracking(False)
+                # await self.mount.aput_tracking(False)
+                tr0 = await self.proof_put(awaitab=self.mount.aput_tracking, track=False)
+                if not tr0:
+                    self.skipped = True
+                    await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
+                    inf = f'Can not execute tracking, program stopping'
+                    logger.error(inf)
+                    await self.journal.error(inf)
+                    return 2
+                # await self.mount.aput_slewtoaltaz_async(az=az, alt=alt)
+                sl0 = await self.proof_put(awaitab=self.mount.aput_slewtoaltaz_async, az=az, alt=alt)
+                if not sl0:
+                    self.skipped = True
+                    await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
+                    inf = f'Can not slew altaz mount, program stopping'
+                    logger.error(inf)
+                    await self.journal.error(inf)
+                    return 2
+                # await self.mount.aput_tracking(False)
+                tr1 = await self.proof_put(awaitab=self.mount.aput_tracking, track=False)
+                if not tr1:
+                    self.skipped = True
+                    await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
+                    inf = f'Can not execute tracking, program stopping'
+                    logger.error(inf)
+                    await self.journal.error(inf)
+                    return 2
                 await self._wait_to_slew_alt_az(az_in=az, alt_in=alt)
                 if self.tracking is not None:
                     await asyncio.sleep(5)
-                    await self.mount.aput_tracking(self.tracking)
+                    # await self.mount.aput_tracking(self.tracking)
+                    tr2 = await self.proof_put(awaitab=self.mount.aput_tracking, track=self.tracking)
+                    if not tr2:
+                        self.skipped = True
+                        await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
+                        inf = f'Can not execute tracking, program stopping'
+                        logger.error(inf)
+                        await self.journal.error(inf)
+                        return 2
                     self.info_callback['stream_1'](f'{self.id} {self.name} tracking: {self.tracking}.')
                     await self.journal.debug(f'{self.id} {self.name} tracking: {self.tracking}.')
                 logger.info(f'{self.id} done')
@@ -168,10 +203,36 @@ class MountSlew(BaseSubCommand):
                                       elevation=OCA['elevation'],
                                       epoch=self.epoch)
             if alt > mount_min_alt:
-                await self.mount.aput_tracking(self.tracking)
-                await self.mount.aput_slewtocoo_async(ra=float(self.ra_now), dec=float(self.dec_now))
+                # await self.mount.aput_tracking(self.tracking)
+                tr3 = await self.proof_put(awaitab=self.mount.aput_tracking, track=self.tracking)
+                if not tr3:
+                    self.skipped = True
+                    await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
+                    inf = f'Can not execute tracking, program stopping'
+                    logger.error(inf)
+                    await self.journal.error(inf)
+                    return 2
+                # await self.mount.aput_slewtocoo_async(ra=float(self.ra_now), dec=float(self.dec_now))
+                sl1 = await self.proof_put(
+                    awaitab=self.mount.aput_slewtocoo_async, ra=float(self.ra_now), dec=float(self.dec_now)
+                )
+                if not sl1:
+                    self.skipped = True
+                    await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
+                    inf = f'Can not mount coo slew, program stopping'
+                    logger.error(inf)
+                    await self.journal.error(inf)
+                    return 2
                 await self._wait_to_slew_coo(ra_in=float(self.ra_now), dec_in=float(self.dec_now))
-                await self.mount.aput_tracking(self.tracking)
+                # await self.mount.aput_tracking(self.tracking)
+                tr4 = await self.proof_put(awaitab=self.mount.aput_tracking, track=self.tracking)
+                if not tr4:
+                    self.skipped = True
+                    await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
+                    inf = f'Can not execute tracking, program stopping'
+                    logger.error(inf)
+                    await self.journal.error(inf)
+                    return 2
                 logger.info(f'{self.id} done')
                 self.info_callback['stream_1'](f'{self.id} {self.name} done')
                 self.info_callback['stream_5'](f'{self.id}')
@@ -200,9 +261,28 @@ class MountSlew(BaseSubCommand):
             dec_d = self.dec_random_dither(dec=dec_t,
                                            dith_val=self.seq_data.dither_distance,
                                            mode=self.seq_data.dither_mode)
-            await self.journal.debug(f'{self.id} {self.name} RA dit: {round(ra_d - ra_t, 3)} DEC dit: {round(dec_d - dec_t, 3)}')
-            await self.mount.aput_tracking(self.tracking)
-            await self.mount.aput_slewtocoo_async(ra=ra_d, dec=dec_d)
+            await self.journal.debug(
+                f'{self.id} {self.name} RA dit: {round(ra_d - ra_t, 3)} DEC dit: {round(dec_d - dec_t, 3)}'
+            )
+
+            # await self.mount.aput_tracking(self.tracking)
+            tr5 = await self.proof_put(awaitab=self.mount.aput_tracking, track=self.tracking)
+            if not tr5:
+                self.skipped = True
+                await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
+                inf = f'Can not execute tracking, program stopping'
+                logger.error(inf)
+                await self.journal.error(inf)
+                return 2
+            # await self.mount.aput_slewtocoo_async(ra=ra_d, dec=dec_d)
+            sl2= await self.proof_put(awaitab=self.mount.aput_slewtocoo_async, ra=ra_d, dec=dec_d)
+            if not sl2:
+                self.skipped = True
+                await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
+                inf = f'Can not mount coo slew, program stopping'
+                logger.error(inf)
+                await self.journal.error(inf)
+                return 2
             await self._wait_to_slew_coo(ra_in=ra_d, dec_in=dec_d, slew_wait_only=True)
             logger.info(f'{self.id} dither done')
             await self.journal.info(f'{self.id} {self.name} done')

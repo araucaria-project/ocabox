@@ -39,7 +39,15 @@ class DomeScreenLight(BaseSubCommand):
             if self.telescope.id == 'dev':
                 pass
             else:
-                await self.mount.aput_domelamp_on()
+                # await self.mount.aput_domelamp_on()
+                do = await self.proof_put(awaitab=self.mount.aput_domelamp_on)
+                if not do:
+                    self.skipped = True
+                    await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
+                    inf = f'Can not turn dome lamp on, program stopping'
+                    logger.error(inf)
+                    await self.journal.error(inf)
+                    return 2
         else:
             inf = f'{self.id} {self.name} turning off.'
             self.info_callback['stream_1'](inf)
@@ -48,9 +56,16 @@ class DomeScreenLight(BaseSubCommand):
             if self.telescope.id == 'dev':
                 pass
             else:
-                await self.mount.aput_domelamp_off()
+                # await self.mount.aput_domelamp_off()
+                df = await self.proof_put(awaitab=self.mount.aput_domelamp_off)
+                if not df:
+                    self.skipped = True
+                    await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
+                    inf = f'Can not turn dome lamp off, program stopping'
+                    logger.error(inf)
+                    await self.journal.error(inf)
+                    return 2
             await self._wait_for_turn_on_off()
-
         inf = f'{self.id} {self.name} done.'
         self.info_callback['stream_5'](f'{self.id}')
         self.info_callback['stream_1'](inf)

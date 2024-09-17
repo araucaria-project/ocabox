@@ -519,8 +519,6 @@ class CameraExposure(BaseSubCommand):
                     return exposure_time, 0
             await asyncio.sleep(test_time_interval)
 
-
-
     async def arun(self, step_id: str or None = None) -> int:
 
         self.started = True
