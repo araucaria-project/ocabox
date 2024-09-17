@@ -263,6 +263,10 @@ class CameraExposure(BaseSubCommand):
         observatory_location = self.gen_conf.get_value(['observatory_location'])
 
         logger.info(6)
+        logger.info(readoutmode)
+        logger.info(gainmode)
+        logger.info(self.gen_conf.get_value([self.telescope.id, 'camera', instrument_name, 'pixel_scale']))
+        logger.info(side_of_pier)
         try:
             header = fits_header(
                 obs_lat=observatory_location['latitude'],
