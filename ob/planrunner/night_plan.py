@@ -17,7 +17,7 @@ class NightPlan(BaseSequence):
         self.sequence_dict = sequence_dict
         self._r_id: int
         param = param if param is not None else {}
-        param['cfg_gen'] = ConfigGeneral(telescope=telescope)
+        param['cfg_gen'] = self.load_config_general(param=param, telescope=telescope)
         param['plan_status'] = PlanStatus(telescope=telescope)
         super().__init__(id=id, name='NIGHTPLAN', info_callback=info_callback,
                          telescope=telescope, sequence_dict=sequence_dict, c_type='night_plan', param=param)
@@ -28,6 +28,13 @@ class NightPlan(BaseSequence):
         self._init_plan_status()
         self._write_subcomponents()
         self._set_r_id()
+
+    @staticmethod
+    def load_config_general(param: Dict, telescope: 'Telescope') -> ConfigGeneral:
+        if 'cfg_gen' in param.keys() and isinstance(param['cfg_gen'], ConfigGeneral):
+            return param['cfg_gen']
+        else:
+            return ConfigGeneral(telescope=telescope)
 
     def _init_cycle_time(self):
         self.param['cycle_time'] = self.telescope.get_cycle_time_calculator()
