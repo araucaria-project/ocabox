@@ -209,7 +209,7 @@ class CameraExposure(BaseSubCommand):
             })
 
     async def _wait_for_save_fits(self, sub: int, sub_time: float) -> bool:
-
+        logger.info(1)
         self._get_fits_file_name()
         self._get_folders_and_symlinks()
 
@@ -225,7 +225,7 @@ class CameraExposure(BaseSubCommand):
         filters = await self.value_proof_get(name='fitsh_filters',
                                              awaitab=self.filter_wheel.aget_names,
                                              expect_type=dict)
-
+        logger.info(2)
         try:
             inv_f_map = {v: k for k, v in filters.items()}
             filter_str = inv_f_map[filter]
@@ -241,7 +241,7 @@ class CameraExposure(BaseSubCommand):
             req_dec = ''
         else:
             req_dec = self.req_dec
-
+        logger.info(3)
         mount_type = self.gen_conf.get_value([self.telescope.id, 'mount', 'type'])
         if mount_type == 'eq':
             rot_pos = ''
@@ -300,7 +300,7 @@ class CameraExposure(BaseSubCommand):
             scale=self.gen_conf.get_value([self.telescope.id, 'camera', instrument_name, 'pixel_scale']),
             pierside=side_of_pier
         )
-
+        logger.info(4)
         try:
             dat = await self.rpc_request(fits_id=self.fits_file_name,
                                          header=header,
