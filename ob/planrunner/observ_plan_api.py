@@ -56,6 +56,8 @@ class ObservPlanApi:
                                      client_config_dict: Dict or None = None) -> bool:
         if client_config_dict is not None and isinstance(client_config_dict, Dict):
             logger.info('Gathered client config dict')
+            if not isinstance(param, Dict):
+                param = {}
             param['cfg_gen'] = ConfigGeneral(telescope=self.telescope, client_config_dict=client_config_dict)
         return await self.observ_plan.aload_nightplan_string(
             nightplan_id=nightplan_id, string=string, overwrite=overwrite, param=param
