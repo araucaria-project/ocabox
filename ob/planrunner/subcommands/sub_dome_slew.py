@@ -96,7 +96,7 @@ class DomeSlew(BaseSubCommand):
             else:
                 az = mount_az
         await self.journal.info(f"{self.id} {self.name} slewing az: {az}")
-        slew = await self.proof_put(az, awaitab=self.dome.aput_slewtoazimuth)
+        slew = await self.proof_put(awaitab=self.dome.aput_slewtoazimuth, az=az)
         if not slew:
             self.skipped = True
             await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
