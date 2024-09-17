@@ -36,10 +36,10 @@ class AbstractBase(ABC):
         self.skipped: bool = False
         self.param = param if param is not None else {}
         self.journal: MsgJournalPublisher | None = None
-        self.get_journal()
-        self.build_plan_status()
         self.gen_conf = ConfigGeneral(telescope=self.telescope)
         self.cfg_gen = ConfigGeneral(telescope=self.telescope)
+        self.get_journal()
+        self.build_plan_status()
         super().__init__()
 
     @property
