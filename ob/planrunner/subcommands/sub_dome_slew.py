@@ -95,9 +95,16 @@ class DomeSlew(BaseSubCommand):
                 return 0
             else:
                 az = mount_az
-
         await self.journal.info(f"{self.id} {self.name} slewing az: {az}")
-        await self.dome.aput_slewtoazimuth(az)
+        slew = await self.proof_put(awaitab=self.dome.aput_slewtoazimuth, az=az)
+        if not slew:
+            self.skipped = True
+            await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
+            inf = f'Can not execute dome slew, program stopping'
+            logger.error(inf)
+            await self.journal.error(inf)
+            return 2
+        # await self.dome.aput_slewtoazimuth(az)
         await self._wait_to_slew(az)
         logger.info(f'{self.id} done')
         self.info_callback['stream_1'](f'{self.id} {self.name} done.')

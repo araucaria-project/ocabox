@@ -31,23 +31,23 @@ class ChangeFilter(BaseSubCommand):
                     logger.info('Wait to move done')
                     break
 
-    async def change_filter_pos_proof(self, pos: int) -> None or int:
-        t = datetime.datetime.now()
-        try:
-            await self.filterwheel.aput_position(pos)
-            logger.info(f'{self.id} {self.name} filter position done in {datetime.datetime.now()-t}')
-        except Exception as e:
-            logger.error(f'{self.id} {self.name} filter position error after {datetime.datetime.now()-t}: {e}')
-            logger.warning(f'{self.id} filter change 2-nd try')
-            try:
-                await self.filterwheel.aput_position(pos)
-            except Exception as e:
-                logger.warning(f'{self.id} filter change 3-rd try, error: {e}')
-                try:
-                    await self.filterwheel.aput_position(pos)
-                except Exception as e:
-                    logger.error(f'{self.id} filter aput_position error, error: {e}')
-                    return 1
+    # async def change_filter_pos_proof(self, pos: int) -> None or int:
+    #     t = datetime.datetime.now()
+    #     try:
+    #         await self.filterwheel.aput_position(pos)
+    #         logger.info(f'{self.id} {self.name} filter position done in {datetime.datetime.now()-t}')
+    #     except Exception as e:
+    #         logger.error(f'{self.id} {self.name} filter position error after {datetime.datetime.now()-t}: {e}')
+    #         logger.warning(f'{self.id} filter change 2-nd try')
+    #         try:
+    #             await self.filterwheel.aput_position(pos)
+    #         except Exception as e:
+    #             logger.warning(f'{self.id} filter change 3-rd try, error: {e}')
+    #             try:
+    #                 await self.filterwheel.aput_position(pos)
+    #             except Exception as e:
+    #                 logger.error(f'{self.id} filter aput_position error, error: {e}')
+    #                 return 1
 
     async def arun(self, step_id: str or None = None) -> int:
         inf = f'{self.id} {self.name} {self.filter} started'
@@ -86,17 +86,25 @@ class ChangeFilter(BaseSubCommand):
             return 0
 
         # TODO this subcommand is freeze on aput_position -> change_filter_pos_proof
-        res = await self.change_filter_pos_proof(pos)
-        if res == 1:
-            inf = f'{self.id} {self.name} filter aput position error, skipping.'
-            self.info_callback['stream_1'](inf)
-            self.info_callback['stream_5'](f'{self.id}')
-            logger.info(inf)
-            await self.journal.error(inf)
+        # await self.change_filter_pos_proof(pos)
+        res = await self.proof_put(awaitab=self.filterwheel.aput_position, pos=pos)
+        if not res:
             self.skipped = True
-            await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.skipped)
-            self.info_callback['exec_json'](self.exec_json(**self.info_dict))
-            return 1
+            await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
+            inf = f'Can not execute change filter, program stopping'
+            logger.error(inf)
+            await self.journal.error(inf)
+            return 2
+        # if res == 1:
+        #     inf = f'{self.id} {self.name} filter aput position error, skipping.'
+        #     self.info_callback['stream_1'](inf)
+        #     self.info_callback['stream_5'](f'{self.id}')
+        #     logger.info(inf)
+        #     await self.journal.error(inf)
+        #     self.skipped = True
+        #     await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.skipped)
+        #     self.info_callback['exec_json'](self.exec_json(**self.info_dict))
+        #     return 1
         await self._wait_to_move(pos)
         inf = f'{self.id} {self.name} done.'
         await self.journal.info(inf)
