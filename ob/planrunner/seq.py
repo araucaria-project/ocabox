@@ -13,22 +13,13 @@ class Seq:
     Class representing camera single sequence
     """
 
-    def __init__(self,
-                 seq: str,
-                 command_kwargs: Dict,
-                 gen_conf: Any
-                 ):
+    def __init__(self, seq: str, command_kwargs: Dict):
         self.seq: str = seq
         self._focus_id: int or None = None
         self.command_kwargs: Dict = command_kwargs
         self.focus_folder: str or None = None
         self.skip = False
-        self.gen_conf = gen_conf
         self.set_focus_id()
-
-    @property
-    def site_coo(self) -> Dict[str, float]:
-        return self.gen_conf.get_value(['observatory_location'])
 
     @property
     def focus_id(self) -> int or None:
