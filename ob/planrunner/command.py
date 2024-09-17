@@ -666,6 +666,9 @@ class Command(BaseSequence):
                                       param=self.param,
                                       uobi=self.uobi), id_next=id_next)
 
+    async def send_command_log(self, time_start: float, time_stop: float, skip: int) -> None:
+        pass
+
     async def arun(self, step_id: str or None = None) -> int:
         t_0 = time.time()
         self.info_callback['stream_1'](f'Command {self.id} {self.name} started.')
@@ -708,7 +711,9 @@ class Command(BaseSequence):
         self._cycle_time_data_build.insert_data(name='readoutmode', value=rm1)
         self._cycle_time_data_build.save_to_log()
         self.info_callback['stream_5'](f'{self.id}')
+        t_1 = time.time()
+        await self.param['plan_status'].upd_real_time(id=self.id, value=t_1 - t_0)
+        await self.send_command_log(time_start=t_0, time_stop=t_1, skip=skip)
         await self.journal.info(f'{self.id} {self.name} done.')
         logger.info(f'{self.id} done')
-        await self.param['plan_status'].upd_real_time(id=self.id, value=time.time() - t_0)
         return skip

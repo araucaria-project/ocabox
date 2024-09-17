@@ -1,23 +1,32 @@
 import logging
 from typing import Dict, Any, List
 
+
 log = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class ConfigGeneral:
 
-    def __init__(self, telescope_id: str = None) -> None:
-        self.telescope_id = telescope_id
+    def __init__(self, telescope: 'Telescope') -> None:
+        self.telescope = telescope
+        self.config_body_nats = self.telescope.observatory.get_client_configuration()
         super().__init__()
 
-    def get_value(self, seq: List) -> Any:
-        ret = self.config_body
+    def get_value(self, seq: List, source: str = 'local') -> Any:
+        if source == 'local':
+            ret = self.config_body
+        elif source == 'nats':
+            ret = self.config_body_nats
+        else:
+            ret = self.config_body
         for n in seq:
             try:
                 ret = ret[n]
             except (IndexError, KeyError):
                 log.error(f'No value name {n} in config or wrong seq')
                 return None
+        if '{telescope}' in ret:
+            ret = ret.format(telescope=self.telescope.id)
         return ret
 
     @property
