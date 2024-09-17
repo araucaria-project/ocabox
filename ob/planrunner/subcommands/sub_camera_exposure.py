@@ -116,8 +116,13 @@ class CameraExposure(BaseSubCommand):
 
     @property
     def rpc_subject(self) -> str:
-        cfg = self.telescope.observatory.get_app_cfg('nats_subject')
-        return f"{cfg['rpc_root']}.{self.telescope.id}.{cfg['service_name']['download']}"
+        r = self.param['cfg_gen'].get_value(
+            seq=['site', 'global', 'nats', 'subjects', 'rpc', 'download'],
+            source='nats'
+        )
+        # cfg = self.telescope.observatory.get_app_cfg('nats_subject')
+        # return f"{cfg['rpc_root']}.{self.telescope.id}.{cfg['service_name']['download']}"
+        return r
 
     def rpc_data(self, fits_id: str, header: Dict, req: str,
                 mean_points_no_stats: int, dtyp: str) -> Dict:
