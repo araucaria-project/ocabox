@@ -49,9 +49,16 @@ class Focusing(BaseSubCommand):
             self.info_callback['stream_1'](inf)
             await self.journal.debug(inf)
             logger.debug(inf)
-            await self.focuser.aput_move(int(self.position))
+            # await self.focuser.aput_move(int(self.position))
+            fm = await self.proof_put(awaitab=self.focuser.aput_move, pos=int(self.position))
+            if not fm:
+                self.skipped = True
+                await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
+                inf = f'Can not move focuser, program stopping'
+                logger.error(inf)
+                await self.journal.error(inf)
+                return 2
             await self._wait_for_move(self.position)
-
         elif self.position is None and self.auto is True:
             rang = self.gen_conf.get_value([self.telescope.id, 'focuser', 'focusing_range'])
             #rang = [14000, 17000]
@@ -75,7 +82,15 @@ class Focusing(BaseSubCommand):
                 self.info_callback['stream_1'](inf)
                 await self.journal.info(inf)
                 logger.info(inf)
-                await self.focuser.aput_move(round(sharp))
+                # await self.focuser.aput_move(round(sharp))
+                fm = await self.proof_put(awaitab=self.focuser.aput_move, pos=round(sharp))
+                if not fm:
+                    self.skipped = True
+                    await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
+                    inf = f'Can not move focuser, program stopping'
+                    logger.error(inf)
+                    await self.journal.error(inf)
+                    return 2
                 await self._wait_for_move(sharp)
             else:
                 inf = f'{self.id} {self.name} wrong focus calculation: {sharp}.'

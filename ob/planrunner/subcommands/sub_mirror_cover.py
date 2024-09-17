@@ -50,7 +50,15 @@ class MirrorCover(BaseSubCommand):
             if self.telescope.id == 'dev':
                 pass
             else:
-                await self.cover.aput_opencover()
+                # await self.cover.aput_opencover()
+                oc1 = await self.proof_put(awaitab=self.cover.aput_opencover)
+                if not oc1:
+                    self.skipped = True
+                    await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
+                    inf = f'Can not open cover, program stopping'
+                    logger.error(inf)
+                    await self.journal.error(inf)
+                    return 2
                 await self._wait_for_move(expected_status="3")
             inf = f'{self.id} {self.name} opening done.'
             self.info_callback['stream_1'](inf)
@@ -69,7 +77,15 @@ class MirrorCover(BaseSubCommand):
             if self.telescope.id == 'dev':
                 pass
             else:
-                await self.cover.aput_closecover()
+                # await self.cover.aput_closecover()
+                oc1 = await self.proof_put(awaitab=self.cover.aput_closecover)
+                if not oc1:
+                    self.skipped = True
+                    await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
+                    inf = f'Can not close cover, program stopping'
+                    logger.error(inf)
+                    await self.journal.error(inf)
+                    return 2
                 await self._wait_for_move(expected_status="1")
             inf = f'{self.id} {self.name} closing done.'
             logger.info(inf)

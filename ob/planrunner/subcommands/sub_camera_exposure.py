@@ -353,19 +353,10 @@ class CameraExposure(BaseSubCommand):
                                                           awaitab=self.camera.aget_imageready,
                                                           expect_type=bool)
             if subexposure_done is True:
-                # if self.telescope.id == 'jk15':
-                #     await asyncio.sleep(60)
                 break
             await asyncio.sleep(0.1)
 
-    async def get_array_autoexp(self, test_exp_time: float) -> List:
-        await self.camera.aput_startexposure(test_exp_time, self.light)
-        await self._wait_for_subexposure(test_exp_time)
-        return await self.value_proof_get(name='autoexp_get_array',
-                                         awaitab=self.camera.aget_imagearray,
-                                         expect_type=list)
-
-    async def _autoexposure_exec(self) -> Tuple[float, bool]:
+    async def _autoexposure_exec(self) -> Tuple[float, int]:
         """
         TODO for filter, time, make test shot on sky with 1s exposure. If value is not what You expect wait
         some time and make test shot again until You don't get expected value of adu, then continue to make
@@ -405,10 +396,18 @@ class CameraExposure(BaseSubCommand):
             await self.journal.info(inf)
             self.info_callback['stream_1'](inf)
             auto_exp_sub_no += 1
-
-            await self.camera.aput_startexposure(test_exposure_time, self.light)
+            exe = await self.proof_put(
+                awaitab=self.camera.aput_startexposure, duration=test_exposure_time, light=self.light
+            )
+            if not exe:
+                self.skipped = True
+                await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
+                inf = f'Can not execute startexposure, program stopping'
+                logger.error(inf)
+                await self.journal.error(inf)
+                return 0, 2
+            # await self.camera.aput_startexposure(test_exposure_time, self.light)
             await self._wait_for_subexposure(test_exposure_time)
-
             try:
                 dat = await self.rpc_request(fits_id=f'{round((time.time())*10)}'[-7:],
                                              header={},
@@ -418,7 +417,7 @@ class CameraExposure(BaseSubCommand):
                 logger.error(inf)
                 await self.journal.error(inf)
                 self.info_callback['stream_1'](inf)
-                return 0, True
+                return 0, 1
             if dat:
                 try:
                     if dat['response'] == 'stats_done':
@@ -428,19 +427,19 @@ class CameraExposure(BaseSubCommand):
                         logger.error(inf)
                         await self.journal.error(inf)
                         self.info_callback['stream_1'](inf)
-                        return 0, True
+                        return 0, 1
                 except KeyError:
                     inf = f'{self.id} {self.name} wrong rpc response, key error.'
                     logger.error(inf)
                     await self.journal.error(inf)
                     self.info_callback['stream_1'](inf)
-                    return 0, True
+                    return 0, 1
             else:
                 inf = f'{self.id} {self.name} wrong rpc response, dat is None.'
                 logger.error(inf)
                 await self.journal.error(inf)
                 self.info_callback['stream_1'](inf)
-                return 0, True
+                return 0, 1
 
             self.info_callback['exec_json'](self.exec_json(auto_exp_start=True,
                                                            auto_exp_finnished=True,
@@ -485,7 +484,7 @@ class CameraExposure(BaseSubCommand):
                     await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.skipped)
                     self.info_callback['exec_json'](self.exec_json(**self.info_dict))
                     self.seq_data.skip = True
-                    return 0, True
+                    return 0, 1
                 # Morning
                 elif not evening and mean_diff > 0 and mean_min_max[0] > test_min_max_adu[1]:
                     inf = f"{self.id} autoflat filter: {self.filter} skipped - too bright."
@@ -496,7 +495,7 @@ class CameraExposure(BaseSubCommand):
                     await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.skipped)
                     self.info_callback['exec_json'](self.exec_json(**self.info_dict))
                     self.seq_data.skip = True
-                    return 0, True
+                    return 0, 1
 
             # Try to calculate exposure time, if fail next loop starts
             if test_min_max_adu[0] - mean_min_max[1] < 0 < test_min_max_adu[1] - mean_min_max[0]:
@@ -508,7 +507,7 @@ class CameraExposure(BaseSubCommand):
                     await self.journal.info(inf)
                     self.info_callback['stream_1'](inf)
 
-                    return exposure_time, False
+                    return exposure_time, 0
                 else:
                     exposure_time = (mean_min_max[0] / mean) * ev_fact
                     inf = (f"{self.id} calc_exp_time:{round(exposure_time, 1)},"
@@ -517,7 +516,7 @@ class CameraExposure(BaseSubCommand):
                     await self.journal.info(inf)
                     self.info_callback['stream_1'](inf)
 
-                    return exposure_time, False
+                    return exposure_time, 0
             await asyncio.sleep(test_time_interval)
 
     async def arun(self, step_id: str or None = None) -> int:
@@ -538,8 +537,10 @@ class CameraExposure(BaseSubCommand):
 
         if self.auto_exposure:
             exposure_time, _exit = await self._autoexposure_exec()
-            if _exit:
+            if _exit == 1:
                 return 0
+            elif _exit == 2:
+                return 2
         inf = f'{self.id} {self.name} exp: {self.sub_exp}/{self.exp_no} started.'
         logger.info(inf)
         await self.journal.info(inf)
@@ -552,7 +553,17 @@ class CameraExposure(BaseSubCommand):
                                                        exp_time=float(exposure_time)))
         self.readout_time_start = time.time()
         self.exp_time_start = datetime.datetime.utcnow()
-        await self.camera.aput_startexposure(float(exposure_time), self.light)
+        exe = await self.proof_put(
+            awaitab=self.camera.aput_startexposure, duration=float(exposure_time), light=self.light
+        )
+        if not exe:
+            self.skipped = True
+            await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
+            inf = f'Can not execute startexposure, program stopping'
+            logger.error(inf)
+            await self.journal.error(inf)
+            return 2
+        # await self.camera.aput_startexposure(float(exposure_time), self.light)
         await self._wait_for_subexposure(float(exposure_time))
         self.readout_time = time.time() - self.readout_time_start - float(exposure_time)
         inf = f'{self.id} {self.name} exp:{self.sub_exp}/{self.exp_no} saving.'
