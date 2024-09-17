@@ -15,7 +15,6 @@ from ocaboxapi.exceptions import OcaboxServerError
 from obcom.comunication.comunication_error import CommunicationTimeoutError
 
 
-
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
@@ -39,18 +38,21 @@ class AbstractBase(ABC):
         self.journal: MsgJournalPublisher | None = None
         self.get_journal()
         self.build_plan_status()
-        self.gen_conf = ConfigGeneral(telescope_id=self.telescope.id)
+        self.gen_conf = ConfigGeneral(telescope=self.telescope)
+        self.cfg_gen = ConfigGeneral(telescope=self.telescope)
         super().__init__()
 
     @property
     def journal_subject(self) -> str:
-        c = self.telescope.observatory.get_app_cfg('nats_subject')
-        r = f'{c["journal_root"]}.{self.telescope.id}.{c["tic_comp"]["planner"]}'
+        r = self.cfg_gen.get_value(seq=['site', 'global', 'nats', 'subjects', 'journal', 'planner'], source='nats')
+        # c = self.telescope.observatory.get_app_cfg('nats_subject')
+        # r = f'{c["journal_root"]}.{self.telescope.id}.{c["tic_comp"]["planner"]}'
         return r
 
     def get_status_subject(self, field: str) -> str:
-        c = self.telescope.observatory.get_app_cfg('nats_subject')
-        r = f'{c["status_root"]}.{self.telescope.id}.{c["tic_comp"]["planner"]}.{c["planner_status"][field]}'
+        r = self.cfg_gen.get_value(seq=['site', 'global', 'nats', 'subjects', 'status', field], source='nats')
+        # c = self.telescope.observatory.get_app_cfg('nats_subject')
+        # r = f'{c["status_root"]}.{self.telescope.id}.{c["tic_comp"]["planner"]}.{c["planner_status"][field]}'
         return r
 
     def get_journal(self) -> None:
@@ -94,7 +96,8 @@ class AbstractBase(ABC):
             if n == n_times:
                 return None
 
-    async def proof_put(self, awaitab: Callable, name: str = '', n_times: int = 5, wait: float = 3.0, **kwargs) -> bool:
+    @staticmethod
+    async def proof_put(awaitab: Callable, name: str = '', n_times: int = 5, wait: float = 3.0, **kwargs) -> bool:
         for n in range(1, n_times + 1):
             try:
                 await awaitab(**kwargs)
