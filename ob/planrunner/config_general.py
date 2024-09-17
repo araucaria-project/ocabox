@@ -21,10 +21,8 @@ class ConfigGeneral:
     def get_value(self, seq: List, source: str = 'local') -> Any:
         if source == 'local':
             ret = self.config_body
-        elif source == 'nats':
-            ret = self.config_body_nats
         else:
-            ret = self.config_body
+            ret = self.config_body_nats
         for n in seq:
             try:
                 ret = ret[n]
