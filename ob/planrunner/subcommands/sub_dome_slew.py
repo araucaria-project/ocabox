@@ -4,6 +4,8 @@ from pyaraucaria.dome_eq import dome_eq_azimuth
 from ob.planrunner.base_subcommand import BaseSubCommand
 from typing import Callable, Dict, Any
 from ob.planrunner.status import PlanStatusEnum
+from ocaboxapi.exceptions import OcaboxServerError
+from obcom.comunication.comunication_error import CommunicationTimeoutError
 
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -96,7 +98,22 @@ class DomeSlew(BaseSubCommand):
             else:
                 az = mount_az
         await self.journal.info(f"{self.id} {self.name} slewing az: {az}")
-        slew = await self.proof_put(awaitab=self.dome.aput_slewtoazimuth, az=az)
+        for n in range(1, 5 + 1):
+            n_times: int = 5
+            wait: float = 2.0
+            name = 'dome az slew'
+            try:
+                await self.dome.aput_slewtoazimuth(az)
+                slew = True
+                break
+            except OcaboxServerError:
+                logger.warning(f'Ocabox server not reachable')
+                await asyncio.sleep(wait)
+                slew = False
+            except CommunicationTimeoutError:
+                logger.warning(f'Tic CommunicationTimeoutError')
+                await asyncio.sleep(wait)
+                slew = False
         if not slew:
             self.skipped = True
             await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
