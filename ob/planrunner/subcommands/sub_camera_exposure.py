@@ -84,7 +84,7 @@ class CameraExposure(BaseSubCommand):
 
     async def readout_noise_value(self, rmmode: int) -> float or str:
         _gain = self.param['cfg_gen'].get_value(seq=[
-            'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'gain_modes', str(rmmode)
+            'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'readout_modes', str(rmmode)
         ], source='nats')
         try:
             return _gain['ron']
