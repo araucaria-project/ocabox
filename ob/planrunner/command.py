@@ -1,7 +1,6 @@
 import logging
 import time
 import re
-import datetime
 from typing import Dict, Any, List, Callable
 from ob.planrunner.base_sequence import BaseSequence
 from ob.planrunner.subcommands.sub_mount_slew import MountSlew
@@ -674,7 +673,7 @@ class Command(BaseSequence):
                                       param=self.param,
                                       uobi=self.uobi), id_next=id_next)
 
-    async def send_command_log(self, time_start: datetime, time_stop: datetime, skip: int) -> None:
+    async def send_command_log(self, time_start: float, time_stop: float, skip: int) -> None:
         if skip == 0:
             status = 'done'
         else:
@@ -695,7 +694,7 @@ class Command(BaseSequence):
             'status': status,
             'command_dict': self.sequence_dict,
             # 'comment': self.comment,
-            'time': {'starts': str(time_start),  'ends': str(time_stop), 'length_s': time_stop - time_start}
+            'time': {'starts': time_start,  'ends': time_stop, 'length_s': time_stop - time_start}
         }
         try:
             await self.command_log_pub.publish(data=data, timeout=10)
@@ -704,9 +703,8 @@ class Command(BaseSequence):
 
 
     async def arun(self, step_id: str or None = None) -> int:
-        self.info_callback['stream_1'](f'Command {self.id} {self.name} started.')
         t_0 = time.time()
-        dt_0 = datetime.datetime.now(datetime.UTC)
+        self.info_callback['stream_1'](f'Command {self.id} {self.name} started.')
         await self.journal.info(f'{self.id} {self.name} started.')
         logger.info(f'{self.id} {self.name} started.')
         d = self.telescope.get_dome()
@@ -748,8 +746,7 @@ class Command(BaseSequence):
         self.info_callback['stream_5'](f'{self.id}')
         t_1 = time.time()
         await self.param['plan_status'].upd_real_time(id=self.id, value=t_1 - t_0)
-        dt_1 = datetime.datetime.now(datetime.UTC)
-        await self.send_command_log(time_start=dt_0, time_stop=dt_1, skip=skip)
+        await self.send_command_log(time_start=t_0, time_stop=t_1, skip=skip)
         await self.journal.info(f'{self.id} {self.name} done.')
         logger.info(f'{self.id} done')
         return skip
