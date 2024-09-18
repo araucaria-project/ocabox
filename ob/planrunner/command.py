@@ -704,9 +704,9 @@ class Command(BaseSequence):
 
 
     async def arun(self, step_id: str or None = None) -> int:
+        self.info_callback['stream_1'](f'Command {self.id} {self.name} started.')
         t_0 = time.time()
         dt_0 = datetime.datetime.now(datetime.UTC)
-        self.info_callback['stream_1'](f'Command {self.id} {self.name} started.')
         await self.journal.info(f'{self.id} {self.name} started.')
         logger.info(f'{self.id} {self.name} started.')
         d = self.telescope.get_dome()
