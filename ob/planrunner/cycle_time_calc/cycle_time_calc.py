@@ -310,7 +310,6 @@ class CycleTimeCalc(AbstractCycleTime):
         :param command_dict: command_dict parsed by pyaraucaria obs_plan_parser
         :return: operation time in float
         """
-        command_dict = dict(command_dict)
         tim = 0.0
         if isinstance(command_dict, str):
             conv = ObsPlanParser.convert_from_string(command_dict)
@@ -318,6 +317,11 @@ class CycleTimeCalc(AbstractCycleTime):
                 command_dict = conv['subcommands'][0]
             except (KeyError, IndexError):
                 logger.error(f'Please check plan format')
+        elif isinstance(command_dict, Dict):
+            command_dict = dict(command_dict)
+        else:
+            logger.error(f'command_dict TypeError')
+            raise TypeError
 
         try:
             if command_dict['command_name'] in self.avialable_param_telesc_commands:
