@@ -74,7 +74,7 @@ class CameraExposure(BaseSubCommand):
 
     async def gain_value(self, gain_mode: int) -> float or str:
         _gain = self.param['cfg_gen'].get_value(seq=[
-            'tree', self.telescope.id, 'observatory', 'components', 'camera', 'gain_modes', gain_mode
+            'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'gain_modes', gain_mode
         ], source='nats')
         try:
             return _gain['gain']
@@ -84,7 +84,7 @@ class CameraExposure(BaseSubCommand):
 
     async def readout_noise_value(self, rmmode: int) -> float or str:
         _gain = self.param['cfg_gen'].get_value(seq=[
-            'tree', self.telescope.id, 'observatory', 'components', 'camera', 'gain_modes', rmmode
+            'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'gain_modes', rmmode
         ], source='nats')
         try:
             return _gain['ron']
@@ -94,7 +94,7 @@ class CameraExposure(BaseSubCommand):
 
     async def pixel_scale(self) -> float or str:
         _cam = self.param['cfg_gen'].get_value(seq=[
-            'tree', self.telescope.id, 'observatory', 'components', 'camera'
+            'telescopes', self.telescope.id, 'observatory', 'components', 'camera'
         ], source='nats')
         try:
             return _cam['pixel_scale']
@@ -104,7 +104,7 @@ class CameraExposure(BaseSubCommand):
 
     def array_bits(self, rmmode: int) -> str:
         rm = self.param['cfg_gen'].get_value(seq=[
-            'tree', self.telescope.id, 'observatory', 'components', 'camera', 'readout_modes', rmmode
+            'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'readout_modes', rmmode
         ], source='nats')
         try:
             bit = rm['bits']
@@ -410,7 +410,7 @@ class CameraExposure(BaseSubCommand):
         auto_exp_sub_no = 0
 
         sky_flat_conf = self.param['cfg_gen'].get_value(seq=[
-            'tree', self.telescope.id, 'observatory', 'components', 'camera', 'sky_flats'
+            'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'sky_flats'
         ], source='nats')
         # test_exposure_time = 1.0 # Test exposure time
         # test_time_interval = 1 # Test interval
