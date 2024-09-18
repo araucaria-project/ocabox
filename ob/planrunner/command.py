@@ -679,22 +679,17 @@ class Command(BaseSequence):
             status = 'done'
         else:
             status = 'skipped'
-        # if 'seq' in self.kwargs:
-        #     seq = self.kwargs['seq']
-        # else:
-        #     seq = ''
-        # if self.plan_object_name is not None:
-        #     object_name = self.plan_object_name
-        # else:
-        #     object_name = ''
+        if self.plan_object_name is not None:
+            object_name = self.plan_object_name
+        else:
+            object_name = ''
         length_s = 0
         data = {
-            # 'object_name': object_name,
-            # 'uobi': self.uobi,
+            'object_name': object_name,
+            'uobi': self.uobi,
             'telescope': self.telescope.id,
             'status': status,
             'command_dict': self.sequence_dict,
-            # 'comment': self.comment,
             'time': {
                 'starts': time_start,
                 'ends': time_stop,
