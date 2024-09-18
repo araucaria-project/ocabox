@@ -14,6 +14,7 @@ from serverish.messenger import request
 from serverish.base.datetime import dt_utcnow_array
 from serverish.base.exceptions import MessengerRequestNoResponders, MessengerRequestNoResponse, MessengerRequestTimeout
 from pyaraucaria.date import get_oca_jd
+from pyaraucaria.airmass import airmass
 from ob.planrunner.status import PlanStatusEnum
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -80,6 +81,12 @@ class CameraExposure(BaseSubCommand):
             return _gain['gain']
         except (LookupError, TypeError):
             logger.info(f' No gain value in gain modes in general config')
+            return ''
+
+    async def airmass_value(self, alt: float) -> float or str:
+        try:
+            return airmass(elevation=alt)
+        except ValueError:
             return ''
 
     async def readout_noise_value(self, rmmode: int) -> float or str:
