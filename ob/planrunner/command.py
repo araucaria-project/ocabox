@@ -695,7 +695,7 @@ class Command(BaseSequence):
             'status': status,
             'command_dict': self.sequence_dict,
             # 'comment': self.comment,
-            'time': {'starts': time_start,  'ends': time_stop, 'length_s': time_stop - time_start}
+            'time': {'starts': str(time_start),  'ends': str(time_stop), 'length_s': time_stop - time_start}
         }
         try:
             await self.command_log_pub.publish(data=data, timeout=10)
