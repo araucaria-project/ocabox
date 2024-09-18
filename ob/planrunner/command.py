@@ -338,6 +338,13 @@ class Command(BaseSequence):
                 return False
 
     @property
+    def comment(self) -> str:
+        if 'comment' in self.kwargs:
+            return self.kwargs['comment']
+        else:
+            return ''
+
+    @property
     def object_name(self) -> str:
         if not self.plan_object_name:
             if self.name == 'SKYFLAT':
@@ -667,7 +674,32 @@ class Command(BaseSequence):
                                       uobi=self.uobi), id_next=id_next)
 
     async def send_command_log(self, time_start: float, time_stop: float, skip: int) -> None:
-        pass
+        if skip == 0:
+            status = 'done'
+        else:
+            status = 'skipped'
+        # if 'seq' in self.kwargs:
+        #     seq = self.kwargs['seq']
+        # else:
+        #     seq = ''
+        # if self.plan_object_name is not None:
+        #     object_name = self.plan_object_name
+        # else:
+        #     object_name = ''
+        length_s = 0
+        data = {
+            # 'object_name': object_name,
+            # 'uobi': self.uobi,
+            'status': status,
+            'command_dict': self.sequence_dict,
+            # 'comment': self.comment,
+            'time': {'starts': time_start,  'ends': time_stop, 'length_s': length_s}
+        }
+        try:
+            await self.command_log_pub.publish(data=data, timeout=10)
+        except TimeoutError:
+            logger.error(f'Nats publish get timeout error')
+
 
     async def arun(self, step_id: str or None = None) -> int:
         t_0 = time.time()

@@ -381,8 +381,8 @@ class CameraExposure(BaseSubCommand):
         evening_factor = 1.11 # Evening factor to set comparable values from morning and evening
 
         # Get inf if it is evening or morning and set ev_factor
-        # TODO calculate according to location -
-        longitude = -70.196389
+        loc = self.param['cfg_gen'].get_value(seq=['site', 'global', 'geo_location'], source='nats')
+        longitude = loc['lon']
         s = longitude / abs(longitude)
         h = (datetime.datetime.utcnow() + s * datetime.timedelta(minutes=abs(longitude) * 4)).hour
         if h > 12:

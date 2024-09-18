@@ -107,9 +107,7 @@ class MountSlew(BaseSubCommand):
         logger.info(f'{self.id} started')
         self.info_callback['stream_1'](f'{self.id} {self.name} started')
         await self.journal.info(f'{self.id} {self.name} started.')
-
-        # TODO This OCA should be taken from settings
-        OCA = {'latitude': -24.598056, 'longitude': -70.196389, 'elevation': 2817}
+        loc = self.param['cfg_gen'].get_value(seq=['site', 'global', 'geo_location'], source='nats')
         # TODO mount_min_alt should be taken from settings
         mount_min_alt = 14.9
 
@@ -198,9 +196,9 @@ class MountSlew(BaseSubCommand):
             await self.journal.debug(f'{self.id} {self.name} Ra now: {self.ra_now} Dec now: {self.dec_now}')
             az, alt = ra_dec_2_az_alt(ra=self.ra_now,
                                       dec=self.dec_now,
-                                      latitude=OCA['latitude'],
-                                      longitude=OCA['longitude'],
-                                      elevation=OCA['elevation'],
+                                      latitude=loc['lat'],
+                                      longitude=loc['lon'],
+                                      elevation=loc['elev'],
                                       epoch=self.epoch)
             if alt > mount_min_alt:
                 # await self.mount.aput_tracking(self.tracking)

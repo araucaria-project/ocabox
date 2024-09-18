@@ -39,6 +39,7 @@ class AbstractBase(ABC):
         self.gen_conf = ConfigGeneral(telescope=self.telescope)
         self.get_journal()
         self.build_plan_status()
+        self.command_log_pub = self.get_publish(field='planner_command_log')
         super().__init__()
 
     @property
@@ -47,21 +48,17 @@ class AbstractBase(ABC):
             seq=['site', 'global', 'nats', 'subjects', 'journal', 'planner'], source='nats'
         )
         logger.debug(f'Journal subject {r}')
-        # c = self.telescope.observatory.get_app_cfg('nats_subject')
-        # r = f'{c["journal_root"]}.{self.telescope.id}.{c["tic_comp"]["planner"]}'
         return r
 
     def get_status_subject(self, field: str) -> str:
         r = self.param['cfg_gen'].get_value(seq=['site', 'global', 'nats', 'subjects', 'status', field], source='nats')
         logger.debug(f'Status subject {r}')
-        # c = self.telescope.observatory.get_app_cfg('nats_subject')
-        # r = f'{c["status_root"]}.{self.telescope.id}.{c["tic_comp"]["planner"]}.{c["planner_status"][field]}'
         return r
 
     def get_journal(self) -> None:
         self.journal = get_journalpublisher(subject=self.journal_subject)
 
-    def get_publisher(self, field: str) -> MsgPublisher or None:
+    def get_publish(self, field: str) -> MsgPublisher or None:
         subj = self.get_status_subject(field=field)
         if subj is None:
             logger.error(f'Wrong subject for field {field}')
