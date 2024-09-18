@@ -690,10 +690,11 @@ class Command(BaseSequence):
         data = {
             # 'object_name': object_name,
             # 'uobi': self.uobi,
+            'telescope': self.telescope.id,
             'status': status,
             'command_dict': self.sequence_dict,
             # 'comment': self.comment,
-            'time': {'starts': time_start,  'ends': time_stop, 'length_s': length_s}
+            'time': {'starts': time_start,  'ends': time_stop, 'length_s': time_stop - time_start}
         }
         try:
             await self.command_log_pub.publish(data=data, timeout=10)

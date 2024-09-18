@@ -310,6 +310,7 @@ class CycleTimeCalc(AbstractCycleTime):
         :param command_dict: command_dict parsed by pyaraucaria obs_plan_parser
         :return: operation time in float
         """
+        command_dict = command_dict.copy()
         tim = 0.0
         if isinstance(command_dict, str):
             conv = ObsPlanParser.convert_from_string(command_dict)
