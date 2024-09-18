@@ -698,7 +698,7 @@ class Command(BaseSequence):
             'time': {
                 'starts': time_start,
                 'ends': time_stop,
-                'length_s': 0}
+                'length_s': dt_from_array(time_stop) - dt_from_array(time_start)}
         }
         try:
             await self.command_log_pub.publish(data=data, timeout=10)
@@ -709,7 +709,7 @@ class Command(BaseSequence):
     async def arun(self, step_id: str or None = None) -> int:
         self.info_callback['stream_1'](f'Command {self.id} {self.name} started.')
         t_0 = time.time()
-        dt_0 = dt_utcnow_array
+        dt_0 = dt_utcnow_array()
         await self.journal.info(f'{self.id} {self.name} started.')
         logger.info(f'{self.id} {self.name} started.')
         d = self.telescope.get_dome()
@@ -750,7 +750,7 @@ class Command(BaseSequence):
         self._cycle_time_data_build.save_to_log()
         self.info_callback['stream_5'](f'{self.id}')
         t_1 = time.time()
-        dt_1 = dt_utcnow_array
+        dt_1 = dt_utcnow_array()
         await self.param['plan_status'].upd_real_time(id=self.id, value=t_1 - t_0)
         await self.send_command_log(time_start=dt_0, time_stop=dt_1, skip=skip)
         await self.journal.info(f'{self.id} {self.name} done.')
