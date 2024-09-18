@@ -698,7 +698,7 @@ class Command(BaseSequence):
             'time': {
                 'starts': time_start,
                 'ends': time_stop,
-                'length_s': dt_from_array(time_stop) - dt_from_array(time_start)}
+                'length_s': (dt_from_array(time_stop) - dt_from_array(time_start)).total_seconds()}
         }
         try:
             await self.command_log_pub.publish(data=data, timeout=10)
