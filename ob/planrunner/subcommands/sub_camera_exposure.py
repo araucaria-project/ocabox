@@ -72,7 +72,37 @@ class CameraExposure(BaseSubCommand):
     def add_zero(numb: int):
         return f'{numb:02d}'
 
-    def array_bits(self, rmmode) -> str:
+    async def gain_value(self, gain_mode: int) -> float or str:
+        _gain = self.param['cfg_gen'].get_value(seq=[
+            'tree', self.telescope.id, 'observatory', 'components', 'camera', 'gain_modes', gain_mode
+        ], source='nats')
+        try:
+            return _gain['gain']
+        except (LookupError, TypeError):
+            logger.info(f' No gain value in gain modes in general config')
+            return ''
+
+    async def readout_noise_value(self, rmmode: int) -> float or str:
+        _gain = self.param['cfg_gen'].get_value(seq=[
+            'tree', self.telescope.id, 'observatory', 'components', 'camera', 'gain_modes', rmmode
+        ], source='nats')
+        try:
+            return _gain['ron']
+        except (LookupError, TypeError):
+            logger.info(f' No readout noise value in readout modes in general config')
+            return ''
+
+    async def pixel_scale(self) -> float or str:
+        _cam = self.param['cfg_gen'].get_value(seq=[
+            'tree', self.telescope.id, 'observatory', 'components', 'camera'
+        ], source='nats')
+        try:
+            return _cam['pixel_scale']
+        except (LookupError, TypeError):
+            logger.info(f' No pixel scale value in camera in general config')
+            return ''
+
+    def array_bits(self, rmmode: int) -> str:
         rm = self.param['cfg_gen'].get_value(seq=[
             'tree', self.telescope.id, 'observatory', 'components', 'camera', 'readout_modes', rmmode
         ], source='nats')
@@ -299,7 +329,9 @@ class CameraExposure(BaseSubCommand):
                                             expect_type=int),
             read_mod=readoutmode,
             gain_mod=gainmode,
-            # scale=self.gen_conf.get_value([self.telescope.id, 'camera', instrument_name, 'pixel_scale']),
+            r_noise=await self.readout_noise_value(rmmode=readoutmode),
+            gain=await self.gain_value(gain_mode=gainmode),
+            scale=await self.pixel_scale(),
             pierside=side_of_pier
         )
         try:
