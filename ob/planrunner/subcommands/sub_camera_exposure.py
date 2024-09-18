@@ -13,7 +13,7 @@ import re
 from serverish.messenger import request
 from serverish.base.datetime import dt_utcnow_array
 from serverish.base.exceptions import MessengerRequestNoResponders, MessengerRequestNoResponse, MessengerRequestTimeout
-
+from pyaraucaria.date import get_oca_jd
 from ob.planrunner.status import PlanStatusEnum
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -64,23 +64,27 @@ class CameraExposure(BaseSubCommand):
             'observer': observer,
             'obj_name': obj_name,
             'req_ra': req_ra,
-            'req_dec': req_dec}
+            'req_dec': req_dec
+        }
         self.create_sub_command_string(**self.info_dict)
-
-    @staticmethod
-    def get_oca_date(jd: float) -> float:
-        return jd - 2460000
 
     @staticmethod
     def add_zero(numb: int):
         return f'{numb:02d}'
 
     def array_bits(self, rmmode) -> str:
-        # TODO Take from settings
-        if self.telescope.id == 'jk15':
-            if rmmode in [3, 5]:
-                return 'int32'
-        return 'sideint16'
+        rm = self.param['cfg_gen'].get_value(seq=[
+            'tree', self.telescope.id, 'observatory', 'components', 'camera', 'readout_modes', rmmode
+        ], source='nats')
+        try:
+            bit = rm['bits']
+        except (LookupError, TypeError):
+            logger.error(f' No bit value in rm modes in general config')
+            bit = 16
+        if bit <= 16:
+            return 'sideint16'
+        else:
+            return 'int32'
 
     @property
     def obs_type(self) -> str:
@@ -104,14 +108,14 @@ class CameraExposure(BaseSubCommand):
         return f'{jd_tuple[0]}_{mnth}_{day}'
 
     def _get_today_fits_folder_name(self) -> str:
-        return f"{math.floor(self.get_oca_date(self.get_julian_date(str(datetime.datetime.utcnow())))):04.0f}"
+        return f"{math.floor(get_oca_jd(self.get_julian_date(str(datetime.datetime.utcnow())))):04.0f}"
 
     def _get_fits_file_name(self):
         if self.type == 'snap':
             self.fits_file_name = f'snap'
         else:
             jd = self.get_julian_date(self.exp_time_start)
-            jd_oca = f"{self.get_oca_date(jd):010.5f}"
+            jd_oca = f"{get_oca_jd(jd):010.5f}"
             self.fits_file_name = f'{self.telescope.id}c_{jd_oca.split(".")[0]}_{jd_oca.split(".")[1]}'
 
     @property
@@ -135,7 +139,8 @@ class CameraExposure(BaseSubCommand):
             'dtyp': dtyp,
             'mean_points_no_stats': mean_points_no_stats,
             'symlinks': self.symlinks,
-            'header': header}
+            'header': header
+        }
 
     async def rpc_request(self,
                           fits_id: str,
@@ -372,13 +377,45 @@ class CameraExposure(BaseSubCommand):
         mean_diff = None
         auto_exp_sub_no = 0
 
-        # TODO take all values from settings (for zero_level maybe make some zero?)
-        test_exposure_time = 1.0 # Test exposure time
-        test_time_interval = 1 # Test interval
-        test_min_max_adu = (20000, 25000) # Accepted flat adu range
-        test_min_max_time_exp = (2, 30) # Accepted flat time range
-        zero_level = 290.0 # Zero mean
-        evening_factor = 1.11 # Evening factor to set comparable values from morning and evening
+        sky_flat_conf = self.param['cfg_gen'].get_value(seq=[
+            'tree', self.telescope.id, 'observatory', 'components', 'camera', 'sky_flats'
+        ], source='nats')
+        # test_exposure_time = 1.0 # Test exposure time
+        # test_time_interval = 1 # Test interval
+        # test_min_max_adu = (20000, 25000) # Accepted flat adu range
+        # test_min_max_time_exp = (2, 30) # Accepted flat time range
+        # zero_level = 290.0 # Zero mean
+        # evening_factor = 1.11 # Evening factor to set comparable values from morning and evening
+        try:
+            test_exposure_time = sky_flat_conf['test_exp_time']
+        except (LookupError, TypeError):
+            logger.warning(f'No test_exp_time in general config.')
+            test_exposure_time = 1.0 # Test exposure time
+        try:
+            test_time_interval = sky_flat_conf['test_exp_interval']
+        except (LookupError, TypeError):
+            logger.warning(f'No test_exp_interval in general config.')
+            test_time_interval = 1.0 # Test interval
+        try:
+            test_min_max_adu = sky_flat_conf['test_adu_range']
+        except (LookupError, TypeError):
+            logger.warning(f'No test_adu_range in general config.')
+            test_min_max_adu = [20000, 25000] # Accepted flat adu range
+        try:
+            test_min_max_time_exp = sky_flat_conf['exposure_time_range']
+        except (LookupError, TypeError):
+            logger.warning(f'No exposure_time_range in general config.')
+            test_min_max_time_exp = [2, 30] # Accepted flat time range
+        try:
+            zero_level = sky_flat_conf['bias_level']
+        except (LookupError, TypeError):
+            logger.warning(f'No bias_level in general config.')
+            zero_level = 290.0 # Zero mean
+        try:
+            evening_factor = sky_flat_conf['evening_factor']
+        except (LookupError, TypeError):
+            logger.warning(f'No evening_factor in general config.')
+            evening_factor = 1.11 # Evening factor to set comparable values from morning and eve.
 
         # Get inf if it is evening or morning and set ev_factor
         loc = self.param['cfg_gen'].get_value(seq=['site', 'global', 'geo_location'], source='nats')
