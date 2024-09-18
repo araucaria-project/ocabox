@@ -4,8 +4,6 @@ from pyaraucaria.dome_eq import dome_eq_azimuth
 from ob.planrunner.base_subcommand import BaseSubCommand
 from typing import Callable, Dict, Any
 from ob.planrunner.status import PlanStatusEnum
-from ocaboxapi.exceptions import OcaboxServerError
-from obcom.comunication.comunication_error import CommunicationTimeoutError
 
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -57,17 +55,18 @@ class DomeSlew(BaseSubCommand):
         self.info_callback['stream_1'](f'{self.id} {self.name} started.')
         await self.journal.info(f"{self.id} {self.name} started.")
         mount_type = self.gen_conf.get_value([])[self.telescope.id]['mount']['type']
-        logger.info(mount_type)
+        logger.debug(f'Mount type {mount_type}')
         if self.az is not None:
             az = self.az
         else:
             if mount_type == 'eq':
                 await self.journal.info(f"For eq started")
-                observ_loc = {'latitude': -24.598056, 'longitude': -70.196389, 'elevation': 2817}
+                loc = self.param['cfg_gen'].get_value(seq=['site', 'global', 'geo_location'], source='nats')
                 ra = await self.value_proof_get(name='mount_ra', awaitab=self.mount.aget_ra, expect_type=float)
                 dec = await self.value_proof_get(name='mount_dec', awaitab=self.mount.aget_dec, expect_type=float)
-                side_of_pier = await self.value_proof_get(name='mount_sideofpier', awaitab=self.mount.aget_sideofpier,
-                                                          expect_type=int)
+                side_of_pier = await self.value_proof_get(
+                    name='mount_sideofpier', awaitab=self.mount.aget_sideofpier, expect_type=int
+                )
                 logger.info(f'Dome_eq_azimuth for ra:{ra} dec:{dec}')
                 r_dome = self.gen_conf.get_value([])[self.telescope.id]['dome']['r_dome']
                 spx = self.gen_conf.get_value([])[self.telescope.id]['dome']['spx']
@@ -80,8 +79,8 @@ class DomeSlew(BaseSubCommand):
                 logger.info(gem)
                 mount_az, info_dict = dome_eq_azimuth(
                     ra=ra, dec=dec, r_dome=r_dome, spx=spx, spy=spy,
-                    gem=gem, side_of_pier=side_of_pier, latitude=observ_loc['latitude'],
-                    longitude=observ_loc['longitude'], elevation=observ_loc['elevation']
+                    gem=gem, side_of_pier=side_of_pier, latitude=loc['lat'],
+                    longitude=loc['lon'], elevation=loc['elev']
                 )
                 logger.info(f'Calculated eq dome az: {mount_az}')
                 logger.info(f'Calculated info dict eq dome az: {info_dict}')

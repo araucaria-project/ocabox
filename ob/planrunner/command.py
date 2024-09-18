@@ -14,9 +14,11 @@ from ob.planrunner.subcommands.sub_stop import Stop
 from ob.planrunner.subcommands.sub_wait import Wait
 from ob.planrunner.cycle_time_calc.cycle_time_data_build import CycleTimeDataBuild
 from pyaraucaria.coordinates import ra_to_decimal, dec_to_decimal, deg_to_decimal_deg
+from pyaraucaria.date import datetime_to_julian
 from ob.planrunner.seq import Seq
 from ob.planrunner.base_subcommand import BaseSubCommand
 from ob.planrunner.coded_error import SequenceTreeError
+from serverish.base import dt_utcnow_array, dt_to_array, dt_from_array
 
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -336,6 +338,13 @@ class Command(BaseSequence):
                 return True
             else:
                 return False
+
+    @property
+    def comment(self) -> str:
+        if 'comment' in self.kwargs:
+            return self.kwargs['comment']
+        else:
+            return ''
 
     @property
     def object_name(self) -> str:
@@ -666,12 +675,36 @@ class Command(BaseSequence):
                                       param=self.param,
                                       uobi=self.uobi), id_next=id_next)
 
-    async def send_command_log(self, time_start: float, time_stop: float, skip: int) -> None:
-        pass
+    async def send_command_log(self, time_start: list, time_stop: list, skip: int) -> None:
+        if skip == 0:
+            status = 'done'
+        else:
+            status = 'skipped'
+        if self.plan_object_name is not None:
+            object_name = self.plan_object_name
+        else:
+            object_name = ''
+        data = {
+            'object_name': object_name,
+            'uobi': self.uobi,
+            'telescope': self.telescope.id,
+            'status': status,
+            'command_dict': self.sequence_dict,
+            'time': {
+                'start_jd': datetime_to_julian(dt_from_array(time_start)),
+                'end_jd': datetime_to_julian((dt_from_array(time_stop))),
+                'length_s': (dt_from_array(time_stop) - dt_from_array(time_start)).total_seconds()}
+        }
+        try:
+            await self.command_log_pub.publish(data=data, timeout=10)
+        except TimeoutError:
+            logger.error(f'Nats publish get timeout error')
+
 
     async def arun(self, step_id: str or None = None) -> int:
-        t_0 = time.time()
         self.info_callback['stream_1'](f'Command {self.id} {self.name} started.')
+        t_0 = time.time()
+        dt_0 = dt_utcnow_array()
         await self.journal.info(f'{self.id} {self.name} started.')
         logger.info(f'{self.id} {self.name} started.')
         d = self.telescope.get_dome()
@@ -712,8 +745,9 @@ class Command(BaseSequence):
         self._cycle_time_data_build.save_to_log()
         self.info_callback['stream_5'](f'{self.id}')
         t_1 = time.time()
+        dt_1 = dt_utcnow_array()
         await self.param['plan_status'].upd_real_time(id=self.id, value=t_1 - t_0)
-        await self.send_command_log(time_start=t_0, time_stop=t_1, skip=skip)
+        await self.send_command_log(time_start=dt_0, time_stop=dt_1, skip=skip)
         await self.journal.info(f'{self.id} {self.name} done.')
         logger.info(f'{self.id} done')
         return skip
