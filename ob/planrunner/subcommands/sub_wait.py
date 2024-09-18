@@ -24,7 +24,6 @@ class Wait(BaseSubCommand):
                          telescope=telescope, name=name, uobi=uobi, param=param)
         self.info_dict = {'key': self.key, 'value': self.value}
         self.create_sub_command_string(**self.info_dict)
-        self.loc = self.gen_conf.get_value([])['observatory_location']
 
     @staticmethod
     async def _wait_exec(value: float) -> None:
@@ -52,10 +51,10 @@ class Wait(BaseSubCommand):
             await asyncio.sleep(0.1)
 
     async def _wait_sun_exec(self, value: str, sun_rise: bool) -> bool:
-        # TODO take loc from settings
-        lo = EarthLocation(lat=self.loc['latitude'] * u.deg,
-                           lon=self.loc['longitude'] * u.deg,
-                           height=self.loc['elevation'] * u.m)
+        loc = self.param['cfg_gen'].get_value(seq=['site', 'global', 'geo_location'], source='nats')
+        lo = EarthLocation(lat=loc['lat'] * u.deg,
+                           lon=loc['lon'] * u.deg,
+                           height=loc['elev'] * u.m)
         try:
             val = float(value)
         except ValueError:

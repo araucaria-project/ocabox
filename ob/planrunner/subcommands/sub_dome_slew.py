@@ -57,7 +57,7 @@ class DomeSlew(BaseSubCommand):
         self.info_callback['stream_1'](f'{self.id} {self.name} started.')
         await self.journal.info(f"{self.id} {self.name} started.")
         mount_type = self.gen_conf.get_value([])[self.telescope.id]['mount']['type']
-        logger.info(mount_type)
+        logger.debug(f'Mount type {mount_type}')
         if self.az is not None:
             az = self.az
         else:

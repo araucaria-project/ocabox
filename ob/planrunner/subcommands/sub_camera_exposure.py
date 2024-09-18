@@ -255,12 +255,11 @@ class CameraExposure(BaseSubCommand):
                                                          expect_type=str))
         if self.telescope.id == 'dev':
             instrument_name = 'simul'
-        observatory_location = self.gen_conf.get_value([])['observatory_location']
-
+        loc = self.param['cfg_gen'].get_value(seq=['site', 'global', 'geo_location'], source='nats')
         header = fits_header(
-            obs_lat=observatory_location['latitude'],
-            obs_lon=observatory_location['longitude'],
-            obs_elev=observatory_location['elevation'],
+            obs_lat=loc['lat'],
+            obs_lon=loc['lon'],
+            obs_elev=loc['elev'],
             tel_id=str(self.telescope.id),
             utc_now=str(self.exp_time_start.isoformat(sep='T', timespec='auto')),
             jd=self.get_julian_date(self.exp_time_start),
