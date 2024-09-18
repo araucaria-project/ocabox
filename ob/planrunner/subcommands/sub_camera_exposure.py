@@ -74,7 +74,7 @@ class CameraExposure(BaseSubCommand):
 
     async def gain_value(self, gain_mode: int) -> float or str:
         _gain = self.param['cfg_gen'].get_value(seq=[
-            'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'gain_modes', gain_mode
+            'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'gain_modes', str(gain_mode)
         ], source='nats')
         try:
             return _gain['gain']
@@ -84,7 +84,7 @@ class CameraExposure(BaseSubCommand):
 
     async def readout_noise_value(self, rmmode: int) -> float or str:
         _gain = self.param['cfg_gen'].get_value(seq=[
-            'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'gain_modes', rmmode
+            'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'gain_modes', str(rmmode)
         ], source='nats')
         try:
             return _gain['ron']
@@ -104,7 +104,7 @@ class CameraExposure(BaseSubCommand):
 
     def array_bits(self, rmmode: int) -> str:
         rm = self.param['cfg_gen'].get_value(seq=[
-            'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'readout_modes', rmmode
+            'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'readout_modes', str(rmmode)
         ], source='nats')
         try:
             bit = rm['bits']
