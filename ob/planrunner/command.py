@@ -14,6 +14,7 @@ from ob.planrunner.subcommands.sub_stop import Stop
 from ob.planrunner.subcommands.sub_wait import Wait
 from ob.planrunner.cycle_time_calc.cycle_time_data_build import CycleTimeDataBuild
 from pyaraucaria.coordinates import ra_to_decimal, dec_to_decimal, deg_to_decimal_deg
+from pyaraucaria.date import datetime_to_julian
 from ob.planrunner.seq import Seq
 from ob.planrunner.base_subcommand import BaseSubCommand
 from ob.planrunner.coded_error import SequenceTreeError
@@ -683,7 +684,6 @@ class Command(BaseSequence):
             object_name = self.plan_object_name
         else:
             object_name = ''
-        length_s = 0
         data = {
             'object_name': object_name,
             'uobi': self.uobi,
@@ -691,8 +691,8 @@ class Command(BaseSequence):
             'status': status,
             'command_dict': self.sequence_dict,
             'time': {
-                'starts': time_start,
-                'ends': time_stop,
+                'start_jd': datetime_to_julian(dt_from_array(time_start)),
+                'end_jd': datetime_to_julian((dt_from_array(time_stop))),
                 'length_s': (dt_from_array(time_stop) - dt_from_array(time_start)).total_seconds()}
         }
         try:
