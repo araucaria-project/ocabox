@@ -83,7 +83,8 @@ class CameraExposure(BaseSubCommand):
             logger.info(f' No gain value in gain modes in general config')
             return ''
 
-    async def airmass_value(self, alt: float) -> float or str:
+    @staticmethod
+    async def airmass_value(alt: float) -> float or str:
         try:
             return airmass(elevation=alt)
         except ValueError:
@@ -298,6 +299,7 @@ class CameraExposure(BaseSubCommand):
         if self.telescope.id == 'dev':
             instrument_name = 'simul'
         loc = self.param['cfg_gen'].get_value(seq=['site', 'global', 'geo_location'], source='nats')
+        tel_alt = await self.value_proof_get(name='fitsh_tel_alt', awaitab=self.mount.aget_alt, expect_type=float)
         header = fits_header(
             obs_lat=loc['lat'],
             obs_lon=loc['lon'],
@@ -310,7 +312,7 @@ class CameraExposure(BaseSubCommand):
             epoch=self.epoch,
             tel_ra=await self.value_proof_get(name='fitsh_tel_ra', awaitab=self.mount.aget_ra, expect_type=float),
             tel_dec=await self.value_proof_get(name='fitsh_tel_dec', awaitab=self.mount.aget_dec, expect_type=float),
-            tel_alt=await self.value_proof_get(name='fitsh_tel_alt', awaitab=self.mount.aget_alt, expect_type=float),
+            tel_alt=tel_alt,
             tel_az=await self.value_proof_get(name='fitsh_tel_az', awaitab=self.mount.aget_az, expect_type=float),
             focus=await self.value_proof_get(name='fitsh_focus_pos',
                                              awaitab=self.focuser.aget_position,
@@ -339,7 +341,8 @@ class CameraExposure(BaseSubCommand):
             r_noise=await self.readout_noise_value(rmmode=readoutmode),
             gain=await self.gain_value(gain_mode=gainmode),
             scale=await self.pixel_scale(),
-            pierside=side_of_pier
+            pierside=side_of_pier,
+            airmass=await self.airmass_value(alt=tel_alt)
         )
         try:
             dat = await self.rpc_request(fits_id=self.fits_file_name,
