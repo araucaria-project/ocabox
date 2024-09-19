@@ -90,7 +90,7 @@ class Seq:
         return ret
 
     @property
-    def filter(self) -> str or int:
+    def filter_(self) -> str or int:
         return self.seq_list[1]
 
     @property

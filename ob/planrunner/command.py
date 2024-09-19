@@ -424,7 +424,7 @@ class Command(BaseSequence):
                 id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),
                                                       telescope=self.telescope,
                                                       info_callback=self.info_callback,
-                                                      filter=seq_data.filter,
+                                                      filter_=seq_data.filter_,
                                                       param=self.param,
                                                       uobi=self.uobi), id_next=id_next)
 
@@ -443,7 +443,7 @@ class Command(BaseSequence):
                                                             req_ra='',
                                                             req_dec='',
                                                             epoch=self.epoch,
-                                                            filter=seq_data.filter,
+                                                            filter_=seq_data.filter_,
                                                             auto_exposure=False,
                                                             observer=self.observer,
                                                             seq_data=seq_data,
@@ -527,7 +527,7 @@ class Command(BaseSequence):
                 id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),
                                                       telescope=self.telescope,
                                                       info_callback=self.info_callback,
-                                                      filter=seq_data.filter,
+                                                      filter_=seq_data.filter_,
                                                       param=self.param,
                                                       uobi=self.uobi), id_next=id_next)
 
@@ -579,7 +579,7 @@ class Command(BaseSequence):
                                                             req_ra=self.plan_ra,
                                                             req_dec=self.plan_dec,
                                                             epoch=self.epoch,
-                                                            filter=seq_data.filter,
+                                                            filter_=seq_data.filter_,
                                                             auto_exposure=seq_data.auto_exposure,
                                                             observer=self.observer,
                                                             seq_data=seq_data,
@@ -626,7 +626,7 @@ class Command(BaseSequence):
                 id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),
                                                       telescope=self.telescope,
                                                       info_callback=self.info_callback,
-                                                      filter=seq_data.filter,
+                                                      filter_=seq_data.filter_,
                                                       param=self.param,
                                                       uobi=self.uobi), id_next=id_next)
 
@@ -645,7 +645,7 @@ class Command(BaseSequence):
                                                             req_ra='',
                                                             req_dec='',
                                                             epoch=self.epoch,
-                                                            filter=seq_data.filter,
+                                                            filter_=seq_data.filter_,
                                                             auto_exposure=False,
                                                             observer=self.observer,
                                                             seq_data=seq_data,
@@ -691,15 +691,17 @@ class Command(BaseSequence):
             'status': status,
             'command_dict': self.sequence_dict,
             'time': {
+                'start_dt': dt_from_array(time_start).strftime("%Y-%m-%dT%H:%M:%S"),
+                'end_dt': dt_from_array(time_stop).strftime("%Y-%m-%dT%H:%M:%S"),
                 'start_jd': datetime_to_julian(dt_from_array(time_start)),
                 'end_jd': datetime_to_julian((dt_from_array(time_stop))),
-                'length_s': (dt_from_array(time_stop) - dt_from_array(time_start)).total_seconds()}
+                'length_s': (dt_from_array(time_stop) - dt_from_array(time_start)).total_seconds()
+            }
         }
         try:
             await self.command_log_pub.publish(data=data, timeout=10)
         except TimeoutError:
             logger.error(f'Nats publish get timeout error')
-
 
     async def arun(self, step_id: str or None = None) -> int:
         self.info_callback['stream_1'](f'Command {self.id} {self.name} started.')
@@ -714,7 +716,7 @@ class Command(BaseSequence):
         f_pos = await self.value_proof_get(name='command_fw_pos',
                                            awaitab=f.aget_position,
                                            expect_type=int)
-        f_names = await f.aget_names()
+        f_names = await self.get_filters_dict()
         d_az = await self.value_proof_get(name='command_dome_az',
                                           awaitab=d.aget_az,
                                           expect_type=float)
