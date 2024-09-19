@@ -1,5 +1,4 @@
 import datetime
-import time
 from ob.planrunner.base_subcommand import BaseSubCommand
 import logging
 import asyncio
@@ -10,18 +9,19 @@ from astropy.time import Time
 from ob.planrunner.coded_error import SequenceTreeError
 from ob.planrunner.status import PlanStatusEnum
 
+
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class Wait(BaseSubCommand):
 
-    def __init__(self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable],
-                 key: str, value: str, uobi: int,
-                 name: str = 'wait', param: Dict[str, Any] or None = None) -> None:
+    def __init__(
+            self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable],
+            key: str, value: str, uobi: int, name: str = 'wait', param: Dict[str, Any] or None = None) -> None:
+
         self.key = key
         self.value = value
-        super().__init__(id=id, info_callback=info_callback,
-                         telescope=telescope, name=name, uobi=uobi, param=param)
+        super().__init__(id=id, info_callback=info_callback, telescope=telescope, name=name, uobi=uobi, param=param)
         self.info_dict = {'key': self.key, 'value': self.value}
         self.create_sub_command_string(**self.info_dict)
 
@@ -52,9 +52,7 @@ class Wait(BaseSubCommand):
 
     async def _wait_sun_exec(self, value: str, sun_rise: bool) -> bool:
         loc = self.param['cfg_gen'].get_value(seq=['site', 'global', 'geo_location'], source='nats')
-        lo = EarthLocation(lat=loc['lat'] * u.deg,
-                           lon=loc['lon'] * u.deg,
-                           height=loc['elev'] * u.m)
+        lo = EarthLocation(lat=loc['lat'] * u.deg, lon=loc['lon'] * u.deg, height=loc['elev'] * u.m)
         try:
             val = float(value)
         except ValueError:

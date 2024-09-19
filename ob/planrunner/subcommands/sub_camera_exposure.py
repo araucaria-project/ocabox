@@ -17,18 +17,20 @@ from pyaraucaria.date import get_oca_jd
 from pyaraucaria.airmass import airmass
 from ob.planrunner.status import PlanStatusEnum
 
+
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class CameraExposure(BaseSubCommand):
 
-    def __init__(self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable], seq_data: 'Seq', uobi: int,
-                 type: str, filter_: str, light: bool, sub_exp: int, exp_no: int, auto_exposure: bool,
-                 epoch: str, observer: str, obj_name: str, req_ra: float or None = None, req_dec: float or None = None,
-                 name: str = 'camera-exposure', param: Dict[str, Any] or None = None) -> None:
+    def __init__(
+            self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable], seq_data: 'Seq', uobi: int,
+            exp_type: str, filter_: str, light: bool, sub_exp: int, exp_no: int, auto_exposure: bool,
+            epoch: str, observer: str, obj_name: str, req_ra: float or None = None, req_dec: float or None = None,
+            name: str = 'camera-exposure', param: Dict[str, Any] or None = None) -> None:
 
         self.seq_data = seq_data
-        self.type = type
+        self.exp_type = exp_type
         self.filter_ = filter_
         self.light = light
         self.sub_exp = sub_exp
@@ -45,8 +47,7 @@ class CameraExposure(BaseSubCommand):
         self.readout_time_start: float or None = None
         self.exp_time_start: str or None = None
         self.fits_file_name: str or None = None
-        super().__init__(id=id, info_callback=info_callback,
-                         telescope=telescope, name=name, uobi=uobi, param=param)
+        super().__init__(id=id, info_callback=info_callback, telescope=telescope, name=name, uobi=uobi, param=param)
         self.mount = self.telescope.get_mount()
         self.camera = self.telescope.get_camera()
         self.cover = self.telescope.get_covercalibrator()
@@ -55,7 +56,7 @@ class CameraExposure(BaseSubCommand):
         self.rotator = self.telescope.get_rotator()
 
         self.info_dict = {
-            'type': self.type,
+            'type': self.exp_type,
             'filter': filter_,
             'light': light,
             'sub_exp': sub_exp,
@@ -126,11 +127,11 @@ class CameraExposure(BaseSubCommand):
 
     @property
     def obs_type(self) -> str:
-        if self.type == 'snap':
+        if self.exp_type == 'snap':
             return f'test'
-        elif self.type == 'focusing':
+        elif self.exp_type == 'focusing':
             return f'focus'
-        elif self.type in ['flat', 'dark', 'zero']:
+        elif self.exp_type in ['flat', 'dark', 'zero']:
             return f'calib'
         else:
             return f'science'
@@ -149,7 +150,7 @@ class CameraExposure(BaseSubCommand):
         return f"{math.floor(get_oca_jd(self.get_julian_date(str(datetime.datetime.utcnow())))):04.0f}"
 
     def _get_fits_file_name(self):
-        if self.type == 'snap':
+        if self.exp_type == 'snap':
             self.fits_file_name = f'snap'
         else:
             jd = self.get_julian_date(self.exp_time_start)
@@ -162,12 +163,9 @@ class CameraExposure(BaseSubCommand):
             seq=['site', 'global', 'nats', 'subjects', 'rpc', 'download'],
             source='nats'
         )
-        # cfg = self.telescope.observatory.get_app_cfg('nats_subject')
-        # return f"{cfg['rpc_root']}.{self.telescope.id}.{cfg['service_name']['download']}"
         return r
 
-    def rpc_data(self, fits_id: str, header: Dict, req: str,
-                mean_points_no_stats: int, dtyp: str) -> Dict:
+    def rpc_data(self, fits_id: str, header: Dict, req: str, mean_points_no_stats: int, dtyp: str) -> Dict:
         return {
             'telescope_id': self.telescope.id,
             'ts': dt_utcnow_array(),
@@ -180,24 +178,20 @@ class CameraExposure(BaseSubCommand):
             'header': header
         }
 
-    async def rpc_request(self,
-                          fits_id: str,
-                          header: Dict,
-                          req: str = 'fits_download',
-                          mean_points_no_stats: int = 100,
-                          dtyp: str = 'sideint16',
-                          timeout: float or None = None):
+    async def rpc_request(
+            self, fits_id: str, header: Dict, req: str = 'fits_download', mean_points_no_stats: int = 100,
+            dtyp: str = 'sideint16', timeout: float or None = None) -> None:
 
         inf = f'{self.id} {self.name} send rpc request {self.rpc_subject}'
         logger.info(inf)
         await self.journal.debug(inf)
-        dat, met = await request(subject=self.rpc_subject,
-                                 data=self.rpc_data(fits_id=fits_id,
-                                                    header=header,
-                                                    req=req,
-                                                    mean_points_no_stats=mean_points_no_stats,
-                                                    dtyp=dtyp),
-                                 timeout=timeout)
+        dat, met = await request(
+            subject=self.rpc_subject,
+            data=self.rpc_data(
+                fits_id=fits_id, header=header, req=req, mean_points_no_stats=mean_points_no_stats, dtyp=dtyp
+            ),
+            timeout=timeout
+        )
 
         inf = f'{self.id} {self.name} rpc response received.'
         logger.debug(inf)
@@ -206,7 +200,7 @@ class CameraExposure(BaseSubCommand):
 
     def _get_folders_and_symlinks(self) -> None:
         self.symlinks = []
-        if self.type == 'focusing':
+        if self.exp_type == 'focusing':
             if self.seq_data.focus_folder:
                 self.target_folder = self.seq_data.focus_folder
             else:
@@ -223,14 +217,20 @@ class CameraExposure(BaseSubCommand):
                 ff_name = f'{num:06d}'
                 self.target_folder = os.path.join(self.fits_focus_folder, ff_name)
                 self.seq_data.focus_folder = self.target_folder
-                self.symlinks.append({'target': f'./{ff_name}',
-                                      'symlink': os.path.join(self.fits_focus_folder, f'actual')})
-            self.symlinks.append({'target': os.path.join(self.target_folder, f'{self.fits_file_name}.fits'),
-                                  'symlink': os.path.join(self.fits_main_folder, 'last_shoot.fits')})
-        elif self.type == 'snap':
+                self.symlinks.append({
+                    'target': f'./{ff_name}',
+                    'symlink': os.path.join(self.fits_focus_folder, f'actual')
+                })
+            self.symlinks.append({
+                'target': os.path.join(self.target_folder, f'{self.fits_file_name}.fits'),
+                'symlink': os.path.join(self.fits_main_folder, 'last_shoot.fits')
+            })
+        elif self.exp_type == 'snap':
             self.target_folder = self.fits_main_folder
-            self.symlinks.append({'target': f'./{self.fits_file_name}.fits',
-                                  'symlink': os.path.join(self.fits_main_folder, 'last_shoot.fits')})
+            self.symlinks.append({
+                'target': f'./{self.fits_file_name}.fits',
+                'symlink': os.path.join(self.fits_main_folder, 'last_shoot.fits')
+            })
         else:
 
             today_symlink_name = self._get_today_symlink_name()
@@ -255,15 +255,15 @@ class CameraExposure(BaseSubCommand):
         self._get_fits_file_name()
         self._get_folders_and_symlinks()
 
-        gainmode = await self.value_proof_get(name='fitsh_cam_gain',
-                                              awaitab=self.camera.aget_gain,
-                                              expect_type=int)
-        readoutmode = await self.value_proof_get(name='fitsh_cam_rm',
-                                                 awaitab=self.camera.aget_readoutmode,
-                                                 expect_type=int)
-        _filter = await self.value_proof_get(name='fitsh_filter',
-                                            awaitab=self.filter_wheel.aget_position,
-                                            expect_type=int)
+        gainmode = await self.value_proof_get(
+            name='fitsh_cam_gain', awaitab=self.camera.aget_gain, expect_type=int
+        )
+        readoutmode = await self.value_proof_get(
+            name='fitsh_cam_rm', awaitab=self.camera.aget_readoutmode, expect_type=int
+        )
+        _filter = await self.value_proof_get(
+            name='fitsh_filter', awaitab=self.filter_wheel.aget_position, expect_type=int
+        )
         filters = await self.get_filters_dict()
         try:
             inv_f_map = {v: k for k, v in filters.items()}
@@ -289,13 +289,13 @@ class CameraExposure(BaseSubCommand):
                 name='mount_sideofpier', awaitab=self.mount.aget_sideofpier, expect_type=int
             )
         else:
-            rot_pos = await self.value_proof_get(name='fitsh_rot_pos',
-                                                 awaitab=self.rotator.aget_position,
-                                                 expect_type=float)
+            rot_pos = await self.value_proof_get(
+                name='fitsh_rot_pos', awaitab=self.rotator.aget_position, expect_type=float
+            )
             side_of_pier = ''
-        instrument_name = str(await self.value_proof_get(name='fitsh_cam_sens_name',
-                                                         awaitab=self.camera.aget_sensorname,
-                                                         expect_type=str))
+        instrument_name = str(await self.value_proof_get(
+            name='fitsh_cam_sens_name', awaitab=self.camera.aget_sensorname, expect_type=str)
+                              )
         if self.telescope.id == 'dev':
             instrument_name = 'simul'
         loc = self.param['cfg_gen'].get_value(seq=['site', 'global', 'geo_location'], source='nats')
@@ -314,12 +314,12 @@ class CameraExposure(BaseSubCommand):
             tel_dec=await self.value_proof_get(name='fitsh_tel_dec', awaitab=self.mount.aget_dec, expect_type=float),
             tel_alt=tel_alt,
             tel_az=await self.value_proof_get(name='fitsh_tel_az', awaitab=self.mount.aget_az, expect_type=float),
-            focus=await self.value_proof_get(name='fitsh_focus_pos',
-                                             awaitab=self.focuser.aget_position,
-                                             expect_type=int),
+            focus=await self.value_proof_get(
+                name='fitsh_focus_pos', awaitab=self.focuser.aget_position, expect_type=int
+            ),
             rotator_pos=rot_pos,
             observer=str(self.observer),
-            image_type=str(self.type),
+            image_type=str(self.exp_type),
             obs_type=self.obs_type,
             object=str(self.obj_name),
             n_loops=self.exp_no,
@@ -327,15 +327,15 @@ class CameraExposure(BaseSubCommand):
             filter=filter_str,
             exp_time=sub_time,
             instrume_name=instrument_name,
-            ccd_temp=await self.value_proof_get(name='fitsh_cam_temp',
-                                                awaitab=self.camera.aget_ccdtemperature,
-                                                expect_type=float),
-            binx=await self.value_proof_get(name='fitsh_cam_binx',
-                                            awaitab=self.camera.aget_binx,
-                                            expect_type=int),
-            biny=await self.value_proof_get(name='fitsh_cam_biny',
-                                            awaitab=self.camera.aget_biny,
-                                            expect_type=int),
+            ccd_temp=await self.value_proof_get(
+                name='fitsh_cam_temp', awaitab=self.camera.aget_ccdtemperature, expect_type=float
+            ),
+            binx=await self.value_proof_get(
+                name='fitsh_cam_binx', awaitab=self.camera.aget_binx, expect_type=int
+            ),
+            biny=await self.value_proof_get(
+                name='fitsh_cam_biny', awaitab=self.camera.aget_biny, expect_type=int
+            ),
             read_mod=readoutmode,
             gain_mod=gainmode,
             r_noise=await self.readout_noise_value(rmmode=readoutmode),
@@ -345,9 +345,9 @@ class CameraExposure(BaseSubCommand):
             airmass=await self.airmass_value(alt=tel_alt)
         )
         try:
-            dat = await self.rpc_request(fits_id=self.fits_file_name,
-                                         header=header,
-                                         dtyp=self.array_bits(rmmode=readoutmode))
+            dat = await self.rpc_request(
+                fits_id=self.fits_file_name, header=header, dtyp=self.array_bits(rmmode=readoutmode)
+            )
         except (MessengerRequestNoResponders, MessengerRequestNoResponse, MessengerRequestTimeout):
             inf = f'{self.id} {self.name} nats rpc guider msg can not reach responder.'
             logger.error(inf)
@@ -361,13 +361,10 @@ class CameraExposure(BaseSubCommand):
                     logger.info(inf)
                     await self.journal.info(inf)
                     self.info_callback['stream_1'](inf)
-                    self.info_callback['exec_json'](self.exec_json(exp_started=True,
-                                                                   exp_done=True,
-                                                                   exp_saved=True,
-                                                                   n_exp=sub,
-                                                                   mean=round(dat['param']['mean']),
-                                                                   exp_time=sub_time,
-                                                                   **self.info_dict))
+                    self.info_callback['exec_json'](self.exec_json(
+                        exp_started=True, exp_done=True, exp_saved=True, n_exp=sub, mean=round(dat['param']['mean']),
+                        exp_time=sub_time, **self.info_dict)
+                    )
                     return True
                 else:
                     inf = f'{self.id} {self.name} wrong rpc response, no fits_saved.'
@@ -389,24 +386,22 @@ class CameraExposure(BaseSubCommand):
             return False
 
     async def _wait_for_subexposure(self, sub_time: float) -> None:
-        # TODO In final version, i.e. on server-side exposures, I would avoid asyncio.sleep and subscibe on imagerady
-        #  and camerastate. (exposures may be aborted earlier, no imagerady then)
         if sub_time >= 0.6:
             sub_t = sub_time
         else:
             sub_t = 1.0
         await asyncio.sleep(float(sub_t))
         while True:
-            subexposure_done = await self.value_proof_get(name='wait_subexp',
-                                                          awaitab=self.camera.aget_imageready,
-                                                          expect_type=bool)
+            subexposure_done = await self.value_proof_get(
+                name='wait_subexp', awaitab=self.camera.aget_imageready, expect_type=bool
+            )
             if subexposure_done is True:
                 break
             await asyncio.sleep(0.1)
 
     async def _autoexposure_exec(self) -> Tuple[float, int]:
         """
-        TODO for filter, time, make test shot on sky with 1s exposure. If value is not what You expect wait
+        For filter, time, make test shot on sky with 1s exposure. If value is not what You expect wait
         some time and make test shot again until You don't get expected value of adu, then continue to make
         normal exposure with calculated length of exposure. On another sub, test shot calculation will be
         repeated, up to end.
@@ -480,7 +475,6 @@ class CameraExposure(BaseSubCommand):
                 logger.error(inf)
                 await self.journal.error(inf)
                 return 0, 2
-            # await self.camera.aput_startexposure(test_exposure_time, self.light)
             await self._wait_for_subexposure(test_exposure_time)
             try:
                 dat = await self.rpc_request(fits_id=f'{round((time.time())*10)}'[-7:],
@@ -515,13 +509,10 @@ class CameraExposure(BaseSubCommand):
                 self.info_callback['stream_1'](inf)
                 return 0, 1
 
-            self.info_callback['exec_json'](self.exec_json(auto_exp_start=True,
-                                                           auto_exp_finnished=True,
-                                                           auto_exp_sub_no=auto_exp_sub_no,
-                                                           auto_exp_time=test_exposure_time,
-                                                           **self.info_dict))
-
-            # Substract zero from mean and add to mean_list (plus some info)
+            self.info_callback['exec_json'](self.exec_json(
+                auto_exp_start=True, auto_exp_finnished=True, auto_exp_sub_no=auto_exp_sub_no,
+                auto_exp_time=test_exposure_time, **self.info_dict)
+            )
             if mean > zero_level:
                 mean = mean - zero_level
             else:
@@ -537,7 +528,8 @@ class CameraExposure(BaseSubCommand):
                 **self.info_dict,
                 test_exp_mean=mean,
                 expected_mean_min=round(test_min_max_adu[0]/test_min_max_time_exp[1]),
-                expected_mean_max=round(test_min_max_adu[1]/test_min_max_time_exp[0])))
+                expected_mean_max=round(test_min_max_adu[1]/test_min_max_time_exp[0]))
+            )
 
             # Calculate mean diff from last two steps
             if len(mean_list) > 1:
@@ -619,12 +611,10 @@ class CameraExposure(BaseSubCommand):
         logger.info(inf)
         await self.journal.info(inf)
         self.info_callback['stream_1'](inf)
-        self.info_callback['exec_json'](self.exec_json(exp_started=True,
-                                                       exp_done=False,
-                                                       exp_saved=False,
-                                                       n_exp=self.sub_exp,
-                                                       **self.info_dict,
-                                                       exp_time=float(exposure_time)))
+        self.info_callback['exec_json'](self.exec_json(
+            exp_started=True, exp_done=False, exp_saved=False, n_exp=self.sub_exp,
+            **self.info_dict, exp_time=float(exposure_time))
+        )
         self.readout_time_start = time.time()
         self.exp_time_start = datetime.datetime.utcnow()
         exe = await self.proof_put(
@@ -644,13 +634,10 @@ class CameraExposure(BaseSubCommand):
         logger.info(inf)
         await self.journal.info(inf)
         self.info_callback['stream_1'](f'{self.id} {self.name} exp:{self.sub_exp}/{self.exp_no} --> saving')
-        self.info_callback['exec_json'](self.exec_json(exp_started=True,
-                                                       exp_done=True,
-                                                       exp_saved=False,
-                                                       **self.info_dict,
-                                                       readout_time=self.readout_time,
-                                                       n_exp=self.sub_exp,
-                                                       exp_time=float(exposure_time)))
+        self.info_callback['exec_json'](self.exec_json(
+            exp_started=True, exp_done=True, exp_saved=False, **self.info_dict,
+            readout_time=self.readout_time, n_exp=self.sub_exp, exp_time=float(exposure_time)
+        ))
         wff = await self._wait_for_save_fits(sub=self.sub_exp, sub_time=float(exposure_time))
         if not wff:
             return 2
@@ -660,7 +647,6 @@ class CameraExposure(BaseSubCommand):
         logger.debug(inf)
         self.done = True
         await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.done)
-        self.info_callback['exec_json'](self.exec_json(exp_time=float(exposure_time),
-                                                       **self.info_dict))
+        self.info_callback['exec_json'](self.exec_json(exp_time=float(exposure_time), **self.info_dict))
         await asyncio.sleep(0.2)
         return 0

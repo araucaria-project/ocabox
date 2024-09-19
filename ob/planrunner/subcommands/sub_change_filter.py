@@ -1,20 +1,21 @@
-import datetime
 from typing import Callable, Dict, Any
 import asyncio
 import logging
 from ob.planrunner.base_subcommand import BaseSubCommand
 from ob.planrunner.status import PlanStatusEnum
 
+
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class ChangeFilter(BaseSubCommand):
 
-    def __init__(self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable],
-                 filter_: str, uobi: int,  name: str = 'change-filter', param: Dict[str, Any] or None = None) -> None:
+    def __init__(
+            self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable],
+            filter_: str, uobi: int,  name: str = 'change-filter', param: Dict[str, Any] or None = None) -> None:
+
         self.filter_ = filter_
-        super().__init__(id=id, info_callback=info_callback, telescope=telescope,
-                         name=name, uobi=uobi, param=param)
+        super().__init__(id=id, info_callback=info_callback, telescope=telescope, name=name, uobi=uobi, param=param)
         self.filterwheel = self.telescope.get_filterwheel()
         self.info_dict = {'filter': self.filter_}
         self.create_sub_command_string(**self.info_dict)
@@ -23,9 +24,9 @@ class ChangeFilter(BaseSubCommand):
         logger.info('Wait to move...')
         while True:
             await asyncio.sleep(0.2)
-            fit_pos = await self.value_proof_get(name='fw_pos',
-                                                 awaitab=self.filterwheel.aget_position,
-                                                 expect_type=int)
+            fit_pos = await self.value_proof_get(
+                name='fw_pos', awaitab=self.filterwheel.aget_position, expect_type=int
+            )
             if isinstance(fit_pos, int) and fit_pos > -1:
                 if fit_pos == pos:
                     logger.info('Wait to move done')
@@ -39,7 +40,6 @@ class ChangeFilter(BaseSubCommand):
         self.started = True
         await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.running)
         self.info_callback['exec_json'](self.exec_json(**self.info_dict))
-        # filter_dict = await self.filterwheel.aget_names()
         filter_dict = await self.get_filters_dict()
         try:
             pos = filter_dict[self.filter_]
@@ -54,9 +54,9 @@ class ChangeFilter(BaseSubCommand):
             self.info_callback['exec_json'](self.exec_json(**self.info_dict))
             return 2
 
-        fit_pos = await self.value_proof_get(name='fw_pos',
-                                             awaitab=self.filterwheel.aget_position,
-                                             expect_type=int)
+        fit_pos = await self.value_proof_get(
+            name='fw_pos', awaitab=self.filterwheel.aget_position, expect_type=int
+        )
         if pos == fit_pos:
             inf = f'{self.id} {self.name} no need to change filter, skipping.'
             self.info_callback['stream_1'](inf)

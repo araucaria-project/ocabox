@@ -2,19 +2,20 @@ import asyncio
 import logging
 from ob.planrunner.base_subcommand import BaseSubCommand
 from typing import Callable, Dict, Any
-
 from ob.planrunner.status import PlanStatusEnum
+
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class DomeScreenLight(BaseSubCommand):
 
-    def __init__(self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable],
-                 light: bool, uobi: int, name: str = 'dome-screenlight', param: Dict[str, Any] or None = None) -> None:
+    def __init__(
+            self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable],
+            light: bool, uobi: int, name: str = 'dome-screenlight', param: Dict[str, Any] or None = None) -> None:
+
         self.light = light
-        super().__init__(id=id, info_callback=info_callback, telescope=telescope,
-                         name=name, uobi=uobi, param=param)
+        super().__init__(id=id, info_callback=info_callback, telescope=telescope, name=name, uobi=uobi, param=param)
         self.mount = self.telescope.get_mount('mount')
         self.info_dict = {'light': self.light}
         self.create_sub_command_string(**self.info_dict)
@@ -30,7 +31,6 @@ class DomeScreenLight(BaseSubCommand):
         self.info_callback['exec_json'](self.exec_json(**self.info_dict))
         logger.info(inf)
         await self.journal.info(inf)
-
         if self.light is True:
             inf = f'{self.id} {self.name} turning on.'
             self.info_callback['stream_1'](inf)
@@ -39,7 +39,6 @@ class DomeScreenLight(BaseSubCommand):
             if self.telescope.id == 'dev':
                 pass
             else:
-                # await self.mount.aput_domelamp_on()
                 do = await self.proof_put(awaitab=self.mount.aput_domelamp_on)
                 if not do:
                     self.skipped = True
@@ -56,7 +55,6 @@ class DomeScreenLight(BaseSubCommand):
             if self.telescope.id == 'dev':
                 pass
             else:
-                # await self.mount.aput_domelamp_off()
                 df = await self.proof_put(awaitab=self.mount.aput_domelamp_off)
                 if not df:
                     self.skipped = True
