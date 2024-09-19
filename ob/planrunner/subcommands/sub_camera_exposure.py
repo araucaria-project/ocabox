@@ -282,7 +282,9 @@ class CameraExposure(BaseSubCommand):
             req_dec = ''
         else:
             req_dec = self.req_dec
-        mount_type = self.gen_conf.get_value([])[self.telescope.id]['mount']['type']
+        mount_type = self.param['cfg_gen'].get_value(seq=[
+            'telescopes', self.telescope.id, 'observatory', 'components', 'mount', 'type'
+        ], source='nats')
         if mount_type == 'eq':
             rot_pos = ''
             side_of_pier = await self.value_proof_get(

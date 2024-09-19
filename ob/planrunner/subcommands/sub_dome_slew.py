@@ -54,7 +54,9 @@ class DomeSlew(BaseSubCommand):
         logger.info(f'{self.id} started')
         self.info_callback['stream_1'](f'{self.id} {self.name} started.')
         await self.journal.info(f"{self.id} {self.name} started.")
-        mount_type = self.gen_conf.get_value([])[self.telescope.id]['mount']['type']
+        mount_type = self.param['cfg_gen'].get_value(seq=[
+            'telescopes', self.telescope.id, 'observatory', 'components', 'mount', 'type'
+        ], source='nats')
         logger.debug(f'Mount type {mount_type}')
         if self.az is not None:
             az = self.az
@@ -68,15 +70,21 @@ class DomeSlew(BaseSubCommand):
                     name='mount_sideofpier', awaitab=self.mount.aget_sideofpier, expect_type=int
                 )
                 logger.info(f'Dome_eq_azimuth for ra:{ra} dec:{dec}')
-                r_dome = self.gen_conf.get_value([])[self.telescope.id]['dome']['r_dome']
-                spx = self.gen_conf.get_value([])[self.telescope.id]['dome']['spx']
-                spy = self.gen_conf.get_value([])[self.telescope.id]['dome']['spy']
-                gem = self.gen_conf.get_value([])[self.telescope.id]['dome']['gem']
-
-                logger.info(r_dome)
-                logger.info(spx)
-                logger.info(spy)
-                logger.info(gem)
+                pointing_params = self.param['cfg_gen'].get_value(seq=[
+                    'telescopes', self.telescope.id, 'observatory', 'components', 'dome', 'pointing_params'
+                ], source='nats')
+                try:
+                    r_dome = pointing_params['dome_radius']
+                    spx = pointing_params['spx']
+                    spy = pointing_params['spy']
+                    gem = pointing_params['gem']
+                except (LookupError, TypeError):
+                    inf = f'No pointing_params for eq mount in dome in general config, quitting'
+                    logger.error(inf)
+                    self.skipped = True
+                    await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
+                    self.info_callback['exec_json'](self.exec_json(**self.info_dict))
+                    return 2
                 mount_az, info_dict = dome_eq_azimuth(
                     ra=ra, dec=dec, r_dome=r_dome, spx=spx, spy=spy,
                     gem=gem, side_of_pier=side_of_pier, latitude=loc['lat'],
@@ -84,11 +92,19 @@ class DomeSlew(BaseSubCommand):
                 )
                 logger.info(f'Calculated eq dome az: {mount_az}')
                 logger.info(f'Calculated info dict eq dome az: {info_dict}')
+            elif mount_type == 'az':
+                mount_az = await self.value_proof_get(
+                    name='sub_dome_mount_az', awaitab=self.mount.aget_az, expect_type=float
+                )
             else:
-                mount_az = await self.value_proof_get(name='sub_dome_mount_az',
-                                                      awaitab=self.mount.aget_az, expect_type=float)
+                inf = f'No mount type in {self.telescope.id}, quitting'
+                logger.error(inf)
+                await self.journal.error(inf)
+                self.skipped = True
+                await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
+                self.info_callback['exec_json'](self.exec_json(**self.info_dict))
+                return 2
             dome_az = await self.value_proof_get(name='sub_dome_az', awaitab=self.dome.aget_az, expect_type=float)
-
             if (360 > abs(mount_az - dome_az) > (360 - self.follow_tol)) or \
                     0 < (abs(mount_az - dome_az) < self.follow_tol):
                 inf = f'{self.id} {self.name} in position tolerance (set az: {mount_az} dome az: {dome_az}), skipping.'
