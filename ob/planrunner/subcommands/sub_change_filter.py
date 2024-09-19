@@ -11,12 +11,12 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class ChangeFilter(BaseSubCommand):
 
     def __init__(self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable],
-                 filter: str, uobi: int,  name: str = 'change-filter', param: Dict[str, Any] or None = None) -> None:
-        self.filter = filter
+                 filter_: str, uobi: int,  name: str = 'change-filter', param: Dict[str, Any] or None = None) -> None:
+        self.filter_ = filter_
         super().__init__(id=id, info_callback=info_callback, telescope=telescope,
                          name=name, uobi=uobi, param=param)
         self.filterwheel = self.telescope.get_filterwheel()
-        self.info_dict = {'filter': self.filter}
+        self.info_dict = {'filter': self.filter_}
         self.create_sub_command_string(**self.info_dict)
 
     async def _wait_to_move(self, pos: int) -> None:
@@ -27,12 +27,12 @@ class ChangeFilter(BaseSubCommand):
                                                  awaitab=self.filterwheel.aget_position,
                                                  expect_type=int)
             if isinstance(fit_pos, int) and fit_pos > -1:
-                if fit_pos==pos:
+                if fit_pos == pos:
                     logger.info('Wait to move done')
                     break
 
     async def arun(self, step_id: str or None = None) -> int:
-        inf = f'{self.id} {self.name} {self.filter} started'
+        inf = f'{self.id} {self.name} {self.filter_} started'
         logger.info(inf)
         self.info_callback['stream_1'](inf)
         await self.journal.info(inf)
@@ -42,11 +42,11 @@ class ChangeFilter(BaseSubCommand):
         # filter_dict = await self.filterwheel.aget_names()
         filter_dict = await self.get_filters_dict()
         try:
-            pos = filter_dict[self.filter]
+            pos = filter_dict[self.filter_]
         except (LookupError, TypeError):
-            inf = f'{self.id} {self.name} filter index {self.filter} is wrong, error.'
+            inf = f'{self.id} {self.name} filter index {self.filter_} is wrong, error.'
             self.info_callback['stream_1'](
-                f'Filter index{self.filter} is wrong, {self.id} error')
+                f'Filter index{self.filter_} is wrong, {self.id} error')
             await self.journal.error(inf)
             self.info_callback['stream_5'](f'{self.id}')
             self.skipped = True
