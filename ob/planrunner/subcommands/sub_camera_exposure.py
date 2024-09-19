@@ -23,13 +23,13 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class CameraExposure(BaseSubCommand):
 
     def __init__(self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable], seq_data: 'Seq', uobi: int,
-                 type: str, filter: str, light: bool, sub_exp: int, exp_no: int, auto_exposure: bool,
+                 type: str, filter_: str, light: bool, sub_exp: int, exp_no: int, auto_exposure: bool,
                  epoch: str, observer: str, obj_name: str, req_ra: float or None = None, req_dec: float or None = None,
                  name: str = 'camera-exposure', param: Dict[str, Any] or None = None) -> None:
 
         self.seq_data = seq_data
         self.type = type
-        self.filter = filter
+        self.filter_ = filter_
         self.light = light
         self.sub_exp = sub_exp
         self.exp_no = exp_no
@@ -56,7 +56,7 @@ class CameraExposure(BaseSubCommand):
 
         self.info_dict = {
             'type': self.type,
-            'filter': filter,
+            'filter': filter_,
             'light': light,
             'sub_exp': sub_exp,
             'exp_no': exp_no,
@@ -261,17 +261,15 @@ class CameraExposure(BaseSubCommand):
         readoutmode = await self.value_proof_get(name='fitsh_cam_rm',
                                                  awaitab=self.camera.aget_readoutmode,
                                                  expect_type=int)
-        filter = await self.value_proof_get(name='fitsh_filter',
+        _filter = await self.value_proof_get(name='fitsh_filter',
                                             awaitab=self.filter_wheel.aget_position,
                                             expect_type=int)
-        filters = await self.value_proof_get(name='fitsh_filters',
-                                             awaitab=self.filter_wheel.aget_names,
-                                             expect_type=dict)
+        filters = await self.get_filters_dict()
         try:
             inv_f_map = {v: k for k, v in filters.items()}
-            filter_str = inv_f_map[filter]
+            filter_str = inv_f_map[_filter]
         except KeyError:
-            filter_str = str(self.filter)
+            filter_str = str(self.filter_)
 
         if self.req_ra is None:
             req_ra = ''
@@ -424,12 +422,6 @@ class CameraExposure(BaseSubCommand):
         sky_flat_conf = self.param['cfg_gen'].get_value(seq=[
             'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'sky_flats'
         ], source='nats')
-        # test_exposure_time = 1.0 # Test exposure time
-        # test_time_interval = 1 # Test interval
-        # test_min_max_adu = (20000, 25000) # Accepted flat adu range
-        # test_min_max_time_exp = (2, 30) # Accepted flat time range
-        # zero_level = 290.0 # Zero mean
-        # evening_factor = 1.11 # Evening factor to set comparable values from morning and evening
         try:
             test_exposure_time = sky_flat_conf['test_exp_time']
         except (LookupError, TypeError):
@@ -473,7 +465,7 @@ class CameraExposure(BaseSubCommand):
             evening = False
             ev_fact = 1
         while True:
-            inf = f'{self.id} {self.name} filter: {self.filter} starting test exposure.'
+            inf = f'{self.id} {self.name} filter: {self.filter_} starting test exposure.'
             logger.info(inf)
             await self.journal.info(inf)
             self.info_callback['stream_1'](inf)
@@ -535,7 +527,7 @@ class CameraExposure(BaseSubCommand):
             else:
                 mean = 1.0
             mean_list.append(mean)
-            inf = (f'{self.id} Test frame filter: {self.filter} mean:{round(mean, 2)}'
+            inf = (f'{self.id} Test frame filter: {self.filter_} mean:{round(mean, 2)}'
                    f' range:[{round(test_min_max_adu[0]/test_min_max_time_exp[1], 2)}-'
                    f'{round(test_min_max_adu[1]/test_min_max_time_exp[0], 2)}]')
             logger.info(inf)
@@ -558,7 +550,7 @@ class CameraExposure(BaseSubCommand):
             if mean_diff is not None:
                 # Evening
                 if evening and mean_diff < 0 and mean_min_max[1] < test_min_max_adu[0]:
-                    inf = f"{self.id} autoflat filter: {self.filter} skipped - too dark."
+                    inf = f"{self.id} autoflat filter: {self.filter_} skipped - too dark."
                     logger.info(inf)
                     await self.journal.info(inf)
                     self.info_callback['stream_1'](inf)
@@ -569,7 +561,7 @@ class CameraExposure(BaseSubCommand):
                     return 0, 1
                 # Morning
                 elif not evening and mean_diff > 0 and mean_min_max[0] > test_min_max_adu[1]:
-                    inf = f"{self.id} autoflat filter: {self.filter} skipped - too bright."
+                    inf = f"{self.id} autoflat filter: {self.filter_} skipped - too bright."
                     logger.info(inf)
                     await self.journal.info(inf)
                     self.info_callback['stream_1'](inf)

@@ -443,7 +443,7 @@ class Command(BaseSequence):
                                                             req_ra='',
                                                             req_dec='',
                                                             epoch=self.epoch,
-                                                            filter=seq_data.filter,
+                                                            filter_=seq_data.filter,
                                                             auto_exposure=False,
                                                             observer=self.observer,
                                                             seq_data=seq_data,
@@ -579,7 +579,7 @@ class Command(BaseSequence):
                                                             req_ra=self.plan_ra,
                                                             req_dec=self.plan_dec,
                                                             epoch=self.epoch,
-                                                            filter=seq_data.filter,
+                                                            filter_=seq_data.filter,
                                                             auto_exposure=seq_data.auto_exposure,
                                                             observer=self.observer,
                                                             seq_data=seq_data,
@@ -645,7 +645,7 @@ class Command(BaseSequence):
                                                             req_ra='',
                                                             req_dec='',
                                                             epoch=self.epoch,
-                                                            filter=seq_data.filter,
+                                                            filter_=seq_data.filter,
                                                             auto_exposure=False,
                                                             observer=self.observer,
                                                             seq_data=seq_data,
@@ -714,7 +714,7 @@ class Command(BaseSequence):
         f_pos = await self.value_proof_get(name='command_fw_pos',
                                            awaitab=f.aget_position,
                                            expect_type=int)
-        f_names = await f.aget_names()
+        f_names = await self.get_filters_dict()
         d_az = await self.value_proof_get(name='command_dome_az',
                                           awaitab=d.aget_az,
                                           expect_type=float)

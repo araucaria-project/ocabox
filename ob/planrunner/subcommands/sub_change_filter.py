@@ -39,19 +39,20 @@ class ChangeFilter(BaseSubCommand):
         self.started = True
         await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.running)
         self.info_callback['exec_json'](self.exec_json(**self.info_dict))
-        filter_dict = await self.filterwheel.aget_names()
+        # filter_dict = await self.filterwheel.aget_names()
+        filter_dict = await self.get_filters_dict()
         try:
             pos = filter_dict[self.filter]
-        except KeyError:
-            inf = f'{self.id} {self.name} filter index {self.filter} is wrong, skipping.'
+        except (LookupError, TypeError):
+            inf = f'{self.id} {self.name} filter index {self.filter} is wrong, error.'
             self.info_callback['stream_1'](
-                f'Filter index{self.filter} is wrong, {self.id} skipping')
-            await self.journal.warning(inf)
+                f'Filter index{self.filter} is wrong, {self.id} error')
+            await self.journal.error(inf)
             self.info_callback['stream_5'](f'{self.id}')
             self.skipped = True
-            await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.skipped)
+            await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
             self.info_callback['exec_json'](self.exec_json(**self.info_dict))
-            return 1
+            return 2
 
         fit_pos = await self.value_proof_get(name='fw_pos',
                                              awaitab=self.filterwheel.aget_position,

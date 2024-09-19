@@ -170,3 +170,15 @@ class AbstractBase(ABC):
         ex_js['c_type'] = self.c_type
         self._add_to_log_night(ex_js, {'c_type': 'command'})
         return ex_js
+
+    async def get_filters_dict(self) -> Dict[str, int] or None:
+        filers = self.param['cfg_gen'].get_value(seq=[
+            'telescopes', self.telescope.id, 'observatory', 'components', 'filterwheel', 'filters'
+        ], source='nats')
+        try:
+            return {f['name']: f['position'] for f in filers}
+        except (LookupError, TypeError):
+            inf = f'{self.id} {self.name} done.'
+            logger.error(inf)
+            await self.journal.info(inf)
+            return None
