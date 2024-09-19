@@ -11,18 +11,16 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class DomeSlew(BaseSubCommand):
 
-    def __init__(self, id: str, telescope: 'Telescope', info_callback: Dict[str, Callable],
-                 uobi: int, seq_data: 'Seq' or None = None,
-                 follow_tol: float = 3.0,
-                 az: float or None = None,
-                 slew_tolerance: float = 3.0,
-                 name: str = 'dome-slew', param: Dict[str, Any] or None = None) -> None:
+    def __init__(
+            self, id: str, telescope: 'Telescope', info_callback: Dict[str, Callable], uobi: int,
+            seq_data: 'Seq' or None = None, follow_tol: float = 3.0, az: float or None = None,
+            slew_tolerance: float = 3.0, name: str = 'dome-slew', param: Dict[str, Any] or None = None) -> None:
+
         self.seq_data = seq_data
         self.az = az
         self.follow_tol = follow_tol # TODO take from settings
         self.slew_tolerance = slew_tolerance # TODO take from settings
-        super().__init__(id=id, info_callback=info_callback, telescope=telescope,
-                         name=name, uobi=uobi, param=param)
+        super().__init__(id=id, info_callback=info_callback, telescope=telescope, name=name, uobi=uobi, param=param)
         self.dome = self.telescope.get_dome()
         self.mount = self.telescope.get_mount()
         self.info_dict = {'az': self.az, 'follow_tol': self.follow_tol}
@@ -32,9 +30,9 @@ class DomeSlew(BaseSubCommand):
         logger.info(f'Starting wait_to slew az: {azimuth}')
         while True:
             dome_az = await self.value_proof_get(name='sub_dome_az', awaitab=self.dome.aget_az, expect_type=float)
-            dome_slewing = await self.value_proof_get(name='sub_dome_slew',
-                                                      awaitab=self.dome.aget_slewing,
-                                                      expect_type=bool)
+            dome_slewing = await self.value_proof_get(
+                name='sub_dome_slew', awaitab=self.dome.aget_slewing, expect_type=bool
+            )
             await asyncio.sleep(0.5)
             if dome_az is not None and dome_slewing is False:
                 if (abs(azimuth - float(dome_az))) < self.slew_tolerance \
@@ -127,7 +125,6 @@ class DomeSlew(BaseSubCommand):
             logger.error(inf)
             await self.journal.error(inf)
             return 2
-        # await self.dome.aput_slewtoazimuth(az)
         await self._wait_to_slew(az)
         logger.info(f'{self.id} done')
         self.info_callback['stream_1'](f'{self.id} {self.name} done.')

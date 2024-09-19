@@ -137,10 +137,10 @@ class AbstractBase(ABC):
     def log_file_name(self) -> str:
         return f'log_night_{math.floor(AbstractBase.get_jd_now())}.txt'
 
-    def _add_to_log_night(self, log_line: Dict[str, Any], filter: Dict[str, Any] = None) -> None:
+    def _add_to_log_night(self, log_line: Dict[str, Any], filter_rules: Dict[str, Any] = None) -> None:
         put = True
-        if filter and len(filter) > 0:
-            for n, k in filter.items():
+        if filter_rules and len(filter_rules) > 0:
+            for n, k in filter_rules.items():
                 if n in log_line.keys():
                     if log_line[n] == k:
                         put = put * True

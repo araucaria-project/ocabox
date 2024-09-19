@@ -4,20 +4,22 @@ from ob.planrunner.base_subcommand import BaseSubCommand
 from pyaraucaria.coordinates import ra_dec_epoch, ra_dec_2_az_alt, deg_to_decimal_deg
 import random
 from typing import Callable, Dict, Any
-
 from ob.planrunner.status import PlanStatusEnum
+
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class MountSlew(BaseSubCommand):
 
-    def __init__(self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable],
-                 obj_name: str, uobi: int, epoch: str, tracking: bool,
-                 dithering: bool = False, seq_data: 'Seq' or None = None,
-                 ra: float or None = None, dec: float or None = None,
-                 az: float or None = None, alt: float or None = None,
-                 name: str = 'mount-slew', param: Dict[str, Any] or None = None) -> None:
+    def __init__(
+            self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable],
+            obj_name: str, uobi: int, epoch: str, tracking: bool,
+            dithering: bool = False, seq_data: 'Seq' or None = None,
+            ra: float or None = None, dec: float or None = None,
+            az: float or None = None, alt: float or None = None,
+            name: str = 'mount-slew', param: Dict[str, Any] or None = None) -> None:
+
         self.obj_name = obj_name
         self.seq_data = seq_data
         self.ra = ra
@@ -29,8 +31,7 @@ class MountSlew(BaseSubCommand):
         self.az = az
         self.ra_now: float or None = None
         self.dec_now: float or None = None
-        super().__init__(id=id, info_callback=info_callback, telescope=telescope,
-                         name=name, uobi=uobi, param=param)
+        super().__init__(id=id, info_callback=info_callback, telescope=telescope, name=name, uobi=uobi, param=param)
         self.mount = self.telescope.get_mount()
         self.info_dict = { 'obj_name': self.obj_name,
                             'seq_data': self.seq_data,
@@ -66,12 +67,9 @@ class MountSlew(BaseSubCommand):
             slew = await self.value_proof_get(name='mount_slew', awaitab=self.mount.aget_slewing, expect_type=bool)
 
             if ((abs(az - az_in) > 359.0) or (abs(az - az_in) < 1.0)) and (abs(alt - alt_in) < 1.0) and (slew is False):
-                # await self.mount.aput_tracking(False)
                 await self.proof_put(awaitab=self.mount.aput_tracking, track=False)
-                # await self.mount.aput_slewtoaltaz_async(az=az_in, alt=alt_in)
                 await self.proof_put(awaitab=self.mount.aput_slewtoaltaz_async, az=az_in, alt=alt_in)
                 await asyncio.sleep(0.5)
-                # await self.mount.aput_tracking(False)
                 await self.proof_put(awaitab=self.mount.aput_tracking, track=False)
                 break
             await asyncio.sleep(0.1)
@@ -129,7 +127,6 @@ class MountSlew(BaseSubCommand):
                     await self.journal.error(f"{self.id} {self.name} wrong az alt format.")
                     return 1
             if alt > mount_min_alt:
-                # await self.mount.aput_tracking(False)
                 tr0 = await self.proof_put(awaitab=self.mount.aput_tracking, track=False)
                 if not tr0:
                     self.skipped = True
@@ -138,7 +135,6 @@ class MountSlew(BaseSubCommand):
                     logger.error(inf)
                     await self.journal.error(inf)
                     return 2
-                # await self.mount.aput_slewtoaltaz_async(az=az, alt=alt)
                 sl0 = await self.proof_put(awaitab=self.mount.aput_slewtoaltaz_async, az=az, alt=alt)
                 if not sl0:
                     self.skipped = True
@@ -147,7 +143,6 @@ class MountSlew(BaseSubCommand):
                     logger.error(inf)
                     await self.journal.error(inf)
                     return 2
-                # await self.mount.aput_tracking(False)
                 tr1 = await self.proof_put(awaitab=self.mount.aput_tracking, track=False)
                 if not tr1:
                     self.skipped = True
@@ -189,19 +184,13 @@ class MountSlew(BaseSubCommand):
                 return 1
 
         elif self.ra is not None and self.dec is not None and self.dithering is False:
-
-            self.ra_now, self.dec_now = ra_dec_epoch(ra=self.ra,
-                                                     dec=self.dec,
-                                                     epoch=self.epoch)
+            self.ra_now, self.dec_now = ra_dec_epoch(ra=self.ra, dec=self.dec, epoch=self.epoch)
             await self.journal.debug(f'{self.id} {self.name} Ra now: {self.ra_now} Dec now: {self.dec_now}')
-            az, alt = ra_dec_2_az_alt(ra=self.ra_now,
-                                      dec=self.dec_now,
-                                      latitude=loc['lat'],
-                                      longitude=loc['lon'],
-                                      elevation=loc['elev'],
-                                      epoch=self.epoch)
+            az, alt = ra_dec_2_az_alt(
+                ra=self.ra_now, dec=self.dec_now, latitude=loc['lat'], longitude=loc['lon'],
+                elevation=loc['elev'], epoch=self.epoch
+            )
             if alt > mount_min_alt:
-                # await self.mount.aput_tracking(self.tracking)
                 tr3 = await self.proof_put(awaitab=self.mount.aput_tracking, track=self.tracking)
                 if not tr3:
                     self.skipped = True
@@ -210,7 +199,6 @@ class MountSlew(BaseSubCommand):
                     logger.error(inf)
                     await self.journal.error(inf)
                     return 2
-                # await self.mount.aput_slewtocoo_async(ra=float(self.ra_now), dec=float(self.dec_now))
                 sl1 = await self.proof_put(
                     awaitab=self.mount.aput_slewtocoo_async, ra=float(self.ra_now), dec=float(self.dec_now)
                 )
@@ -222,7 +210,6 @@ class MountSlew(BaseSubCommand):
                     await self.journal.error(inf)
                     return 2
                 await self._wait_to_slew_coo(ra_in=float(self.ra_now), dec_in=float(self.dec_now))
-                # await self.mount.aput_tracking(self.tracking)
                 tr4 = await self.proof_put(awaitab=self.mount.aput_tracking, track=self.tracking)
                 if not tr4:
                     self.skipped = True
@@ -253,17 +240,15 @@ class MountSlew(BaseSubCommand):
             logger.info(f'{self.id} started dither')
             ra_t = await self.value_proof_get(name='mount_ra', awaitab=self.mount.aget_ra, expect_type=float)
             dec_t = await self.value_proof_get(name='mount_dec', awaitab=self.mount.aget_dec, expect_type=float)
-            ra_d = self.ra_random_dither(ra=ra_t,
-                                         dith_val=self.seq_data.dither_distance,
-                                         mode=self.seq_data.dither_mode)
-            dec_d = self.dec_random_dither(dec=dec_t,
-                                           dith_val=self.seq_data.dither_distance,
-                                           mode=self.seq_data.dither_mode)
+            ra_d = self.ra_random_dither(
+                ra=ra_t, dith_val=self.seq_data.dither_distance, mode=self.seq_data.dither_mode
+            )
+            dec_d = self.dec_random_dither(
+                dec=dec_t, dith_val=self.seq_data.dither_distance, mode=self.seq_data.dither_mode
+            )
             await self.journal.debug(
                 f'{self.id} {self.name} RA dit: {round(ra_d - ra_t, 3)} DEC dit: {round(dec_d - dec_t, 3)}'
             )
-
-            # await self.mount.aput_tracking(self.tracking)
             tr5 = await self.proof_put(awaitab=self.mount.aput_tracking, track=self.tracking)
             if not tr5:
                 self.skipped = True
@@ -272,7 +257,6 @@ class MountSlew(BaseSubCommand):
                 logger.error(inf)
                 await self.journal.error(inf)
                 return 2
-            # await self.mount.aput_slewtocoo_async(ra=ra_d, dec=dec_d)
             sl2= await self.proof_put(awaitab=self.mount.aput_slewtocoo_async, ra=ra_d, dec=dec_d)
             if not sl2:
                 self.skipped = True
@@ -290,7 +274,6 @@ class MountSlew(BaseSubCommand):
             await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.done)
             self.info_callback['exec_json'](self.exec_json(**self.info_dict))
             return 0
-
         else:
             self.info_callback['stream_1'](f'{self.id} no coordinates, skipping')
             self.info_callback['stream_5'](f'{self.id}')
