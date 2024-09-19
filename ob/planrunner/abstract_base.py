@@ -178,7 +178,7 @@ class AbstractBase(ABC):
         try:
             return {f['name']: f['position'] for f in filers}
         except (LookupError, TypeError):
-            inf = f'{self.id} {self.name} done.'
+            inf = f'Can not take filters from cfg general'
             logger.error(inf)
             await self.journal.info(inf)
             return None
