@@ -36,7 +36,6 @@ class AbstractBase(ABC):
         self.skipped: bool = False
         self.param = param if param is not None else {}
         self.journal: MsgJournalPublisher | None = None
-        self.gen_conf = ConfigGeneral(telescope=self.telescope)
         self.get_journal()
         self.build_plan_status()
         self.command_log_pub = self.get_publish(field='planner_command_log')

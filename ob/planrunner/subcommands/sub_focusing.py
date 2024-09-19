@@ -60,8 +60,14 @@ class Focusing(BaseSubCommand):
                 return 2
             await self._wait_for_move(self.position)
         elif self.position is None and self.auto is True:
-            rang = self.gen_conf.get_value([])[self.telescope.id]['focuser']['focusing_range']
-            #rang = [14000, 17000]
+            rang_dict = self.param['cfg_gen'].get_value(seq=[
+                'telescopes', self.telescope.id, 'observatory', 'components', 'focuser', 'focusing_range'
+            ], source='nats')
+            try:
+                rang = [rang_dict['min'], rang_dict['max']]
+            except (LookupError, TypeError):
+                logger.error(f'No focusing range in focuser in general config')
+                rang = [0, 50000]
             inf = f'{self.id} {self.name} calculate focus position from {self.fits_focus_folder_actual}.'
             self.info_callback['stream_1'](inf)
             await self.journal.debug(inf)
