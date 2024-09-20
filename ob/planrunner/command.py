@@ -717,19 +717,11 @@ class Command(BaseSequence):
         m = self.telescope.get_mount()
         c = self.telescope.get_camera()
         f = self.telescope.get_filterwheel()
-        f_pos = await self.value_proof_get(name='command_fw_pos',
-                                           awaitab=f.aget_position,
-                                           expect_type=int)
+        f_pos = await self.value_proof_get(name='command_fw_pos', awaitab=f.aget_position, expect_type=int)
         f_names = await self.get_filters_dict()
-        d_az = await self.value_proof_get(name='command_dome_az',
-                                          awaitab=d.aget_az,
-                                          expect_type=float)
-        m_az = await self.value_proof_get(name='command_mount_az',
-                                          awaitab=m.aget_az,
-                                          expect_type=float)
-        m_alt = await self.value_proof_get(name='command_mount_alt',
-                                           awaitab=m.aget_alt,
-                                           expect_type=float)
+        d_az = await self.value_proof_get(name='command_dome_az', awaitab=d.aget_az, expect_type=float)
+        m_az = await self.value_proof_get(name='command_mount_az', awaitab=m.aget_az, expect_type=float)
+        m_alt = await self.value_proof_get(name='command_mount_alt', awaitab=m.aget_alt, expect_type=float)
         f = str(self.fw_named(f_pos=f_pos, f_names=f_names))
         self._cycle_time_data_build.insert_data(name='dome_az_begin', value=d_az)
         self._cycle_time_data_build.insert_data(name='mount_az_begin', value=m_az)
@@ -744,9 +736,7 @@ class Command(BaseSequence):
         skip = await self._arun(self.subcomponents, step_id=step_id)
         self._cycle_time_data_build.insert_data(name='done', value=self.done)
         self._cycle_time_data_build.insert_data(name='skipped', value=self.skipped)
-        rm1 = await self.value_proof_get(name='command_cam_rm',
-                                         awaitab=c.aget_readoutmode,
-                                         expect_type=int)
+        rm1 = await self.value_proof_get(name='command_cam_rm', awaitab=c.aget_readoutmode, expect_type=int)
         self._cycle_time_data_build.insert_data(name='readoutmode', value=rm1)
         self._cycle_time_data_build.save_to_log()
         self.info_callback['stream_5'](f'{self.id}')
