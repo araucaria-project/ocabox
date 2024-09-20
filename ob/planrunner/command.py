@@ -12,7 +12,7 @@ from ob.planrunner.subcommands.sub_dome_screenlight import DomeScreenLight
 from ob.planrunner.subcommands.sub_focusing import Focusing
 from ob.planrunner.subcommands.sub_stop import Stop
 from ob.planrunner.subcommands.sub_wait import Wait
-from ob.planrunner.cycle_time_calc.cycle_time_data_build import CycleTimeDataBuild
+from ctc import CycleTimeDataBuild
 from pyaraucaria.coordinates import ra_to_decimal, dec_to_decimal, deg_to_decimal_deg
 from pyaraucaria.date import datetime_to_julian
 from ob.planrunner.seq import Seq

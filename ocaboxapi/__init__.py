@@ -12,6 +12,7 @@ from ocaboxapi.rotator import Rotator
 from ocaboxapi.cctv import CCTV
 from ocaboxapi.guiding_controller import GuidingController
 from ob.planrunner.config_general import ConfigGeneral
+from ocaboxapi.cycle_time import CycleTime
 
 __all__ = ['Observatory',
            'Telescope',
@@ -26,5 +27,6 @@ __all__ = ['Observatory',
            'Rotator',
            'CCTV',
            'GuidingController',
-           'ConfigGeneral'
+           'ConfigGeneral',
+           'CycleTime'
            ]

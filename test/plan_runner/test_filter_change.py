@@ -1,10 +1,8 @@
 from serverish.messenger import Messenger
-
 from ob.planrunner.config_general import ConfigGeneral
-from ob.planrunner.cycle_time_calc.abstract_cycle_time import AbstractCycleTime
-from ob.planrunner.cycle_time_calc.cycle_time_calc import CycleTimeCalc
 import unittest
 import numpy as np
+
 
 from ocaboxapi import Observatory
 
