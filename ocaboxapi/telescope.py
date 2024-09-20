@@ -127,9 +127,11 @@ class Telescope(AbstractTelescope):
             self.rotators[id] = dev
             return dev
 
-    def get_cycle_time_calculator(self) -> CycleTime:
+    def get_cycle_time_calculator(self, base_folder: str = None, client_config_dict: Dict or None = None) -> CycleTime:
         if self._cycle_time_calculator is None:
-            self._cycle_time_calculator = CycleTime(telescope=self)
+            self._cycle_time_calculator = CycleTime(
+                telescope=self, base_folder=base_folder, client_config_dict=client_config_dict
+            )
         return self._cycle_time_calculator
 
     def get_guiding_controller(self) -> GuidingController:

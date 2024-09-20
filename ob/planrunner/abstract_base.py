@@ -10,7 +10,6 @@ import math
 from serverish.messenger import get_journalpublisher, get_publisher
 from serverish.messenger.msg_journal_pub import MsgJournalPublisher
 from serverish.messenger.msg_publisher import MsgPublisher
-from ob.planrunner.config_general import ConfigGeneral
 from ocaboxapi.exceptions import OcaboxServerError
 from obcom.comunication.comunication_error import CommunicationTimeoutError
 
