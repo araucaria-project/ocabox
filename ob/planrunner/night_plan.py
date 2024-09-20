@@ -3,7 +3,7 @@ import logging
 from typing import List, Any, Dict, Callable
 from ob.planrunner.base_sequence import BaseSequence
 from ob.planrunner.sequence import Sequence
-from ob.planrunner.cycle_time_calc.cycle_time_data_build import CycleTimeDataBuild
+from ctc import CycleTimeDataBuild
 from ob.planrunner.config_general import ConfigGeneral
 
 from ob.planrunner.status import PlanStatus

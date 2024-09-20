@@ -1,7 +1,7 @@
 import logging
-from ob.planrunner.cycle_time_calc.cycle_time_calc import  CycleTimeCalc
-from ob.planrunner.cycle_time_calc.cycle_time_data_clean import CycleTimeDataClean
-from ob.planrunner.cycle_time_calc.cycle_time_train import CycleTimeTrain
+from ctc import CycleTimeCalc
+from ctc import CycleTimeDataClean
+from ctc import CycleTimeTrain
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
