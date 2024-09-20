@@ -49,7 +49,7 @@ class CycleTime(CycleTimeCalc):
             try:
                 _rm_mod = \
                     self._cli_conf_dict['telescopes'][_tel_id]['observatory']['components']['camera']['readout_modes']
-                self._rm_modes = [mod['val_mhz'] for _, mod in _rm_mod.items()]
+                self._rm_modes = {_tel_id: [mod['val_mhz'] for _, mod in _rm_mod.items()]}
             except (LookupError, TypeError):
                 pass
 
