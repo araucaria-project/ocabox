@@ -1,12 +1,12 @@
 import logging
 from typing import List, Optional
 
-from ob.comunication.base_client_request_solver import BaseClientRequestSolver
+from obcom.comunication.base_client_request_solver import BaseClientRequestSolver
 from ob.comunication.client import Client
-from ob.comunication.comunication_error import CommunicationRuntimeError, CommunicationTimeoutError
-from ob.data_colection.address import AddressError
-from ob.data_colection.response_error import ResponseError
-from ob.data_colection.value_call import ValueRequest, ValueResponse
+from obcom.comunication.comunication_error import CommunicationRuntimeError, CommunicationTimeoutError
+from obcom.data_colection.address import AddressError
+from obcom.data_colection.response_error import ResponseError
+from obcom.data_colection.value_call import ValueRequest, ValueResponse
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -53,7 +53,7 @@ class ClientRequestSolver(BaseClientRequestSolver):
                 vr.append(ValueResponse('', None, False, re))
         return vr
 
-    async def ping_server(self, request_timeout: float = None):
+    async def ping_server(self, request_timeout: float = None) -> bool:
         """
         The method checks if the server responds
 
@@ -63,5 +63,11 @@ class ClientRequestSolver(BaseClientRequestSolver):
         result = await self.client.ping_server(request_timeout=request_timeout)
         return result is not None
 
-    def get_cfg(self, name_cfg: str, default=None, use_default_settings=True):
-        return self.client.get_cfg(name_cfg=name_cfg, default=default, use_default_settings=use_default_settings)
+    async def reload_nats_config(self, request_timeout: float = None) -> bool:
+        """
+        The method sends a request to the server to resend the configuration to nats.
+
+        :param request_timeout: waiting for answer timeout
+        :return: True if success
+        """
+        return await self.client.reload_nats_config(request_timeout=request_timeout)

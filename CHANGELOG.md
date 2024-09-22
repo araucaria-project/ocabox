@@ -2,8 +2,86 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
-### Added
 
+## [2.0.2]
+### Changed
+- Removed application configuration system using `confuse` and configuration files. From now on, creating a rare 
+client will require providing appropriate configuration parameters in the constructor. 
+- `Observatory` will search NATS for a predefined configuration. The existence of an open connection to nats is 
+required before using the API
+
+## [2.0.1]
+- Added support for new server method `reload_config`.
+
+## [2.0.0]
+- The project was divided into `ocabox-server`, `ocabox-common` and `ocabox` (client part) parts
+
+## [1.0.18]
+
+### Added
+- add new methods to alpaca dome driver: `domefansrunning`, `domefansrunning`, `domefansturnoff`
+### Changed
+- A site section has been added to the configuration, which contains the configuration of external applications. 
+It will be sent to nats together with the alpacas configuration. From now on, alpaca configurations will be 
+wrapped in `telescopes` sections. 
+### Fixed
+
+## [1.0.17]
+
+### Added
+- `cycle_time_calc` added sunrise and sunset
+- `planrunner` added sunrise and sunset wait, seq is possible to write seq=12x(...) now
+- `astroplan` add to poetry
+
+### Changed
+- `sub_camera_exposure` folders creation and symlinks moved to ofp
+- `nightplan` add comment use
+- `planrunner` numering is 000 instead of 00
+- `cycle_time_calc` is training not only full nights, night id is jd now
+
+### Fixed
+- evening and morning autoflat canceling
+- fixed `planrunner` wait ut
+
+## [1.0.16]
+
+### Added
+- auto skyflat evening factor add
+- cycle time api in `ocaboxapi`
+- cycle time logging
+- A mechanism has been added that will send alpaca configuration to nats at server startup
+- NATS config for `TOI_Client`
+- NATS rpc subject for all clients
+- `ocaboxapi` dome ventilators
+- `sub_camera_exposure` fits gather and saving by ofp downloader
+
+### Changed
+- skyflat dithering movement value to 8'
+- `CameraExposure` changed to header beta3, fixed autoexposure skyflat no oper. skipping, get filter to header from pos
+- `cycle_time_calc` telescope find changed, filter manage changed
+- `ocaboxapi` - `FilterWheel` jk15 get proper filter names 
+
+### Fixed
+- `cycle_time_calc` fixed first filter pos
+
+## [1.0.15] - 2023-08-14
+### Added
+- CCTV method asubscribe_ir
+- `ocaboxapi.__init__` CCTV
+- planrunner.command tracking=off or on or default
+- Added custom `CoverCalibrator` alpaca module which has correctly working methods `opencover` and `closecover`
+- Module `cycle_time_calc` added and implemented into `planrunner`
+- `planrunner` get is running info
+- `planrunner` added `get_value_proof`
+- `planrunner` camera auto exposure info added
+
+### Fixed
+- Fixed getting values from config in method `get_app_cfg()` form `Observatory` object
+- Fixed `WAIT` ut after midnight
+- Fixed `ZERO` exposition time (extended to 1s)
+- `planrunner` fixed altaz dithering
+- `cycle_time` test, altaz distance fix
+- `ocaboxapi/telescope`: `shutdown` ,`emergency_stop`, `whether_stop` fixed
 
 ## [1.0.14] - 2023-06-26
 ### Added

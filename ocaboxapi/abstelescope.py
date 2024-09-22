@@ -15,3 +15,7 @@ class AbstractTelescope:
     @property
     def tel_addr(self):
         return self.id
+
+    def get_config(self) -> dict:
+        """Method return configuration for telescope"""
+        return self.observatory.get_telescopes_configuration().get(self.tel_addr, {})

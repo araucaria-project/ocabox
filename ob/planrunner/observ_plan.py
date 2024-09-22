@@ -4,6 +4,8 @@ from typing import List, Any, Callable, Dict
 import asyncio
 from ob.planrunner.coded_error import CantOverideNightPlanError, SequenceTreeError
 from pyaraucaria.obs_plan.obs_plan_parser import ObsPlanParser
+from ob.planrunner.status import PlanStatusEnum
+
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -12,12 +14,8 @@ class ObservPlan:
 
     def __init__(self, observ_plan_id: str, telescope: 'Telescope') -> None:
         self.observ_plan_id = observ_plan_id
-        self.args = []
-        self.kwargs = {}
-        self.parent_kwargs = {}
         self.subcomponents = {}
         self.telescope = telescope
-        self.observatory = telescope.observatory
         self.parsed_plan: List[Any] or None = None
         self.plan_string: str or None = None
         self.tsk: asyncio.Task or None = None
@@ -35,6 +33,7 @@ class ObservPlan:
         self.callbacks_dict['c_commands'] = [self.empty_callback]
         self.callbacks_dict['c_sequences'] = [self.empty_callback]
         self.callbacks_dict['exec_json'] = [self.empty_callback]
+        self.callbacks_dict['time_end'] = [self.empty_callback]
 
     def empty_callback(self, value):
         pass
@@ -69,6 +68,10 @@ class ObservPlan:
         for calb in self.callbacks_dict['exec_json']:
             calb(value)
 
+    def time_end_callback(self, value):
+        for calb in self.callbacks_dict['time_end']:
+            calb(value)
+
     def add_callbacks(self) -> None:
         """
         Method set callback for plan runner information stream.
@@ -88,6 +91,7 @@ class ObservPlan:
         self.info_callback['c_commands'] = self.c_commands_callback
         self.info_callback['c_sequences'] = self.c_sequences_callback
         self.info_callback['exec_json'] = self.exec_json_callback
+        self.info_callback['time_end'] = self.time_end_callback
 
     def delete_nightplan(self, nightplan_id: str) -> None:
         """
@@ -108,7 +112,8 @@ class ObservPlan:
                         overwrite: bool = False, param: Dict[str, Any] or None = None) -> None:
         if (nightplan_id in self.subcomponents.keys()) and (overwrite is True):
             self.delete_nightplan(nightplan_id)
-            np = NightPlan(nightplan_id, nightplan_dict, self, param=param)
+            np = NightPlan(id=nightplan_id, sequence_dict=nightplan_dict,
+                           telescope=self.telescope, info_callback=self.info_callback, param=param)
             self.subcomponents[nightplan_id] = np
             logger.info(f'Night plan {nightplan_id} to {self.observ_plan_id} is overwritten')
 
@@ -116,12 +121,13 @@ class ObservPlan:
             raise CantOverideNightPlanError
 
         else:
-            np = NightPlan(nightplan_id, nightplan_dict, self, param=param)
+            np = NightPlan(id=nightplan_id, sequence_dict=nightplan_dict,
+                           telescope=self.telescope, info_callback=self.info_callback, param=param)
             self.subcomponents[nightplan_id] = np
             logger.info(f'Night plan {nightplan_id} is written')
 
     def load_nightplan_string(self, nightplan_id: str, string: str,
-                              overwrite: bool = False, param: Dict[str, Any] or None = None) -> None:
+                              overwrite: bool = False, param: Dict[str, Any] or None = None) -> bool:
         """
         :param nightplan_id: Night plan id (default: julian night date)
         :param string:
@@ -129,27 +135,42 @@ class ObservPlan:
         :return:
         """
         # TODO keep nightplans in settings, only load plans for night, else delete from memory.
+        # TODO write to journal from observ_plan
         self.plan_string = string
         self._parse_plan()
         if self.parsed_plan is not None:
             try:
                 self.write_nightplan(nightplan_id, self.parsed_plan, overwrite=overwrite, param=param)
+                return True
             except CantOverideNightPlanError:
                 logger.warning(f'Cannot overwrite night plan {nightplan_id}, please select overwrite=True')
                 self.info_callback['stream_1'](f'Cannot overwrite night plan {nightplan_id},'
                                                f' please select overwrite=True')
+                return False
             except SequenceTreeError:
                 logger.warning(f'Plan is wrong. Check the syntax.')
-                self.info_callback['stream_1'](f'Warning: Plan have syntax errors.')
+                self.info_callback['stream_1'](f'Plan have syntax errors.')
+                return False
+
+    async def aload_nightplan_string(self, nightplan_id: str, string: str,
+                                     overwrite: bool = False, param: Dict[str, Any] or None = None) -> bool:
+        self.load_nightplan_string(nightplan_id=nightplan_id, string=string, overwrite=overwrite, param=param)
+        night = self.get_nightplan(nightplan_id=nightplan_id)
+        if night is not None:
+            await night.param['plan_status'].send_all_to_nats()
+            return True
+        else:
+            info = f'Plan is not created. Check the syntax.'
+            logger.warning(info)
+            self.info_callback['stream_1'](info)
+            return False
 
     def _parse_plan(self) -> None:
         if self.plan_string:
-            parser = ObsPlanParser()
-            try:
-                self.parsed_plan = parser.convert_from_string(self.plan_string)
-                logger.debug(f'Parsed: {self.parsed_plan}')
-            except Exception as e:
-                logger.error(f'Cannot parse plan - please check the syntax')
+            # try:
+            self.parsed_plan = ObsPlanParser.convert_from_string(self.plan_string)
+            # except Exception as e:
+            #     logger.error(f'Cannot parse plan - please check the syntax, error {e}')
         else:
             logger.error(f'No plan to parse.')
 
@@ -173,7 +194,8 @@ class ObservPlan:
             self.info_callback['stream_1'](f'Night plan stopped')
             self.tsk = None
         self.tsk = None
-        self.running_nightplan = None
+        # self.running_nightplan = None
+
 
     def get_loop(self) -> Any or None:
         try:
@@ -190,10 +212,15 @@ class ObservPlan:
         :param step_id: optional, run from specified step, example: '00' or '00_01_02' or '00_02'
         :return: None
         """
-        await self.astop_nightplan()
+        if self.running_nightplan:
+            await self.astop_nightplan()
         if self.get_nightplan(nightplan_id):
             if self.tsk is None:
                 self.running_nightplan = nightplan_id
+                if self.running_nightplan in self.subcomponents.keys():
+                    self.subcomponents[self.running_nightplan].started = True
+                    self.subcomponents[self.running_nightplan].skipped = False
+                    self.subcomponents[self.running_nightplan].done = False
                 loop = self.get_loop()
                 if loop:
                     self.tsk = loop.create_task(self.arun_night(nightplan_id, step_id=step_id))
@@ -212,10 +239,27 @@ class ObservPlan:
             self.info_callback['stream_1'](f'Night plan stopped')
             self.tsk = None
         self.tsk = None
-        self.running_nightplan = None
+        if self.running_nightplan in self.subcomponents.keys():
+            self.subcomponents[self.running_nightplan].skipped = True
+        if self.running_nightplan:
+            night = self.get_nightplan(nightplan_id=self.running_nightplan)
+            await night.param['plan_status'].upd_status(id=self.running_nightplan, value=PlanStatusEnum.stop)
+            for n, m in night.param['plan_status'].status_dict.items():
+                if m['status'] == PlanStatusEnum.running:
+                    await night.param['plan_status'].upd_status(id=n, value=PlanStatusEnum.stop)
+        # self.running_nightplan = None
 
     async def arun_night(self, nightplan_id: str, step_id: str or None = None) -> None:
         await self.subcomponents[nightplan_id].arun(step_id=step_id)
 
     async def stop(self):
         await self.astop_nightplan()
+
+    def is_nightplan_running(self, nightplan_id: str) -> bool:
+        if nightplan_id in self.subcomponents.keys():
+            if self.subcomponents[nightplan_id].started is True:
+                if self.subcomponents[nightplan_id].done is True or self.subcomponents[nightplan_id].skipped is True:
+                    return False
+                else:
+                    return True
+        return False

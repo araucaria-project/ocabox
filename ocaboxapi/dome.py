@@ -1,6 +1,6 @@
 from __future__ import annotations
 import logging
-from typing import Callable
+from typing import Callable, Optional
 
 from ocaboxapi.telescopecomponent import TelescopeComponent, OcaBoxParam
 
@@ -8,6 +8,8 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class Dome(TelescopeComponent):
+    # INFO default values in param is only for class getting value e.g. Dome.slewing return default, but instance
+    # return None
 
     azimuth = OcaBoxParam(default=0.0, doc="Dome azimuth")
     shutterstatus = OcaBoxParam(default=0, doc="Dome shutter status")
@@ -15,6 +17,7 @@ class Dome(TelescopeComponent):
     slewing = OcaBoxParam(default=False, doc="Dome is moving")
     slave_on = OcaBoxParam(default=False, doc="Slave to telescope on")
     atpark = OcaBoxParam(default=False, doc="Dome at park position")
+    domefansrunning = OcaBoxParam(default=False, doc="Dome fans running")
 
 
     shutter_status_to_code = {
@@ -33,7 +36,8 @@ class Dome(TelescopeComponent):
 
     async def asubscribe_az(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing AZ from {self.tel_addr}')
-        return await self.subscribe('azimuth', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
+        return await self.subscribe('azimuth', callback=callback,
+                                    time_of_data_tolerance=time_of_data_tolerance)
 
     async def aget_shutterstatus(self) -> int:
         logger.debug(f'Getting dome shutterstatus from {self.tel_addr}')
@@ -43,7 +47,8 @@ class Dome(TelescopeComponent):
     async def asubscribe_shutterstatus(self, callback: Callable | None = None,
                                        time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing shutterstatus from {self.tel_addr}')
-        return await self.subscribe('shutterstatus', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
+        return await self.subscribe('shutterstatus', callback=callback,
+                                    time_of_data_tolerance=time_of_data_tolerance)
 
     async def aput_openshutter(self):
         logger.debug(f'Putting openshutter to {self.tel_addr}')
@@ -60,7 +65,8 @@ class Dome(TelescopeComponent):
 
     async def asubscribe_slaved(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing slaved from {self.tel_addr}')
-        return await self.subscribe('slaved', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
+        return await self.subscribe('slaved', callback=callback,
+                                    time_of_data_tolerance=time_of_data_tolerance)
 
     async def aget_slewing(self) -> bool:
         logger.debug(f'Getting dome slewing from {self.tel_addr}')
@@ -69,7 +75,8 @@ class Dome(TelescopeComponent):
 
     async def asubscribe_slewing(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing slewing from {self.tel_addr}')
-        return await self.subscribe('slewing', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
+        return await self.subscribe('slewing', callback=callback,
+                                    time_of_data_tolerance=time_of_data_tolerance)
 
     async def aget_atpark(self) -> bool:
         logger.debug(f'Getting dome atpark from {self.tel_addr}')
@@ -78,7 +85,8 @@ class Dome(TelescopeComponent):
 
     async def asubscribe_atpark(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing dome atpark from {self.tel_addr}')
-        return await self.subscribe('atpark', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
+        return await self.subscribe('atpark', callback=callback,
+                                    time_of_data_tolerance=time_of_data_tolerance)
 
     async def aput_slewtoazimuth(self, az: float) -> None:
         logger.debug(f'Putting slew to {self.tel_addr}')
@@ -98,3 +106,23 @@ class Dome(TelescopeComponent):
     async def aput_park(self) -> None:
         logger.debug(f'Putting park dome to {self.tel_addr}')
         await self.aput_value('park')
+
+    async def aput_dome_fans_turn_on(self) -> None:
+        logger.debug(f'Putting dome ventilators on to {self.tel_addr}')
+        await self.aput_value('domefansturnon')
+
+    async def aput_fans_turn_off(self) -> None:
+        logger.debug(f'Putting dome ventilators off to {self.tel_addr}')
+        await self.aput_value('domefansturnoff')
+
+    async def aget_dome_fans_running(self) -> bool:
+        logger.debug(f'Getting dome ventilators are running from {self.tel_addr}')
+        ret = await self.aget_value('domefansrunning')
+        return ret
+
+    async def asubscribe_dome_fans_running(self, callback: Optional[Callable] = None,
+                                           time_of_data_tolerance: Optional[float] = None):
+        logger.debug(f'Subscribing dome ventilators are running from {self.tel_addr}')
+        return await self.subscribe('domefansrunning',
+                                    callback=callback,
+                                    time_of_data_tolerance=time_of_data_tolerance)

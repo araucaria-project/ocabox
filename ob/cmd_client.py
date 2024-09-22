@@ -3,9 +3,9 @@ import asyncio
 import sys
 from ob.OBApp import OBApp
 from ocaboxapi.client_api import ClientAPI
-from ob.comunication.comunication_error import CommunicationRuntimeError, CommunicationTimeoutError
-from ob.data_colection.value import Value
-from ob.data_colection.value_call import ValueResponse
+from obcom.comunication.comunication_error import CommunicationRuntimeError, CommunicationTimeoutError
+from obcom.data_colection.value import Value
+from obcom.data_colection.value_call import ValueResponse
 
 
 def add_client_arguments(app: OBApp):

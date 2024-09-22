@@ -1,97 +1,87 @@
-import datetime
-
+from typing import Callable, Dict, Any
 import asyncio
 import logging
-from ob.planrunner.subcommand import SubCommand
+from ob.planrunner.base_subcommand import BaseSubCommand
+from ob.planrunner.status import PlanStatusEnum
 
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
-class ChangeFilter(SubCommand):
+class ChangeFilter(BaseSubCommand):
 
-    def __init__(self, id: str, parent: 'Command', subcommand_name: str = 'change-filter', **kwargs) -> None:
-        self.subcommand_name = subcommand_name
-        self.telescope = parent.telescope
+    def __init__(
+            self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable],
+            filter_: str, uobi: int,  name: str = 'change-filter', param: Dict[str, Any] or None = None) -> None:
+
+        self.filter_ = filter_
+        super().__init__(id=id, info_callback=info_callback, telescope=telescope, name=name, uobi=uobi, param=param)
         self.filterwheel = self.telescope.get_filterwheel()
-        self.kwargs = kwargs
-        self.id = id
-        self.started: bool = False
-        self.done: bool = False
-        self.skipped: bool = False
-        super().__init__(id=id, parent=parent, subcommand_name=subcommand_name,
-                         started=self.started, done=self.done, skipped=self.skipped, **kwargs)
+        self.info_dict = {'filter': self.filter_}
+        self.create_sub_command_string(**self.info_dict)
 
     async def _wait_to_move(self, pos: int) -> None:
+        logger.info('Wait to move...')
         while True:
-            await asyncio.sleep(0.5)
-            fit_pos = await self.get_value_position()
-            if isinstance(fit_pos, int) and fit_pos>-1:
-                if fit_pos==pos:
+            await asyncio.sleep(0.2)
+            fit_pos = await self.value_proof_get(
+                name='fw_pos', awaitab=self.filterwheel.aget_position, expect_type=int
+            )
+            if isinstance(fit_pos, int) and fit_pos > -1:
+                if fit_pos == pos:
+                    logger.info('Wait to move done')
                     break
 
-    async def get_value_position(self):
-        while True:
-            val = self.filterwheel.position
-            if isinstance(val, int):
-                return val
-            await asyncio.sleep(0.1)
-
-    async def change_filter_pos_proof(self, pos: int) -> None or int:
-        t = datetime.datetime.now()
-        try:
-            await self.filterwheel.aput_position(pos)
-            logger.info(f'{self.id} {self.subcommand_name} filter position done in {datetime.datetime.now()-t}')
-        except Exception as e:
-            logger.error(f'{self.id} {self.subcommand_name} filter position error after {datetime.datetime.now()-t}: {e}')
-            try:
-                logger.warning(f'{self.id} filter change 2-nd try')
-                await self.filterwheel.aput_position(pos)
-            except:
-                try:
-                    logger.warning(f'{self.id} filter change 3-rd try')
-                    await self.filterwheel.aput_position(pos)
-                except:
-                    logger.error(f'{self.id} filter aput_position error')
-                    return 1
-
     async def arun(self, step_id: str or None = None) -> int:
-        logger.info(f'{self.id} started')
-        self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} {self.kwargs["filter"]} started')
+        inf = f'{self.id} {self.name} {self.filter_} started'
+        logger.info(inf)
+        self.info_callback['stream_1'](inf)
+        await self.journal.info(inf)
         self.started = True
-        self.info_callback['exec_json'](self.exec_json())
-        filter_dict = await self.filterwheel.aget_names()
-        if self.kwargs["filter"] in filter_dict.keys() and self.kwargs["filter"] is not None:
-            pos = filter_dict[self.kwargs["filter"]]
-        else:
+        await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.running)
+        self.info_callback['exec_json'](self.exec_json(**self.info_dict))
+        filter_dict = await self.get_filters_dict()
+        try:
+            pos = filter_dict[self.filter_]
+        except (LookupError, TypeError):
+            inf = f'{self.id} {self.name} filter index {self.filter_} is wrong, error.'
             self.info_callback['stream_1'](
-                f'Filter index{self.kwargs["filter"]} is wrong, {self.parent.id} skipping')
+                f'Filter index{self.filter_} is wrong, {self.id} error')
+            await self.journal.error(inf)
             self.info_callback['stream_5'](f'{self.id}')
             self.skipped = True
-            self.info_callback['exec_json'](self.exec_json())
-            return 1
-        fit_pos = await self.get_value_position()
-        if pos==fit_pos:
-            self.info_callback['stream_1'](f'No need to change filter, skipping')
-            self.info_callback['stream_5'](f'{self.id}')
-            logger.info(f'{self.id} no need to change filter, skipping')
-            self.skipped = True
-            self.info_callback['exec_json'](self.exec_json())
-            return 0
+            await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
+            self.info_callback['exec_json'](self.exec_json(**self.info_dict))
+            return 2
 
-        # TODO this subcommand is freeze on aput_position -> change_filter_pos_proof
-        res = await self.change_filter_pos_proof(pos)
-        if res==1:
-            self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} filter aput_position error, skipping')
+        fit_pos = await self.value_proof_get(
+            name='fw_pos', awaitab=self.filterwheel.aget_position, expect_type=int
+        )
+        if pos == fit_pos:
+            inf = f'{self.id} {self.name} no need to change filter, skipping.'
+            self.info_callback['stream_1'](inf)
             self.info_callback['stream_5'](f'{self.id}')
-            logger.info(f'{self.id} filter aput_position error, skipping')
+            await self.journal.info(inf)
+            logger.info(inf)
             self.skipped = True
-            self.info_callback['exec_json'](self.exec_json())
-            return 1
+            await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.skipped)
+            self.info_callback['exec_json'](self.exec_json(**self.info_dict))
+            return 0
+        fp = await self.proof_put(awaitab=self.filterwheel.aput_position, pos=pos)
+        if not fp:
+            self.skipped = True
+            await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
+            inf = f'Can not execute change filter, program stopping'
+            logger.error(inf)
+            await self.journal.error(inf)
+            return 2
         await self._wait_to_move(pos)
-        logger.info(f'{self.id} done')
-        self.info_callback['stream_1'](f'{self.id} {self.subcommand_name} done')
+        inf = f'{self.id} {self.name} done.'
+        await self.journal.info(inf)
+        logger.info(inf)
+        self.info_callback['stream_1'](inf)
         self.info_callback['stream_5'](f'{self.id}')
         self.done = True
-        self.info_callback['exec_json'](self.exec_json())
+        await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.done)
+        self.info_callback['exec_json'](self.exec_json(**self.info_dict))
         return 0

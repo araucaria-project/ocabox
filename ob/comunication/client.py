@@ -1,15 +1,14 @@
 import asyncio
 import logging
 import time
-from contextlib import suppress
-
 import zmq
+from contextlib import suppress
 from typing import List
+from obcom.comunication.base_zmq_communication_object import BaseZmqCommunicationObject
+from obcom.comunication.comunication_error import CommunicationRuntimeError, CommunicationTimeoutError
+from obcom.comunication.message_serializer import MessageSerializer
+from obcom.comunication.multipart_structure import MultipartStructure
 
-from ob.comunication.base_zmq_communication_object import BaseZmqCommunicationObject
-from ob.comunication.comunication_error import CommunicationRuntimeError, CommunicationTimeoutError
-from ob.comunication.message_serializer import MessageSerializer
-from ob.comunication.multipart_structure import MultipartStructure
 from ob.util_functions.asyncio_util_functions import wait_for_psce
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -18,14 +17,27 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class Client(BaseZmqCommunicationObject):
     DEFAULT_NAME = 'DefaultClient'
     TYPE = 'client'
+    DEFAULT_HOST = "localhost"
+    DEFAULT_PORT = "5559"
+    DEFAULT_PROTOCOL = "tcp"
 
-    def __init__(self, name: str = None, port: int = None, **kwargs):
+    def __init__(self, name: str = None, port: int = None, host: str = None, **kwargs):
+        port = port if port is not None else self.DEFAULT_PORT
         super().__init__(name=name, port=port, **kwargs)
+        # connection data
+        self._host = host if host else self.DEFAULT_HOST
+        if not self._host or not isinstance(self._host, str):
+            logger.error(f"Can not get correct host ({self._host}) for {self.TYPE}")
+            raise RuntimeError
+        self._protocol = self.DEFAULT_PROTOCOL
+        if not self._host or not isinstance(self._host, str):
+            logger.error(f"Can not get correct protocol ({self._protocol}) for {self.TYPE}")
+            raise RuntimeError
         # OMQ
         self._front_socket = self.context.socket(zmq.DEALER)
         # IMPORTANT Pending messages shall be discarded immediately when the socket is closed
         self._front_socket.setsockopt(zmq.LINGER, 0)
-        connect_string = f"{self._get_cfg('protocol')}://{self._get_cfg('url')}:{self._port}"
+        connect_string = f"{self._protocol}://{self._host}:{self._port}"
         self._front_socket.connect(connect_string)
         logger.info(f'Connecting to TIC server at {connect_string}')
         # message service
@@ -270,7 +282,7 @@ class Client(BaseZmqCommunicationObject):
         # create message timeout
         if request_timeout is None:
             request_timeout = time.time() + self.default_timeout
-            logger.info(f"Timeout will be set to the default value (The request will expire in {self.default_timeout} "
+            logger.debug(f"Timeout will be set to the default value (The request will expire in {self.default_timeout} "
                         f"second)")
         request_timeout_b = MessageSerializer.pack_b(request_timeout)
         # TODO If some performance problems occurs, here it is place to change potentially unneeded deserialization
@@ -316,6 +328,33 @@ class Client(BaseZmqCommunicationObject):
             r = None
             logger.warning(f"the server returned corrupted data")
         return r
+
+    async def reload_nats_config(self, request_timeout: float = None) -> bool:
+        """
+        The method sends a request to the server to resend the configuration to nats.
+
+        :param request_timeout: waiting for answer timeout
+        :return: result of request
+        """
+        out = False
+        request = {"command": "reload_config"}
+        list_part = [MessageSerializer.pack_b(request)]
+        try:
+            response = await self._send_multipart(list_part=list_part, request_timeout=request_timeout,
+                                                  service_msg=True, no_wait=False)
+        except (CommunicationTimeoutError, CommunicationRuntimeError):
+            logger.warning(f"the server not response for reload_config request")
+            return False
+
+        if response and isinstance(response, list) and len(response) > 0:
+            result = MessageSerializer.unpack_b(response[0])
+
+            logger.debug(f"the server returned '{result.get('response')}' for reload_config request ")
+            out = result.get('response', False)
+        else:
+            out = False
+            logger.warning(f"the server returned corrupted data for request reload_config")
+        return out
 
     async def send_singlepart(self, part: bytes, request_timeout: float = None, no_wait: bool = False) -> bytes:
         """

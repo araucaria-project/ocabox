@@ -1,6 +1,8 @@
 import logging
 from typing import Callable, Dict, List, Any
 from ob.planrunner.observ_plan import ObservPlan
+from ob.planrunner.config_general import ConfigGeneral
+
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -8,6 +10,7 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class ObservPlanApi:
 
     def __init__(self, id: str, telescope: 'Telescope') -> None:
+        self.telescope = telescope
         self.observ_plan = ObservPlan(observ_plan_id=id, telescope=telescope)
         super().__init__()
 
@@ -45,7 +48,17 @@ class ObservPlanApi:
     async def astop_nightplan(self) -> None:
         await self.observ_plan.astop_nightplan()
 
+    def is_nightplan_running(self, nightplan_id: str) -> bool:
+        return self.observ_plan.is_nightplan_running(nightplan_id=nightplan_id)
 
-
-
-
+    async def aload_nightplan_string(self, nightplan_id: str, string: str,
+                                     overwrite: bool = False, param: Dict[str, Any] or None = None,
+                                     client_config_dict: Dict or None = None) -> bool:
+        if client_config_dict is not None and isinstance(client_config_dict, Dict):
+            logger.info('Gathered client config dict')
+            if not isinstance(param, Dict):
+                param = {}
+            param['cfg_gen'] = ConfigGeneral(telescope=self.telescope, client_config_dict=client_config_dict)
+        return await self.observ_plan.aload_nightplan_string(
+            nightplan_id=nightplan_id, string=string, overwrite=overwrite, param=param
+        )

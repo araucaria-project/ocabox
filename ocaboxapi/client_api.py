@@ -1,9 +1,10 @@
 import logging
-from ob.comunication.base_client_api import BaseClientAPI
+from typing import List
+
+from obcom.comunication.base_client_api import BaseClientAPI
 from ob.comunication.client import Client
 from ob.comunication.client_request_solver import ClientRequestSolver
-from ob.data_colection.tree_user import TreeUser, BaseTreeUser
-from ob.ob_config import SingletonConfig
+from obcom.data_colection.tree_user import TreeUser, BaseTreeUser
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -26,14 +27,10 @@ class ClientAPI(BaseClientAPI):
     def _CRS(self) -> ClientRequestSolver:  # todo tu jest zmiana typu po dziedziczeniu - sprawdzić czy jest to poprawne
         return self._crs
 
-    # @staticmethod
-    # def client_config():
-    #     return SingletonConfig.get_config()
+    def get_client(self):
+        return self._CRS.client
 
-    def get_cfg(self, name_cfg: str, default=None, use_default_settings=True):
-        return self._CRS.get_cfg(name_cfg, default, use_default_settings)
-
-    async def server_is_alive(self, request_timeout: float = None):
+    async def server_is_alive(self, request_timeout: float = None) -> bool:
         """
         The method checks if the server responds
 
@@ -41,3 +38,20 @@ class ClientAPI(BaseClientAPI):
         :return: True if server responds
         """
         return await self._CRS.ping_server(request_timeout=request_timeout)
+
+    async def server_reload_nats_config(self, request_timeout: float = None) -> bool:
+        """
+        The method sends a request to the server to resend the configuration to nats.
+
+        :param request_timeout: waiting for answer timeout
+        :return: True if success
+        """
+        return await self._CRS.reload_nats_config(request_timeout=request_timeout)
+
+    def get_cfg(self, name_cfg: str, default=None, use_default_settings=True):
+        #TODO: deprecated method
+        return default
+
+    def get_cfg_deep(self, name_cfg: List[str], default=None, use_default_settings=True):
+        #TODO: deprecated method
+        return default

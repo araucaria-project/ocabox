@@ -1,6 +1,8 @@
 import logging
-from typing import Dict, Any, List
-from ob.planrunner.abstract_sequence import AbstractSequence
+import time
+import re
+from typing import Dict, Any, List, Callable
+from ob.planrunner.base_sequence import BaseSequence
 from ob.planrunner.subcommands.sub_mount_slew import MountSlew
 from ob.planrunner.subcommands.sub_dome_slew import DomeSlew
 from ob.planrunner.subcommands.sub_change_filter import ChangeFilter
@@ -10,34 +12,38 @@ from ob.planrunner.subcommands.sub_dome_screenlight import DomeScreenLight
 from ob.planrunner.subcommands.sub_focusing import Focusing
 from ob.planrunner.subcommands.sub_stop import Stop
 from ob.planrunner.subcommands.sub_wait import Wait
-from pyaraucaria.coordinates import az_alt_2_ra_dec, ra_to_decimal, dec_to_decimal, deg_to_decimal_deg
-import random
-from ob.planrunner.subcommand import SubCommand
+from ctc import CycleTimeDataBuild
+from pyaraucaria.coordinates import ra_to_decimal, dec_to_decimal, deg_to_decimal_deg
+from pyaraucaria.date import datetime_to_julian
+from ob.planrunner.seq import Seq
+from ob.planrunner.base_subcommand import BaseSubCommand
 from ob.planrunner.coded_error import SequenceTreeError
+from serverish.base import dt_utcnow_array, dt_to_array, dt_from_array
+
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
-class Command(AbstractSequence):
+
+class Command(BaseSequence):
 
     TYPES = {'SKYFLAT': 'flat', 'FOCUS': 'focusing', 'DOMEFLAT': 'flat',
              'DARK': 'dark', 'ZERO': 'zero', 'OBJECT': 'science', 'WAIT': 'wait', 'STOP': 'stop', 'SNAP': 'snap'}
 
-    def __init__(self, id: str, sequence_dict: Dict[Any, Any],
-                 parent: 'Sequence' or 'NightPlan', param: Dict[str, Any] or None = None) -> None:
-        self.id = id
-        self.sequence_dict = sequence_dict
-        self.parent = parent
-        self.info_callback = parent.info_callback
-        self.args = self.build_args(self.sequence_dict)
-        self.kwargs = self.build_kwargs(sequence_dict=self.sequence_dict, info_callback=self.info_callback, id=id)
-        self.parent_kwargs = self.parent.kwargs | self.parent.parent_kwargs
-        self.command_name = self.sequence_dict['command_name']
-        self.subcomponents = {}
-        self.telescope = parent.telescope
-        self.param = param
-        self.info_callback = parent.info_callback
-        super().__init__(self.id, self.command_name, self.info_callback,
-                         observatory=self.parent.observatory, c_type='command', kwargs=self.kwargs)
+    def __init__(
+            self, id: str, sequence_dict: Dict[Any, Any], telescope: 'Telescope',
+            info_callback: Dict[str, Callable], param: Dict[str, Any] or None = None) -> None:
+
+        self._cycle_time_data_build = CycleTimeDataBuild(
+            telescope=telescope.id,
+            base_folder=telescope.observatory.get_app_cfg(key='base_cycle_time_calc_dir')
+        )
+        super().__init__(
+            id=id, name=sequence_dict['command_name'], info_callback=info_callback,
+            telescope=telescope, sequence_dict=sequence_dict, c_type='command', param=param
+        )
+        self.ctc_time = self.ctc_calc_time()
+        self.build_args(self.sequence_dict)
+        self.build_kwargs(sequence_dict=self.sequence_dict)
         self._write_subcommands()
 
     def _create_command_string(self):
@@ -45,42 +51,46 @@ class Command(AbstractSequence):
         for n in self.args:
             kw = f'{kw} {n}'
         for n in self.kwargs.keys():
-            kw = f'{kw} {n}={self.kwargs[n]}'
-        for n in self.parent_kwargs.keys():
-            kw = f'{kw} {n}={self.parent_kwargs[n]}'
-        self.info_callback['c_commands'](f'{self.id};{self.command_name};{kw}')
-        logger.info(f'{self.id} {self.command_name} {self.args} {self.kwargs} is written')
+            if n != 'seq_data':
+                kw = f'{kw} {n}={self.kwargs[n]}'
+        self.info_callback['c_commands'](
+            f'{self.id};'f'{self.name};'
+            f' {round(self.ctc_time)}s;{kw}')
+        logger.info(f'{self.id} {self.name} {self.args} {self.kwargs} is written')
+
+    def ctc_calc_time(self) -> float:
+        return self.param["cycle_time"].calc_time(command_dict=self.sequence_dict)
 
     def _write_subcommands(self) -> None:
         self._create_command_string()
+        self.param["plan_status"].upd_ctc_time(id=self.id, value=self.ctc_time)
 
-        if self.command_name == 'OBJECT':
+        if self.name == 'OBJECT':
             self._write_object_skyflat_focusing()
 
-        elif self.command_name == 'DOMEFLAT':
+        elif self.name == 'DOMEFLAT':
             self._write_domeflat()
 
-        elif self.command_name == 'FOCUS':
+        elif self.name == 'FOCUS':
             self._write_object_skyflat_focusing()
 
-        elif self.command_name == 'DARK':
+        elif self.name == 'DARK':
             self._write_zero_dark()
 
-        elif self.command_name == 'ZERO':
+        elif self.name == 'ZERO':
             self._write_zero_dark()
 
-        elif self.command_name == 'SKYFLAT':
+        elif self.name == 'SKYFLAT':
             self._write_object_skyflat_focusing()
 
-        elif self.command_name == 'WAIT':
+        elif self.name == 'WAIT':
             self._write_wait()
 
-        elif self.command_name == 'STOP':
+        elif self.name == 'STOP':
             self._write_stop()
 
-        elif self.command_name == 'SNAP':
+        elif self.name == 'SNAP':
             self._write_object_skyflat_focusing()
-
         else:
             logger.warning(f'{self.id} command name: {self.name} is wrong')
             self.info_callback['stream_1'](f'{self.id} command name: {self.name} is wrong')
@@ -109,6 +119,35 @@ class Command(AbstractSequence):
             return str(self.kwargs['epoch'])
         else:
             return f'2000'
+
+    @property
+    def dither_on(self) -> bool:
+        """
+        Do dithering or not.
+        :return: bool
+        """
+        if self.name == 'SKYFLAT':
+            try:
+                d = self.kwargs['dither']
+                if d == 'off':
+                    return False
+                else:
+                    return True
+            except KeyError:
+                return True
+
+        elif self.name in self.possible_dither:
+            try:
+                d = self.kwargs['dither']
+                if d == 'off':
+                    return False
+                else:
+                    return True
+            except KeyError:
+                return False
+
+        else:
+            return False
 
     @property
     def mirror_cover_mode(self):
@@ -142,7 +181,7 @@ class Command(AbstractSequence):
     def _op_id(self, id_next: int) -> str:
         return f'{self.id}_{self.numb(id_next)}'
 
-    def _add_comp(self, sub: SubCommand, id_next: int) -> int:
+    def _add_comp(self, sub: BaseSubCommand, id_next: int) -> int:
         self.subcomponents[f'{self.id}_{self.numb(id_next)}'] = sub
         return id_next + 1
 
@@ -178,7 +217,7 @@ class Command(AbstractSequence):
 
     @property
     def plan_az(self) -> float or None:
-        if 'alt' and 'az' in self.kwargs.keys():
+        if 'az' in self.kwargs.keys():
             try:
                 return float(self.kwargs['az'])
             except ValueError:
@@ -191,7 +230,7 @@ class Command(AbstractSequence):
 
     @property
     def plan_alt(self) -> float or None:
-        if 'alt' and 'az' in self.kwargs.keys():
+        if 'alt' in self.kwargs.keys():
             try:
                 return float(self.kwargs['alt'])
             except ValueError:
@@ -202,12 +241,45 @@ class Command(AbstractSequence):
         else:
             return None
 
+    @staticmethod
+    def multiple_seq(seq_string: str):
+        spl_x = seq_string.split('x')
+        repeat = int(spl_x[0])
+        se = spl_x[1][1:-1]
+        seq_res = ''
+        for n in range(0, repeat):
+            seq_res += f'{se},'
+        return seq_res[:-1]
+
     @property
     def plan_seq(self):
         if 'seq' in self.kwargs.keys():
-            return self._split_seq(self.kwargs['seq'])
+            if re.fullmatch(pattern=r'\d*x\(.*\)', string=self.kwargs['seq']):
+                seq_res = self.multiple_seq(self.kwargs['seq'])
+            else:
+                seq_res = self.kwargs['seq']
+            return self._split_seq(seq_res)
         else:
             return None
+
+    @staticmethod
+    def _split_seq(seq):
+        if str(seq).find(','):
+            seq_list = list(seq.split(','))
+        else:
+            seq_list = list(seq)
+        return seq_list
+
+    @staticmethod
+    def fw_named(f_pos: int, f_names: Dict) -> str or int:
+        if f_names is not None:
+            inv_f_map = {v: k for k, v in f_names.items()}
+        else:
+            inv_f_map = {}
+        if f_pos in inv_f_map.keys():
+            return inv_f_map[f_pos]
+        else:
+            return f_pos
 
     @property
     def domeflat_dome_az(self) -> float or None:
@@ -226,6 +298,13 @@ class Command(AbstractSequence):
             return None
 
     @property
+    def auto_focus(self) -> bool:
+        if 'auto_focus' in self.kwargs.keys():
+            if self.kwargs['auto_focus'] == 'on':
+                return True
+        return False
+
+    @property
     def domeflat_mount_alt(self) -> float or None:
         # TODO take this value from settings
         if self.exp_type == 'flat':
@@ -242,19 +321,49 @@ class Command(AbstractSequence):
         return ['OBJECT', 'SNAP']
 
     @property
+    def tracking(self) -> bool:
+        tracking = ['on', 'off']
+        default_tracking_on = ['SKYFLAT', 'OBJECT', 'SNAP', 'FOCUS']
+
+        if 'tracking' in self.kwargs.keys():
+            if self.kwargs['tracking'] in tracking:
+                if self.kwargs['tracking'] == 'on':
+                    return True
+                elif self.kwargs['tracking'] == 'off':
+                    return False
+                else:
+                    return False
+            else:
+                logger.warning(f'Wrong tracking value')
+                self.info_callback['stream_1'](f'{self.id} Wrong tracking value, set to off')
+                return False
+        else:
+            if self.name in default_tracking_on:
+                return True
+            else:
+                return False
+
+    @property
+    def comment(self) -> str:
+        if 'comment' in self.kwargs:
+            return self.kwargs['comment']
+        else:
+            return ''
+
+    @property
     def object_name(self) -> str:
         if not self.plan_object_name:
-            if self.command_name == 'SKYFLAT':
+            if self.name == 'SKYFLAT':
                 name = 'skyflat'
-            elif self.command_name == 'FOCUS':
+            elif self.name == 'FOCUS':
                 name = 'focusing'
-            elif self.command_name == 'DOMEFLAT':
+            elif self.name == 'DOMEFLAT':
                 name = 'domeflat'
-            elif self.command_name == 'DARK':
+            elif self.name == 'DARK':
                 name = 'dark'
-            elif self.command_name == 'ZERO':
+            elif self.name == 'ZERO':
                 name = 'zero'
-            elif self.command_name == 'SNAP':
+            elif self.name == 'SNAP':
                 name = 'snap'
             else:
                 name = ''
@@ -264,7 +373,7 @@ class Command(AbstractSequence):
 
     @property
     def exp_type(self):
-        return Command.TYPES[self.command_name]
+        return Command.TYPES[self.name]
 
     def _write_domeflat(self):
 
@@ -273,44 +382,54 @@ class Command(AbstractSequence):
         # Dome slewing to domeflat position
         if self._dome_follow is True:
             id_next = self._add_comp(DomeSlew(id=self._op_id(id_next=id_next),
-                                              parent=self,
+                                              telescope=self.telescope,
+                                              info_callback=self.info_callback,
                                               az=self.domeflat_dome_az,
+                                              param=self.param,
                                               uobi=self.uobi), id_next=id_next)
 
         # Mount slewing to domeflat position
         id_next = self._add_comp(MountSlew(id=self._op_id(id_next=id_next),
-                                           parent=self,
+                                           telescope=self.telescope,
+                                           info_callback=self.info_callback,
                                            obj_name=self.object_name,
                                            alt=self.domeflat_mount_alt,
                                            az=self.domeflat_mount_az,
-                                           tracking=False,
+                                           tracking=self.tracking,
                                            epoch=self.epoch,
+                                           param=self.param,
                                            uobi=self.uobi
                                            ), id_next=id_next)
 
         # Turn screen light on
         if self.screen_light_mode in ['auto', 'on']:
             id_next = self._add_comp(DomeScreenLight(id=self._op_id(id_next=id_next),
-                                                     parent=self,
+                                                     telescope=self.telescope,
+                                                     info_callback=self.info_callback,
                                                      light=True,
+                                                     param=self.param,
                                                      uobi=self.uobi), id_next=id_next)
 
         # Open mirror cover
         if self.mirror_cover_mode in ['auto', 'open']:
             id_next = self._add_comp(MirrorCover(id=self._op_id(id_next=id_next),
-                                                 parent=self,
+                                                 telescope=self.telescope,
+                                                 info_callback=self.info_callback,
                                                  open=True,
+                                                 param=self.param,
                                                  uobi=self.uobi), id_next=id_next)
 
         # Camera exposure sequences
         if self.plan_seq:
             for s in self.plan_seq:
-                seq_data = Seq(seq=s, parent=self)
+                seq_data = Seq(seq=s, command_kwargs=self.kwargs)
 
                 # Change filter
                 id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),
-                                                      parent=self,
-                                                      filter=seq_data.filter,
+                                                      telescope=self.telescope,
+                                                      info_callback=self.info_callback,
+                                                      filter_=seq_data.filter_,
+                                                      param=self.param,
                                                       uobi=self.uobi), id_next=id_next)
 
                 for ex in range(1, seq_data.exp_no + 1):
@@ -318,33 +437,39 @@ class Command(AbstractSequence):
 
                     # Camera exposure
                     id_next = self._add_comp(CameraExposure(id=self._op_id(id_next=id_next),
-                                                            parent=self,
+                                                            telescope=self.telescope,
+                                                            info_callback=self.info_callback,
                                                             sub_exp=ex,
-                                                            exp_time=seq_data.exp_time,
                                                             exp_no=seq_data.exp_no,
-                                                            type=self.exp_type,
+                                                            exp_type=self.exp_type,
                                                             light=True,
                                                             obj_name=self.object_name,
                                                             req_ra='',
                                                             req_dec='',
                                                             epoch=self.epoch,
-                                                            filter=seq_data.filter,
+                                                            filter_=seq_data.filter_,
                                                             auto_exposure=False,
                                                             observer=self.observer,
+                                                            seq_data=seq_data,
+                                                            param=self.param,
                                                             uobi=self.uobi), id_next=id_next)
 
         # Turning off light
         if self.screen_light_mode in ['auto', 'off']:
             id_next = self._add_comp(DomeScreenLight(id=self._op_id(id_next=id_next),
-                                                     parent=self,
+                                                     telescope=self.telescope,
+                                                     info_callback=self.info_callback,
                                                      light=False,
+                                                     param=self.param,
                                                      uobi=self.uobi), id_next=id_next)
 
         # Close mirror covers
         if self.mirror_cover_mode in ['close']:
             id_next = self._add_comp(MirrorCover(id=self._op_id(id_next=id_next),
-                                                 parent=self,
+                                                 telescope=self.telescope,
+                                                 info_callback=self.info_callback,
                                                  open=False,
+                                                 param=self.param,
                                                  uobi=self.uobi), id_next=id_next)
 
     def _write_object_skyflat_focusing(self) -> None:
@@ -352,23 +477,29 @@ class Command(AbstractSequence):
         id_next = 0
 
         # Mount slewing radec
-        if self.plan_ra and self.plan_dec:
+        if (self.plan_ra and self.plan_dec) is not None and (self.plan_az and self.plan_alt) is None:
             id_next = self._add_comp(MountSlew(id=self._op_id(id_next=id_next),
-                                                   parent=self,
-                                                   obj_name=self.object_name,
-                                                   ra=self.plan_ra,
-                                                   dec=self.plan_dec,
-                                                   epoch=self.epoch,
-                                                   uobi=self.uobi), id_next=id_next)
+                                               telescope=self.telescope,
+                                               info_callback=self.info_callback,
+                                               obj_name=self.object_name,
+                                               ra=self.plan_ra,
+                                               dec=self.plan_dec,
+                                               tracking=self.tracking,
+                                               epoch=self.epoch,
+                                               param=self.param,
+                                               uobi=self.uobi), id_next=id_next)
+
         # Mount slewing altaz
-        elif self.plan_az and self.plan_alt:
+        if (self.plan_ra and self.plan_dec) is None and (self.plan_az and self.plan_alt) is not None:
             id_next = self._add_comp(MountSlew(id=self._op_id(id_next=id_next),
-                                               parent=self,
+                                               telescope=self.telescope,
+                                               info_callback=self.info_callback,
                                                obj_name=self.object_name,
                                                alt=self.plan_alt,
                                                az=self.plan_az,
-                                               tracking=True,
+                                               tracking=self.tracking,
                                                epoch=self.epoch,
+                                               param=self.param,
                                                uobi=self.uobi), id_next=id_next)
         # No coordinates - no slewing
         else:
@@ -377,80 +508,104 @@ class Command(AbstractSequence):
         # Dome follow
         if self._dome_follow is True:
             id_next = self._add_comp(DomeSlew(id=self._op_id(id_next=id_next),
-                                              parent=self,
-                                              follow_tol=2.0,
+                                              telescope=self.telescope,
+                                              info_callback=self.info_callback,
+                                              param=self.param,
                                               uobi=self.uobi), id_next=id_next)
 
         # Mirror cover
         if self.mirror_cover_mode in ['auto', 'open']:
             id_next = self._add_comp(MirrorCover(id=self._op_id(id_next=id_next),
-                                                 parent=self,
+                                                 telescope=self.telescope,
+                                                 info_callback=self.info_callback,
                                                  open=True,
+                                                 param=self.param,
                                                  uobi=self.uobi), id_next=id_next)
 
         # Camera exposure sequences
         if self.plan_seq:
             for s in self.plan_seq:
-                seq_data = Seq(seq=s, parent=self)
+                seq_data = Seq(seq=s, command_kwargs=self.kwargs)
 
                 # Change filter
                 id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),
-                                                      parent=self,
-                                                      filter=seq_data.filter,
+                                                      telescope=self.telescope,
+                                                      info_callback=self.info_callback,
+                                                      filter_=seq_data.filter_,
+                                                      param=self.param,
                                                       uobi=self.uobi), id_next=id_next)
 
                 for ex in range(1, seq_data.exp_no + 1):
                     # Camera single sequence, single exposure
 
                     # Focusig
-                    if self.command_name == 'FOCUS':
+                    if self.name == 'FOCUS':
                         id_next = self._add_comp(Focusing(id=self._op_id(id_next=id_next),
-                                                          parent=self,
+                                                          telescope=self.telescope,
+                                                          info_callback=self.info_callback,
                                                           position=seq_data.focus_position(exp_no=ex),
+                                                          param=self.param,
                                                           uobi=self.uobi), id_next=id_next)
 
                     # Dithering
-                    if seq_data.dither_this_exp(ex=ex):
+                    if seq_data.dither_this_exp(ex=ex) is True and self.dither_on is True:
 
                         # Mount slew dithering
                         id_next = self._add_comp(MountSlew(id=self._op_id(id_next=id_next),
-                                                           parent=self,
+                                                           telescope=self.telescope,
+                                                           info_callback=self.info_callback,
                                                            obj_name=self.object_name,
-                                                           ra=seq_data.ra_dither,
-                                                           dec=seq_data.dec_dither,
+                                                           dithering=True,
+                                                           tracking=self.tracking,
                                                            epoch=self.epoch,
+                                                           seq_data=seq_data,
+                                                           param=self.param,
                                                            uobi=self.uobi), id_next=id_next)
 
                     # Dome follow between exposures
-                    if self._dome_follow is True and (ex > 1):
+                    if self._dome_follow is True:
                         id_next = self._add_comp(DomeSlew(id=self._op_id(id_next=id_next),
-                                                          parent=self,
-                                                          follow_tol=3.0,
+                                                          telescope=self.telescope,
+                                                          info_callback=self.info_callback,
+                                                          seq_data=seq_data,
+                                                          param=self.param,
                                                           uobi=self.uobi), id_next=id_next)
 
                     # Camera exposure
                     id_next = self._add_comp(CameraExposure(id=self._op_id(id_next=id_next),
-                                                            parent=self,
+                                                            telescope=self.telescope,
+                                                            info_callback=self.info_callback,
                                                             sub_exp=ex,
-                                                            exp_time=seq_data.exp_time,
                                                             exp_no=seq_data.exp_no,
-                                                            type=self.exp_type,
+                                                            exp_type=self.exp_type,
                                                             light=True,
                                                             obj_name=self.object_name,
-                                                            req_ra=seq_data.ra_final,
-                                                            req_dec=seq_data.dec_final,
+                                                            req_ra=self.plan_ra,
+                                                            req_dec=self.plan_dec,
                                                             epoch=self.epoch,
-                                                            filter=seq_data.filter,
-                                                            focus_id=seq_data.focus_id,
+                                                            filter_=seq_data.filter_,
                                                             auto_exposure=seq_data.auto_exposure,
                                                             observer=self.observer,
+                                                            seq_data=seq_data,
+                                                            param=self.param,
                                                             uobi=self.uobi), id_next=id_next)
+
+        # Focusig
+        if self.name == 'FOCUS' and self.auto_focus is True:
+            id_next = self._add_comp(Focusing(id=self._op_id(id_next=id_next),
+                                              telescope=self.telescope,
+                                              info_callback=self.info_callback,
+                                              auto=True,
+                                              param=self.param,
+                                              uobi=self.uobi), id_next=id_next)
 
         # Mirror cover close
         if self.mirror_cover_mode in ['close']:
             id_next = self._add_comp(MirrorCover(id=self._op_id(id_next=id_next),
-                                                 parent=self,
+                                                 telescope=self.telescope,
+                                                 info_callback=self.info_callback,
                                                  open=False,
+                                                 param=self.param,
                                                  uobi=self.uobi), id_next=id_next)
 
     def _write_zero_dark(self) -> None:
@@ -460,19 +615,23 @@ class Command(AbstractSequence):
         # Mirror cover
         if self.mirror_cover_mode in ['auto', 'close']:
             id_next = self._add_comp(MirrorCover(id=self._op_id(id_next=id_next),
-                                                 parent=self,
+                                                 telescope=self.telescope,
+                                                 info_callback=self.info_callback,
                                                  open=False,
+                                                 param=self.param,
                                                  uobi=self.uobi), id_next=id_next)
 
         # Camera exposure sequences
         if self.plan_seq:
             for s in self.plan_seq:
-                seq_data = Seq(seq=s, parent=self)
+                seq_data = Seq(seq=s, command_kwargs=self.kwargs)
 
                 # Change filter
                 id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),
-                                                      parent=self,
-                                                      filter=seq_data.filter,
+                                                      telescope=self.telescope,
+                                                      info_callback=self.info_callback,
+                                                      filter_=seq_data.filter_,
+                                                      param=self.param,
                                                       uobi=self.uobi), id_next=id_next)
 
                 for ex in range(1, seq_data.exp_no + 1):
@@ -480,299 +639,111 @@ class Command(AbstractSequence):
 
                     # Camera exposure
                     id_next = self._add_comp(CameraExposure(id=self._op_id(id_next=id_next),
-                                                            parent=self,
+                                                            telescope=self.telescope,
+                                                            info_callback=self.info_callback,
                                                             sub_exp=ex,
-                                                            exp_time=seq_data.exp_time,
                                                             exp_no=seq_data.exp_no,
-                                                            type=self.exp_type,
+                                                            exp_type=self.exp_type,
                                                             light=False,
                                                             obj_name=self.object_name,
                                                             req_ra='',
                                                             req_dec='',
                                                             epoch=self.epoch,
-                                                            filter=seq_data.filter,
+                                                            filter_=seq_data.filter_,
                                                             auto_exposure=False,
                                                             observer=self.observer,
+                                                            seq_data=seq_data,
+                                                            param=self.param,
                                                             uobi=self.uobi), id_next=id_next)
 
     def _write_wait(self):
         id_next = 0
+        self.param["plan_status"].upd_dynamic_time(id=self.id, value=True)
         if len(self.kwargs.keys()) == 1:
             key = list(self.kwargs.keys())[0]
             id_next = self._add_comp(Wait(id=self._op_id(id_next=id_next),
-                                          parent=self,
+                                          telescope=self.telescope,
+                                          info_callback=self.info_callback,
                                           key=key,
-                                          value=self.kwargs[key]), id_next=id_next)
+                                          value=self.kwargs[key],
+                                          param=self.param,
+                                          uobi=self.uobi), id_next=id_next)
         else:
             pass
 
     def _write_stop(self):
         id_next = 0
-        id_next = self._add_comp(Stop(id=self._op_id(id_next=id_next), parent=self), id_next=id_next)
+        id_next = self._add_comp(Stop(id=self._op_id(id_next=id_next),
+                                      telescope=self.telescope,
+                                      info_callback=self.info_callback,
+                                      param=self.param,
+                                      uobi=self.uobi), id_next=id_next)
 
-    @staticmethod
-    def _split_seq(seq):
-        if str(seq).find(','):
-            seq_list = list(seq.split(','))
+    async def send_command_log(self, time_start: list, time_stop: list, skip: int) -> None:
+        if skip == 0:
+            status = 'done'
         else:
-            seq_list = list(seq)
-        return seq_list
+            status = 'skipped'
+        if self.plan_object_name is not None:
+            object_name = self.plan_object_name
+        else:
+            object_name = ''
+        data = {
+            'object_name': object_name,
+            'uobi': self.uobi,
+            'telescope': self.telescope.id,
+            'status': status,
+            'command_dict': self.sequence_dict,
+            'time': {
+                'start_dt': dt_from_array(time_start).strftime("%Y-%m-%dT%H:%M:%S"),
+                'end_dt': dt_from_array(time_stop).strftime("%Y-%m-%dT%H:%M:%S"),
+                'start_jd': datetime_to_julian(dt_from_array(time_start)),
+                'end_jd': datetime_to_julian((dt_from_array(time_stop))),
+                'length_s': (dt_from_array(time_stop) - dt_from_array(time_start)).total_seconds()
+            }
+        }
+        try:
+            await self.command_log_pub.publish(data=data, timeout=10)
+        except TimeoutError:
+            logger.error(f'Nats publish get timeout error')
 
     async def arun(self, step_id: str or None = None) -> int:
-        self.info_callback['stream_1'](f'Command {self.id} {self.command_name} started')
-        logger.info(f'{self.id} {self.command_name} {self.args} {self.kwargs} started')
+        self.info_callback['stream_1'](f'Command {self.id} {self.name} started.')
+        t_0 = time.time()
+        dt_0 = dt_utcnow_array()
+        await self.journal.info(f'{self.id} {self.name} started.')
+        logger.info(f'{self.id} {self.name} started.')
+        d = self.telescope.get_dome()
+        m = self.telescope.get_mount()
+        c = self.telescope.get_camera()
+        f = self.telescope.get_filterwheel()
+        f_pos = await self.value_proof_get(name='command_fw_pos', awaitab=f.aget_position, expect_type=int)
+        f_names = await self.get_filters_dict()
+        d_az = await self.value_proof_get(name='command_dome_az', awaitab=d.aget_az, expect_type=float)
+        m_az = await self.value_proof_get(name='command_mount_az', awaitab=m.aget_az, expect_type=float)
+        m_alt = await self.value_proof_get(name='command_mount_alt', awaitab=m.aget_alt, expect_type=float)
+        f = str(self.fw_named(f_pos=f_pos, f_names=f_names))
+        self._cycle_time_data_build.insert_data(name='dome_az_begin', value=d_az)
+        self._cycle_time_data_build.insert_data(name='mount_az_begin', value=m_az)
+        self._cycle_time_data_build.insert_data(name='dither', value=self.dither_on)
+        self._cycle_time_data_build.insert_data(name='mount_alt_begin', value=m_alt)
+        self._cycle_time_data_build.insert_data(name='telescope', value=self.telescope.id)
+        self._cycle_time_data_build.insert_data(name='id', value=self.id)
+        self._cycle_time_data_build.insert_data(name='started', value=True)
+        self._cycle_time_data_build.insert_data_dict(self.sequence_dict)
+        self._cycle_time_data_build.insert_data(name='filter_pos', value=f)
+        self._cycle_time_data_build.save_to_log()
         skip = await self._arun(self.subcomponents, step_id=step_id)
+        self._cycle_time_data_build.insert_data(name='done', value=self.done)
+        self._cycle_time_data_build.insert_data(name='skipped', value=self.skipped)
+        rm1 = await self.value_proof_get(name='command_cam_rm', awaitab=c.aget_readoutmode, expect_type=int)
+        self._cycle_time_data_build.insert_data(name='readoutmode', value=rm1)
+        self._cycle_time_data_build.save_to_log()
         self.info_callback['stream_5'](f'{self.id}')
+        t_1 = time.time()
+        dt_1 = dt_utcnow_array()
+        await self.param['plan_status'].upd_real_time(id=self.id, value=t_1 - t_0)
+        await self.send_command_log(time_start=dt_0, time_stop=dt_1, skip=skip)
+        await self.journal.info(f'{self.id} {self.name} done.')
         logger.info(f'{self.id} done')
         return skip
-
-
-class Seq:
-
-    """
-    Class representing camera single sequence parameters
-    """
-
-    def __init__(self, seq: str, parent: Command):
-        self._seq: str = seq
-        self._focus_id: int or None = None
-        self.parent_kwargs: Dict = parent.kwargs
-        self.parent: Command = parent
-        self.set_focus_id()
-
-    @property
-    def site_coo(self) -> Dict[str, float]:
-        # TODO Take this from settings
-        return {'latitude': -24.598056, 'longitude': -70.196389, 'elevation': 2817}
-
-    @property
-    def if_radec(self) -> bool:
-        if self.parent.plan_ra and self.parent.plan_dec:
-            return True
-        else:
-            return False
-
-    def if_altaz(self) -> bool:
-        if self.parent.plan_az and self.parent.plan_alt:
-            return True
-        else:
-            return False
-
-    @staticmethod
-    def ra_random_dither(ra: float, dith_val: float, mode: str = 'basic') -> float:
-        # TODO dith_val = dith_val / cos(dec) ?
-        if mode == 'basic':
-            return ra + random.uniform(-dith_val / 60, dith_val / 60)
-
-    @staticmethod
-    def dec_random_dither(dec: float, dith_val: float, mode: str = 'basic') -> float:
-        if mode == 'basic':
-            return dec + random.uniform(-dith_val / 60, dith_val / 60)
-
-    @property
-    def ra_dither(self) -> float or None:
-        if self.dither_on:
-            if self.if_radec:
-                return self.ra_random_dither(ra=self.parent.plan_ra,
-                                             dith_val=self.dither_distance,
-                                             mode=self.dither_mode)
-            elif self.if_altaz:
-                ra, _ = az_alt_2_ra_dec(alt=self.parent.plan_alt,
-                                        az=self.parent.plan_az,
-                                        latitude=self.site_coo['latitude'],
-                                        longitude=self.site_coo['longitude'],
-                                        elevation=self.site_coo['elevation'])
-                return self.ra_random_dither(ra=ra,
-                                             dith_val=self.dither_distance,
-                                             mode=self.dither_mode)
-            else:
-                return None
-        else:
-            return None
-
-    @property
-    def dec_dither(self) -> float or None:
-        if self.dither_on:
-            if self.if_radec:
-                return self.dec_random_dither(dec=self.parent.plan_dec,
-                                              dith_val=self.dither_distance,
-                                              mode=self.dither_mode)
-            elif self.if_altaz:
-                _, dec = az_alt_2_ra_dec(alt=self.parent.plan_alt,
-                                         az=self.parent.plan_az,
-                                         latitude=self.site_coo['latitude'],
-                                         longitude=self.site_coo['longitude'],
-                                         elevation=self.site_coo['elevation'])
-                return self.dec_random_dither(dec=dec,
-                                              dith_val=self.dither_distance,
-                                              mode=self.dither_mode)
-            else:
-                return None
-        else:
-            return None
-
-    @property
-    def ra_final(self) -> float:
-        if self.dither_on:
-            return self.ra_dither
-        else:
-            return self.parent.plan_ra
-
-    @property
-    def dec_final(self) -> float:
-        if self.dither_on:
-            return self.dec_dither
-        else:
-            return self.parent.plan_dec
-
-    @property
-    def focus_id(self) -> int or None:
-        return self._focus_id
-
-    def set_focus_id(self):
-        self._focus_id = random.randrange(0, 100000)
-
-    @property
-    def focus_list(self) -> List[str] or None:
-        """
-        Input format focus_target/focus_step
-        :return: [focus_target/focus_step]
-        """
-        if 'pos' in self.parent_kwargs.keys():
-            return list(self.parent_kwargs['pos'].split('/'))
-        else:
-            return None
-
-    @property
-    def focus_target(self) -> int or None:
-        if self.focus_list:
-            return int(self.focus_list[0])
-        else:
-            return None
-
-    def focus_position(self, exp_no: int) -> float or None:
-        if self.focus_values_list:
-            return self.focus_values_list[exp_no - 1]
-        else:
-            return None
-
-    @property
-    def focus_min(self) -> int or None:
-        if self.focus_list:
-            return int(round(self.focus_target - (self.focus_step * ((self.exp_no - 1) / 2))))
-        else:
-            return None
-
-    @property
-    def focus_step(self) -> int or None:
-        if self.focus_list:
-            return int(self.focus_list[1])
-        else:
-            return None
-
-    @property
-    def focus_values_list(self) -> List[str] or None:
-        if self.focus_list:
-            f = []
-            for n in range(0, self.exp_no):
-                f.append(self.focus_min + (self.focus_step * n))
-            return f
-        else:
-            return None
-
-    @property
-    def seq_list(self) -> List[str]:
-        return list(self._seq.split('/'))
-
-    @property
-    def exp_no(self) -> int:
-        return int(self.seq_list[0])
-
-    @property
-    def filter(self) -> str or int:
-        return self.seq_list[1]
-
-    @property
-    def exp_time(self) -> float or None:
-        try:
-            return float(self.seq_list[2])
-        except ValueError:
-            return None
-
-    @property
-    def auto_exposure(self) -> bool:
-        if self.seq_list[2] == 'a':
-            return True
-        else:
-            return False
-
-    @property
-    def dither_list(self) -> List[str] or None:
-        # [dither_mode, dither_every_sub, dither_distance]
-        if 'dither' in self.parent_kwargs.keys():
-            if self.parent_kwargs['dither'] == 'none':
-                return None
-            else:
-                return list(self.parent_kwargs['dither'].split('/'))
-        else:
-            return None
-
-    @property
-    def dither_mode(self) -> str:
-        if self.dither_list:
-            return str(self.dither_list[0])
-        else:
-            # TODO get from settings
-            return 'basic'
-
-    @property
-    def dither_every_sub(self) -> int:
-        if self.dither_list:
-            return int(self.dither_list[1])
-        else:
-            # TODO get from settings
-            return 1
-
-    @property
-    def dither_distance(self) -> float:
-        if self.dither_list:
-            return float(self.dither_list[2])
-        else:
-            # TODO get from settings
-            return 1.0
-
-    @property
-    def dither_on(self) -> bool:
-        """
-        Do dithering or not.
-        :return: bool
-        """
-        if self.parent.command_name == 'SKYFLAT':
-            if 'dither' not in self.parent_kwargs.keys():
-                return True
-            elif 'dither' in self.parent_kwargs.keys() and self.parent_kwargs['dither'] != 'none':
-                return True
-            elif 'dither' in self.parent_kwargs.keys() and self.parent_kwargs['dither'] =='none':
-                return False
-            else:
-                return False
-
-        elif self.parent.command_name == self.parent.possible_dither:
-            if 'dither' not in self.parent_kwargs.keys():
-                return False
-            elif 'dither' in self.parent_kwargs.keys() and self.parent_kwargs['dither'] != 'none':
-                return True
-            elif 'dither' in self.parent_kwargs.keys() and self.parent_kwargs['dither'] == 'none':
-                return False
-            else:
-                return False
-        else:
-            return False
-
-    def dither_this_exp(self, ex: int) -> bool:
-        if (ex % self.dither_every_sub == 0) and self.dither_on and (ex > 1):
-            return True
-        else:
-            return False
-
-

@@ -13,10 +13,15 @@ from ocaboxapi.covercalibrator import CoverCalibrator
 from ocaboxapi.rotator import Rotator
 from ocaboxapi.plan import ObservationPlan
 from ocaboxapi.exceptions import OcaboxServerError
+from ocaboxapi.cycle_time import CycleTime
+from ocaboxapi.guiding_controller import GuidingController
 from typing import Dict
-from ob.comunication.comunication_error import CommunicationTimeoutError, CommunicationRuntimeError
+from obcom.comunication.comunication_error import CommunicationTimeoutError, CommunicationRuntimeError
+
+from ocaboxapi.tertiary import Tertiary
 
 logger = logging.getLogger("telescope")
+
 
 class Telescope(AbstractTelescope):
     """The Telescope maintains components of signgle telescope"""
@@ -32,9 +37,13 @@ class Telescope(AbstractTelescope):
         self.cameras = {}
         self.cctvs = {}
         self.covercalibrators = {}
-        self.rotators = {}
+        self.tertiarys = {}
         self._access_grantor = None
         self._observation_plan = None
+        self._cycle_time_calculator = None
+        self._guiding_controller = None
+        # !!! po dodaniu nowego komponentu który dziedziczy po TelescopeComponent lub Component należy uzupełnić
+        # metody unwatch_all_component() i unsubscribe_all_component()
 
     def get_mount(self, id='mount') -> Mount:
         try:
@@ -58,6 +67,14 @@ class Telescope(AbstractTelescope):
         except LookupError:
             dev = Camera(id=id, telescope=self)
             self.cameras[id] = dev
+            return dev
+
+    def get_tertiary(self, id='tertiary') -> Tertiary:
+        try:
+            return self.tertiarys[id]
+        except LookupError:
+            dev = Tertiary(id=id, telescope=self)
+            self.tertiarys[id] = dev
             return dev
 
     def get_cctv(self, id='cctv') -> CCTV:
@@ -110,6 +127,18 @@ class Telescope(AbstractTelescope):
             self.rotators[id] = dev
             return dev
 
+    def get_cycle_time_calculator(self, base_folder: str = None, client_config_dict: Dict or None = None) -> CycleTime:
+        if self._cycle_time_calculator is None:
+            self._cycle_time_calculator = CycleTime(
+                telescope=self, base_folder=base_folder, client_config_dict=client_config_dict
+            )
+        return self._cycle_time_calculator
+
+    def get_guiding_controller(self) -> GuidingController:
+        if self._guiding_controller is None:
+            self._guiding_controller = GuidingController(id='custom_guider', telescope=self)
+        return self._guiding_controller
+
     async def is_telescope_alpaca_server_available(self, request_timeout: float = None) -> Dict[str, bool]:
         """
         The method checks if the telescope alpaca server responds
@@ -117,62 +146,127 @@ class Telescope(AbstractTelescope):
         :return: True if server responds
         """
         try:
-            va = await self.observatory.get_async(f'{self.tel_addr}.mount.connected', request_timeout=request_timeout)
+            va = await self.observatory.get_async(f'{self.tel_addr}.mount.connected',
+                                                  request_timeout=request_timeout)
             if va == True or va == False:
                 return {'alpaca': True}
         except (CommunicationTimeoutError, CommunicationRuntimeError, OcaboxServerError):
             return {'alpaca': False}
 
-    async def waiting_for_value(self, current, target, tolerance, execute):
-        while True:
-            c = await current
-            if isinstance(target, bool):
-                if bool(c) == target:
-                    await execute
-                    break
-            elif isinstance(target, int):
-                if abs(int(c) - target) == tolerance:
-                    await execute
-                    break
-            elif  isinstance(target, float):
-                if abs(float(c) - target) <= tolerance:
-                    await execute
-                    break
-            else:
-                break
-
-    def _get_mount_dome_cover(self):
-        try:
-            m = self.mounts[0]
-            d = self.domes[0]
-            c = self.covercalibrators[0]
-            return m, d, c
-        except IndexError:
-            logger.warning(f"No components, please create instances")
-
     async def shutdown(self):
-        m, d, c = self._get_mount_dome_cover()
+        m = self.get_mount()
+        d = self.get_dome()
+        c = self.get_covercalibrator()
+        a = self.get_access_grantor()
+        await a.aput_break_control()
+        await a.aput_take_control(600)
+        if await m.aget_slewing():
+            await m.aput_abortslew()
+        if await d.aget_slewing():
+            await d.aput_abortslew()
         await m.aput_tracking(False)
-        await m.aput_closecover()
+        await c.aput_closecover()
+        while True:
+            current = await c.aget_coverstate()
+            if current == 1:
+                await d.aput_closeshutter()
+                break
+            await asyncio.sleep(0.1)
         await m.aput_park()
-        await self.waiting_for_value(current=m.aget_atpark(),
-                                     target=True, tolerance=None, execute=m.aput_motoroff())
-        await self.waiting_for_value(current=c.aget_calibratorstate(),
-                                     target=1, tolerance=0, execute=d.aput_closeshutter())
         await d.aput_park()
+        await asyncio.sleep(30)
+        await m.aput_motoroff()
 
     async def weather_stop(self):
-        m, d, c = self._get_mount_dome_cover()
+        m = self.get_mount()
+        d = self.get_dome()
+        c = self.get_covercalibrator()
+        a = self.get_access_grantor()
+        await a.aput_break_control()
+        await a.aput_take_control(600)
+        if await m.aget_slewing():
+            await m.aput_abortslew()
+        if await d.aget_slewing():
+            await d.aput_abortslew()
         await m.aput_tracking(False)
-        await m.aput_closecover()
         await m.aput_park()
-        await self.waiting_for_value(current=c.aget_calibratorstate(),
-                                     target=1, tolerance=0, execute=d.aput_closeshutter())
+        await c.aput_closecover()
+        while True:
+            current = await c.aget_coverstate()
+            if current == 1:
+                await d.aput_closeshutter()
+                break
+            await asyncio.sleep(0.1)
         await d.aput_park()
 
     async def emergency_stop(self):
-        m, d, c = self._get_mount_dome_cover()
+        m = self.get_mount()
+        d = self.get_dome()
+        a = self.get_access_grantor()
+        await a.aput_break_control()
+        await a.aput_take_control(600)
         await m.aput_tracking(False)
-        await m.aput_abortslew()
+        if await m.aget_slewing():
+            await m.aput_abortslew()
         await m.aput_motoroff()
-        await d.aput_abortslew()
+        if await d.aget_slewing():
+            await d.aput_abortslew()
+
+    def unsubscribe_all_component(self):
+        for comp in self.mounts.values():
+            comp.unsubscribe_all()
+        for comp in self.domes.values():
+            comp.unsubscribe_all()
+        for comp in self.rotators.values():
+            comp.unsubscribe_all()
+        for comp in self.focusers.values():
+            comp.unsubscribe_all()
+        for comp in self.filterwheels.values():
+            comp.unsubscribe_all()
+        for comp in self.cameras.values():
+            comp.unsubscribe_all()
+        for comp in self.cctvs.values():
+            comp.unsubscribe_all()
+        for comp in self.covercalibrators.values():
+            comp.unsubscribe_all()
+        for comp in self.tertiarys.values():
+            comp.unsubscribe_all()
+        if self._access_grantor:
+            self._access_grantor.unsubscribe_all()
+        if self._guiding_controller:
+            self._guiding_controller.unsubscribe_all()
+
+    def unwatch_all_component(self):
+        for comp in self.mounts.values():
+            comp.unwatch_all()
+            comp.reset_params_values()
+        for comp in self.domes.values():
+            comp.unwatch_all()
+            comp.reset_params_values()
+        for comp in self.rotators.values():
+            comp.unwatch_all()
+            comp.reset_params_values()
+        for comp in self.focusers.values():
+            comp.unwatch_all()
+            comp.reset_params_values()
+        for comp in self.filterwheels.values():
+            comp.unwatch_all()
+            comp.reset_params_values()
+        for comp in self.cameras.values():
+            comp.unwatch_all()
+            comp.reset_params_values()
+        for comp in self.cctvs.values():
+            comp.unwatch_all()
+            comp.reset_params_values()
+        for comp in self.covercalibrators.values():
+            comp.unwatch_all()
+            comp.reset_params_values()
+        for comp in self.tertiarys.values():
+            comp.unsubscribe_all()
+            comp.reset_params_values()
+        if self._access_grantor:
+            self._access_grantor.unwatch_all()
+            self._access_grantor.reset_params_values()
+        if self._guiding_controller:
+            self._guiding_controller.unwatch_all()
+            self._guiding_controller.reset_params_values()
