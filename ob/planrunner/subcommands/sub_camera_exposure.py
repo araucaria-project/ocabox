@@ -87,7 +87,11 @@ class CameraExposure(BaseSubCommand):
     @staticmethod
     async def airmass_value(alt: float) -> float or str:
         try:
-            return airmass(elevation=alt)
+            air = airmass(elevation=alt)
+            if air is None:
+                return ''
+            else:
+                return air
         except ValueError:
             return ''
 
