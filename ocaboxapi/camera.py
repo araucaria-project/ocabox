@@ -38,6 +38,8 @@ class Camera(TelescopeComponent):
     gains = OcaBoxParam(default=[0], doc="Avaliable Camera gains")
     lastexposureduration = OcaBoxParam(default=0.0, doc="Camera current exposure duration")
     lastexposurestarttime = OcaBoxParam(default=0.0, doc="Camera current exposure start time")
+    cameraxsize = OcaBoxParam(default=0, doc="Camera xsize")
+    cameraysize = OcaBoxParam(default=0, doc="Camera ysize")
 
 
     camerastate_to_code = {
@@ -305,6 +307,15 @@ class Camera(TelescopeComponent):
                                     callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
+    async def aget_cameraxsize(self) -> float:
+        logger.debug(f'Getting camera x size from {self.tel_addr}')
+        ret = await self.aget_value('cameraxsize')
+        return ret
+
+    async def aget_cameraysize(self) -> float:
+        logger.debug(f'Getting camera y size from {self.tel_addr}')
+        ret = await self.aget_value('cameraysize')
+        return ret
 
     async def aput_binx(self, binx: int) -> None:
         logger.debug(f'Putting binx to {self.tel_addr}')
