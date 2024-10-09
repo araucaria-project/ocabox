@@ -294,8 +294,15 @@ class CameraExposure(BaseSubCommand):
             )
         else:
             rot_pos = await self.value_proof_get(
-                name='fitsh_rot_pos', awaitab=self.rotator.aget_position, expect_type=float
+                name='fitsh_rot_pos', awaitab=self.rotator.aget_position, expect_type=float, n_times=1
             )
+            # if rot_pos is None:
+            #     rot_pos = await self.value_proof_get(
+            #         name='fitsh_rot_mechpos', awaitab=self.rotator.aget_mechanicalposition(),
+            #         expect_type=float, n_times=1
+            #     )
+            if rot_pos is None:
+                rot_pos = ''
             side_of_pier = ''
         instrument_name = str(await self.value_proof_get(
             name='fitsh_cam_sens_name', awaitab=self.camera.aget_sensorname, expect_type=str)
