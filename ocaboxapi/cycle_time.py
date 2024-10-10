@@ -78,11 +78,11 @@ class CycleTime(CycleTimeCalc):
 
         return _tel_id, _base_fold
 
-    def clean_and_train_on_exit(self, client_config_dict: Dict or None = None):
+    async def clean_and_train_on_exit(self, client_config_dict: Dict or None = None):
         if client_config_dict is not None:
             tel_list = self.get_telescopes_list(client_config_dict=client_config_dict)
             if tel_list is not None:
                 for t in tel_list:
                     self.provide_rm_modes(telescope_id=t, client_config_dict=client_config_dict)
-        CycleTimeDataClean.data_clean_all(base_folder=self._base_fold, rm_modes=self._rm_modes)
-        CycleTimeTrain.train_all_telesc_all_commands(base_folder=self._base_fold)
+        await CycleTimeDataClean.data_clean_all(base_folder=self._base_fold, rm_modes=self._rm_modes)
+        await CycleTimeTrain.train_all_telesc_all_commands(base_folder=self._base_fold)
