@@ -357,7 +357,7 @@ class CameraExposure(BaseSubCommand):
         )
         try:
             dat = await self.rpc_request(
-                fits_id=self.fits_file_name, header=header, dtyp=self.array_bits(rmmode=readoutmode)
+                fits_id=self.fits_file_name, header=header, dtyp=self.array_bits(rmmode=readoutmode), timeout=30
             )
         except (MessengerRequestNoResponders, MessengerRequestNoResponse, MessengerRequestTimeout):
             inf = f'{self.id} {self.name} nats rpc guider msg can not reach responder.'
@@ -488,10 +488,11 @@ class CameraExposure(BaseSubCommand):
                 return 0, 2
             await self._wait_for_subexposure(test_exposure_time)
             try:
-                dat = await self.rpc_request(fits_id=f'{round((time.time())*10)}'[-7:],
-                                             header={},
-                                             req='stats_only',
-                                             timeout=20)
+                dat = await self.rpc_request(
+                    fits_id=f'{round((time.time())*10)}'[-7:],
+                    header={},
+                    req='stats_only',
+                    timeout=30)
             except (MessengerRequestNoResponders, MessengerRequestNoResponse, MessengerRequestTimeout):
                 inf = f'{self.id} {self.name} nats rpc guider msg can not reach responder.'
                 logger.error(inf)
