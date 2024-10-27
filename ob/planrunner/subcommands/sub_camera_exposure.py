@@ -397,10 +397,10 @@ class CameraExposure(BaseSubCommand):
             return False
 
     async def _wait_for_subexposure(self, sub_time: float) -> None:
-        if sub_time >= 0.6:
+        if sub_time >= 2:
             sub_t = sub_time
         else:
-            sub_t = 1.0
+            sub_t = 2.0
         await asyncio.sleep(float(sub_t))
         while True:
             subexposure_done = await self.value_proof_get(
@@ -408,7 +408,7 @@ class CameraExposure(BaseSubCommand):
             )
             if subexposure_done is True:
                 break
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0)
 
     async def _autoexposure_exec(self) -> Tuple[float, int]:
         """
