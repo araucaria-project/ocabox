@@ -200,6 +200,8 @@ class CameraExposure(BaseSubCommand):
         inf = f'{self.id} {self.name} rpc response received.'
         logger.debug(inf)
         await self.journal.debug(inf)
+        if 'error' in met:
+            logger.error(f'Meta error: {met["error"]}')
         return dat
 
     def _get_folders_and_symlinks(self) -> None:
@@ -391,6 +393,7 @@ class CameraExposure(BaseSubCommand):
                 return False
         else:
             inf = f'{self.id} {self.name} wrong rpc response, dat is None.'
+            try
             logger.error(inf)
             await self.journal.error(inf)
             self.info_callback['stream_1'](inf)
