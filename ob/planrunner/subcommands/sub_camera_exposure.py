@@ -199,7 +199,9 @@ class CameraExposure(BaseSubCommand):
 
         inf = f'{self.id} {self.name} rpc response received.'
         logger.debug(inf)
-        await self.journal.debug(inf)
+        await self.journal.info(inf)
+        logger.info(f'Data: {dat}')
+        logger.info(f'Data: {met}')
         if 'error' in met:
             logger.error(f'Meta error: {met["error"]}')
         return dat
