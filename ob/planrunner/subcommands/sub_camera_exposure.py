@@ -397,10 +397,10 @@ class CameraExposure(BaseSubCommand):
             return False
 
     async def _wait_for_subexposure(self, sub_time: float) -> None:
-        if sub_time >= 2:
+        if sub_time >= 4.0:
             sub_t = sub_time
         else:
-            sub_t = 2.0
+            sub_t = 4.0
         await asyncio.sleep(float(sub_t))
         while True:
             subexposure_done = await self.value_proof_get(
