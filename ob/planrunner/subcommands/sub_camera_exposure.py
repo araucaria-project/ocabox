@@ -393,7 +393,6 @@ class CameraExposure(BaseSubCommand):
                 return False
         else:
             inf = f'{self.id} {self.name} wrong rpc response, dat is None.'
-            try
             logger.error(inf)
             await self.journal.error(inf)
             self.info_callback['stream_1'](inf)
