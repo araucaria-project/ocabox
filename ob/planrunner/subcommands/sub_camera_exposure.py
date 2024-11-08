@@ -489,7 +489,7 @@ class AutoFlat:
     TEST_BIN_X = 2
     TEST_BIN_Y = 2
     TEST_RM_MODE = 1
-    RM_MOD_FACTOR = 1.17
+    RM_MOD_FACTOR = 1
 
     def __init__(self) -> None:
         self.ce: CameraExposure or None = None
