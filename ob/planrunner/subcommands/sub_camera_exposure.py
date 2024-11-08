@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from asyncio import CancelledError
 from typing import Callable, Dict, Any, Optional
 from ob.planrunner.base_subcommand import BaseSubCommand
 from pyaraucaria.fits import fits_header
@@ -485,6 +486,10 @@ class CameraExposure(BaseSubCommand):
 
 class AutoFlat:
 
+    TEST_BIN_X = 2
+    TEST_BIN_Y = 2
+    TEST_RM_MODE = 0
+
     def __init__(self) -> None:
         self.ce: CameraExposure or None = None
         self.test_exposure_time: float = 1.0
@@ -500,6 +505,11 @@ class AutoFlat:
         self.saturation_factor: float = 1
         self.mean_min_max: List = []
         self.last_mean: float = 0
+        self.initial_rm_mode: Optional[int] = None
+        self.initial_bin_x: Optional[int] = None
+        self.initial_bin_y: Optional[int] = None
+        self.cameraxsize: Optional[int] = None
+        self.cameraysize: Optional[int] = None
 
     def set_camera_exposure_parent(self, camera_exposure: CameraExposure) -> None:
         self.ce = camera_exposure
@@ -605,7 +615,9 @@ class AutoFlat:
             auto_exp_time=self.test_exposure_time, **self.ce.info_dict)
         )
         if self.last_mean > self.zero_level:
-            self.last_mean = self.last_mean - self.zero_level
+            # included binning values
+            # self.last_mean = (self.last_mean / (self.TEST_BIN_X * self.TEST_BIN_Y)) - self.zero_level
+            self.last_mean = self.last_mean  - self.zero_level
         else:
             self.last_mean = 1.0
         return None, None
@@ -675,14 +687,13 @@ class AutoFlat:
                 return exposure_time, 0
         return None, None
 
-    async def auto_exposure_exec(self) -> Tuple[float, int]:
+    async def _auto_exposure_exec(self) -> Tuple[float, int]:
         """
         For filter, time, make test shot on sky with 1s exposure. If value is not what You expect wait
         some time and make test shot again until You don't get expected value of adu, then continue to make
         normal exposure with calculated length of exposure. On another sub, test shot calculation will be
         repeated, up to end.
         """
-
         if self.ce is None:
             logger.error('Parent camera_expousure not set')
             raise RuntimeError
@@ -737,3 +748,68 @@ class AutoFlat:
                 return _exp_time, _skip
 
             await asyncio.sleep(self.test_time_interval)
+
+    async def set_cameraxsize(self):
+        self.cameraxsize = await self.ce.value_proof_get(
+            name='aget_cameraxsize', awaitab=self.ce.camera.aget_cameraxsize, expect_type=int
+        )
+
+    async def set_cameraysize(self):
+        self.cameraysize = await self.ce.value_proof_get(
+            name='aget_cameraysize', awaitab=self.ce.camera.aget_cameraysize, expect_type=int
+        )
+
+    async def set_initial_rm_mode(self):
+        self.initial_rm_mode = await self.ce.value_proof_get(
+            name='aget_readoutmode', awaitab=self.ce.camera.aget_readoutmode, expect_type=int
+        )
+
+    async def set_initial_bin_x(self):
+        self.initial_bin_x = await self.ce.value_proof_get(
+            name='aget_binx', awaitab=self.ce.camera.aget_binx, expect_type=int
+        )
+
+    async def set_initial_bin_y(self):
+        self.initial_bin_y = await self.ce.value_proof_get(
+            name='aget_biny', awaitab=self.ce.camera.aget_biny, expect_type=int
+        )
+
+    async def auto_exposure_exec(self) -> Tuple[float, int]:
+
+        await asyncio.gather(*[
+            self.set_cameraxsize(),
+            self.set_cameraysize(),
+            self.set_initial_rm_mode(),
+            self.set_initial_bin_x(),
+            self.set_initial_bin_y(),
+        ])
+
+        inf = f'{self.cameraxsize} {self.cameraysize} {self.initial_rm_mode} {self.initial_bin_x} {self.initial_bin_y}'
+        logger.info(inf)
+        await self.ce.journal.info(inf)
+
+        try:
+            exe = await self.ce.proof_put(awaitab=self.ce.camera.aput_readoutmode, romode=self.TEST_RM_MODE)
+            exe = await self.ce.proof_put(awaitab=self.ce.camera.aput_binx, binx=self.TEST_BIN_X)
+            exe = await self.ce.proof_put(awaitab=self.ce.camera.aput_biny, biny=self.TEST_BIN_Y)
+            exe = await self.ce.proof_put(
+                awaitab=self.ce.camera.aput_numx, numx=int(self.cameraxsize / self.TEST_BIN_X)
+            )
+            exe = await self.ce.proof_put(
+                awaitab=self.ce.camera.aput_numy, numy=int(self.cameraysize / self.TEST_BIN_Y)
+            )
+            _exp_time, _skip = await self._auto_exposure_exec()
+            return _exp_time, _skip
+        except CancelledError:
+            pass
+        finally:
+            inf = 'Setting rm mode and binning back to initial values'
+            logger.info(inf)
+            await self.ce.journal.info(inf)
+            # TODO here be sure that camera is not exposing anymore, so wait until finish exposing (to set params)
+
+            exe = await self.ce.proof_put(awaitab=self.ce.camera.aput_readoutmode, romode=self.initial_rm_mode)
+            exe = await self.ce.proof_put(awaitab=self.ce.camera.aput_binx, binx=self.initial_bin_x)
+            exe = await self.ce.proof_put(awaitab=self.ce.camera.aput_biny, biny=self.initial_bin_y)
+            exe = await self.ce.proof_put(awaitab=self.ce.camera.aput_numx, numx=self.cameraxsize)
+            exe = await self.ce.proof_put(awaitab=self.ce.camera.aput_numy, numy=self.cameraysize)
