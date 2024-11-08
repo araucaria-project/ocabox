@@ -616,7 +616,7 @@ class AutoFlat:
         )
         if self.last_mean > self.zero_level:
             # included binning values
-            self.last_mean = (self.last_mean / (self.TEST_BIN_X * self.TEST_BIN_Y)) - self.zero_level
+            self.last_mean = (self.last_mean - self.zero_level) / (self.TEST_BIN_X * self.TEST_BIN_Y)
             # self.last_mean = self.last_mean  - self.zero_level
         else:
             self.last_mean = 1.0
