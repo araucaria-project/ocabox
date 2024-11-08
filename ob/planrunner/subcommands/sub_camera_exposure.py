@@ -510,6 +510,7 @@ class AutoFlat:
         self.initial_bin_y: Optional[int] = None
         self.cameraxsize: Optional[int] = None
         self.cameraysize: Optional[int] = None
+        self.rm_mode_factor = 1.17
 
     def set_camera_exposure_parent(self, camera_exposure: CameraExposure) -> None:
         self.ce = camera_exposure
@@ -616,7 +617,8 @@ class AutoFlat:
         )
         if self.last_mean > self.zero_level:
             # included binning values
-            self.last_mean = (self.last_mean - self.zero_level) / (self.TEST_BIN_X * self.TEST_BIN_Y)
+            self.last_mean = (self.last_mean - self.zero_level) \
+                             * self.rm_mode_factor / (self.TEST_BIN_X * self.TEST_BIN_Y)
             # self.last_mean = self.last_mean  - self.zero_level
         else:
             self.last_mean = 1.0
