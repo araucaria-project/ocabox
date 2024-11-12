@@ -581,7 +581,8 @@ class AutoFlat:
                 fits_id=f'{round((time.time()) * 10)}'[-7:],
                 header={},
                 req='stats_only',
-                timeout=30)
+                timeout=30
+            )
         except (MessengerRequestNoResponders, MessengerRequestNoResponse, MessengerRequestTimeout):
             inf = f'{self.ce.id} {self.ce.name} nats rpc msg can not reach responder.'
             logger.error(inf)
@@ -776,6 +777,42 @@ class AutoFlat:
             name='aget_biny', awaitab=self.ce.camera.aget_biny, expect_type=int
         )
 
+    async def auto_exposure_exec_no_rm_bin(self) -> Tuple[float, int]:
+        _exp_time, _skip = await self._auto_exposure_exec()
+        return _exp_time, _skip
+
+    async def _wait_for_cam_params(
+            self, readoutmode: int, bin_x: int, bin_y: int, numx: int, numy: int,
+            timeout: float = 5.0) -> bool:
+        _start_time = time.time()
+        while True:
+            c_par = await asyncio.gather(*[
+
+                self.ce.value_proof_get(
+                    name='aget_readoutmode', awaitab=self.ce.camera.aget_readoutmode, expect_type=int
+                ),
+                self.ce.value_proof_get(
+                    name='aget_binx', awaitab=self.ce.camera.aget_binx, expect_type=int
+                ),
+                self.ce.value_proof_get(
+                    name='aget_biny', awaitab=self.ce.camera.aget_biny, expect_type=int
+                ),
+                self.ce.value_proof_get(
+                    name='aget_numx', awaitab=self.ce.camera.aget_numx, expect_type=int
+                ),
+                self.ce.value_proof_get(
+                    name='aget_numy', awaitab=self.ce.camera.aget_numy, expect_type=int
+                )
+            ])
+            if c_par[0] == readoutmode and c_par[1] == bin_x and c_par[2] == bin_y and \
+                    c_par[3] == numx and c_par[4] == numy:
+                return True
+            if time.time() > _start_time + timeout:
+                logger.error('Wait_for_cam_params timeout')
+                break
+            await asyncio.sleep(0)
+        return False
+
     async def auto_exposure_exec(self) -> Tuple[float, int]:
 
         await asyncio.gather(*[
@@ -786,20 +823,29 @@ class AutoFlat:
             self.set_initial_bin_y(),
         ])
 
-        inf = f'{self.cameraxsize} {self.cameraysize} {self.initial_rm_mode} {self.initial_bin_x} {self.initial_bin_y}'
+        inf = (f'x: {self.cameraxsize} y: {self.cameraysize} rm: {self.initial_rm_mode}'
+               f' binx: {self.initial_bin_x} biny: {self.initial_bin_y}')
         logger.info(inf)
         await self.ce.journal.info(inf)
 
+
         try:
-            exe = await self.ce.proof_put(awaitab=self.ce.camera.aput_readoutmode, romode=self.TEST_RM_MODE)
-            exe = await self.ce.proof_put(awaitab=self.ce.camera.aput_binx, binx=self.TEST_BIN_X)
-            exe = await self.ce.proof_put(awaitab=self.ce.camera.aput_biny, biny=self.TEST_BIN_Y)
-            exe = await self.ce.proof_put(
-                awaitab=self.ce.camera.aput_numx, numx=int(self.cameraxsize / self.TEST_BIN_X)
+            await asyncio.gather(*[
+                self.ce.proof_put(awaitab=self.ce.camera.aput_readoutmode, romode=self.TEST_RM_MODE),
+                self.ce.proof_put(awaitab=self.ce.camera.aput_binx, binx=self.TEST_BIN_X),
+                self.ce.proof_put(awaitab=self.ce.camera.aput_biny, biny=self.TEST_BIN_Y),
+                self.ce.proof_put(awaitab=self.ce.camera.aput_numx, numx=int(self.cameraxsize / self.TEST_BIN_X)),
+                self.ce.proof_put(awaitab=self.ce.camera.aput_numy, numy=int(self.cameraysize / self.TEST_BIN_Y))
+            ])
+            ok = await self._wait_for_cam_params(
+                readoutmode=self.TEST_RM_MODE,
+                bin_x=self.TEST_BIN_X,
+                bin_y=self.TEST_BIN_Y,
+                numx=int(self.cameraxsize / self.TEST_BIN_X),
+                numy=int(self.cameraysize / self.TEST_BIN_Y)
             )
-            exe = await self.ce.proof_put(
-                awaitab=self.ce.camera.aput_numy, numy=int(self.cameraysize / self.TEST_BIN_Y)
-            )
+            if not ok:
+                return 0, 0
             _exp_time, _skip = await self._auto_exposure_exec()
             return _exp_time, _skip
         except CancelledError:
@@ -808,10 +854,20 @@ class AutoFlat:
             inf = 'Setting rm mode and binning back to initial values'
             logger.info(inf)
             await self.ce.journal.info(inf)
-            # TODO here be sure that camera is not exposing anymore, so wait until finish exposing (to set params)
+            await asyncio.gather(*[
+                self.ce.proof_put(awaitab=self.ce.camera.aput_readoutmode, romode=self.initial_rm_mode),
+                self.ce.proof_put(awaitab=self.ce.camera.aput_binx, binx=self.initial_bin_x),
+                self.ce.proof_put(awaitab=self.ce.camera.aput_biny, biny=self.initial_bin_y),
+                self.ce.proof_put(awaitab=self.ce.camera.aput_numx, numx=self.cameraxsize),
+                self.ce.proof_put(awaitab=self.ce.camera.aput_numy, numy=self.cameraysize)
+            ])
 
-            exe = await self.ce.proof_put(awaitab=self.ce.camera.aput_readoutmode, romode=self.initial_rm_mode)
-            exe = await self.ce.proof_put(awaitab=self.ce.camera.aput_binx, binx=self.initial_bin_x)
-            exe = await self.ce.proof_put(awaitab=self.ce.camera.aput_biny, biny=self.initial_bin_y)
-            exe = await self.ce.proof_put(awaitab=self.ce.camera.aput_numx, numx=self.cameraxsize)
-            exe = await self.ce.proof_put(awaitab=self.ce.camera.aput_numy, numy=self.cameraysize)
+            ok = await self._wait_for_cam_params(
+                readoutmode=self.initial_rm_mode,
+                bin_x=self.initial_bin_x,
+                bin_y=self.initial_bin_y,
+                numx=self.cameraxsize,
+                numy=self.cameraysize
+            )
+            if not ok:
+                return 0, 1
