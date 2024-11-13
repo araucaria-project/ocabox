@@ -847,6 +847,7 @@ class AutoFlat:
             if not ok:
                 # TODO Logging errors here
                 return 0, 2
+            await asyncio.sleep(1)
             _exp_time, _skip = await self._auto_exposure_exec()
             return _exp_time, _skip
         except CancelledError:
@@ -873,6 +874,8 @@ class AutoFlat:
             if not ok:
                 # TODO Logging errors here
                 return 0, 2
+
+            await asyncio.sleep(1)
 
     async def exec(self, rm_bin_option: bool = True) -> Tuple[float, int]:
         if rm_bin_option:
