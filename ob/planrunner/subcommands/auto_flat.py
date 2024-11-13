@@ -29,6 +29,7 @@ class AutoFlatNoTest:
         self.ts_start: List[float] = []
         self.exposure: List[float] = []
         self.saturation: List[float] = []
+        self.auto_exp_sub_no = 0
 
     def set_camera_exposure_parent(self, camera_exposure: Any) -> None:
         self.ce = camera_exposure
@@ -133,29 +134,6 @@ class AutoFlatNoTest:
 
         return _new_exposure_min, _new_exposure_max
 
-        # self.test_min_max_time_exp
-
-        # if self.test_min_max_adu[0] - self.mean_min_max[1] < 0 < self.test_min_max_adu[1] - self.mean_min_max[0]:
-        #     if self.mean_min_max[0] < self.test_min_max_adu[0]:
-        #         exposure_time = (self.test_min_max_adu[0] / self.last_mean) * self.saturation_factor
-        #         inf = (f"{self.ce.id} {self.ce.name} calc_exp_time:{round(exposure_time, 1)},"
-        #                f" expect_adu:{round(exposure_time * self.last_mean, 1)}")
-        #         logger.info(inf)
-        #         await self.ce.journal.info(inf)
-        #         self.ce.info_callback['stream_1'](inf)
-        #
-        #         return exposure_time, 0
-        #     else:
-        #         exposure_time = (self.mean_min_max[0] / self.last_mean) * self.saturation_factor
-        #         inf = (f"{self.ce.id} calc_exp_time:{round(exposure_time, 1)},"
-        #                f" expect_adu:{round(exposure_time * self.last_mean, 1)}")
-        #         logger.info(inf)
-        #         await self.ce.journal.info(inf)
-        #         self.ce.info_callback['stream_1'](inf)
-
-        #         return exposure_time, 0
-        # return None, None
-
     async def _evaluate_exposure_time(
             self, exposure_min: float, exposure_max: float) -> Tuple[float, float] or Tuple[None, None]:
 
@@ -166,13 +144,33 @@ class AutoFlatNoTest:
             self.ce.info_callback['stream_1'](inf)
             return exposure_min, 0
         elif exposure_min < self.range_min_max_time_exp[0] and exposure_max < self.range_min_max_time_exp[0]:
-            # TODO here stop sequence if not worth it
-            return None, None
+            if not self.evening:
+                inf = f"{self.ce.id} auto skyflat filter: {self.ce.filter_} skipped - too bright."
+                logger.info(inf)
+                await self.ce.journal.info(inf)
+                self.ce.info_callback['stream_1'](inf)
+                self.ce.skipped = True
+                await self.ce.param['plan_status'].upd_status(id=self.ce.id, value=PlanStatusEnum.skipped)
+                self.ce.info_callback['exec_json'](self.ce.exec_json(**self.ce.info_dict))
+                self.ce.seq_data.skip = True
+                return 0, 1
+            else:
+                return None, None
         elif exposure_max > self.range_min_max_time_exp[1] and exposure_min > self.range_min_max_time_exp[1]:
-            # TODO here stop sequence if not worth it
-            return None, None
+            if self.evening:
+                inf = f"{self.ce.id} auto skyflat filter: {self.ce.filter_} skipped - too dark."
+                logger.info(inf)
+                await self.ce.journal.info(inf)
+                self.ce.info_callback['stream_1'](inf)
+                self.ce.skipped = True
+                await self.ce.param['plan_status'].upd_status(id=self.ce.id, value=PlanStatusEnum.skipped)
+                self.ce.info_callback['exec_json'](self.ce.exec_json(**self.ce.info_dict))
+                self.ce.seq_data.skip = True
+                return 0, 1
+            else:
+                return None, None
         elif exposure_min < self.range_min_max_time_exp[0] and exposure_max < self.range_min_max_time_exp[1]:
-            inf = f"{self.ce.id} {self.ce.name} calc_exp_time:{round(exposure_min, 1)}"
+            inf = f"{self.ce.id} {self.ce.name} calc_exp_time:{round(self.range_min_max_time_exp[0], 1)}"
             logger.info(inf)
             await self.ce.journal.info(inf)
             self.ce.info_callback['stream_1'](inf)
@@ -180,10 +178,76 @@ class AutoFlatNoTest:
         else:
             return None, None
 
+    async def _run_test_exposure(self) -> bool:
+
+        inf = f'{self.ce.id} {self.ce.name} filter: {self.ce.filter_} starting test exposure.'
+        logger.info(inf)
+        await self.ce.journal.info(inf)
+        self.ce.info_callback['stream_1'](inf)
+
+        self.auto_exp_sub_no += 1
+
+        _ts_start = time.time()
+        exe = await self.ce.proof_put(
+            awaitab=self.ce.camera.aput_startexposure, duration=self.test_exposure_time, light=self.ce.light
+        )
+
+        if not exe:
+            self.ce.skipped = True
+            await self.ce.param['plan_status'].upd_status(id=self.ce.id, value=PlanStatusEnum.error)
+            inf = f'Can not execute start_exposure, program stopping'
+            logger.error(inf)
+            await self.ce.journal.error(inf)
+            return False
+        await self.ce.wait_for_subexposure(self.test_exposure_time)
+        try:
+            dat = await self.ce.rpc_request(
+                fits_id=f'{round((time.time()) * 10)}'[-7:],
+                header={},
+                req='stats_only',
+                timeout=30
+            )
+        except (MessengerRequestNoResponders, MessengerRequestNoResponse, MessengerRequestTimeout):
+            inf = f'{self.ce.id} {self.ce.name} nats rpc msg can not reach responder.'
+            logger.error(inf)
+            await self.ce.journal.error(inf)
+            self.ce.info_callback['stream_1'](inf)
+            return False
+        if dat:
+            try:
+                if dat['response'] == 'stats_done':
+                    await self.add_record(
+                        ts_start=_ts_start, saturation=dat['param']['mean'], exp=self.test_exposure_time
+                    )
+                else:
+                    inf = f'{self.ce.id} {self.ce.name} wrong rpc response, no stats_done.'
+                    logger.error(inf)
+                    await self.ce.journal.error(inf)
+                    self.ce.info_callback['stream_1'](inf)
+                    return False
+            except KeyError:
+                inf = f'{self.ce.id} {self.ce.name} wrong rpc response, key error.'
+                logger.error(inf)
+                await self.ce.journal.error(inf)
+                self.ce.info_callback['stream_1'](inf)
+                return False
+        else:
+            inf = f'{self.ce.id} {self.ce.name} wrong rpc response, dat is None.'
+            logger.error(inf)
+            await self.ce.journal.error(inf)
+            self.ce.info_callback['stream_1'](inf)
+            return False
+
+        self.ce.info_callback['exec_json'](self.ce.exec_json(
+            auto_exp_start=True, auto_exp_finnished=True, auto_exp_sub_no=self.auto_exp_sub_no,
+            auto_exp_time=self.test_exposure_time, **self.ce.info_dict)
+        )
+        return True
+
     async def _exec(self) -> Tuple[float, int]:
 
         if self.ce is None:
-            logger.error('Parent camera_expousure not set')
+            logger.error('Parent camera_exposure not set')
             raise RuntimeError
 
         inf = f'{self.ce.id} auto skyflat procedure started.'
@@ -194,51 +258,15 @@ class AutoFlatNoTest:
         await self._set_evening()
 
         while True:
-
-            inf = f'{self.ce.id} {self.ce.name} filter: {self.ce.filter_} starting test exposure.'
-            logger.info(inf)
-            await self.ce.journal.info(inf)
-            self.ce.info_callback['stream_1'](inf)
-
             _new_exposure_min, _new_exposure_max = await self._calculate_exposure_time()
-
             _exp_time, _skip = await self._evaluate_exposure_time(
                 exposure_min=_new_exposure_min, exposure_max=_new_exposure_max
             )
             if _exp_time is not None and _skip is not None:
                 return _exp_time, _skip
-
-            # await self._run_test_exposure()
-
-
-
-            # self.auto_exp_sub_no += 1
-            #
-            # _exp_time, _skip = await self.get_last_mean()
-            # if _exp_time is not None and _skip is not None:
-            #     return _exp_time, _skip
-            #
-            # self.mean_list.append(self.last_mean)
-            #
-            # inf = (f'{self.ce.id} Test frame filter: {self.ce.filter_} mean:{round(self.last_mean, 2)}'
-            #        f' range:[{round(self.test_min_max_adu[0] / self.test_min_max_time_exp[1], 2)}-'
-            #        f'{round(self.test_min_max_adu[1] / self.test_min_max_time_exp[0], 2)}]')
-            # logger.info(inf)
-            # await self.ce.journal.info(inf)
-            # self.ce.info_callback['stream_1'](inf)
-            #
-            # self.ce.info_callback['exec_json'](self.ce.exec_json(
-            #     **self.ce.info_dict,
-            #     test_exp_mean=self.last_mean,
-            #     expected_mean_min=round(self.test_min_max_adu[0] / self.test_min_max_time_exp[1]),
-            #     expected_mean_max=round(self.test_min_max_adu[1] / self.test_min_max_time_exp[0]))
-            # )
-            #
-            # await self.calc_mean_diff()
-            #
-            # await self.calc_mean_min_max()
-            #
-
+            ok = await self._run_test_exposure()
+            if not ok:
+                return 0, 2
             await asyncio.sleep(self.test_time_interval)
 
     async def exec(self) -> Tuple[float, int]:
