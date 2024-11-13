@@ -2,7 +2,7 @@ from typing import Dict, List, Any
 import logging
 import random
 from ob.planrunner.coded_error import SequenceTreeError
-from ob.planrunner.subcommands.sub_camera_exposure import AutoFlatNoTest
+from ob.planrunner.subcommands.auto_flat import AutoFlatNoTest
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
