@@ -434,7 +434,7 @@ class CameraExposure(BaseSubCommand):
         if self.auto_exposure:
             _af = AutoFlat()
             _af.set_camera_exposure_parent(camera_exposure=self)
-            exposure_time, _exit = await _af.auto_exposure_exec()
+            exposure_time, _exit = await _af.exec()
             if _exit == 1:
                 return 0
             elif _exit == 2:
@@ -496,7 +496,8 @@ class AutoFlat:
         self.test_exposure_time: float = 1.0
         self.test_time_interval: float = 1.0
         self.test_min_max_adu: List = [20000, 25000]
-        self.test_min_max_time_exp: List = [10, 120]
+        self.test_min_max_time_exp: List = [10, 60]
+        # self.test_min_max_time_exp: List = [2, 30]
         self.zero_level: float = 290.0
         self.evening_factor: float = 1.11
         self.mean_list: List = []
@@ -777,10 +778,6 @@ class AutoFlat:
             name='aget_biny', awaitab=self.ce.camera.aget_biny, expect_type=int
         )
 
-    async def auto_exposure_exec_no_rm_bin(self) -> Tuple[float, int]:
-        _exp_time, _skip = await self._auto_exposure_exec()
-        return _exp_time, _skip
-
     async def _wait_for_cam_params(
             self, readoutmode: int, bin_x: int, bin_y: int, numx: int, numy: int,
             timeout: float = 5.0) -> bool:
@@ -813,7 +810,11 @@ class AutoFlat:
             await asyncio.sleep(0)
         return False
 
-    async def auto_exposure_exec(self) -> Tuple[float, int]:
+    async def exec_no_rm_bin(self) -> Tuple[float, int]:
+        _exp_time, _skip = await self._auto_exposure_exec()
+        return _exp_time, _skip
+
+    async def exec_rm_bin(self) -> Tuple[float, int]:
 
         await asyncio.gather(*[
             self.set_cameraxsize(),
@@ -827,7 +828,6 @@ class AutoFlat:
                f' binx: {self.initial_bin_x} biny: {self.initial_bin_y}')
         logger.info(inf)
         await self.ce.journal.info(inf)
-
 
         try:
             await asyncio.gather(*[
@@ -845,7 +845,8 @@ class AutoFlat:
                 numy=int(self.cameraysize / self.TEST_BIN_Y)
             )
             if not ok:
-                return 0, 0
+                # TODO Logging errors here
+                return 0, 2
             _exp_time, _skip = await self._auto_exposure_exec()
             return _exp_time, _skip
         except CancelledError:
@@ -870,4 +871,12 @@ class AutoFlat:
                 numy=self.cameraysize
             )
             if not ok:
-                return 0, 1
+                # TODO Logging errors here
+                return 0, 2
+
+    async def exec(self, rm_bin_option: bool = True) -> Tuple[float, int]:
+        if rm_bin_option:
+            _exp_time, _skip = await self.exec_rm_bin()
+        else:
+            _exp_time, _skip = await self.exec_no_rm_bin()
+        return _exp_time, _skip
