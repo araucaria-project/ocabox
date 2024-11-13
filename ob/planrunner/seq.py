@@ -2,7 +2,7 @@ from typing import Dict, List, Any
 import logging
 import random
 from ob.planrunner.coded_error import SequenceTreeError
-
+from ob.planrunner.subcommands.sub_camera_exposure import AutoFlatNoTest
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -19,6 +19,7 @@ class Seq:
         self.command_kwargs: Dict = command_kwargs
         self.focus_folder: str or None = None
         self.skip = False
+        self.auto_flat: AutoFlatNoTest or None = None
         self.set_focus_id()
 
     @property
@@ -103,6 +104,7 @@ class Seq:
     @property
     def auto_exposure(self) -> bool:
         if self.seq_list[2] == 'a':
+            self.auto_flat = AutoFlatNoTest()
             return True
         else:
             return False

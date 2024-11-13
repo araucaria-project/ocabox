@@ -2,6 +2,9 @@ import asyncio
 import logging
 from asyncio import CancelledError
 from typing import Callable, Dict, Any, Optional
+from scipy.optimize import curve_fit
+import numpy as np
+from scipy.stats import linregress
 from ob.planrunner.base_subcommand import BaseSubCommand
 from pyaraucaria.fits import fits_header
 from pyaraucaria.date import julian_to_tuple
@@ -377,8 +380,15 @@ class CameraExposure(BaseSubCommand):
                     logger.info(inf)
                     await self.journal.info(inf)
                     self.info_callback['stream_1'](inf)
+                    saturation_mean = round(dat['param']['mean'])
+                    if self.auto_exposure:
+                        await self.seq_data.auto_flat.add_record(
+                            ts_start=self.exp_time_start.timestamp(),
+                            saturation=saturation_mean,
+                            exp=sub_time
+                        )
                     self.info_callback['exec_json'](self.exec_json(
-                        exp_started=True, exp_done=True, exp_saved=True, n_exp=sub, mean=round(dat['param']['mean']),
+                        exp_started=True, exp_done=True, exp_saved=True, n_exp=sub, mean=saturation_mean,
                         exp_time=sub_time, **self.info_dict)
                     )
                     return True
@@ -432,9 +442,8 @@ class CameraExposure(BaseSubCommand):
         exposure_time = self.seq_data.exp_time
 
         if self.auto_exposure:
-            _af = AutoFlat()
-            _af.set_camera_exposure_parent(camera_exposure=self)
-            exposure_time, _exit = await _af.exec()
+            self.seq_data.auto_flat.set_camera_exposure_parent(camera_exposure=self)
+            exposure_time, _exit = await self.seq_data.auto_flat.exec()
             if _exit == 1:
                 return 0
             elif _exit == 2:
@@ -482,6 +491,217 @@ class CameraExposure(BaseSubCommand):
         self.info_callback['exec_json'](self.exec_json(exp_time=float(exposure_time), **self.info_dict))
         await asyncio.sleep(0.2)
         return 0
+
+
+class AutoFlatNoTest:
+
+    def __init__(self) -> None:
+        self.ce: CameraExposure or None = None
+        self.test_exposure_time: float = 1.0
+        self.test_time_interval: float = 3.0
+        self.range_min_max_adu: List = [20000, 25000]
+        self.range_min_max_time_exp: List = [2, 30]
+        self.zero_level: float = 290.0
+        self.evening: bool = False
+        self.ts_start: List[float] = []
+        self.exposure: List[float] = []
+        self.saturation: List[float] = []
+
+    def set_camera_exposure_parent(self, camera_exposure: CameraExposure) -> None:
+        self.ce = camera_exposure
+
+    async def _load_params(self):
+        sky_flat_conf = self.ce.param['cfg_gen'].get_value(seq=[
+            'telescopes', self.ce.telescope.id, 'observatory', 'components', 'camera', 'sky_flats'
+        ], source='nats')
+        try:
+            self.test_exposure_time = sky_flat_conf['test_exp_time']
+        except (LookupError, TypeError):
+            logger.warning(f'No test_exp_time in general config.')
+            pass
+        try:
+            self.test_time_interval = sky_flat_conf['test_exp_interval']
+        except (LookupError, TypeError):
+            logger.warning(f'No test_exp_interval in general config.')
+            pass
+        try:
+            self.test_min_max_adu = sky_flat_conf['test_adu_range']
+        except (LookupError, TypeError):
+            logger.warning(f'No test_adu_range in general config.')
+            pass
+        try:
+            self.test_min_max_time_exp = sky_flat_conf['exposure_time_range']
+        except (LookupError, TypeError):
+            logger.warning(f'No exposure_time_range in general config.')
+            pass
+        try:
+            self.zero_level = sky_flat_conf['bias_level']
+        except (LookupError, TypeError):
+            logger.warning(f'No bias_level in general config.')
+            pass
+
+    async def _set_evening(self):
+        loc = self.ce.param['cfg_gen'].get_value(seq=['site', 'global', 'geo_location'], source='nats')
+        longitude = loc['lon']
+        s = longitude / abs(longitude)
+        h = (datetime.datetime.utcnow() + s * datetime.timedelta(minutes=abs(longitude) * 4)).hour
+        if h > 12:
+            self.evening = True
+        else:
+            self.evening = False
+
+    async def add_record(self,ts_start: float, saturation: float, exp: float) -> None:
+        self.ts_start.append(ts_start)
+        self.saturation.append(saturation)
+        self.exposure.append(exp)
+
+    @staticmethod
+    def _exp_func(x, a, b, c):
+        return a * b ** x + c
+
+    @staticmethod
+    async def _curve_fit(x, y):
+        params = curve_fit(AutoFlatNoTest._exp_func, x, y)
+        return params[0]
+
+    async def _calculate_exposure_time(self) -> Tuple[float, float] or Tuple[None, None]:
+
+        _sat_sec = np.array(self.saturation) / np.array(self.exposure)
+        _ts_mid = np.array(self.ts_start) + (np.array(self.exposure) / 2)
+        _ts_mid_min = _ts_mid.min()
+        _ts_mid_shift = _ts_mid - _ts_mid_min
+        _ts_now = time.time() - _ts_mid_min
+
+        if len(self.saturation) == 1:
+            _saturation_predict = self.saturation[0]
+
+        elif len(self.saturation) == 2:
+            slope, intercept, r_value, p_value, std_err = linregress(_ts_mid_shift, _sat_sec)
+            _saturation_predict = slope * _ts_now + intercept
+
+        elif len(self.saturation) > 2:
+            a, b, c = self._curve_fit(x=_ts_mid_shift, y=_sat_sec)
+            _saturation_predict = self._exp_func(_ts_now, a, b, c)
+
+        else:
+            return None, None
+
+        _new_exposure_min = self.range_min_max_adu[0] / _saturation_predict
+        _new_exposure_max = self.range_min_max_adu[1] / _saturation_predict
+
+        return _new_exposure_min, _new_exposure_max
+
+        # self.test_min_max_time_exp
+
+        # if self.test_min_max_adu[0] - self.mean_min_max[1] < 0 < self.test_min_max_adu[1] - self.mean_min_max[0]:
+        #     if self.mean_min_max[0] < self.test_min_max_adu[0]:
+        #         exposure_time = (self.test_min_max_adu[0] / self.last_mean) * self.saturation_factor
+        #         inf = (f"{self.ce.id} {self.ce.name} calc_exp_time:{round(exposure_time, 1)},"
+        #                f" expect_adu:{round(exposure_time * self.last_mean, 1)}")
+        #         logger.info(inf)
+        #         await self.ce.journal.info(inf)
+        #         self.ce.info_callback['stream_1'](inf)
+        #
+        #         return exposure_time, 0
+        #     else:
+        #         exposure_time = (self.mean_min_max[0] / self.last_mean) * self.saturation_factor
+        #         inf = (f"{self.ce.id} calc_exp_time:{round(exposure_time, 1)},"
+        #                f" expect_adu:{round(exposure_time * self.last_mean, 1)}")
+        #         logger.info(inf)
+        #         await self.ce.journal.info(inf)
+        #         self.ce.info_callback['stream_1'](inf)
+
+        #         return exposure_time, 0
+        # return None, None
+
+    async def _evaluate_exposure_time(
+            self, exposure_min: float, exposure_max: float) -> Tuple[float, float] or Tuple[None, None]:
+
+        if self.range_min_max_time_exp[1] >= exposure_min >= self.range_min_max_time_exp[0]:
+            inf = f"{self.ce.id} {self.ce.name} calc_exp_time:{round(exposure_min, 1)}"
+            logger.info(inf)
+            await self.ce.journal.info(inf)
+            self.ce.info_callback['stream_1'](inf)
+            return exposure_min, 0
+        elif exposure_min < self.range_min_max_time_exp[0] and exposure_max < self.range_min_max_time_exp[0]:
+            # TODO here stop sequence if not worth it
+            return None, None
+        elif exposure_max > self.range_min_max_time_exp[1] and exposure_min > self.range_min_max_time_exp[1]:
+            # TODO here stop sequence if not worth it
+            return None, None
+        elif exposure_min < self.range_min_max_time_exp[0] and exposure_max < self.range_min_max_time_exp[1]:
+            inf = f"{self.ce.id} {self.ce.name} calc_exp_time:{round(exposure_min, 1)}"
+            logger.info(inf)
+            await self.ce.journal.info(inf)
+            self.ce.info_callback['stream_1'](inf)
+            return self.range_min_max_time_exp[0], 0
+        else:
+            return None, None
+
+    async def _exec(self) -> Tuple[float, int]:
+
+        if self.ce is None:
+            logger.error('Parent camera_expousure not set')
+            raise RuntimeError
+
+        inf = f'{self.ce.id} auto skyflat procedure started.'
+        logger.info(inf)
+        await self.ce.journal.info(inf)
+        self.ce.info_callback['stream_1'](inf)
+
+        await self._set_evening()
+
+        while True:
+
+            inf = f'{self.ce.id} {self.ce.name} filter: {self.ce.filter_} starting test exposure.'
+            logger.info(inf)
+            await self.ce.journal.info(inf)
+            self.ce.info_callback['stream_1'](inf)
+
+            _new_exposure_min, _new_exposure_max = await self._calculate_exposure_time()
+
+            _exp_time, _skip = await self._evaluate_exposure_time(
+                exposure_min=_new_exposure_min, exposure_max=_new_exposure_max
+            )
+            if _exp_time is not None and _skip is not None:
+                return _exp_time, _skip
+
+            await self._run_test_exposure()
+
+
+
+            # self.auto_exp_sub_no += 1
+            #
+            # _exp_time, _skip = await self.get_last_mean()
+            # if _exp_time is not None and _skip is not None:
+            #     return _exp_time, _skip
+            #
+            # self.mean_list.append(self.last_mean)
+            #
+            # inf = (f'{self.ce.id} Test frame filter: {self.ce.filter_} mean:{round(self.last_mean, 2)}'
+            #        f' range:[{round(self.test_min_max_adu[0] / self.test_min_max_time_exp[1], 2)}-'
+            #        f'{round(self.test_min_max_adu[1] / self.test_min_max_time_exp[0], 2)}]')
+            # logger.info(inf)
+            # await self.ce.journal.info(inf)
+            # self.ce.info_callback['stream_1'](inf)
+            #
+            # self.ce.info_callback['exec_json'](self.ce.exec_json(
+            #     **self.ce.info_dict,
+            #     test_exp_mean=self.last_mean,
+            #     expected_mean_min=round(self.test_min_max_adu[0] / self.test_min_max_time_exp[1]),
+            #     expected_mean_max=round(self.test_min_max_adu[1] / self.test_min_max_time_exp[0]))
+            # )
+            #
+            # await self.calc_mean_diff()
+            #
+            # await self.calc_mean_min_max()
+            #
+
+            await asyncio.sleep(self.test_time_interval)
+
+    async def exec(self) -> Tuple[float, int]:
+        _exp_time, _skip = await self._exec()
+        return _exp_time, _skip
 
 
 class AutoFlat:
