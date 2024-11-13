@@ -496,7 +496,7 @@ class AutoFlat:
         self.test_exposure_time: float = 1.0
         self.test_time_interval: float = 1.0
         self.test_min_max_adu: List = [20000, 25000]
-        self.test_min_max_time_exp: List = [2, 30]
+        self.test_min_max_time_exp: List = [10, 120]
         self.zero_level: float = 290.0
         self.evening_factor: float = 1.11
         self.mean_list: List = []
@@ -534,11 +534,11 @@ class AutoFlat:
         except (LookupError, TypeError):
             logger.warning(f'No test_adu_range in general config.')
             pass
-        try:
-            self.test_min_max_time_exp = sky_flat_conf['exposure_time_range']
-        except (LookupError, TypeError):
-            logger.warning(f'No exposure_time_range in general config.')
-            pass
+        # try:
+        #     self.test_min_max_time_exp = sky_flat_conf['exposure_time_range']
+        # except (LookupError, TypeError):
+        #     logger.warning(f'No exposure_time_range in general config.')
+        #     pass
         try:
             self.zero_level = sky_flat_conf['bias_level']
         except (LookupError, TypeError):
