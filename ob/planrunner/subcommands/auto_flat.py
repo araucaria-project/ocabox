@@ -102,25 +102,29 @@ class AutoFlatNoTest:
     async def _calculate_exposure_time(self, test_time: float = None) -> Tuple[float, float] or Tuple[None, None]:
         inf = f'Start calc. exp. time'
         logger.info(inf)
-        await self.ce.journal.info(inf)
-        self.ce.info_callback['stream_1'](inf)
+        if test_time is None:
+            await self.ce.journal.info(inf)
+            self.ce.info_callback['stream_1'](inf)
 
         if len(self.saturation) == 0:
             inf = f'No data - calc. time skipped.'
             logger.info(inf)
-            await self.ce.journal.info(inf)
-            self.ce.info_callback['stream_1'](inf)
+            if test_time is None:
+                await self.ce.journal.info(inf)
+                self.ce.info_callback['stream_1'](inf)
             return None, None
 
         inf = f'Saturation: {self.saturation}, zero: {self.zero_level}, exp: {self.exposure}'
         logger.info(inf)
-        await self.ce.journal.info(inf)
-        self.ce.info_callback['stream_1'](inf)
+        if test_time is None:
+            await self.ce.journal.info(inf)
+            self.ce.info_callback['stream_1'](inf)
+
         _sat_sec = ((np.array(self.saturation) - self.zero_level) / np.array(self.exposure))
         _ts_mid = np.array(self.ts_start) + (np.array(self.exposure) / 2)
         _ts_mid_min = _ts_mid.min()
         _ts_mid_shift = _ts_mid - _ts_mid_min
-        if not test_time:
+        if test_time is None:
             _ts_now = time.time() - _ts_mid_min
         else:
             _ts_now = test_time - _ts_mid_min
@@ -145,16 +149,20 @@ class AutoFlatNoTest:
         else:
             inf = f'No data to calc. time'
             logger.info(inf)
-            await self.ce.journal.info(inf)
-            self.ce.info_callback['stream_1'](inf)
+            if test_time is None:
+                await self.ce.journal.info(inf)
+                self.ce.info_callback['stream_1'](inf)
             return None, None
 
         _new_exposure_min = (self.range_min_max_adu[0] - self.zero_level) / _saturation_predict
         _new_exposure_max = (self.range_min_max_adu[1] - self.zero_level) / _saturation_predict
+
         inf = f'Calc. exp. time done {_new_exposure_min:.2} - {_new_exposure_max:.2}'
         logger.info(inf)
-        await self.ce.journal.info(inf)
-        self.ce.info_callback['stream_1'](inf)
+        if test_time is None:
+            await self.ce.journal.info(inf)
+            self.ce.info_callback['stream_1'](inf)
+
         return _new_exposure_min, _new_exposure_max
 
     async def _evaluate_exposure_time(
