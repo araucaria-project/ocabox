@@ -145,7 +145,7 @@ class AutoFlatNoTest:
 
         _new_exposure_min = self.range_min_max_adu[0] / _saturation_predict
         _new_exposure_max = self.range_min_max_adu[1] / _saturation_predict
-        inf = f'Calc. exp. time done'
+        inf = f'Calc. exp. time done {_new_exposure_min} - {_new_exposure_max}'
         logger.info(inf)
         await self.ce.journal.info(inf)
         self.ce.info_callback['stream_1'](inf)
