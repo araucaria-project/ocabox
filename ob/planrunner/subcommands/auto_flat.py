@@ -152,11 +152,17 @@ class AutoFlatNoTest:
         return _new_exposure_min, _new_exposure_max
 
     async def _evaluate_exposure_time(
-            self, exposure_min: float, exposure_max: float) -> Tuple[float, float] or Tuple[None, None]:
-        inf = f'Start valuate exp. time.'
+            self, exposure_min: float or None, exposure_max: float or None) -> Tuple[float, float] or Tuple[None, None]:
+        inf = f'Start evaluate exp. time.'
         logger.info(inf)
         await self.ce.journal.info(inf)
         self.ce.info_callback['stream_1'](inf)
+        if exposure_min is None or exposure_max is None:
+            inf = f'Start evaluate exp. time skipped.'
+            logger.info(inf)
+            await self.ce.journal.info(inf)
+            self.ce.info_callback['stream_1'](inf)
+            return None, None
         if self.range_min_max_time_exp[1] >= exposure_min >= self.range_min_max_time_exp[0]:
             inf = f"{self.ce.id} {self.ce.name} calc_exp_time:{round(exposure_min, 1)}"
             logger.info(inf)
