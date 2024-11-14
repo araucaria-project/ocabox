@@ -73,6 +73,7 @@ class AutoFlatNoTest:
             self.evening = True
         else:
             self.evening = False
+        logger.info(f'Evening set {self.evening}')
 
     async def add_record(self,ts_start: float, saturation: float, exp: float) -> None:
         self.ts_start.append(ts_start)
@@ -99,7 +100,10 @@ class AutoFlatNoTest:
         return _saturation_predict
 
     async def _calculate_exposure_time(self, test_time: float = None) -> Tuple[float, float] or Tuple[None, None]:
-
+        inf = f'Start calc. exp. time'
+        logger.info(inf)
+        await self.ce.journal.info(inf)
+        self.ce.info_callback['stream_1'](inf)
         _sat_sec = ((np.array(self.saturation) - self.zero_level) / np.array(self.exposure)) + self.zero_level
         _ts_mid = np.array(self.ts_start) + (np.array(self.exposure) / 2)
         _ts_mid_min = _ts_mid.min()
@@ -127,16 +131,26 @@ class AutoFlatNoTest:
                 _saturation_predict = self._exp_func(_ts_now, a, b, c)
 
         else:
+            inf = f'No data to calc. time'
+            logger.info(inf)
+            await self.ce.journal.info(inf)
+            self.ce.info_callback['stream_1'](inf)
             return None, None
 
         _new_exposure_min = self.range_min_max_adu[0] / _saturation_predict
         _new_exposure_max = self.range_min_max_adu[1] / _saturation_predict
-
+        inf = f'Calc. exp. time done'
+        logger.info(inf)
+        await self.ce.journal.info(inf)
+        self.ce.info_callback['stream_1'](inf)
         return _new_exposure_min, _new_exposure_max
 
     async def _evaluate_exposure_time(
             self, exposure_min: float, exposure_max: float) -> Tuple[float, float] or Tuple[None, None]:
-
+        inf = f'Start valuate exp. time.'
+        logger.info(inf)
+        await self.ce.journal.info(inf)
+        self.ce.info_callback['stream_1'](inf)
         if self.range_min_max_time_exp[1] >= exposure_min >= self.range_min_max_time_exp[0]:
             inf = f"{self.ce.id} {self.ce.name} calc_exp_time:{round(exposure_min, 1)}"
             logger.info(inf)
