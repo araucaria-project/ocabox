@@ -116,7 +116,7 @@ class AutoFlatNoTest:
         logger.info(inf)
         await self.ce.journal.info(inf)
         self.ce.info_callback['stream_1'](inf)
-        _sat_sec = ((np.array(self.saturation) - self.zero_level) / np.array(self.exposure)) + self.zero_level
+        _sat_sec = ((np.array(self.saturation) - self.zero_level) / np.array(self.exposure))
         _ts_mid = np.array(self.ts_start) + (np.array(self.exposure) / 2)
         _ts_mid_min = _ts_mid.min()
         _ts_mid_shift = _ts_mid - _ts_mid_min
@@ -149,8 +149,8 @@ class AutoFlatNoTest:
             self.ce.info_callback['stream_1'](inf)
             return None, None
 
-        _new_exposure_min = self.range_min_max_adu[0] / _saturation_predict
-        _new_exposure_max = self.range_min_max_adu[1] / _saturation_predict
+        _new_exposure_min = (self.range_min_max_adu[0] - self.zero_level) / _saturation_predict
+        _new_exposure_max = (self.range_min_max_adu[1] - self.zero_level) / _saturation_predict
         inf = f'Calc. exp. time done {_new_exposure_min:.2} - {_new_exposure_max:.2}'
         logger.info(inf)
         await self.ce.journal.info(inf)
