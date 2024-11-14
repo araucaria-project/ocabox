@@ -56,8 +56,7 @@ class AutoFlatNoTest:
             logger.warning(f'No test_adu_range in general config.')
             pass
         try:
-            # self.range_min_max_time_exp = sky_flat_conf['exposure_time_range']
-            self.range_min_max_time_exp = [10, 30]
+            self.range_min_max_time_exp = sky_flat_conf['exposure_time_range']
         except (LookupError, TypeError):
             logger.warning(f'No exposure_time_range in general config.')
             pass
