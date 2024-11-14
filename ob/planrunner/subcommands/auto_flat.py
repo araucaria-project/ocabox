@@ -229,12 +229,12 @@ class AutoFlatNoTest:
 
         self.auto_exp_sub_no += 1
 
-        self.ce.info_callback['exec_json'](self.ce.exec_json(
-            **self.ce.info_dict,
-            # test_exp_mean=self.last_mean,
-            # expected_mean_min=round(self.test_min_max_adu[0] / self.test_min_max_time_exp[1]),
-            # expected_mean_max=round(self.test_min_max_adu[1] / self.test_min_max_time_exp[0])
-        ))
+        # self.ce.info_callback['exec_json'](self.ce.exec_json(
+        #     **self.ce.info_dict,
+        #     # test_exp_mean=self.last_mean,
+        #     # expected_mean_min=round(self.test_min_max_adu[0] / self.test_min_max_time_exp[1]),
+        #     # expected_mean_max=round(self.test_min_max_adu[1] / self.test_min_max_time_exp[0])
+        # ))
 
         _ts_start = time.time()
         exe = await self.ce.proof_put(
