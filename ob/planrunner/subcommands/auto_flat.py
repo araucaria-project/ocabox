@@ -104,13 +104,19 @@ class AutoFlatNoTest:
         logger.info(inf)
         await self.ce.journal.info(inf)
         self.ce.info_callback['stream_1'](inf)
-        _sat_sec = ((np.array(self.saturation) - self.zero_level) / np.array(self.exposure)) + self.zero_level
+
         if len(self.saturation) == 0:
             inf = f'No data - calc. time skipped.'
             logger.info(inf)
             await self.ce.journal.info(inf)
             self.ce.info_callback['stream_1'](inf)
             return None, None
+
+        inf = f'Saturation: {self.saturation}, zero: {self.zero_level}, exp: {self.exposure}'
+        logger.info(inf)
+        await self.ce.journal.info(inf)
+        self.ce.info_callback['stream_1'](inf)
+        _sat_sec = ((np.array(self.saturation) - self.zero_level) / np.array(self.exposure)) + self.zero_level
         _ts_mid = np.array(self.ts_start) + (np.array(self.exposure) / 2)
         _ts_mid_min = _ts_mid.min()
         _ts_mid_shift = _ts_mid - _ts_mid_min
@@ -212,6 +218,13 @@ class AutoFlatNoTest:
         self.ce.info_callback['stream_1'](inf)
 
         self.auto_exp_sub_no += 1
+
+        self.ce.info_callback['exec_json'](self.ce.exec_json(
+            **self.ce.info_dict,
+            # test_exp_mean=self.last_mean,
+            # expected_mean_min=round(self.test_min_max_adu[0] / self.test_min_max_time_exp[1]),
+            # expected_mean_max=round(self.test_min_max_adu[1] / self.test_min_max_time_exp[0])
+        ))
 
         _ts_start = time.time()
         exe = await self.ce.proof_put(
