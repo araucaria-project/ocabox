@@ -105,6 +105,12 @@ class AutoFlatNoTest:
         await self.ce.journal.info(inf)
         self.ce.info_callback['stream_1'](inf)
         _sat_sec = ((np.array(self.saturation) - self.zero_level) / np.array(self.exposure)) + self.zero_level
+        if len(self.saturation) == 0:
+            inf = f'No data - calc. time skipped.'
+            logger.info(inf)
+            await self.ce.journal.info(inf)
+            self.ce.info_callback['stream_1'](inf)
+            return None, None
         _ts_mid = np.array(self.ts_start) + (np.array(self.exposure) / 2)
         _ts_mid_min = _ts_mid.min()
         _ts_mid_shift = _ts_mid - _ts_mid_min
