@@ -126,7 +126,7 @@ class AutoFlatNoTest:
             _ts_now = test_time - _ts_mid_min
 
         if len(self.saturation) == 1:
-            _saturation_predict = self.saturation[0]
+            _saturation_predict = _sat_sec[0]
 
         elif len(self.saturation) == 2:
             _saturation_predict = await self._linear_saturation_predict(
