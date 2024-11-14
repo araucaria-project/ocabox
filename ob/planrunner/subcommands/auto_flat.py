@@ -18,6 +18,8 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class AutoFlatNoTest:
 
+    ZERO_LEVEL_SAFE = 15
+
     def __init__(self) -> None:
         self.ce = None
         self.test_exposure_time: float = 1.0
@@ -59,7 +61,7 @@ class AutoFlatNoTest:
             logger.warning(f'No exposure_time_range in general config.')
             pass
         try:
-            self.zero_level = sky_flat_conf['bias_level']
+            self.zero_level = sky_flat_conf['bias_level'] - self.ZERO_LEVEL_SAFE
         except (LookupError, TypeError):
             logger.warning(f'No bias_level in general config.')
             pass
@@ -157,7 +159,7 @@ class AutoFlatNoTest:
         _new_exposure_min = (self.range_min_max_adu[0] - self.zero_level) / _saturation_predict
         _new_exposure_max = (self.range_min_max_adu[1] - self.zero_level) / _saturation_predict
 
-        inf = f'Calc. exp. time done {_new_exposure_min:.2} - {_new_exposure_max:.2}'
+        inf = f'Calc. exp. time done min: {_new_exposure_min:.1f} max: {_new_exposure_max:.1f}'
         logger.info(inf)
         if test_time is None:
             await self.ce.journal.info(inf)
