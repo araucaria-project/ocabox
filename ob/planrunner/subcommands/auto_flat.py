@@ -87,9 +87,9 @@ class AutoFlatNoTest:
         return (a * (b ** x)) + c
 
     @staticmethod
-    async def _curve_fit(x, y) -> np.ndarray or Tuple[None, None, None]:
+    async def _curve_fit(x: np.ndarray, y: np.ndarray) -> np.ndarray or Tuple[None, None, None]:
         try:
-            params = curve_fit(AutoFlatNoTest._exp_func, np.array(x), np.array(y))
+            params = curve_fit(AutoFlatNoTest._exp_func, x, y)
             return params[0]
         except RuntimeError:
             logger.warning(f'Can not fit curve')
@@ -116,7 +116,7 @@ class AutoFlatNoTest:
                 self.ce.info_callback['stream_1'](inf)
             return None, None
 
-        inf = f'Saturation: {self.saturation}, zero: {self.zero_level}, exp: {self.exposure}'
+        inf = f'Ts_start: {self.ts_start}, sat.: {self.saturation}, exp: {self.exposure}, zero: {self.zero_level}'
         logger.info(inf)
         if test_time is None:
             await self.ce.journal.info(inf)
@@ -126,6 +126,7 @@ class AutoFlatNoTest:
         _ts_mid = np.array(self.ts_start) + (np.array(self.exposure) / 2)
         _ts_mid_min = _ts_mid.min()
         _ts_mid_shift = _ts_mid - _ts_mid_min
+
         if test_time is None:
             _ts_now = time.time() - _ts_mid_min
         else:
@@ -168,54 +169,61 @@ class AutoFlatNoTest:
         return _new_exposure_min, _new_exposure_max
 
     async def _evaluate_exposure_time(
-            self, exposure_min: float or None, exposure_max: float or None) -> Tuple[float, float] or Tuple[None, None]:
+            self, exposure_min: float or None, exposure_max: float or None,
+            test: bool = False) -> Tuple[float, float] or Tuple[None, None]:
         inf = f'Start evaluate exp. time.'
         logger.info(inf)
-        await self.ce.journal.info(inf)
-        self.ce.info_callback['stream_1'](inf)
+        if not test:
+            await self.ce.journal.info(inf)
+            self.ce.info_callback['stream_1'](inf)
         if exposure_min is None or exposure_max is None:
             inf = f'Start evaluate exp. time skipped.'
             logger.info(inf)
-            await self.ce.journal.info(inf)
-            self.ce.info_callback['stream_1'](inf)
+            if not test:
+                await self.ce.journal.info(inf)
+                self.ce.info_callback['stream_1'](inf)
             return None, None
         if self.range_min_max_time_exp[1] >= exposure_min >= self.range_min_max_time_exp[0]:
-            inf = f"{self.ce.id} {self.ce.name} calc_exp_time:{round(exposure_min, 1)}"
-            logger.info(inf)
-            await self.ce.journal.info(inf)
-            self.ce.info_callback['stream_1'](inf)
-            return exposure_min, 0
-        elif exposure_min < self.range_min_max_time_exp[0] and exposure_max < self.range_min_max_time_exp[0]:
-            if not self.evening:
-                inf = f"{self.ce.id} auto skyflat filter: {self.ce.filter_} skipped - too bright."
+            if not test:
+                inf = f"{self.ce.id} {self.ce.name} calc_exp_time:{round(exposure_min, 1)}"
                 logger.info(inf)
                 await self.ce.journal.info(inf)
                 self.ce.info_callback['stream_1'](inf)
-                self.ce.skipped = True
-                await self.ce.param['plan_status'].upd_status(id=self.ce.id, value=PlanStatusEnum.skipped)
-                self.ce.info_callback['exec_json'](self.ce.exec_json(**self.ce.info_dict))
-                self.ce.seq_data.skip = True
+            return exposure_min, 0
+        elif exposure_min < self.range_min_max_time_exp[0] and exposure_max < self.range_min_max_time_exp[0]:
+            if not self.evening:
+                if not test:
+                    inf = f"{self.ce.id} auto skyflat filter: {self.ce.filter_} skipped - too bright."
+                    logger.info(inf)
+                    await self.ce.journal.info(inf)
+                    self.ce.info_callback['stream_1'](inf)
+                    self.ce.skipped = True
+                    await self.ce.param['plan_status'].upd_status(id=self.ce.id, value=PlanStatusEnum.skipped)
+                    self.ce.info_callback['exec_json'](self.ce.exec_json(**self.ce.info_dict))
+                    self.ce.seq_data.skip = True
                 return 0, 1
             else:
                 return None, None
         elif exposure_max > self.range_min_max_time_exp[1] and exposure_min > self.range_min_max_time_exp[1]:
             if self.evening:
-                inf = f"{self.ce.id} auto skyflat filter: {self.ce.filter_} skipped - too dark."
-                logger.info(inf)
-                await self.ce.journal.info(inf)
-                self.ce.info_callback['stream_1'](inf)
-                self.ce.skipped = True
-                await self.ce.param['plan_status'].upd_status(id=self.ce.id, value=PlanStatusEnum.skipped)
-                self.ce.info_callback['exec_json'](self.ce.exec_json(**self.ce.info_dict))
-                self.ce.seq_data.skip = True
+                if not test:
+                    inf = f"{self.ce.id} auto skyflat filter: {self.ce.filter_} skipped - too dark."
+                    logger.info(inf)
+                    await self.ce.journal.info(inf)
+                    self.ce.info_callback['stream_1'](inf)
+                    self.ce.skipped = True
+                    await self.ce.param['plan_status'].upd_status(id=self.ce.id, value=PlanStatusEnum.skipped)
+                    self.ce.info_callback['exec_json'](self.ce.exec_json(**self.ce.info_dict))
+                    self.ce.seq_data.skip = True
                 return 0, 1
             else:
                 return None, None
         elif exposure_min < self.range_min_max_time_exp[0] and exposure_max < self.range_min_max_time_exp[1]:
-            inf = f"{self.ce.id} {self.ce.name} calc_exp_time:{round(self.range_min_max_time_exp[0], 1)}"
-            logger.info(inf)
-            await self.ce.journal.info(inf)
-            self.ce.info_callback['stream_1'](inf)
+            if not test:
+                inf = f"{self.ce.id} {self.ce.name} calc_exp_time:{round(self.range_min_max_time_exp[0], 1)}"
+                logger.info(inf)
+                await self.ce.journal.info(inf)
+                self.ce.info_callback['stream_1'](inf)
             return self.range_min_max_time_exp[0], 0
         else:
             return None, None
