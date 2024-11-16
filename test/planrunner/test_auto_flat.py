@@ -1,5 +1,8 @@
 import unittest
 import logging
+
+import numpy as np
+
 from ob.planrunner.subcommands.auto_flat import AutoFlatNoTest
 
 
@@ -71,29 +74,70 @@ class TestAutoFlatNoTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_auto_flat_real_dat_1(self):
 
-        _min_result = 2.04
+        _min_result = 28.39
         triple_exposure = AutoFlatNoTest()
-        triple_exposure.ts_start = [
-            0.0,
-            22.233521699905396,
-            51.232887744903564,
-            79.2319598197937,
-            # 107.23099780082703
-        ]
+        triple_exposure.zero_level = 985
+        ts = [1731747996.3501148, 1731748015.2929509, 1731748034.1337261, 1731748053.092465,
+                              1731748071.6134248, 1731748090.8051546, 1731748110.106679, 1731748129.6404352,
+                              1731748149.0351684, 1731748168.9507198, 1731748188.9193718, 1731748208.6133432,
+                              1731748228.07451, 1731748247.0922816, 1731748266.6200738, 1731748286.2208922,
+                              1731748305.7002723, 1731748325.0519543, 1731748345.2274277, 1731748364.8947246,
+                              1731748384.123295, 1731748403.958688, 1731748423.4948268, 1731748443.385234,
+                              1731748463.3134286,
+                                    # 1731759283.288294,
+                                    # 1731748534.7738519
+                                    ]
+
+
+        triple_exposure.ts_start = (np.array(ts) + 10800).tolist()
+        triple_exposure.saturation = [1120.59, 1128.45,
+            1136.33, 1146.11,
+            1151.64, 1164.42,
+            1175.09, 1186.0,
+            1196.82, 1215.04,
+            1224.27, 1242.16,
+            1261.55, 1276.7,
+            1299.37, 1318.31,
+            1339.72, 1369.14,
+            1392.61, 1423.51,
+            1451.16, 1484.27,
+            1525.65, 1566.8,
+            1610.08,
+                                      # 20398,
+            # 1810.17
+                                      ]
         triple_exposure.exposure = [
             1.0,
-            3.467043486188349,
-            3.4657752780152546,
-            3.463919431276164,
-            # 3.4619957539940116
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            # 28.398909393878885,
+            # 1.0
         ]
-        triple_exposure.zero_level = 290
-        triple_exposure.saturation = [
-            6469.5, 21534.0, 24284.0, 27345.0,
-            # 30686.0
-        ]
+
         triple_exposure.evening = True
-        _min, _max = await triple_exposure._calculate_exposure_time(test_time=107.23099780082703)
+        _min, _max = await triple_exposure._calculate_exposure_time(test_time=1731759283.288294)
         # print(_min, _max)
         self.assertAlmostEqual(first=_min_result, second=_min, places=1)
 

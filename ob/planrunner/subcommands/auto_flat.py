@@ -1,17 +1,15 @@
 import asyncio
 import time
 from asyncio import CancelledError
-
 from scipy.optimize import curve_fit, OptimizeWarning
 import numpy as np
 from scipy.stats import linregress
 from typing import Dict, List, Tuple, Any, Optional
 import logging
 import datetime
-
 from serverish.base import MessengerRequestNoResponders, MessengerRequestNoResponse, MessengerRequestTimeout
-
 from ob.planrunner.status import PlanStatusEnum
+
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -84,16 +82,16 @@ class AutoFlatNoTest:
 
     @staticmethod
     def _exp_func(x, a, b, c):
-        return (a * (b ** x)) + c
+        return a * b ** x + c
 
     @staticmethod
-    async def _curve_fit(x: np.ndarray, y: np.ndarray) -> np.ndarray or Tuple[None, None, None]:
+    async def _curve_fit(x: np.ndarray, y: np.ndarray) -> np.ndarray or None:
         try:
             params = curve_fit(AutoFlatNoTest._exp_func, x, y)
             return params[0]
         except RuntimeError:
             logger.warning(f'Can not fit curve')
-            return None, None, None
+            return None
 
     @staticmethod
     async def _linear_saturation_predict(ts_mid_shift: np.ndarray, sat_sec: np.ndarray, ts_now: float) -> float:
@@ -102,6 +100,7 @@ class AutoFlatNoTest:
         return _saturation_predict
 
     async def _calculate_exposure_time(self, test_time: float = None) -> Tuple[float, float] or Tuple[None, None]:
+
         inf = f'Start calc. exp. time'
         logger.info(inf)
         if test_time is None:
@@ -116,21 +115,23 @@ class AutoFlatNoTest:
                 self.ce.info_callback['stream_1'](inf)
             return None, None
 
-        inf = f'Ts_start: {self.ts_start}, sat.: {self.saturation}, exp: {self.exposure}, zero: {self.zero_level}'
+        _saturation = np.array(self.saturation)
+        _exposure = np.array(self.exposure)
+        _ts_start = np.array(self.ts_start)
+        _sat_sec = ((_saturation - self.zero_level) / _exposure)
+        _ts_start_shift = _ts_start - _ts_start.min()
+        _ts_mid_shift  = _ts_start_shift + (_exposure / 2)
+
+        inf = f'Ts: {_ts_start_shift}, sat: {_saturation}, exp: {_exposure}, zero: {self.zero_level}'
         logger.info(inf)
         if test_time is None:
             await self.ce.journal.info(inf)
             self.ce.info_callback['stream_1'](inf)
 
-        _sat_sec = ((np.array(self.saturation) - self.zero_level) / np.array(self.exposure))
-        _ts_mid = np.array(self.ts_start) + (np.array(self.exposure) / 2)
-        _ts_mid_min = _ts_mid.min()
-        _ts_mid_shift = _ts_mid - _ts_mid_min
-
         if test_time is None:
-            _ts_now = time.time() - _ts_mid_min
+            _ts_now = datetime.datetime.utcnow().timestamp() - _ts_start.min()
         else:
-            _ts_now = test_time - _ts_mid_min
+            _ts_now = test_time - _ts_start.min()
 
         if len(self.saturation) == 1:
             _saturation_predict = _sat_sec[0]
@@ -141,13 +142,13 @@ class AutoFlatNoTest:
             )
 
         elif len(self.saturation) > 2:
-            a, b, c = await self._curve_fit(x=_ts_mid_shift, y=_sat_sec)
-            if a is None or b is None or c is None:
+            params = await self._curve_fit(x=_ts_mid_shift, y=_sat_sec)
+            if params is None:
                 _saturation_predict = await self._linear_saturation_predict(
                     ts_mid_shift=_ts_mid_shift, sat_sec=_sat_sec, ts_now=_ts_now
                 )
             else:
-                _saturation_predict = self._exp_func(_ts_now, a, b, c)
+                _saturation_predict = self._exp_func(_ts_now, params[0], params[1], params[2])
 
         else:
             inf = f'No data to calc. time'
@@ -244,7 +245,7 @@ class AutoFlatNoTest:
         #     # expected_mean_max=round(self.test_min_max_adu[1] / self.test_min_max_time_exp[0])
         # ))
 
-        _ts_start = time.time()
+        _ts_start = datetime.datetime.utcnow().timestamp()
         exe = await self.ce.proof_put(
             awaitab=self.ce.camera.aput_startexposure, duration=self.test_exposure_time, light=self.ce.light
         )
