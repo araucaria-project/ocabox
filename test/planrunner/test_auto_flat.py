@@ -17,7 +17,7 @@ class TestAutoFlatNoTest(unittest.IsolatedAsyncioTestCase):
         single_exposure = AutoFlatNoTest()
         single_exposure.ts_start = [5]
         single_exposure.exposure = [1]
-        single_exposure.saturation = [20000]
+        single_exposure.adu = [20000]
         single_exposure.evening = True
         _min, _max = await single_exposure._calculate_exposure_time(test_time=200)
         # print(_min, _max)
@@ -31,7 +31,7 @@ class TestAutoFlatNoTest(unittest.IsolatedAsyncioTestCase):
         double_exposure.ts_start = [48, 99]
         double_exposure.exposure = [4, 2]
         double_exposure.zero_level = 0
-        double_exposure.saturation = [20000, 20000]
+        double_exposure.adu = [20000, 20000]
         double_exposure.evening = True
         _min, _max = await double_exposure._calculate_exposure_time(test_time=200)
         self.assertEqual(first=_min_result, second=_min)
@@ -61,7 +61,7 @@ class TestAutoFlatNoTest(unittest.IsolatedAsyncioTestCase):
         ]
         triple_exposure.exposure = [4.38, 3.80 , 3.35, 2.94, 2.60]
         triple_exposure.zero_level = 290
-        triple_exposure.saturation = [
+        triple_exposure.adu = [
             20000,
             20000,
             20000,
@@ -90,7 +90,7 @@ class TestAutoFlatNoTest(unittest.IsolatedAsyncioTestCase):
 
 
         triple_exposure.ts_start = (np.array(ts) + 10800).tolist()
-        triple_exposure.saturation = [1120.59, 1128.45,
+        triple_exposure.adu = [1120.59, 1128.45,
             1136.33, 1146.11,
             1151.64, 1164.42,
             1175.09, 1186.0,
