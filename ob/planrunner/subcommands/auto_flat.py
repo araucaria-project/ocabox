@@ -135,14 +135,14 @@ class AutoFlatNoTest:
             _ts_now = test_time - _ts_start.min()
 
         if len(self.adu) == 1:
-            if _ts_start[0] + self.TEST_TIME_TOLERANCE > datetime.datetime.utcnow().timestamp():
+            if _ts_start[0] + self.TEST_TIME_TOLERANCE > _ts_now:
                 _adu_predict = _sat_sec[0]
             else:
                 logger.info('Single point is to old - proceed to test exposure.')
                 return None, None
 
         elif len(self.adu) == 2:
-            if _ts_start[1] + self.TEST_TIME_TOLERANCE > datetime.datetime.utcnow().timestamp():
+            if _ts_start[1] + self.TEST_TIME_TOLERANCE > _ts_now:
                 _adu_predict = await self._linear_adu_predict(
                     ts_mid_shift=_ts_mid_shift, sat_sec=_sat_sec, ts_now=_ts_now
                 )
