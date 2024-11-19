@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class AutoFlatNoTest:
 
     # ZERO_LEVEL_SAFE = 15
+    TEST_TIME_TOLERANCE = 120 # seconds
 
     def __init__(self) -> None:
         self.ce = None
@@ -108,7 +109,7 @@ class AutoFlatNoTest:
             self.ce.info_callback['stream_1'](inf)
 
         if len(self.adu) == 0:
-            inf = f'No data - calc. time skipped.'
+            inf = f'No data - proceed to test exposure.'
             logger.info(inf)
             if test_time is None:
                 await self.ce.journal.info(inf)
@@ -134,12 +135,20 @@ class AutoFlatNoTest:
             _ts_now = test_time - _ts_start.min()
 
         if len(self.adu) == 1:
-            _adu_predict = _sat_sec[0]
+            if _ts_start[0] + self.TEST_TIME_TOLERANCE > datetime.datetime.utcnow().timestamp():
+                _adu_predict = _sat_sec[0]
+            else:
+                logger.info('Single point is to old - proceed to test exposure.')
+                return None, None
 
         elif len(self.adu) == 2:
-            _adu_predict = await self._linear_adu_predict(
-                ts_mid_shift=_ts_mid_shift, sat_sec=_sat_sec, ts_now=_ts_now
-            )
+            if _ts_start[1] + self.TEST_TIME_TOLERANCE > datetime.datetime.utcnow().timestamp():
+                _adu_predict = await self._linear_adu_predict(
+                    ts_mid_shift=_ts_mid_shift, sat_sec=_sat_sec, ts_now=_ts_now
+                )
+            else:
+                logger.info('Last linear point is to old - proceed to test exposure.')
+                return None, None
 
         elif len(self.adu) > 2:
             params = await self._curve_fit(x=_ts_mid_shift, y=_sat_sec)
