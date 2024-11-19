@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class AutoFlatNoTest:
 
-    ZERO_LEVEL_SAFE = 15
+    # ZERO_LEVEL_SAFE = 15
 
     def __init__(self) -> None:
         self.ce = None
@@ -59,7 +59,7 @@ class AutoFlatNoTest:
             logger.warning(f'No exposure_time_range in general config.')
             pass
         try:
-            self.zero_level = sky_flat_conf['bias_level'] - self.ZERO_LEVEL_SAFE
+            self.zero_level = sky_flat_conf['bias_level'] # - self.ZERO_LEVEL_SAFE
         except (LookupError, TypeError):
             logger.warning(f'No bias_level in general config.')
             pass
@@ -118,7 +118,7 @@ class AutoFlatNoTest:
         _adu = np.array(self.adu)
         _exposure = np.array(self.exposure)
         _ts_start = np.array(self.ts_start)
-        _sat_sec = ((_adu - self.zero_level) / _exposure)
+        _sat_sec = np.abs((_adu - self.zero_level) / _exposure)
         _ts_start_shift = _ts_start - _ts_start.min()
         _ts_mid_shift  = _ts_start_shift + (_exposure / 2)
 
