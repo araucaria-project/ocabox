@@ -28,7 +28,7 @@ class AutoFlatNoTest:
         self.evening: bool = False
         self.ts_start: List[float] = []
         self.exposure: List[float] = []
-        self.saturation: List[float] = []
+        self.adu: List[float] = []
         self.auto_exp_sub_no = 0
 
     def set_camera_exposure_parent(self, camera_exposure: Any) -> None:
@@ -75,9 +75,9 @@ class AutoFlatNoTest:
             self.evening = False
         logger.info(f'Evening set {self.evening}')
 
-    async def add_record(self,ts_start: float, saturation: float, exp: float) -> None:
+    async def add_record(self,ts_start: float, adu_mean: float, exp: float) -> None:
         self.ts_start.append(ts_start)
-        self.saturation.append(saturation)
+        self.adu.append(adu_mean)
         self.exposure.append(exp)
 
     @staticmethod
@@ -94,10 +94,10 @@ class AutoFlatNoTest:
             return None
 
     @staticmethod
-    async def _linear_saturation_predict(ts_mid_shift: np.ndarray, sat_sec: np.ndarray, ts_now: float) -> float:
+    async def _linear_adu_predict(ts_mid_shift: np.ndarray, sat_sec: np.ndarray, ts_now: float) -> float:
         slope, intercept, r_value, p_value, std_err = linregress(ts_mid_shift, sat_sec)
-        _saturation_predict = slope * ts_now + intercept
-        return _saturation_predict
+        _predict = slope * ts_now + intercept
+        return _predict
 
     async def _calculate_exposure_time(self, test_time: float = None) -> Tuple[float, float] or Tuple[None, None]:
 
@@ -107,7 +107,7 @@ class AutoFlatNoTest:
             await self.ce.journal.info(inf)
             self.ce.info_callback['stream_1'](inf)
 
-        if len(self.saturation) == 0:
+        if len(self.adu) == 0:
             inf = f'No data - calc. time skipped.'
             logger.info(inf)
             if test_time is None:
@@ -115,14 +115,14 @@ class AutoFlatNoTest:
                 self.ce.info_callback['stream_1'](inf)
             return None, None
 
-        _saturation = np.array(self.saturation)
+        _adu = np.array(self.adu)
         _exposure = np.array(self.exposure)
         _ts_start = np.array(self.ts_start)
-        _sat_sec = ((_saturation - self.zero_level) / _exposure)
+        _sat_sec = ((_adu - self.zero_level) / _exposure)
         _ts_start_shift = _ts_start - _ts_start.min()
         _ts_mid_shift  = _ts_start_shift + (_exposure / 2)
 
-        inf = f'Ts: {_ts_start_shift}, sat: {_saturation}, exp: {_exposure}, zero: {self.zero_level}'
+        inf = f'Ts: {_ts_start_shift}, adu: {_adu}, exp: {_exposure}, zero: {self.zero_level}'
         logger.info(inf)
         if test_time is None:
             await self.ce.journal.info(inf)
@@ -133,22 +133,22 @@ class AutoFlatNoTest:
         else:
             _ts_now = test_time - _ts_start.min()
 
-        if len(self.saturation) == 1:
-            _saturation_predict = _sat_sec[0]
+        if len(self.adu) == 1:
+            _adu_predict = _sat_sec[0]
 
-        elif len(self.saturation) == 2:
-            _saturation_predict = await self._linear_saturation_predict(
+        elif len(self.adu) == 2:
+            _adu_predict = await self._linear_adu_predict(
                 ts_mid_shift=_ts_mid_shift, sat_sec=_sat_sec, ts_now=_ts_now
             )
 
-        elif len(self.saturation) > 2:
+        elif len(self.adu) > 2:
             params = await self._curve_fit(x=_ts_mid_shift, y=_sat_sec)
             if params is None:
-                _saturation_predict = await self._linear_saturation_predict(
+                _adu_predict = await self._linear_adu_predict(
                     ts_mid_shift=_ts_mid_shift, sat_sec=_sat_sec, ts_now=_ts_now
                 )
             else:
-                _saturation_predict = self._exp_func(_ts_now, params[0], params[1], params[2])
+                _adu_predict = self._exp_func(_ts_now, params[0], params[1], params[2])
 
         else:
             inf = f'No data to calc. time'
@@ -158,8 +158,15 @@ class AutoFlatNoTest:
                 self.ce.info_callback['stream_1'](inf)
             return None, None
 
-        _new_exposure_min = (self.range_min_max_adu[0] - self.zero_level) / _saturation_predict
-        _new_exposure_max = (self.range_min_max_adu[1] - self.zero_level) / _saturation_predict
+        _new_exposure_min = (self.range_min_max_adu[0] - self.zero_level) / _adu_predict
+        _new_exposure_max = (self.range_min_max_adu[1] - self.zero_level) / _adu_predict
+
+        # self.ce.info_callback['exec_json'](self.ce.exec_json(
+        #     **self.ce.info_dict,
+        #     # test_exp_mean=self.last_mean,
+        #     # expected_mean_min=round(self.test_min_max_adu[0] / self.test_min_max_time_exp[1]),
+        #     # expected_mean_max=round(self.test_min_max_adu[1] / self.test_min_max_time_exp[0])
+        # ))
 
         inf = f'Calc. exp. time done min: {_new_exposure_min:.1f} max: {_new_exposure_max:.1f}'
         logger.info(inf)
@@ -238,12 +245,10 @@ class AutoFlatNoTest:
 
         self.auto_exp_sub_no += 1
 
-        # self.ce.info_callback['exec_json'](self.ce.exec_json(
-        #     **self.ce.info_dict,
-        #     # test_exp_mean=self.last_mean,
-        #     # expected_mean_min=round(self.test_min_max_adu[0] / self.test_min_max_time_exp[1]),
-        #     # expected_mean_max=round(self.test_min_max_adu[1] / self.test_min_max_time_exp[0])
-        # ))
+        self.ce.info_callback['exec_json'](self.ce.exec_json(
+            auto_exp_start=True, auto_exp_finnished=False, auto_exp_sub_no=self.auto_exp_sub_no,
+            auto_exp_time=self.test_exposure_time, **self.ce.info_dict)
+        )
 
         _ts_start = datetime.datetime.utcnow().timestamp()
         exe = await self.ce.proof_put(
@@ -275,7 +280,7 @@ class AutoFlatNoTest:
             try:
                 if dat['response'] == 'stats_done':
                     await self.add_record(
-                        ts_start=_ts_start, saturation=dat['param']['mean'], exp=self.test_exposure_time
+                        ts_start=_ts_start, adu_mean=dat['param']['mean'], exp=self.test_exposure_time
                     )
                 else:
                     inf = f'{self.ce.id} {self.ce.name} wrong rpc response, no stats_done.'

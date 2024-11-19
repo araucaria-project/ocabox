@@ -376,15 +376,15 @@ class CameraExposure(BaseSubCommand):
                     logger.info(inf)
                     await self.journal.info(inf)
                     self.info_callback['stream_1'](inf)
-                    saturation_mean = round(dat['param']['mean'])
+                    adu_mean = round(dat['param']['mean'])
                     if self.auto_exposure:
                         await self.seq_data.auto_flat.add_record(
                             ts_start=self.exp_time_start.timestamp(),
-                            saturation=saturation_mean,
+                            adu=adu_mean,
                             exp=sub_time
                         )
                     self.info_callback['exec_json'](self.exec_json(
-                        exp_started=True, exp_done=True, exp_saved=True, n_exp=sub, mean=saturation_mean,
+                        exp_started=True, exp_done=True, exp_saved=True, n_exp=sub, mean=adu_mean,
                         exp_time=sub_time, **self.info_dict)
                     )
                     return True
