@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class AutoFlatNoTest:
 
     ZERO_LEVEL_SAFE = 10
-    TEST_TIME_TOLERANCE = 120 # seconds
+    TEST_TIME_TOLERANCE = 200 # seconds
     LINE_FIT_LAST_POINTS = 3
 
     def __init__(self) -> None:
