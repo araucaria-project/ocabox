@@ -385,9 +385,10 @@ class CameraExposure(BaseSubCommand):
                             f' exp {sub_time}'
                         )
                         logger.info(self.seq_data.auto_flat)
+
                         await self.seq_data.auto_flat.add_record(
                             ts_start=float(self.exp_time_start.timestamp()),
-                            adu=float(adu_mean),
+                            adu_mean=float(adu_mean),
                             exp=float(sub_time)
                         )
                         logger.info('Auto exposure record add.')
