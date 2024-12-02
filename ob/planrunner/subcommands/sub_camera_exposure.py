@@ -260,6 +260,7 @@ class CameraExposure(BaseSubCommand):
             })
 
     async def _wait_for_save_fits(self, sub: int, sub_time: float) -> bool:
+        logger.info('Wait for save fits ...')
         self._get_fits_file_name()
         self._get_folders_and_symlinks()
 
@@ -372,17 +373,19 @@ class CameraExposure(BaseSubCommand):
         if dat:
             try:
                 if dat['response'] == 'fits_saved':
+                    logger.info('Rpc response received.')
+                    adu_mean = round(dat['param']['mean'])
+                    logger.info(f'Adu mean {adu_mean}.')
+                    if self.auto_exposure:
+                        await self.seq_data.auto_flat.add_record(
+                            ts_start=float(self.exp_time_start.timestamp()),
+                            adu_mean=float(adu_mean),
+                            exp=float(sub_time)
+                        )
                     inf = f'{self.id} {self.name} exp:{sub}/{self.exp_no} done. Fits id: {self.fits_file_name}.'
                     logger.info(inf)
                     await self.journal.info(inf)
                     self.info_callback['stream_1'](inf)
-                    adu_mean = round(dat['param']['mean'])
-                    if self.auto_exposure:
-                        await self.seq_data.auto_flat.add_record(
-                            ts_start=self.exp_time_start.timestamp(),
-                            adu=adu_mean,
-                            exp=sub_time
-                        )
                     self.info_callback['exec_json'](self.exec_json(
                         exp_started=True, exp_done=True, exp_saved=True, n_exp=sub, mean=adu_mean,
                         exp_time=sub_time, **self.info_dict)
@@ -408,6 +411,7 @@ class CameraExposure(BaseSubCommand):
             return False
 
     async def wait_for_subexposure(self, sub_time: float) -> None:
+        logger.info('Waiting for camera image ready ...')
         if sub_time >= 4.0:
             sub_t = sub_time
         else:
@@ -418,8 +422,9 @@ class CameraExposure(BaseSubCommand):
                 name='wait_subexp', awaitab=self.camera.aget_imageready, expect_type=bool
             )
             if subexposure_done is True:
+                logger.info('Wait for camera done.')
                 break
-            await asyncio.sleep(0)
+            await asyncio.sleep(0.5)
 
     async def arun(self, step_id: str or None = None) -> int:
 
@@ -464,7 +469,6 @@ class CameraExposure(BaseSubCommand):
             logger.error(inf)
             await self.journal.error(inf)
             return 2
-        # await self.camera.aput_startexposure(float(exposure_time), self.light)
         await self.wait_for_subexposure(float(exposure_time))
         self.readout_time = time.time() - self.readout_time_start - float(exposure_time)
         inf = f'{self.id} {self.name} exp:{self.sub_exp}/{self.exp_no} saving.'
@@ -478,12 +482,12 @@ class CameraExposure(BaseSubCommand):
         wff = await self._wait_for_save_fits(sub=self.sub_exp, sub_time=float(exposure_time))
         if not wff:
             return 2
+        await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.done)
+        self.info_callback['exec_json'](self.exec_json(exp_time=float(exposure_time), **self.info_dict))
         self.info_callback['stream_1'](f'{self.id} {self.name} done')
         self.info_callback['stream_5'](f'{self.id}')
         inf = f'{self.id} {self.name} done.'
-        logger.debug(inf)
+        logger.info(inf)
         self.done = True
-        await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.done)
-        self.info_callback['exec_json'](self.exec_json(exp_time=float(exposure_time), **self.info_dict))
         await asyncio.sleep(0.2)
         return 0

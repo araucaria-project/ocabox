@@ -16,8 +16,9 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class AutoFlatNoTest:
 
-    # ZERO_LEVEL_SAFE = 15
-    TEST_TIME_TOLERANCE = 120 # seconds
+    ZERO_LEVEL_SAFE = 10
+    TEST_TIME_TOLERANCE = 240 # seconds
+    LINE_FIT_LAST_POINTS = 3
 
     def __init__(self) -> None:
         self.ce = None
@@ -60,7 +61,7 @@ class AutoFlatNoTest:
             logger.warning(f'No exposure_time_range in general config.')
             pass
         try:
-            self.zero_level = sky_flat_conf['bias_level'] # - self.ZERO_LEVEL_SAFE
+            self.zero_level = sky_flat_conf['bias_level'] - self.ZERO_LEVEL_SAFE
         except (LookupError, TypeError):
             logger.warning(f'No bias_level in general config.')
             pass
@@ -76,7 +77,7 @@ class AutoFlatNoTest:
             self.evening = False
         logger.info(f'Evening set {self.evening}')
 
-    async def add_record(self,ts_start: float, adu_mean: float, exp: float) -> None:
+    async def add_record(self, ts_start: float, adu_mean: float, exp: float) -> None:
         self.ts_start.append(ts_start)
         self.adu.append(adu_mean)
         self.exposure.append(exp)
@@ -144,7 +145,9 @@ class AutoFlatNoTest:
         elif len(self.adu) == 2:
             if _ts_start[1] + self.TEST_TIME_TOLERANCE > _ts_now:
                 _adu_predict = await self._linear_adu_predict(
-                    ts_mid_shift=_ts_mid_shift, sat_sec=_sat_sec, ts_now=_ts_now
+                    ts_mid_shift=_ts_mid_shift[-self.LINE_FIT_LAST_POINTS:],
+                    sat_sec=_sat_sec[-self.LINE_FIT_LAST_POINTS:],
+                    ts_now=_ts_now
                 )
             else:
                 logger.info('Last linear point is to old - proceed to test exposure.')
@@ -154,7 +157,9 @@ class AutoFlatNoTest:
             params = await self._curve_fit(x=_ts_mid_shift, y=_sat_sec)
             if params is None:
                 _adu_predict = await self._linear_adu_predict(
-                    ts_mid_shift=_ts_mid_shift, sat_sec=_sat_sec, ts_now=_ts_now
+                    ts_mid_shift=_ts_mid_shift[-self.LINE_FIT_LAST_POINTS:],
+                    sat_sec=_sat_sec[-self.LINE_FIT_LAST_POINTS:],
+                    ts_now=_ts_now
                 )
             else:
                 _adu_predict = self._exp_func(_ts_now, params[0], params[1], params[2])
