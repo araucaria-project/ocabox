@@ -378,6 +378,13 @@ class CameraExposure(BaseSubCommand):
                     adu_mean = round(dat['param']['mean'])
                     logger.info(f'Adu mean {adu_mean}.')
                     if self.auto_exposure:
+                        logger.info(
+                            f'Begin to add record:'
+                            f' ts_start {self.exp_time_start.timestamp()}'
+                            f' adu {adu_mean}'
+                            f' exp {sub_time}'
+                        )
+                        logger.info(self.seq_data.auto_flat)
                         await self.seq_data.auto_flat.add_record(
                             ts_start=self.exp_time_start.timestamp(),
                             adu=adu_mean,
