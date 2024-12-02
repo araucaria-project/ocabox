@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class AutoFlatNoTest:
 
-    # ZERO_LEVEL_SAFE = 15
+    ZERO_LEVEL_SAFE = 10
     TEST_TIME_TOLERANCE = 120 # seconds
     LINE_FIT_LAST_POINTS = 3
 
@@ -61,7 +61,7 @@ class AutoFlatNoTest:
             logger.warning(f'No exposure_time_range in general config.')
             pass
         try:
-            self.zero_level = sky_flat_conf['bias_level'] # - self.ZERO_LEVEL_SAFE
+            self.zero_level = sky_flat_conf['bias_level'] - self.ZERO_LEVEL_SAFE
         except (LookupError, TypeError):
             logger.warning(f'No bias_level in general config.')
             pass
