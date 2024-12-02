@@ -78,9 +78,15 @@ class AutoFlatNoTest:
         logger.info(f'Evening set {self.evening}')
 
     async def add_record(self, ts_start: float, adu_mean: float, exp: float) -> None:
+        print(self.ts_start)
+        print(self.adu)
+        print(self.exposure)
         self.ts_start.append(ts_start)
         self.adu.append(adu_mean)
         self.exposure.append(exp)
+        print(self.ts_start)
+        print(self.adu)
+        print(self.exposure)
 
     @staticmethod
     def _exp_func(x, a, b, c):
