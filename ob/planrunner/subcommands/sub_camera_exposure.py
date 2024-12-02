@@ -386,9 +386,9 @@ class CameraExposure(BaseSubCommand):
                         )
                         logger.info(self.seq_data.auto_flat)
                         await self.seq_data.auto_flat.add_record(
-                            ts_start=self.exp_time_start.timestamp(),
-                            adu=adu_mean,
-                            exp=sub_time
+                            ts_start=float(self.exp_time_start.timestamp()),
+                            adu=float(adu_mean),
+                            exp=float(sub_time)
                         )
                         logger.info('Auto exposure record add.')
                     inf = f'{self.id} {self.name} exp:{sub}/{self.exp_no} done. Fits id: {self.fits_file_name}.'
