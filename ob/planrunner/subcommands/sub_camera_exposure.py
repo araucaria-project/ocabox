@@ -374,7 +374,9 @@ class CameraExposure(BaseSubCommand):
             try:
                 if dat['response'] == 'fits_saved':
                     logger.info('Rpc response received.')
+                    logger.info(dat)
                     adu_mean = round(dat['param']['mean'])
+                    logger.info(f'Adu mean {adu_mean}.')
                     if self.auto_exposure:
                         await self.seq_data.auto_flat.add_record(
                             ts_start=self.exp_time_start.timestamp(),
