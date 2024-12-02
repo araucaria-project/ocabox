@@ -477,12 +477,11 @@ class CameraExposure(BaseSubCommand):
         wff = await self._wait_for_save_fits(sub=self.sub_exp, sub_time=float(exposure_time))
         if not wff:
             return 2
-        logger.debug(inf)
-        self.done = True
         await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.done)
         self.info_callback['exec_json'](self.exec_json(exp_time=float(exposure_time), **self.info_dict))
         self.info_callback['stream_1'](f'{self.id} {self.name} done')
         self.info_callback['stream_5'](f'{self.id}')
         inf = f'{self.id} {self.name} done.'
-        # await asyncio.sleep(0.2)
+        logger.info(inf)
+        self.done = True
         return 0
