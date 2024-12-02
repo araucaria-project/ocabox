@@ -372,10 +372,6 @@ class CameraExposure(BaseSubCommand):
         if dat:
             try:
                 if dat['response'] == 'fits_saved':
-                    inf = f'{self.id} {self.name} exp:{sub}/{self.exp_no} done. Fits id: {self.fits_file_name}.'
-                    logger.info(inf)
-                    await self.journal.info(inf)
-                    self.info_callback['stream_1'](inf)
                     adu_mean = round(dat['param']['mean'])
                     if self.auto_exposure:
                         await self.seq_data.auto_flat.add_record(
@@ -387,6 +383,10 @@ class CameraExposure(BaseSubCommand):
                         exp_started=True, exp_done=True, exp_saved=True, n_exp=sub, mean=adu_mean,
                         exp_time=sub_time, **self.info_dict)
                     )
+                    inf = f'{self.id} {self.name} exp:{sub}/{self.exp_no} done. Fits id: {self.fits_file_name}.'
+                    logger.info(inf)
+                    await self.journal.info(inf)
+                    self.info_callback['stream_1'](inf)
                     return True
                 else:
                     inf = f'{self.id} {self.name} wrong rpc response, no fits_saved.'
