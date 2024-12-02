@@ -260,6 +260,7 @@ class CameraExposure(BaseSubCommand):
             })
 
     async def _wait_for_save_fits(self, sub: int, sub_time: float) -> bool:
+        logger.info('Wait for save fits begin.')
         self._get_fits_file_name()
         self._get_folders_and_symlinks()
 
@@ -379,14 +380,14 @@ class CameraExposure(BaseSubCommand):
                             adu=adu_mean,
                             exp=sub_time
                         )
-                    self.info_callback['exec_json'](self.exec_json(
-                        exp_started=True, exp_done=True, exp_saved=True, n_exp=sub, mean=adu_mean,
-                        exp_time=sub_time, **self.info_dict)
-                    )
                     inf = f'{self.id} {self.name} exp:{sub}/{self.exp_no} done. Fits id: {self.fits_file_name}.'
                     logger.info(inf)
                     await self.journal.info(inf)
                     self.info_callback['stream_1'](inf)
+                    self.info_callback['exec_json'](self.exec_json(
+                        exp_started=True, exp_done=True, exp_saved=True, n_exp=sub, mean=adu_mean,
+                        exp_time=sub_time, **self.info_dict)
+                    )
                     return True
                 else:
                     inf = f'{self.id} {self.name} wrong rpc response, no fits_saved.'
@@ -419,7 +420,7 @@ class CameraExposure(BaseSubCommand):
             )
             if subexposure_done is True:
                 break
-            await asyncio.sleep(0)
+            await asyncio.sleep(0.5)
 
     async def arun(self, step_id: str or None = None) -> int:
 
@@ -484,4 +485,5 @@ class CameraExposure(BaseSubCommand):
         inf = f'{self.id} {self.name} done.'
         logger.info(inf)
         self.done = True
+        await asyncio.sleep(0.2)
         return 0
