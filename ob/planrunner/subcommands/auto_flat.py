@@ -18,6 +18,7 @@ class AutoFlatNoTest:
 
     # ZERO_LEVEL_SAFE = 15
     TEST_TIME_TOLERANCE = 120 # seconds
+    LINE_FIT_LAST_POINTS = 3
 
     def __init__(self) -> None:
         self.ce = None
@@ -144,7 +145,9 @@ class AutoFlatNoTest:
         elif len(self.adu) == 2:
             if _ts_start[1] + self.TEST_TIME_TOLERANCE > _ts_now:
                 _adu_predict = await self._linear_adu_predict(
-                    ts_mid_shift=_ts_mid_shift, sat_sec=_sat_sec, ts_now=_ts_now
+                    ts_mid_shift=_ts_mid_shift[-self.LINE_FIT_LAST_POINTS:],
+                    sat_sec=_sat_sec[-self.LINE_FIT_LAST_POINTS:],
+                    ts_now=_ts_now
                 )
             else:
                 logger.info('Last linear point is to old - proceed to test exposure.')
@@ -154,7 +157,9 @@ class AutoFlatNoTest:
             params = await self._curve_fit(x=_ts_mid_shift, y=_sat_sec)
             if params is None:
                 _adu_predict = await self._linear_adu_predict(
-                    ts_mid_shift=_ts_mid_shift, sat_sec=_sat_sec, ts_now=_ts_now
+                    ts_mid_shift=_ts_mid_shift[-self.LINE_FIT_LAST_POINTS:],
+                    sat_sec=_sat_sec[-self.LINE_FIT_LAST_POINTS:],
+                    ts_now=_ts_now
                 )
             else:
                 _adu_predict = self._exp_func(_ts_now, params[0], params[1], params[2])

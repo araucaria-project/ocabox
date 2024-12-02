@@ -703,7 +703,7 @@ class Command(BaseSequence):
             }
         }
         try:
-            await self.command_log_pub.publish(data=data, timeout=10)
+            await self.command_log_pub.publish(data=data, timeout=30)
         except TimeoutError:
             logger.error(f'Nats publish get timeout error')
 

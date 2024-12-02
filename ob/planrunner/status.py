@@ -54,7 +54,7 @@ class PlanStatus:
 
     async def send_to_nats(self, publisher: MsgPublisher, data: Dict)-> None:
         try:
-            await publisher.publish(data=data, timeout=10)
+            await publisher.publish(data=data, timeout=30)
         except TimeoutError:
             logger.error(f'Nats publish get timeout error')
 
