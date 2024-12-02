@@ -260,7 +260,7 @@ class CameraExposure(BaseSubCommand):
             })
 
     async def _wait_for_save_fits(self, sub: int, sub_time: float) -> bool:
-        logger.info('Wait for save fits begin.')
+        logger.info('Wait for save fits start.')
         self._get_fits_file_name()
         self._get_folders_and_symlinks()
 
@@ -373,6 +373,7 @@ class CameraExposure(BaseSubCommand):
         if dat:
             try:
                 if dat['response'] == 'fits_saved':
+                    logger.info('Rpc response received.')
                     adu_mean = round(dat['param']['mean'])
                     if self.auto_exposure:
                         await self.seq_data.auto_flat.add_record(
@@ -380,6 +381,7 @@ class CameraExposure(BaseSubCommand):
                             adu=adu_mean,
                             exp=sub_time
                         )
+                        logger.info('Auto exposure record add.')
                     inf = f'{self.id} {self.name} exp:{sub}/{self.exp_no} done. Fits id: {self.fits_file_name}.'
                     logger.info(inf)
                     await self.journal.info(inf)
@@ -409,6 +411,7 @@ class CameraExposure(BaseSubCommand):
             return False
 
     async def wait_for_subexposure(self, sub_time: float) -> None:
+        logger.info('Waiting for camera start.')
         if sub_time >= 4.0:
             sub_t = sub_time
         else:
@@ -419,6 +422,7 @@ class CameraExposure(BaseSubCommand):
                 name='wait_subexp', awaitab=self.camera.aget_imageready, expect_type=bool
             )
             if subexposure_done is True:
+                logger.info('Wait for camera done.')
                 break
             await asyncio.sleep(0.5)
 
