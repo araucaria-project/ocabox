@@ -464,7 +464,6 @@ class CameraExposure(BaseSubCommand):
             logger.error(inf)
             await self.journal.error(inf)
             return 2
-        # await self.camera.aput_startexposure(float(exposure_time), self.light)
         await self.wait_for_subexposure(float(exposure_time))
         self.readout_time = time.time() - self.readout_time_start - float(exposure_time)
         inf = f'{self.id} {self.name} exp:{self.sub_exp}/{self.exp_no} saving.'
