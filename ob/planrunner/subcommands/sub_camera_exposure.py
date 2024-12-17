@@ -122,7 +122,37 @@ class CameraExposure(BaseSubCommand):
         try:
             return _cam['vertical_shift_speed']
         except (LookupError, TypeError):
-            logger.info(f' No pixel scale value in camera in general config')
+            logger.info(f' No vertical shift speed value in camera in general config')
+            return ''
+
+    async def zero_era(self) -> float or str:
+        _cam = self.param['cfg_gen'].get_value(seq=[
+            'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'zero'
+        ], source='nats')
+        try:
+            return _cam['era']
+        except (LookupError, TypeError):
+            logger.info(f' No zero era value in camera in general config')
+            return ''
+
+    async def dark_era(self) -> float or str:
+        _cam = self.param['cfg_gen'].get_value(seq=[
+            'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'dark'
+        ], source='nats')
+        try:
+            return _cam['era']
+        except (LookupError, TypeError):
+            logger.info(f' No dark era value in camera in general config')
+            return ''
+
+    async def sky_flats_era(self) -> float or str:
+        _cam = self.param['cfg_gen'].get_value(seq=[
+            'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'sky_flats'
+        ], source='nats')
+        try:
+            return _cam['era']
+        except (LookupError, TypeError):
+            logger.info(f' No sky flats era value in camera in general config')
             return ''
 
     async def baseline_clamp(self) -> float or str:
@@ -135,7 +165,7 @@ class CameraExposure(BaseSubCommand):
             else:
                 return 0
         except (LookupError, TypeError):
-            logger.info(f' No pixel scale value in camera in general config')
+            logger.info(f' No baseline clamp value in camera in general config')
             return ''
 
     async def sensor_port(self) -> float or str:
@@ -145,7 +175,7 @@ class CameraExposure(BaseSubCommand):
         try:
             return _cam['sensor_port']
         except (LookupError, TypeError):
-            logger.info(f' No pixel scale value in camera in general config')
+            logger.info(f' No sensor port value in camera in general config')
             return ''
 
     async def sensor_compensation(self) -> float or str:
@@ -158,7 +188,7 @@ class CameraExposure(BaseSubCommand):
             else:
                 return 0
         except (LookupError, TypeError):
-            logger.info(f' No pixel scale value in camera in general config')
+            logger.info(f' No sensor compensation value in camera in general config')
             return ''
 
     def array_bits(self, rmmode: int) -> str:
@@ -408,7 +438,10 @@ class CameraExposure(BaseSubCommand):
             vertical_shift_speed=await self.vertical_shift_speed(),
             baseline_clamp=await self.baseline_clamp(),
             sensor_port=await self.sensor_port(),
-            sensor_compensation=await self.sensor_compensation()
+            sensor_compensation=await self.sensor_compensation(),
+            zero_era=await self.zero_era(),
+            dark_era=await self.dark_era(),
+            flat_era=await self.sky_flat_era(),
         )
         try:
             dat = await self.rpc_request(
