@@ -115,6 +115,46 @@ class CameraExposure(BaseSubCommand):
             logger.info(f' No pixel scale value in camera in general config')
             return ''
 
+    async def vertical_shift_speed(self) -> float or str:
+        _cam = self.param['cfg_gen'].get_value(seq=[
+            'telescopes', self.telescope.id, 'observatory', 'components', 'camera'
+        ], source='nats')
+        try:
+            return _cam['vertical_shift_speed']
+        except (LookupError, TypeError):
+            logger.info(f' No pixel scale value in camera in general config')
+            return ''
+
+    async def baseline_clamp(self) -> float or str:
+        _cam = self.param['cfg_gen'].get_value(seq=[
+            'telescopes', self.telescope.id, 'observatory', 'components', 'camera'
+        ], source='nats')
+        try:
+            return _cam['baseline_clamp']
+        except (LookupError, TypeError):
+            logger.info(f' No pixel scale value in camera in general config')
+            return ''
+
+    async def sensor_port(self) -> float or str:
+        _cam = self.param['cfg_gen'].get_value(seq=[
+            'telescopes', self.telescope.id, 'observatory', 'components', 'camera'
+        ], source='nats')
+        try:
+            return _cam['sensor_port']
+        except (LookupError, TypeError):
+            logger.info(f' No pixel scale value in camera in general config')
+            return ''
+
+    async def sensor_compensation(self) -> float or str:
+        _cam = self.param['cfg_gen'].get_value(seq=[
+            'telescopes', self.telescope.id, 'observatory', 'components', 'camera'
+        ], source='nats')
+        try:
+            return _cam['sensor_compensation']
+        except (LookupError, TypeError):
+            logger.info(f' No pixel scale value in camera in general config')
+            return ''
+
     def array_bits(self, rmmode: int) -> str:
         rm = self.param['cfg_gen'].get_value(seq=[
             'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'readout_modes', str(rmmode)
@@ -358,7 +398,11 @@ class CameraExposure(BaseSubCommand):
             gain=await self.gain_value(gain_mode=gainmode),
             scale=await self.pixel_scale(),
             pierside=side_of_pier,
-            airmass=await self.airmass_value(alt=tel_alt)
+            airmass=await self.airmass_value(alt=tel_alt),
+            vertical_shift_speed=await self.vertical_shift_speed(),
+            baseline_clamp=await self.baseline_clamp(),
+            sensor_port=await self.sensor_port(),
+            sensor_compensation=await self.sensor_compensation()
         )
         try:
             dat = await self.rpc_request(
