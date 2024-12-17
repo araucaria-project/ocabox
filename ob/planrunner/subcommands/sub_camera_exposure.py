@@ -130,7 +130,10 @@ class CameraExposure(BaseSubCommand):
             'telescopes', self.telescope.id, 'observatory', 'components', 'camera'
         ], source='nats')
         try:
-            return _cam['baseline_clamp']
+            if _cam['baseline_clamp']:
+                return 1
+            else:
+                return 0
         except (LookupError, TypeError):
             logger.info(f' No pixel scale value in camera in general config')
             return ''
@@ -150,7 +153,10 @@ class CameraExposure(BaseSubCommand):
             'telescopes', self.telescope.id, 'observatory', 'components', 'camera'
         ], source='nats')
         try:
-            return _cam['sensor_compensation']
+            if _cam['sensor_compensation']:
+                return 1
+            else:
+                return 0
         except (LookupError, TypeError):
             logger.info(f' No pixel scale value in camera in general config')
             return ''
