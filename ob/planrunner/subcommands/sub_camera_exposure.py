@@ -394,8 +394,7 @@ class CameraExposure(BaseSubCommand):
             instrument_name = 'simul'
         loc = self.param['cfg_gen'].get_value(seq=['site', 'global', 'geo_location'], source='nats')
         tel_alt = await self.value_proof_get(name='fitsh_tel_alt', awaitab=self.mount.aget_alt, expect_type=float)
-        era = await self.zero_era()
-        logger.info(str(era))
+        z_era = await self.zero_era()
         header = fits_header(
             obs_lat=loc['lat'],
             obs_lon=loc['lon'],
@@ -443,7 +442,7 @@ class CameraExposure(BaseSubCommand):
             baseline_clamp=await self.baseline_clamp(),
             sensor_port=await self.sensor_port(),
             sensor_compensation=await self.sensor_compensation(),
-            # zero_era=await self.zero_era(),
+            zero_era=z_era,
             # dark_era=await self.dark_era(),
             # flat_era=await self.sky_flats_era(),
         )
