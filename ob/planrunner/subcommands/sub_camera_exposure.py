@@ -127,7 +127,7 @@ class CameraExposure(BaseSubCommand):
 
     async def zero_era(self) -> int or str:
         _era = self.param['cfg_gen'].get_value(seq=[
-            'telescopes', self.telescope.id, 'observatory', 'components', 'camera'
+            'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'zero'
         ], source='nats')
         logger.info(f'zero_era: {_era}')
         # if _era is not None:
