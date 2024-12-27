@@ -125,7 +125,7 @@ class CameraExposure(BaseSubCommand):
             logger.info(f' No vertical shift speed value in camera in general config')
             return ''
 
-    async def zero_era(self) -> int or str:
+    def zero_era(self) -> int or str:
         _era = self.param['cfg_gen'].get_value(seq=[
             'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'zero', 'era'
         ], source='nats')
@@ -442,7 +442,7 @@ class CameraExposure(BaseSubCommand):
             baseline_clamp=await self.baseline_clamp(),
             sensor_port=await self.sensor_port(),
             sensor_compensation=await self.sensor_compensation(),
-            zero_era=await self.zero_era(),
+            zero_era=self.zero_era(),
             # dark_era=await self.dark_era(),
             # flat_era=await self.sky_flats_era(),
         )
