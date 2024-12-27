@@ -443,8 +443,8 @@ class CameraExposure(BaseSubCommand):
             sensor_port=await self.sensor_port(),
             sensor_compensation=await self.sensor_compensation(),
             zero_era=await self.zero_era(),
-            dark_era=await self.dark_era(),
-            flat_era=await self.sky_flats_era(),
+            # dark_era=await self.dark_era(),
+            # flat_era=await self.sky_flats_era(),
         )
         try:
             dat = await self.rpc_request(
