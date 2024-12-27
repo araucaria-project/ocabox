@@ -130,11 +130,11 @@ class CameraExposure(BaseSubCommand):
             'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'zero', 'era'
         ], source='nats')
         logger.info(f'zero_era: {_era}')
-        if _era is not None:
-            return int(_era)
-        else:
-            logger.info(f' No zero era value in camera in general config')
-            return ''
+        # if _era is not None:
+        #     return int(_era)
+        # else:
+        #     logger.info(f' No zero era value in camera in general config')
+        #     return ''
 
     async def dark_era(self) -> int or str:
         _era = self.param['cfg_gen'].get_value(seq=[
