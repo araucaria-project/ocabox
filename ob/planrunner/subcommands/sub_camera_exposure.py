@@ -125,33 +125,33 @@ class CameraExposure(BaseSubCommand):
             logger.info(f' No vertical shift speed value in camera in general config')
             return ''
 
-    async def zero_era(self) -> float or str:
-        _cam = self.param['cfg_gen'].get_value(seq=[
-            'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'zero'
+    async def zero_era(self) -> int or str:
+        _era = self.param['cfg_gen'].get_value(seq=[
+            'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'zero', 'era'
         ], source='nats')
-        try:
-            return _cam['era']
-        except (LookupError, TypeError):
+        if _era is not None:
+            return _era
+        else:
             logger.info(f' No zero era value in camera in general config')
             return ''
 
-    async def dark_era(self) -> float or str:
-        _cam = self.param['cfg_gen'].get_value(seq=[
-            'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'dark'
+    async def dark_era(self) -> int or str:
+        _era = self.param['cfg_gen'].get_value(seq=[
+            'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'dark', 'era'
         ], source='nats')
-        try:
-            return _cam['era']
-        except (LookupError, TypeError):
+        if _era is not None:
+            return _era
+        else:
             logger.info(f' No dark era value in camera in general config')
             return ''
 
-    async def sky_flats_era(self) -> float or str:
-        _cam = self.param['cfg_gen'].get_value(seq=[
-            'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'sky_flats'
+    async def sky_flats_era(self) -> int or str:
+        _era = self.param['cfg_gen'].get_value(seq=[
+            'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'sky_flats', 'era'
         ], source='nats')
-        try:
-            return _cam['era']
-        except (LookupError, TypeError):
+        if _era is not None:
+            return _era
+        else:
             logger.info(f' No sky flats era value in camera in general config')
             return ''
 
@@ -439,9 +439,9 @@ class CameraExposure(BaseSubCommand):
             baseline_clamp=await self.baseline_clamp(),
             sensor_port=await self.sensor_port(),
             sensor_compensation=await self.sensor_compensation(),
-            # zero_era=await self.zero_era(),
-            # dark_era=await self.dark_era(),
-            # flat_era=await self.sky_flat_era(),
+            zero_era=await self.zero_era(),
+            dark_era=await self.dark_era(),
+            flat_era=await self.sky_flats_era(),
         )
         try:
             dat = await self.rpc_request(
