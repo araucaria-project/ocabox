@@ -401,6 +401,7 @@ class CameraExposure(BaseSubCommand):
             instrument_name = 'simul'
         loc = self.param['cfg_gen'].get_value(seq=['site', 'global', 'geo_location'], source='nats')
         tel_alt = await self.value_proof_get(name='fitsh_tel_alt', awaitab=self.mount.aget_alt, expect_type=float)
+        await self.zero_era()
         header = fits_header(
             obs_lat=loc['lat'],
             obs_lon=loc['lon'],
