@@ -81,7 +81,7 @@ class CameraExposure(BaseSubCommand):
         try:
             return _gain['gain']
         except (LookupError, TypeError):
-            logger.info(f' No gain value in gain modes in general config')
+            logger.info(f'No gain value in gain modes in general config')
             return ''
 
     @staticmethod
@@ -102,7 +102,7 @@ class CameraExposure(BaseSubCommand):
         try:
             return _gain['ron']
         except (LookupError, TypeError):
-            logger.info(f' No readout noise value in readout modes in general config')
+            logger.info(f'No readout noise value in readout modes in general config')
             return ''
 
     async def pixel_scale(self) -> float or str:
@@ -112,7 +112,83 @@ class CameraExposure(BaseSubCommand):
         try:
             return _cam['pixel_scale']
         except (LookupError, TypeError):
-            logger.info(f' No pixel scale value in camera in general config')
+            logger.info(f'No pixel scale value in camera in general config')
+            return ''
+
+    async def vertical_shift_speed(self) -> float or str:
+        _cam = self.param['cfg_gen'].get_value(seq=[
+            'telescopes', self.telescope.id, 'observatory', 'components', 'camera'
+        ], source='nats')
+        try:
+            return _cam['vertical_shift_speed']
+        except (LookupError, TypeError):
+            logger.info(f'No vertical shift speed value in camera in general config')
+            return ''
+
+    async def zero_era(self) -> int or str:
+        _era = self.param['cfg_gen'].get_value(seq=[
+            'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'zero'
+        ], source='nats')
+        try:
+            return _era['era']
+        except (LookupError, TypeError):
+            logger.info(f'No zero era value in camera in general config')
+            return ''
+
+    async def dark_era(self) -> int or str:
+        _era = self.param['cfg_gen'].get_value(seq=[
+            'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'dark'
+        ], source='nats')
+        try:
+            return _era['era']
+        except (LookupError, TypeError):
+            logger.info(f'No dark era value in camera in general config')
+            return ''
+
+    async def sky_flats_era(self) -> int or str:
+        _era = self.param['cfg_gen'].get_value(seq=[
+            'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'sky_flats'
+        ], source='nats')
+        try:
+            return _era['era']
+        except (LookupError, TypeError):
+            logger.info(f'No sky flats era value in camera in general config')
+            return ''
+
+    async def baseline_clamp(self) -> float or str:
+        _cam = self.param['cfg_gen'].get_value(seq=[
+            'telescopes', self.telescope.id, 'observatory', 'components', 'camera'
+        ], source='nats')
+        try:
+            if _cam['baseline_clamp']:
+                return 1
+            else:
+                return 0
+        except (LookupError, TypeError):
+            logger.info(f' No baseline clamp value in camera in general config')
+            return ''
+
+    async def sensor_port(self) -> float or str:
+        _cam = self.param['cfg_gen'].get_value(seq=[
+            'telescopes', self.telescope.id, 'observatory', 'components', 'camera'
+        ], source='nats')
+        try:
+            return _cam['sensor_port']
+        except (LookupError, TypeError):
+            logger.info(f' No sensor port value in camera in general config')
+            return ''
+
+    async def sensor_compensation(self) -> float or str:
+        _cam = self.param['cfg_gen'].get_value(seq=[
+            'telescopes', self.telescope.id, 'observatory', 'components', 'camera'
+        ], source='nats')
+        try:
+            if _cam['sensor_compensation']:
+                return 1
+            else:
+                return 0
+        except (LookupError, TypeError):
+            logger.info(f' No sensor compensation value in camera in general config')
             return ''
 
     def array_bits(self, rmmode: int) -> str:
@@ -316,6 +392,9 @@ class CameraExposure(BaseSubCommand):
             instrument_name = 'simul'
         loc = self.param['cfg_gen'].get_value(seq=['site', 'global', 'geo_location'], source='nats')
         tel_alt = await self.value_proof_get(name='fitsh_tel_alt', awaitab=self.mount.aget_alt, expect_type=float)
+        z_era = await self.zero_era()
+        d_era = await self.dark_era()
+        f_era = await self.sky_flats_era()
         header = fits_header(
             obs_lat=loc['lat'],
             obs_lon=loc['lon'],
@@ -358,7 +437,14 @@ class CameraExposure(BaseSubCommand):
             gain=await self.gain_value(gain_mode=gainmode),
             scale=await self.pixel_scale(),
             pierside=side_of_pier,
-            airmass=await self.airmass_value(alt=tel_alt)
+            airmass=await self.airmass_value(alt=tel_alt),
+            vertical_shift_speed=await self.vertical_shift_speed(),
+            baseline_clamp=await self.baseline_clamp(),
+            sensor_port=await self.sensor_port(),
+            sensor_compensation=await self.sensor_compensation(),
+            zero_era=z_era,
+            dark_era=d_era,
+            flat_era=f_era,
         )
         try:
             dat = await self.rpc_request(
