@@ -127,14 +127,20 @@ class CameraExposure(BaseSubCommand):
 
     async def zero_era(self) -> int or str:
         _era = self.param['cfg_gen'].get_value(seq=[
-            'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'zero', 'era'
+            'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'zero'
         ], source='nats')
-        logger.info(f'zero_era: {_era}')
-        if _era is not None and isinstance(_era, int):
-            return _era
-        else:
+        try:
+            er = _era['era']
+        except (LookupError, TypeError):
             logger.info(f' No zero era value in camera in general config')
-            return ''
+            er = ''
+
+        logger.info(f'zero_era: {er}')
+        # if _era is not None and isinstance(_era, int):
+        #     return _era
+        # else:
+        #     logger.info(f' No zero era value in camera in general config')
+        #     return ''
 
     async def dark_era(self) -> int or str:
         _era = self.param['cfg_gen'].get_value(seq=[
@@ -395,7 +401,6 @@ class CameraExposure(BaseSubCommand):
             instrument_name = 'simul'
         loc = self.param['cfg_gen'].get_value(seq=['site', 'global', 'geo_location'], source='nats')
         tel_alt = await self.value_proof_get(name='fitsh_tel_alt', awaitab=self.mount.aget_alt, expect_type=float)
-        logger.info(str(await self.zero_era()))
         header = fits_header(
             obs_lat=loc['lat'],
             obs_lon=loc['lon'],
