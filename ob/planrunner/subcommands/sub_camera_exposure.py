@@ -129,8 +129,9 @@ class CameraExposure(BaseSubCommand):
         _era = self.param['cfg_gen'].get_value(seq=[
             'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'zero', 'era'
         ], source='nats')
+        logger.info(f'zero_era: {_era}')
         if _era is not None:
-            return _era
+            return int(_era)
         else:
             logger.info(f' No zero era value in camera in general config')
             return ''
@@ -139,8 +140,9 @@ class CameraExposure(BaseSubCommand):
         _era = self.param['cfg_gen'].get_value(seq=[
             'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'dark', 'era'
         ], source='nats')
+        logger.info(f'dark_era: {_era}')
         if _era is not None:
-            return _era
+            return int(_era)
         else:
             logger.info(f' No dark era value in camera in general config')
             return ''
@@ -149,8 +151,9 @@ class CameraExposure(BaseSubCommand):
         _era = self.param['cfg_gen'].get_value(seq=[
             'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'sky_flats', 'era'
         ], source='nats')
+        logger.info(f'sky_flats_era: {_era}')
         if _era is not None:
-            return _era
+            return int(_era)
         else:
             logger.info(f' No sky flats era value in camera in general config')
             return ''
