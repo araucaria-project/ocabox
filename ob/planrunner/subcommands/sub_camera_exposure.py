@@ -81,7 +81,7 @@ class CameraExposure(BaseSubCommand):
         try:
             return _gain['gain']
         except (LookupError, TypeError):
-            logger.info(f' No gain value in gain modes in general config')
+            logger.info(f'No gain value in gain modes in general config')
             return ''
 
     @staticmethod
@@ -102,7 +102,7 @@ class CameraExposure(BaseSubCommand):
         try:
             return _gain['ron']
         except (LookupError, TypeError):
-            logger.info(f' No readout noise value in readout modes in general config')
+            logger.info(f'No readout noise value in readout modes in general config')
             return ''
 
     async def pixel_scale(self) -> float or str:
@@ -112,7 +112,7 @@ class CameraExposure(BaseSubCommand):
         try:
             return _cam['pixel_scale']
         except (LookupError, TypeError):
-            logger.info(f' No pixel scale value in camera in general config')
+            logger.info(f'No pixel scale value in camera in general config')
             return ''
 
     async def vertical_shift_speed(self) -> float or str:
@@ -122,7 +122,7 @@ class CameraExposure(BaseSubCommand):
         try:
             return _cam['vertical_shift_speed']
         except (LookupError, TypeError):
-            logger.info(f' No vertical shift speed value in camera in general config')
+            logger.info(f'No vertical shift speed value in camera in general config')
             return ''
 
     async def zero_era(self) -> int or str:
@@ -132,29 +132,27 @@ class CameraExposure(BaseSubCommand):
         try:
             return _era['era']
         except (LookupError, TypeError):
-            logger.info(f' No zero era value in camera in general config')
+            logger.info(f'No zero era value in camera in general config')
             return ''
 
     async def dark_era(self) -> int or str:
         _era = self.param['cfg_gen'].get_value(seq=[
-            'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'dark', 'era'
+            'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'dark'
         ], source='nats')
-        logger.info(f'dark_era: {_era}')
-        if _era is not None:
-            return int(_era)
-        else:
-            logger.info(f' No dark era value in camera in general config')
+        try:
+            return _era['era']
+        except (LookupError, TypeError):
+            logger.info(f'No dark era value in camera in general config')
             return ''
 
     async def sky_flats_era(self) -> int or str:
         _era = self.param['cfg_gen'].get_value(seq=[
-            'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'sky_flats', 'era'
+            'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'sky_flats'
         ], source='nats')
-        logger.info(f'sky_flats_era: {_era}')
-        if _era is not None:
-            return int(_era)
-        else:
-            logger.info(f' No sky flats era value in camera in general config')
+        try:
+            return _era['era']
+        except (LookupError, TypeError):
+            logger.info(f'No sky flats era value in camera in general config')
             return ''
 
     async def baseline_clamp(self) -> float or str:
@@ -395,6 +393,8 @@ class CameraExposure(BaseSubCommand):
         loc = self.param['cfg_gen'].get_value(seq=['site', 'global', 'geo_location'], source='nats')
         tel_alt = await self.value_proof_get(name='fitsh_tel_alt', awaitab=self.mount.aget_alt, expect_type=float)
         z_era = await self.zero_era()
+        d_era = await self.dark_era()
+        f_era = await self.sky_flats_era()
         header = fits_header(
             obs_lat=loc['lat'],
             obs_lon=loc['lon'],
@@ -443,8 +443,8 @@ class CameraExposure(BaseSubCommand):
             sensor_port=await self.sensor_port(),
             sensor_compensation=await self.sensor_compensation(),
             zero_era=z_era,
-            # dark_era=await self.dark_era(),
-            # flat_era=await self.sky_flats_era(),
+            dark_era=d_era,
+            flat_era=f_era,
         )
         try:
             dat = await self.rpc_request(
