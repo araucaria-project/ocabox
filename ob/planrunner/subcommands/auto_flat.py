@@ -16,9 +16,9 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class AutoFlatNoTest:
 
-    ZERO_LEVEL_SAFE = 10
+    ZERO_LEVEL_SAFE = 0
     TEST_TIME_TOLERANCE = 240 # seconds
-    LINE_FIT_LAST_POINTS = 3
+    LINE_FIT_LAST_POINTS = 2
 
     def __init__(self) -> None:
         self.ce = None
@@ -174,13 +174,6 @@ class AutoFlatNoTest:
 
         _new_exposure_min = (self.range_min_max_adu[0] - self.zero_level) / _adu_predict
         _new_exposure_max = (self.range_min_max_adu[1] - self.zero_level) / _adu_predict
-
-        # self.ce.info_callback['exec_json'](self.ce.exec_json(
-        #     **self.ce.info_dict,
-        #     # test_exp_mean=self.last_mean,
-        #     # expected_mean_min=round(self.test_min_max_adu[0] / self.test_min_max_time_exp[1]),
-        #     # expected_mean_max=round(self.test_min_max_adu[1] / self.test_min_max_time_exp[0])
-        # ))
 
         inf = f'Calc. exp. time done min: {_new_exposure_min:.1f} max: {_new_exposure_max:.1f}'
         logger.info(inf)
