@@ -32,8 +32,8 @@ class TestAutoFlatNoTest(unittest.IsolatedAsyncioTestCase):
         single_exposure.exposure = [1]
         single_exposure.adu = [20000]
         single_exposure.evening = True
-        _min, _max = await single_exposure._calculate_exposure_time(test_time=200)
-        # print(_min, _max)
+        _min, _max = await single_exposure._calculate_exposure_time(test_time=300)
+        print(_min, _max)
         self.assertAlmostEqual(first=_min_result, second=_min, places=2)
         self.assertAlmostEqual(first=_max_result, second=_max, places=2)
 
@@ -59,7 +59,7 @@ class TestAutoFlatNoTest(unittest.IsolatedAsyncioTestCase):
         double_exposure.zero_level = 0
         double_exposure.adu = [20000, 20000]
         double_exposure.evening = True
-        _min, _max = await double_exposure._calculate_exposure_time(test_time=300)
+        _min, _max = await double_exposure._calculate_exposure_time(test_time=400)
         self.assertEqual(first=_min_result, second=_min)
         self.assertEqual(first=_max_result, second=_max)
 
