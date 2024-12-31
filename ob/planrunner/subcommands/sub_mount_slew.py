@@ -1,5 +1,7 @@
 import asyncio
 import logging
+import math
+
 from ob.planrunner.base_subcommand import BaseSubCommand
 from pyaraucaria.coordinates import ra_dec_epoch, ra_dec_2_az_alt, deg_to_decimal_deg
 import random
@@ -11,6 +13,8 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class MountSlew(BaseSubCommand):
+
+    SLEW_SETTLE_TIME = 2 # seconds
 
     def __init__(
             self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable],
@@ -54,9 +58,11 @@ class MountSlew(BaseSubCommand):
             if not slew_wait_only:
                 if ((abs(ra - ra_in) > (360 - tolerance)) or (abs(ra - ra_in) < tolerance))\
                         and (abs(dec - dec_in) < tolerance) and (slew is False):
+                    await asyncio.sleep(self.SLEW_SETTLE_TIME)
                     break
             else:
                 if slew is False:
+                    await asyncio.sleep(self.SLEW_SETTLE_TIME)
                     break
 
     async def _wait_to_slew_alt_az(self, az_in: float, alt_in: float) -> None:
@@ -69,19 +75,30 @@ class MountSlew(BaseSubCommand):
             if ((abs(az - az_in) > 359.0) or (abs(az - az_in) < 1.0)) and (abs(alt - alt_in) < 1.0) and (slew is False):
                 await self.proof_put(awaitab=self.mount.aput_tracking, track=False)
                 await self.proof_put(awaitab=self.mount.aput_slewtoaltaz_async, az=az_in, alt=alt_in)
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(self.SLEW_SETTLE_TIME)
                 await self.proof_put(awaitab=self.mount.aput_tracking, track=False)
                 break
             await asyncio.sleep(0.1)
 
     @staticmethod
-    def ra_random_dither(ra: float, dith_val: float, mode: str = 'basic') -> float:
-        # TODO dith_val = dith_val / cos(dec) ?
+    def ra_random_dither(ra: float, dec: float, dith_val: float, mode: str = 'basic') -> float:
+        """
+        Method calculate ra random dither value
+        :param ra: Ra position in degrees
+        :param dec: Dec position in degrees
+        :param dith_val: Maximum step value in minutes
+        :param mode: Dithering modes [basic, ...]
+        :return: New ra position in degrees
+        """
+        if abs(dec) > 85:
+            dec = 85
+        dith_val = dith_val / math.cos(math.radians(dec))
         if mode == 'basic':
             m = 0.000001
             diff = random.uniform(-dith_val / 60, dith_val / 60)
             if abs(diff) < m:
                 diff = m
+            logger.info(f'Dithering value for Ra is {diff} for Dec {dec}')
             return ra + diff
 
     @staticmethod
@@ -241,7 +258,7 @@ class MountSlew(BaseSubCommand):
             ra_t = await self.value_proof_get(name='mount_ra', awaitab=self.mount.aget_ra, expect_type=float)
             dec_t = await self.value_proof_get(name='mount_dec', awaitab=self.mount.aget_dec, expect_type=float)
             ra_d = self.ra_random_dither(
-                ra=ra_t, dith_val=self.seq_data.dither_distance, mode=self.seq_data.dither_mode
+                ra=ra_t,  dec=dec_t, dith_val=self.seq_data.dither_distance, mode=self.seq_data.dither_mode
             )
             dec_d = self.dec_random_dither(
                 dec=dec_t, dith_val=self.seq_data.dither_distance, mode=self.seq_data.dither_mode

@@ -138,6 +138,10 @@ class Seq:
 
     @property
     def dither_distance(self) -> float:
+        """
+        Dither distance.
+        :return: Dither distance in minutes [float].
+        """
         if self.dither_list:
             return float(self.dither_list[2])
         else:
