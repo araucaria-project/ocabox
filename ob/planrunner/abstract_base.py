@@ -10,6 +10,8 @@ import math
 from serverish.messenger import get_journalpublisher, get_publisher
 from serverish.messenger.msg_journal_pub import MsgJournalPublisher
 from serverish.messenger.msg_publisher import MsgPublisher
+
+from ob.planrunner.iter_async import AsyncRangeIter
 from ocaboxapi.exceptions import OcaboxServerError
 from obcom.comunication.comunication_error import CommunicationTimeoutError
 
@@ -87,7 +89,7 @@ class AbstractBase(ABC):
 
     async def value_proof_get(self, name: str, awaitab: Callable, expect_type: type, n_times: int = 5,
                               wait: float = 2.0) -> Any:
-        for n in range(1, n_times + 1):
+        async for n in AsyncRangeIter(start=1, end=n_times):
             res = await self._value_proof_get(name=name, awaitab=awaitab, expect_type=expect_type)
             if res is not None:
                 return res
@@ -99,7 +101,7 @@ class AbstractBase(ABC):
 
     @staticmethod
     async def proof_put(awaitab: Callable, name: str = '', n_times: int = 5, wait: float = 3.0, **kwargs) -> bool:
-        for n in range(1, n_times + 1):
+        async for n in AsyncRangeIter(start=1, end=n_times):
             try:
                 await awaitab(**kwargs)
                 return True
