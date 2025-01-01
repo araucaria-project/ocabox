@@ -101,24 +101,39 @@ class AbstractBase(ABC):
 
     @staticmethod
     async def proof_put(awaitab: Callable, name: str = '', n_times: int = 5, wait: float = 3.0, **kwargs) -> bool:
-        async for n in AsyncRangeIter(start=1, end=n_times):
-            try:
-                await awaitab(**kwargs)
-                return True
-            except OcaboxServerError:
-                logger.warning(f'Ocabox server not reachable')
-                await asyncio.sleep(wait)
-                continue
-            except CommunicationTimeoutError:
-                logger.warning(f'Tic CommunicationTimeoutError')
-                await asyncio.sleep(wait)
-                continue
-            except Exception as e:
-                logger.warning(f'Other tic error {e}')
-                await asyncio.sleep(wait)
-                continue
-        logger.error(f'Sending {name} to telescope failed')
-        return False
+        # async for n in AsyncRangeIter(start=1, end=n_times):
+        #     try:
+        #         await awaitab(**kwargs)
+        #         return True
+        #     except OcaboxServerError:
+        #         logger.warning(f'Ocabox server not reachable')
+        #         await asyncio.sleep(wait)
+        #         continue
+        #     except CommunicationTimeoutError:
+        #         logger.warning(f'Tic CommunicationTimeoutError')
+        #         await asyncio.sleep(wait)
+        #         continue
+        #     except Exception as e:
+        #         logger.warning(f'Other tic error {e}')
+        #         await asyncio.sleep(wait)
+        #         continue
+        # logger.error(f'Sending {name} to telescope failed')
+        # return False
+        try:
+            await awaitab(**kwargs)
+            return True
+        except OcaboxServerError:
+            logger.warning(f'Ocabox server not reachable')
+            await asyncio.sleep(wait)
+            raise
+        except CommunicationTimeoutError:
+            logger.warning(f'Tic CommunicationTimeoutError')
+            await asyncio.sleep(wait)
+            raise
+        except Exception as e:
+            logger.warning(f'Other tic error {e}')
+            await asyncio.sleep(wait)
+            raise
 
     @staticmethod
     def _mk_folder(folder: str):
