@@ -113,6 +113,10 @@ class AbstractBase(ABC):
                 logger.warning(f'Tic CommunicationTimeoutError')
                 await asyncio.sleep(wait)
                 continue
+            except Exception as e:
+                logger.warning(f'Other tic error {e}')
+                await asyncio.sleep(wait)
+                continue
         logger.error(f'Sending {name} to telescope failed')
         return False
 
