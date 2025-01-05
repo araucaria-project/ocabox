@@ -102,10 +102,11 @@ class AbstractBase(ABC):
     @staticmethod
     async def proof_put_timeout(event, timeout: float = 10,  name: str = '') -> None:
         n = 0
+        logger.info('Starting put timeout.')
         while True:
             await asyncio.sleep(1)
             n += 1
-            if timeout > n:
+            if timeout < n:
                 logger.warning(f'Proof put {name} timeout.')
                 event.set()
                 break
@@ -113,6 +114,7 @@ class AbstractBase(ABC):
     @staticmethod
     async def _proof_put(event, run, awaitab: Callable, **kwargs):
         try:
+            logger.info('Starting proof put.')
             await awaitab(**kwargs)
             run['val'] = 1
             event.set()
