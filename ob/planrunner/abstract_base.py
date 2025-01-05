@@ -100,65 +100,22 @@ class AbstractBase(ABC):
                 return None
 
     @staticmethod
-    async def proof_put_timeout(event, timeout: float = 10,  name: str = '') -> None:
-        n = 0
-        logger.info('Starting put timeout.')
-        while True:
-            await asyncio.sleep(1)
-            n += 1
-            if timeout < n:
-                logger.warning(f'Proof put {name} timeout.')
-                event.set()
-                break
-
-    @staticmethod
-    async def _proof_put(event, run, awaitab: Callable, **kwargs):
-        try:
-            logger.info('Starting proof put.')
-            await awaitab(**kwargs)
-            run['val'] = 1
-            event.set()
-            return
-        except OcaboxServerError:
-            logger.warning(f'Ocabox server not reachable')
-            event.set()
-            return
-        except CommunicationTimeoutError:
-            logger.warning(f'Tic CommunicationTimeoutError')
-            event.set()
-            return
-
-    async def proof_put(self, awaitab: Callable, name: str = '', n_times: int = 5, wait: float = 3.0, **kwargs) -> bool:
+    async def proof_put(awaitab: Callable, name: str = '', n_times: int = 5, wait: float = 3.0, **kwargs) -> bool:
         async for n in AsyncRangeIter(start=1, end=n_times):
-            run = {'val': 0}
-            event = asyncio.Event()
-            task_1 = asyncio.create_task(self._proof_put(event=event, run=run, awaitab=awaitab, **kwargs))
-            task_2 = asyncio.create_task(self.proof_put_timeout(event=event))
-            await event.wait()
-            task_1.cancel()
-            task_2.cancel()
-            if run['val'] == 1:
+            try:
+                await awaitab(**kwargs)
+                # logger.info(f'Sending proof put request {name} req no. {n}/{n_times}')
                 return True
+            except OcaboxServerError:
+                logger.warning(f'Ocabox server not reachable')
+                await asyncio.sleep(wait)
+                continue
+            except CommunicationTimeoutError:
+                logger.warning(f'Tic CommunicationTimeoutError')
+                await asyncio.sleep(wait)
+                continue
         logger.error(f'Sending {name} to telescope failed')
         return False
-
-    # @staticmethod
-    # async def proof_put(awaitab: Callable, name: str = '', n_times: int = 5, wait: float = 3.0, **kwargs) -> bool:
-    #     async for n in AsyncRangeIter(start=1, end=n_times):
-    #         try:
-    #             await awaitab(**kwargs)
-    #             # logger.info(f'Sending proof put request {name} req no. {n}/{n_times}')
-    #             return True
-    #         except OcaboxServerError:
-    #             logger.warning(f'Ocabox server not reachable')
-    #             await asyncio.sleep(wait)
-    #             continue
-    #         except CommunicationTimeoutError:
-    #             logger.warning(f'Tic CommunicationTimeoutError')
-    #             await asyncio.sleep(wait)
-    #             continue
-    #     logger.error(f'Sending {name} to telescope failed')
-    #     return False
 
     @staticmethod
     def _mk_folder(folder: str):
