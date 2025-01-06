@@ -74,7 +74,11 @@ class AbstractBase(ABC):
 
     @staticmethod
     async def _value_proof_get(name: str, awaitab: Callable, expect_type) -> Any:
-        res = await awaitab()
+        try:
+            res = await awaitab()
+        except TimeoutError:
+            logger.warning(f'Get {name} timeout.')
+            return None
         if expect_type == float and isinstance(res, int):
             try:
                 res = float(res)
