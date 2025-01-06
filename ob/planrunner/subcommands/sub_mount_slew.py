@@ -111,6 +111,10 @@ class MountSlew(BaseSubCommand):
             return dec + diff
 
     async def arun(self, step_id: str or None = None) -> int:
+        inf = "Mount slew started."
+        logger.info(inf)
+        self.info_callback['stream_1'](inf)
+        await self.journal.info(inf)
         self.started = True
         await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.running)
         if self.seq_data:
@@ -125,6 +129,7 @@ class MountSlew(BaseSubCommand):
         loc = self.param['cfg_gen'].get_value(seq=['site', 'global', 'geo_location'], source='nats')
         # TODO mount_min_alt should be taken from settings
         mount_min_alt = 14.9
+        logger.info(f'Info done')
 
         if self.alt is not None and self.az is not None and self.dithering is False:
             logger.debug(f'{self.id} {self.name} Alt: {self.alt} Az: {self.az}')
@@ -216,6 +221,7 @@ class MountSlew(BaseSubCommand):
                     logger.error(inf)
                     await self.journal.error(inf)
                     return 2
+                logger.info(f'Putting slew coo.')
                 sl1 = await self.proof_put(
                     awaitab=self.mount.aput_slewtocoo_async, ra=float(self.ra_now), dec=float(self.dec_now)
                 )
@@ -226,6 +232,7 @@ class MountSlew(BaseSubCommand):
                     logger.error(inf)
                     await self.journal.error(inf)
                     return 2
+                logger.info(f'Start wait slew coo.')
                 await self._wait_to_slew_coo(ra_in=float(self.ra_now), dec_in=float(self.dec_now))
                 tr4 = await self.proof_put(awaitab=self.mount.aput_tracking, track=self.tracking)
                 if not tr4:
