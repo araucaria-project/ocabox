@@ -733,6 +733,7 @@ class Command(BaseSequence):
         await self._cycle_time_data_build.insert_data_dict(self.sequence_dict)
         await self._cycle_time_data_build.insert_data(name='filter_pos', value=f)
         await self._cycle_time_data_build.save_to_log()
+        logger.info(f'{self.id} {self.name} run.')
         skip = await self._arun(self.subcomponents, step_id=step_id)
         await self._cycle_time_data_build.insert_data(name='done', value=self.done)
         await self._cycle_time_data_build.insert_data(name='skipped', value=self.skipped)
