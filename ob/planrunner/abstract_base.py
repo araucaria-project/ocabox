@@ -76,8 +76,11 @@ class AbstractBase(ABC):
     async def _value_proof_get(name: str, awaitab: Callable, expect_type) -> Any:
         try:
             res = await awaitab()
-        except TimeoutError:
+        except OcaboxServerError:
             logger.warning(f'Get {name} timeout.')
+            return None
+        except CommunicationTimeoutError:
+            logger.warning(f'Tic CommunicationTimeoutError')
             return None
         if expect_type == float and isinstance(res, int):
             try:
@@ -92,7 +95,7 @@ class AbstractBase(ABC):
             return None
 
     async def value_proof_get(self, name: str, awaitab: Callable, expect_type: type, n_times: int = 5,
-                              wait: float = 2.0) -> Any:
+                              wait: float = 3.0) -> Any:
         async for n in AsyncRangeIter(start=1, end=n_times):
             res = await self._value_proof_get(name=name, awaitab=awaitab, expect_type=expect_type)
             if res is not None:
