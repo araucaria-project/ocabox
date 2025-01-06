@@ -17,7 +17,7 @@ class Wait(BaseSubCommand):
 
     def __init__(
             self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable],
-            key: str, value: str, uobi: int, name: str = 'sec', param: Dict[str, Any] or None = None) -> None:
+            key: str, value: str, uobi: int, name: str = 'wait', param: Dict[str, Any] or None = None) -> None:
 
         self.key = key
         self.value = value
