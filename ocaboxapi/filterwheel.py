@@ -34,7 +34,7 @@ class FilterWheel(TelescopeComponent):
 
     async def aget_position(self) -> int:
         logger.debug(f'Getting filterwheel position from {self.tel_addr}')
-        ret = await self.aget_value(param_name='position', request_timeout=5)
+        ret = await self.aget_value('position')
         return ret
 
     async def asubscribe_position(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
