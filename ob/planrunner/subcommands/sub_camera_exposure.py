@@ -259,7 +259,7 @@ class CameraExposure(BaseSubCommand):
         }
 
     async def rpc_request(
-            self, fits_id: str, header: Dict, req: str = 'fits_download', mean_points_no_stats: int = 100,
+            self, fits_id: str, header: Dict, req: str = 'fits_download', mean_points_no_stats: int = 400,
             dtyp: str = 'sideint16', timeout: float or None = None) -> Dict or None:
 
         inf = f'{self.id} {self.name} send rpc request {self.rpc_subject}'
