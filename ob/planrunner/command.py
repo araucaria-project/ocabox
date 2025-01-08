@@ -123,7 +123,10 @@ class Command(BaseSequence):
     @property
     def test(self) -> int:
         if 'test' in self.kwargs.keys():
-            return self.kwargs['test']
+            try:
+                return int(self.kwargs['test'])
+            except (ValueError, TypeError, LookupError):
+                return 0
         else:
             return 0
 
