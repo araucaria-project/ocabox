@@ -130,7 +130,7 @@ class Command(BaseSequence):
     @property
     def forced_read_mod(self) -> int or None:
         if 'read_mod' in self.kwargs.keys():
-            return self.kwargs['read_mod']
+            return int(self.kwargs['read_mod'])
         else:
             return None
 
