@@ -23,11 +23,14 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class CameraExposure(BaseSubCommand):
 
+    FORCED_RM_MODE_SETTLE_TIME = 2 # seconds
+
     def __init__(
             self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable], seq_data: 'Seq', uobi: int,
             exp_type: str, filter_: str, light: bool, sub_exp: int, exp_no: int, auto_exposure: bool,
             epoch: str, observer: str, obj_name: str, req_ra: float or None = None, req_dec: float or None = None,
-            name: str = 'camera-exposure', param: Dict[str, Any] or None = None) -> None:
+            test: int = 0, forced_read_mod: int or None = None, name: str = 'camera-exposure',
+            param: Dict[str, Any] or None = None) -> None:
 
         self.seq_data = seq_data
         self.exp_type = exp_type
@@ -41,6 +44,8 @@ class CameraExposure(BaseSubCommand):
         self.obj_name = obj_name
         self.req_ra = req_ra
         self.req_dec = req_dec
+        self.test = test
+        self.forced_read_mod = forced_read_mod
         self.target_folder: str or None = None
         self.symlinks: List = []
         self.readout_time: float or None = None
@@ -445,6 +450,7 @@ class CameraExposure(BaseSubCommand):
             zero_era=z_era,
             dark_era=d_era,
             flat_era=f_era,
+            test=self.test
         )
         try:
             dat = await self.rpc_request(
@@ -512,6 +518,45 @@ class CameraExposure(BaseSubCommand):
                 break
             await asyncio.sleep(0.5)
 
+    async def forced_read_mod_change(self) -> int:
+
+        inf = f'Readout mode forced change to {self.forced_read_mod} started.'
+        logger.info(inf)
+        await self.journal.info(inf)
+        _current_rm_mode = await self.value_proof_get(
+            name='forced_cam_read_mod', awaitab=self.camera.readoutmode, expect_type=int
+        )
+        if _current_rm_mode is not None and isinstance(_current_rm_mode, int):
+            if _current_rm_mode == self.forced_read_mod:
+                inf = (f'{self.id} {self.name} forced readout mode {self.forced_read_mod}'
+                       f' is equal to set {_current_rm_mode}, no change.')
+                logger.info(inf)
+                await self.journal.info(inf)
+                self.info_callback['stream_1'](inf)
+                return 0
+            elif _current_rm_mode != self.forced_read_mod:
+                exe = await self.proof_put(
+                    awaitab=self.camera.aput_readoutmode, romode=self.forced_read_mod
+                )
+                if not exe:
+                    inf = f'{self.id} {self.name} can not set readout mode {self.forced_read_mod}, program quiting.'
+                    logger.error(inf)
+                    await self.journal.error(inf)
+                    self.info_callback['stream_1'](inf)
+                    return 2
+                await asyncio.sleep(self.FORCED_RM_MODE_SETTLE_TIME)
+                inf = f'{self.id} {self.name} readout mode changed from {_current_rm_mode} to {self.forced_read_mod}.'
+                logger.info(inf)
+                await self.journal.info(inf)
+                self.info_callback['stream_1'](inf)
+                return 0
+        else:
+            inf = f'{self.id} {self.name} can not read current readout mode or is not [int], program quiting.'
+            logger.error(inf)
+            await self.journal.error(inf)
+            self.info_callback['stream_1'](inf)
+            return 2
+
     async def arun(self, step_id: str or None = None) -> int:
 
         self.started = True
@@ -523,8 +568,12 @@ class CameraExposure(BaseSubCommand):
                 self.seq_data.skip = False
             return 0
         inf = f'{self.id} {self.name} started.'
-        logger.debug(inf)
+        logger.info(inf)
         await self.journal.debug(inf)
+        if self.forced_read_mod is not None:
+            _exit = await self.forced_read_mod_change()
+            if _exit == 2:
+                return 2
 
         exposure_time = self.seq_data.exp_time
 

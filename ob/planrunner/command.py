@@ -121,6 +121,20 @@ class Command(BaseSequence):
             return f'2000'
 
     @property
+    def test(self) -> int:
+        if 'test' in self.kwargs.keys():
+            return self.kwargs['test']
+        else:
+            return 0
+
+    @property
+    def forced_read_mod(self) -> int or None:
+        if 'read_mod' in self.kwargs.keys():
+            return self.kwargs['read_mod']
+        else:
+            return None
+
+    @property
     def dither_on(self) -> bool:
         """
         Do dithering or not.
@@ -452,6 +466,8 @@ class Command(BaseSequence):
                                                             observer=self.observer,
                                                             seq_data=seq_data,
                                                             param=self.param,
+                                                            test=self.test,
+                                                            forced_read_mod=forced_read_mod,
                                                             uobi=self.uobi), id_next=id_next)
 
         # Turning off light
@@ -588,6 +604,8 @@ class Command(BaseSequence):
                                                             observer=self.observer,
                                                             seq_data=seq_data,
                                                             param=self.param,
+                                                            test=self.test,
+                                                            forced_read_mod=forced_read_mod,
                                                             uobi=self.uobi), id_next=id_next)
 
         # Focusig
@@ -654,6 +672,8 @@ class Command(BaseSequence):
                                                             observer=self.observer,
                                                             seq_data=seq_data,
                                                             param=self.param,
+                                                            test=self.test,
+                                                            forced_read_mod=forced_read_mod,
                                                             uobi=self.uobi), id_next=id_next)
 
     def _write_wait(self):
