@@ -46,9 +46,9 @@ class NightPlan(BaseSequence):
             base_folder=self.telescope.observatory.get_app_cfg(key='base_cycle_time_calc_dir'))
 
     def _init_plan_status(self):
-        self.param['plan_status'].plan_static_publisher = self.get_publish('planner_static')
-        self.param['plan_status'].plan_status_publisher = self.get_publish('planner_status')
-        self.param['plan_status'].plan_time_publisher = self.get_publish('planner_time')
+        self.param['plan_status'].plan_static_publisher = self.get_publish(stream='planner', field='data_static')
+        self.param['plan_status'].plan_status_publisher = self.get_publish(stream='planner', field='data_status')
+        self.param['plan_status'].plan_time_publisher = self.get_publish(stream='planner', field='data_time')
 
     def _get_rm_mode(self):
         crm = self.camera.readoutmode

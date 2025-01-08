@@ -40,7 +40,7 @@ class AbstractBase(ABC):
         self.journal: MsgJournalPublisher | None = None
         self.get_journal()
         self.build_plan_status()
-        self.command_log_pub = self.get_publish(field='planner_command_log')
+        self.command_log_pub = self.get_publish(stream='status', field='planner_command_log')
         super().__init__()
 
     @property
@@ -51,16 +51,16 @@ class AbstractBase(ABC):
         logger.debug(f'Journal subject {r}')
         return r
 
-    def get_status_subject(self, field: str) -> str:
-        r = self.param['cfg_gen'].get_value(seq=['site', 'global', 'nats', 'subjects', 'status', field], source='nats')
+    def get_subject(self, stream: str, field: str) -> str:
+        r = self.param['cfg_gen'].get_value(seq=['site', 'global', 'nats', 'subjects', stream, field], source='nats')
         logger.debug(f'Status subject {r}')
         return r
 
     def get_journal(self) -> None:
         self.journal = get_journalpublisher(subject=self.journal_subject)
 
-    def get_publish(self, field: str) -> MsgPublisher or None:
-        subj = self.get_status_subject(field=field)
+    def get_publish(self, stream: str, field: str) -> MsgPublisher or None:
+        subj = self.get_subject(stream=stream, field=field)
         if subj is None:
             logger.error(f'Wrong subject for field {field}')
             return None
