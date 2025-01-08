@@ -45,7 +45,7 @@ class CameraExposure(BaseSubCommand):
         self.req_ra = req_ra
         self.req_dec = req_dec
         self.test = test
-        self.forced_read_mod = forced_read_mod
+        self.forced_read_mod = int(forced_read_mod)
         self.target_folder: str or None = None
         self.symlinks: List = []
         self.readout_time: float or None = None
