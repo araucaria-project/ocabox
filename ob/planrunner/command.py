@@ -467,7 +467,7 @@ class Command(BaseSequence):
                                                             seq_data=seq_data,
                                                             param=self.param,
                                                             test=self.test,
-                                                            forced_read_mod=forced_read_mod,
+                                                            forced_read_mod=self.forced_read_mod,
                                                             uobi=self.uobi), id_next=id_next)
 
         # Turning off light
@@ -605,7 +605,7 @@ class Command(BaseSequence):
                                                             seq_data=seq_data,
                                                             param=self.param,
                                                             test=self.test,
-                                                            forced_read_mod=forced_read_mod,
+                                                            forced_read_mod=self.forced_read_mod,
                                                             uobi=self.uobi), id_next=id_next)
 
         # Focusig
@@ -673,7 +673,7 @@ class Command(BaseSequence):
                                                             seq_data=seq_data,
                                                             param=self.param,
                                                             test=self.test,
-                                                            forced_read_mod=forced_read_mod,
+                                                            forced_read_mod=self.forced_read_mod,
                                                             uobi=self.uobi), id_next=id_next)
 
     def _write_wait(self):
