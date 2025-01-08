@@ -524,7 +524,7 @@ class CameraExposure(BaseSubCommand):
         logger.info(inf)
         await self.journal.info(inf)
         _current_rm_mode = await self.value_proof_get(
-            name='forced_cam_read_mod', awaitab=self.camera.readoutmode, expect_type=int
+            name='forced_cam_read_mod', awaitab=self.camera.aget_readoutmode, expect_type=int
         )
         if _current_rm_mode is not None and isinstance(_current_rm_mode, int):
             if _current_rm_mode == self.forced_read_mod:
