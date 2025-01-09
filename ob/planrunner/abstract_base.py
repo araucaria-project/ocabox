@@ -89,17 +89,20 @@ class AbstractBase(ABC):
             except ValueError:
                 pass
         if isinstance(res, expect_type):
-            logger.info(f"Get {name} value done: {res}")
+            # logger.info(f"Get {name} value done: {res}")
             return res
         else:
             logger.warning(f"Can't get {name} value, result is {res}")
             return None
 
     async def value_proof_get(self, name: str, awaitab: Callable, expect_type: type, n_times: int = 5,
-                              wait: float = 3.0) -> Any:
+                              wait: float = 3.0, log: bool = False) -> Any:
         async for n in AsyncRangeIter(start=1, end=n_times):
-            logger.info(f'Proof get {name} start.')
+            if log:
+                logger.info(f'Proof get {name} start.')
             res = await self._value_proof_get(name=name, awaitab=awaitab, expect_type=expect_type)
+            if log:
+                logger.info(f'Proof get {name} got {res}.')
             if res is not None:
                 return res
             else:

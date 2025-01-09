@@ -29,9 +29,10 @@ class DomeSlew(BaseSubCommand):
     async def _wait_to_slew(self, azimuth) -> None:
         logger.info(f'Starting wait_to slew az: {azimuth}')
         while True:
-            dome_az = await self.value_proof_get(name='sub_dome_az', awaitab=self.dome.aget_az, expect_type=float)
+            dome_az = await self.value_proof_get(
+                name='sub_dome_az', awaitab=self.dome.aget_az, expect_type=float, log=True)
             dome_slewing = await self.value_proof_get(
-                name='sub_dome_slew', awaitab=self.dome.aget_slewing, expect_type=bool
+                name='sub_dome_slew', awaitab=self.dome.aget_slewing, expect_type=bool, log=True
             )
             await asyncio.sleep(0.5)
             if dome_az is not None and dome_slewing is False:
