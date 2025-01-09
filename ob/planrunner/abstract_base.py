@@ -89,7 +89,7 @@ class AbstractBase(ABC):
             except ValueError:
                 pass
         if isinstance(res, expect_type):
-            logger.debug(f"Get {name} value done: {res}")
+            logger.info(f"Get {name} value done: {res}")
             return res
         else:
             logger.warning(f"Can't get {name} value, result is {res}")
@@ -98,6 +98,7 @@ class AbstractBase(ABC):
     async def value_proof_get(self, name: str, awaitab: Callable, expect_type: type, n_times: int = 5,
                               wait: float = 3.0) -> Any:
         async for n in AsyncRangeIter(start=1, end=n_times):
+            logger.info(f'Proof get {name} start.')
             res = await self._value_proof_get(name=name, awaitab=awaitab, expect_type=expect_type)
             if res is not None:
                 return res
@@ -111,7 +112,7 @@ class AbstractBase(ABC):
     async def proof_put(awaitab: Callable, name: str = '', n_times: int = 5, wait: float = 3.0, **kwargs) -> bool:
         async for n in AsyncRangeIter(start=1, end=n_times):
             try:
-                logger.info(f'Proof put {name} start')
+                logger.info(f'Proof put {name} start.')
                 await awaitab(**kwargs)
                 # logger.info(f'Sending proof put request {name} req no. {n}/{n_times}')
                 return True
