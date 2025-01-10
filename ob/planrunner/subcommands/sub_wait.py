@@ -27,10 +27,13 @@ class Wait(BaseSubCommand):
 
     @staticmethod
     async def _wait_exec(value: float) -> None:
+        logger.info(f'Wait seconds {value} started.')
         await asyncio.sleep(value)
+        logger.info(f'Wait seconds {value} done.')
 
     @staticmethod
     async def _ut_exec(value: str) -> None:
+        logger.info(f'Wait ut {value} started.')
         val = value.split(':')
         if len(val) == 2:
             h = int(val[0])
@@ -49,8 +52,10 @@ class Wait(BaseSubCommand):
                     if utc.second >= s:
                         break
             await asyncio.sleep(0.1)
+        logger.info(f'Wait ut {value} done.')
 
-    async def _wait_sun_exec(self, value: str, sun_rise: bool) -> bool:
+    async def _wait_sun_exec(self, value: str, sunrise: bool) -> bool:
+        logger.info(f'Wait sun {value} (sunrise {sunrise}) started.')
         loc = self.param['cfg_gen'].get_value(seq=['site', 'global', 'geo_location'], source='nats')
         lo = EarthLocation(lat=loc['lat'] * u.deg, lon=loc['lon'] * u.deg, height=loc['elev'] * u.m)
         try:
@@ -68,10 +73,11 @@ class Wait(BaseSubCommand):
             al = sun_altaz.alt.deg
             if w % 60 == 0:
                 await self.journal.info(f'Wait sun pos.: {round(al, 2)} -> {val}')
-            if sun_rise is True and val < al or sun_rise is False and val > al:
+            if sunrise is True and val < al or sunrise is False and val > al:
                 break
             await asyncio.sleep(1)
             w += 1
+        logger.info(f'Wait sun {value} (sunrise {sunrise}) done.')
 
     async def arun(self, step_id: str or None = None) -> int:
         inf = f'{self.id} {self.name} {self.key} {self.value} started.'
@@ -81,14 +87,14 @@ class Wait(BaseSubCommand):
         await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.running)
         self.info_callback['exec_json'](self.exec_json(**self.info_dict))
         self.info_callback['stream_1'](inf)
-        if self.key == 'wait':
+        if self.key == 'sec':
             await self._wait_exec(float(self.value))
         elif self.key == 'ut':
             await self._ut_exec(self.value)
-        elif self.key == 'wait_sunrise':
-            await self._wait_sun_exec(self.value, sun_rise=True)
-        elif self.key == 'wait_sunset':
-            await self._wait_sun_exec(self.value, sun_rise=False)
+        elif self.key == 'sunrise':
+            await self._wait_sun_exec(self.value, sunrise=True)
+        elif self.key == 'sunset':
+            await self._wait_sun_exec(self.value, sunrise=False)
         else:
             pass
         inf = f'{self.id} {self.name} done.'

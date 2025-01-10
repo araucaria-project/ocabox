@@ -121,6 +121,23 @@ class Command(BaseSequence):
             return f'2000'
 
     @property
+    def test(self) -> int:
+        if 'test' in self.kwargs.keys():
+            try:
+                return int(self.kwargs['test'])
+            except (ValueError, TypeError, LookupError):
+                return 0
+        else:
+            return 0
+
+    @property
+    def forced_read_mod(self) -> int or None:
+        if 'read_mod' in self.kwargs.keys():
+            return int(self.kwargs['read_mod'])
+        else:
+            return None
+
+    @property
     def dither_on(self) -> bool:
         """
         Do dithering or not.
@@ -452,6 +469,8 @@ class Command(BaseSequence):
                                                             observer=self.observer,
                                                             seq_data=seq_data,
                                                             param=self.param,
+                                                            test=self.test,
+                                                            forced_read_mod=self.forced_read_mod,
                                                             uobi=self.uobi), id_next=id_next)
 
         # Turning off light
@@ -588,6 +607,8 @@ class Command(BaseSequence):
                                                             observer=self.observer,
                                                             seq_data=seq_data,
                                                             param=self.param,
+                                                            test=self.test,
+                                                            forced_read_mod=self.forced_read_mod,
                                                             uobi=self.uobi), id_next=id_next)
 
         # Focusig
@@ -654,6 +675,8 @@ class Command(BaseSequence):
                                                             observer=self.observer,
                                                             seq_data=seq_data,
                                                             param=self.param,
+                                                            test=self.test,
+                                                            forced_read_mod=self.forced_read_mod,
                                                             uobi=self.uobi), id_next=id_next)
 
     def _write_wait(self):
@@ -733,6 +756,7 @@ class Command(BaseSequence):
         await self._cycle_time_data_build.insert_data_dict(self.sequence_dict)
         await self._cycle_time_data_build.insert_data(name='filter_pos', value=f)
         await self._cycle_time_data_build.save_to_log()
+        logger.info(f'{self.id} {self.name} run.')
         skip = await self._arun(self.subcomponents, step_id=step_id)
         await self._cycle_time_data_build.insert_data(name='done', value=self.done)
         await self._cycle_time_data_build.insert_data(name='skipped', value=self.skipped)

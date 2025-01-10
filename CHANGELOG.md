@@ -3,6 +3,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.1.0]
+### Added
+- Served better proof_put and proof_get in `planrunner`, add access denied error serve
+- add kwarg add mechanism `read_mod` to `planrunner`
+### Changed
+- `Wait` command arguments changed from wait to sec and from wait_sunrise to sunrise / sunset
+- `Autoflat` now has 400 points of statistics
+- for `planrunner` changed stream to tic.planrunner.* 
+
 ## [2.0.2]
 ### Changed
 - Removed application configuration system using `confuse` and configuration files. From now on, creating a rare 

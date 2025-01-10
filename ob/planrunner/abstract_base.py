@@ -12,7 +12,7 @@ from serverish.messenger.msg_journal_pub import MsgJournalPublisher
 from serverish.messenger.msg_publisher import MsgPublisher
 
 from ob.planrunner.iter_async import AsyncRangeIter
-from ocaboxapi.exceptions import OcaboxServerError
+from ocaboxapi.exceptions import OcaboxServerError, OcaboxAccessDenied
 from obcom.comunication.comunication_error import CommunicationTimeoutError
 
 
@@ -23,7 +23,8 @@ class AbstractBase(ABC):
 
     COMMAND_NAMES = ['SKYFLAT', 'FOCUS', 'DOMEFLAT', 'DARK', 'ZERO', 'OBJECT', 'WAIT', 'STOP', 'SNAP', 'SEQUENCE']
     KWARGS = ['uobi', 'dome_follow', 'epoch', 'mirror_cover', 'observer', 'screen_light', 'az', 'alt', 'seq',
-              'pos', 'dither', 'wait', 'ut', 'tracking', 'comment', 'wait_sunrise', 'wait_sunset', 'auto_focus']
+              'pos', 'dither', 'sec', 'ut', 'tracking', 'comment', 'sunrise', 'sunset', 'auto_focus', 'read_mod',
+              'test']
 
     def __init__(self, id: str, name: str, telescope: 'Telescope',
                  info_callback: Dict[str, Callable], c_type: str, param: Dict[str, Any] or None = None) -> None:
@@ -39,7 +40,7 @@ class AbstractBase(ABC):
         self.journal: MsgJournalPublisher | None = None
         self.get_journal()
         self.build_plan_status()
-        self.command_log_pub = self.get_publish(field='planner_command_log')
+        self.command_log_pub = self.get_publish(stream='status', field='planner_command_log')
         super().__init__()
 
     @property
@@ -50,16 +51,16 @@ class AbstractBase(ABC):
         logger.debug(f'Journal subject {r}')
         return r
 
-    def get_status_subject(self, field: str) -> str:
-        r = self.param['cfg_gen'].get_value(seq=['site', 'global', 'nats', 'subjects', 'status', field], source='nats')
+    def get_subject(self, stream: str, field: str) -> str:
+        r = self.param['cfg_gen'].get_value(seq=['site', 'global', 'nats', 'subjects', stream, field], source='nats')
         logger.debug(f'Status subject {r}')
         return r
 
     def get_journal(self) -> None:
         self.journal = get_journalpublisher(subject=self.journal_subject)
 
-    def get_publish(self, field: str) -> MsgPublisher or None:
-        subj = self.get_status_subject(field=field)
+    def get_publish(self, stream: str, field: str) -> MsgPublisher or None:
+        subj = self.get_subject(stream=stream, field=field)
         if subj is None:
             logger.error(f'Wrong subject for field {field}')
             return None
@@ -74,23 +75,37 @@ class AbstractBase(ABC):
 
     @staticmethod
     async def _value_proof_get(name: str, awaitab: Callable, expect_type) -> Any:
-        res = await awaitab()
+        try:
+            res = await awaitab()
+        except OcaboxServerError:
+            logger.warning(f'Tic OcaboxServerError.')
+            return None
+        except CommunicationTimeoutError:
+            logger.warning(f'Tic CommunicationTimeoutError')
+            return None
+        except OcaboxAccessDenied:
+            logger.warning(f'Tic OcaboxAccessDenied')
+            return None
         if expect_type == float and isinstance(res, int):
             try:
                 res = float(res)
             except ValueError:
                 pass
         if isinstance(res, expect_type):
-            logger.debug(f"Get {name} value done: {res}")
+            # logger.info(f"Get {name} value done: {res}")
             return res
         else:
             logger.warning(f"Can't get {name} value, result is {res}")
             return None
 
     async def value_proof_get(self, name: str, awaitab: Callable, expect_type: type, n_times: int = 5,
-                              wait: float = 2.0) -> Any:
+                              wait: float = 3.0, log: bool = False) -> Any:
         async for n in AsyncRangeIter(start=1, end=n_times):
+            if log:
+                logger.info(f'Proof get {name} start.')
             res = await self._value_proof_get(name=name, awaitab=awaitab, expect_type=expect_type)
+            if log:
+                logger.info(f'Proof get {name} got {res}.')
             if res is not None:
                 return res
             else:
@@ -99,63 +114,24 @@ class AbstractBase(ABC):
             if n == n_times:
                 return None
 
-    # @staticmethod
-    # async def proof_put_timeout(event, timeout: float = 10,  name: str = '') -> None:
-    #     n = 0
-    #     logger.info('Starting put timeout.')
-    #     while True:
-    #         await asyncio.sleep(1)
-    #         n += 1
-    #         if timeout < n:
-    #             logger.warning(f'Proof put {name} timeout.')
-    #             event.set()
-    #             break
-    #
-    # @staticmethod
-    # async def _proof_put(event, run, awaitab: Callable, **kwargs):
-    #     try:
-    #         logger.info('Starting proof put.')
-    #         await awaitab(**kwargs)
-    #         run['val'] = 1
-    #         event.set()
-    #         return
-    #     except OcaboxServerError:
-    #         logger.warning(f'Ocabox server not reachable')
-    #         event.set()
-    #         return
-    #     except CommunicationTimeoutError:
-    #         logger.warning(f'Tic CommunicationTimeoutError')
-    #         event.set()
-    #         return
-    #
-    # async def proof_put(self, awaitab: Callable, name: str = '', n_times: int = 5, wait: float = 3.0, **kwargs) -> bool:
-    #     async for n in AsyncRangeIter(start=1, end=n_times):
-    #         run = {'val': 0}
-    #         event = asyncio.Event()
-    #         task_1 = asyncio.create_task(self._proof_put(event=event, run=run, awaitab=awaitab, **kwargs))
-    #         task_2 = asyncio.create_task(self.proof_put_timeout(event=event))
-    #         await event.wait()
-    #         task_1.cancel()
-    #         task_2.cancel()
-    #         if run['val'] == 1:
-    #             return True
-    #     logger.error(f'Sending {name} to telescope failed')
-    #     return False
-
     @staticmethod
     async def proof_put(awaitab: Callable, name: str = '', n_times: int = 5, wait: float = 3.0, **kwargs) -> bool:
         async for n in AsyncRangeIter(start=1, end=n_times):
             try:
-                logger.info(f'Proof put {name} start')
+                logger.info(f'Proof put {name} start.')
                 await awaitab(**kwargs)
                 # logger.info(f'Sending proof put request {name} req no. {n}/{n_times}')
                 return True
             except OcaboxServerError:
-                logger.warning(f'Ocabox server not reachable')
+                logger.warning(f'Tic OcaboxServerError')
                 await asyncio.sleep(wait)
                 continue
             except CommunicationTimeoutError:
                 logger.warning(f'Tic CommunicationTimeoutError')
+                await asyncio.sleep(wait)
+                continue
+            except OcaboxAccessDenied:
+                logger.warning(f'Tic OcaboxAccessDenied')
                 await asyncio.sleep(wait)
                 continue
         logger.error(f'Sending {name} to telescope failed')

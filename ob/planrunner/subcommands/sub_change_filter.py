@@ -41,6 +41,7 @@ class ChangeFilter(BaseSubCommand):
         await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.running)
         self.info_callback['exec_json'](self.exec_json(**self.info_dict))
         filter_dict = await self.get_filters_dict()
+        logger.info(filter_dict)
         try:
             pos = filter_dict[self.filter_]
         except (LookupError, TypeError):
@@ -53,10 +54,11 @@ class ChangeFilter(BaseSubCommand):
             await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
             self.info_callback['exec_json'](self.exec_json(**self.info_dict))
             return 2
-
+        logger.info(f'Ordered filter slot pos {pos}')
         fit_pos = await self.value_proof_get(
             name='fw_pos', awaitab=self.filterwheel.aget_position, expect_type=int
         )
+        logger.info(f'Current filter pos {fit_pos}')
         if pos == fit_pos:
             inf = f'{self.id} {self.name} no need to change filter, skipping.'
             self.info_callback['stream_1'](inf)
@@ -67,6 +69,7 @@ class ChangeFilter(BaseSubCommand):
             await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.skipped)
             self.info_callback['exec_json'](self.exec_json(**self.info_dict))
             return 0
+        logger.info(f'Put position')
         fp = await self.proof_put(awaitab=self.filterwheel.aput_position, pos=pos)
         if not fp:
             self.skipped = True
