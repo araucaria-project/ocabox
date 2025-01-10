@@ -12,7 +12,7 @@ from serverish.messenger.msg_journal_pub import MsgJournalPublisher
 from serverish.messenger.msg_publisher import MsgPublisher
 
 from ob.planrunner.iter_async import AsyncRangeIter
-from ocaboxapi.exceptions import OcaboxServerError
+from ocaboxapi.exceptions import OcaboxServerError, OcaboxAccessDenied
 from obcom.comunication.comunication_error import CommunicationTimeoutError
 
 
@@ -78,10 +78,13 @@ class AbstractBase(ABC):
         try:
             res = await awaitab()
         except OcaboxServerError:
-            logger.warning(f'Get {name} timeout.')
+            logger.warning(f'Tic OcaboxServerError.')
             return None
         except CommunicationTimeoutError:
             logger.warning(f'Tic CommunicationTimeoutError')
+            return None
+        except OcaboxAccessDenied:
+            logger.warning(f'Tic OcaboxAccessDenied')
             return None
         if expect_type == float and isinstance(res, int):
             try:
@@ -120,11 +123,15 @@ class AbstractBase(ABC):
                 # logger.info(f'Sending proof put request {name} req no. {n}/{n_times}')
                 return True
             except OcaboxServerError:
-                logger.warning(f'Ocabox server not reachable')
+                logger.warning(f'Tic OcaboxServerError')
                 await asyncio.sleep(wait)
                 continue
             except CommunicationTimeoutError:
                 logger.warning(f'Tic CommunicationTimeoutError')
+                await asyncio.sleep(wait)
+                continue
+            except OcaboxAccessDenied:
+                logger.warning(f'Tic OcaboxAccessDenied')
                 await asyncio.sleep(wait)
                 continue
         logger.error(f'Sending {name} to telescope failed')
