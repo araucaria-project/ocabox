@@ -142,7 +142,7 @@ class AutoFlatNoTest:
                 logger.info('Single point is to old - proceed to test exposure.')
                 return None, None
 
-        elif len(self.adu) == 2:
+        elif len(self.adu) == 2 or len(self.adu) == 3:
             if _ts_start[1] + self.TEST_TIME_TOLERANCE > _ts_now:
                 _adu_predict = await self._linear_adu_predict(
                     ts_mid_shift=_ts_mid_shift[-self.LINE_FIT_LAST_POINTS:],
@@ -153,7 +153,7 @@ class AutoFlatNoTest:
                 logger.info('Last linear point is to old - proceed to test exposure.')
                 return None, None
 
-        elif len(self.adu) > 2:
+        elif len(self.adu) > 3:
             params = await self._curve_fit(x=_ts_mid_shift, y=_sat_sec)
             if params is None:
                 _adu_predict = await self._linear_adu_predict(
