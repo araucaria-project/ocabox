@@ -78,9 +78,12 @@ class AutoFlatNoTest:
         logger.info(f'Evening set {self.evening}')
 
     async def add_record(self, ts_start: float, adu_mean: float, exp: float) -> None:
-        self.ts_start.append(ts_start)
-        self.adu.append(adu_mean)
-        self.exposure.append(exp)
+        if adu_mean > self.zero_level:
+            self.ts_start.append(ts_start)
+            self.adu.append(adu_mean)
+            self.exposure.append(exp)
+        else:
+            logger.warning(f'Mean adu {adu_mean} is lower than zero level {self.zero_level}, record not add.')
 
     @staticmethod
     def _exp_func(x, a, b, c):
