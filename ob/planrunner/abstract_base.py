@@ -134,7 +134,7 @@ class AbstractBase(ABC):
                 logger.warning(f'Tic OcaboxAccessDenied')
                 await asyncio.sleep(wait)
                 continue
-        logger.error(f'Sending {name} to telescope failed')
+        logger.error(f'Sending {name} failed')
         return False
 
     @staticmethod

@@ -454,10 +454,22 @@ class CameraExposure(BaseSubCommand):
         )
         try:
             dat = await self.rpc_request(
-                fits_id=self.fits_file_name, header=header, dtyp=self.array_bits(rmmode=readoutmode), timeout=30
+                fits_id=self.fits_file_name, header=header, dtyp=self.array_bits(rmmode=readoutmode), timeout=120
             )
-        except (MessengerRequestNoResponders, MessengerRequestNoResponse, MessengerRequestTimeout):
-            inf = f'{self.id} {self.name} nats rpc guider msg can not reach responder.'
+        except MessengerRequestNoResponders:
+            inf = f'{self.id} {self.name} camera_exposure rpc to ofp downloader get MessengerRequestNoResponders.'
+            logger.error(inf)
+            await self.journal.error(inf)
+            self.info_callback['stream_1'](inf)
+            return False
+        except MessengerRequestNoResponse:
+            inf = f'{self.id} {self.name} camera_exposure rpc to ofp downloader get MessengerRequestNoResponse.'
+            logger.error(inf)
+            await self.journal.error(inf)
+            self.info_callback['stream_1'](inf)
+            return False
+        except MessengerRequestTimeout:
+            inf = f'{self.id} {self.name} camera_exposure rpc to ofp downloader get MessengerRequestTimeout.'
             logger.error(inf)
             await self.journal.error(inf)
             self.info_callback['stream_1'](inf)
