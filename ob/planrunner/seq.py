@@ -21,7 +21,6 @@ class Seq:
         self.skip = False
         self.auto_flat: AutoFlatNoTest or None = None
         self.set_focus_id()
-        self.fits_file_names: List[str] = []
 
     @property
     def focus_id(self) -> int or None:
