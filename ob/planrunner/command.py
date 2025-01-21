@@ -1,8 +1,10 @@
+import copy
 import logging
 import time
 import re
 from typing import Dict, Any, List, Callable
 from ob.planrunner.base_sequence import BaseSequence
+from ob.planrunner.iter_async import AsyncListIter
 from ob.planrunner.subcommands.sub_mount_slew import MountSlew
 from ob.planrunner.subcommands.sub_dome_slew import DomeSlew
 from ob.planrunner.subcommands.sub_change_filter import ChangeFilter
@@ -45,6 +47,7 @@ class Command(BaseSequence):
         self.build_args(self.sequence_dict)
         self.build_kwargs(sequence_dict=self.sequence_dict)
         self._write_subcommands()
+        self.seq_dataset: List[Seq] = []
 
     def _create_command_string(self):
         kw = ''
@@ -440,6 +443,7 @@ class Command(BaseSequence):
         if self.plan_seq:
             for s in self.plan_seq:
                 seq_data = Seq(seq=s, command_kwargs=self.kwargs)
+                self.seq_dataset.append(seq_data)
 
                 # Change filter
                 id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),
@@ -545,6 +549,7 @@ class Command(BaseSequence):
         if self.plan_seq:
             for s in self.plan_seq:
                 seq_data = Seq(seq=s, command_kwargs=self.kwargs)
+                self.seq_dataset.append(seq_data)
 
                 # Change filter
                 id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),
@@ -646,6 +651,7 @@ class Command(BaseSequence):
         if self.plan_seq:
             for s in self.plan_seq:
                 seq_data = Seq(seq=s, command_kwargs=self.kwargs)
+                self.seq_dataset.append(seq_data)
 
                 # Change filter
                 id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),
@@ -702,6 +708,12 @@ class Command(BaseSequence):
                                       param=self.param,
                                       uobi=self.uobi), id_next=id_next)
 
+    async def generate_fits_files_dict(self) -> Dict:
+        ret = {}
+        async for _seq in AsyncListIter(self.seq_dataset):
+            ret[f"{_seq.seq}"] = copy.deepcopy(_seq.fits_file_names)
+        return ret
+
     async def send_command_log(self, time_start: list, time_stop: list, skip: int) -> None:
         if skip == 0:
             status = 'done'
@@ -717,6 +729,7 @@ class Command(BaseSequence):
             'telescope': self.telescope.id,
             'status': status,
             'command_dict': self.sequence_dict,
+            'fits_files_names': await self.generate_fits_files_dict(),
             'time': {
                 'start_dt': dt_from_array(time_start).strftime("%Y-%m-%dT%H:%M:%S"),
                 'end_dt': dt_from_array(time_stop).strftime("%Y-%m-%dT%H:%M:%S"),

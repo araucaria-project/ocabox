@@ -12,7 +12,8 @@ import math
 import re
 from serverish.messenger import request
 from serverish.base.datetime import dt_utcnow_array
-from serverish.base.exceptions import MessengerRequestNoResponders, MessengerRequestNoResponse, MessengerRequestTimeout
+from serverish.base.exceptions import MessengerRequestNoResponders, MessengerRequestNoResponse, MessengerRequestTimeout, \
+    MessengerRequestCanceled
 from pyaraucaria.date import get_oca_jd
 from pyaraucaria.airmass import airmass
 from ob.planrunner.status import PlanStatusEnum
@@ -462,8 +463,8 @@ class CameraExposure(BaseSubCommand):
             await self.journal.error(inf)
             self.info_callback['stream_1'](inf)
             return False
-        except MessengerRequestNoResponse:
-            inf = f'{self.id} {self.name} camera_exposure rpc to ofp downloader get MessengerRequestNoResponse.'
+        except MessengerRequestCanceled:
+            inf = f'{self.id} {self.name} camera_exposure rpc to ofp downloader get MessengerRequestCanceled.'
             logger.error(inf)
             await self.journal.error(inf)
             self.info_callback['stream_1'](inf)
@@ -480,6 +481,7 @@ class CameraExposure(BaseSubCommand):
                     logger.info('Rpc response received.')
                     adu_mean = round(dat['param']['mean'])
                     logger.info(f'Adu mean {adu_mean}.')
+                    self.seq_data.fits_file_names.append(f"{self.fits_file_name}")
                     if self.auto_exposure:
                         await self.seq_data.auto_flat.add_record(
                             ts_start=float(self.exp_time_start.timestamp()),

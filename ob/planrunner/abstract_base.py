@@ -41,15 +41,8 @@ class AbstractBase(ABC):
         self.get_journal()
         self.build_plan_status()
         self.command_log_pub = self.get_publish(stream='status', field='planner_command_log')
+        self.status_error_pub = self.get_publish(stream='planner', field='status_error')
         super().__init__()
-
-    @property
-    def journal_subject(self) -> str:
-        r = self.param['cfg_gen'].get_value(
-            seq=['site', 'global', 'nats', 'subjects', 'journal', 'planner'], source='nats'
-        )
-        logger.debug(f'Journal subject {r}')
-        return r
 
     def get_subject(self, stream: str, field: str) -> str:
         r = self.param['cfg_gen'].get_value(seq=['site', 'global', 'nats', 'subjects', stream, field], source='nats')
@@ -57,7 +50,7 @@ class AbstractBase(ABC):
         return r
 
     def get_journal(self) -> None:
-        self.journal = get_journalpublisher(subject=self.journal_subject)
+        self.journal = get_journalpublisher(subject=self.get_subject(stream='journal', field='planner'))
 
     def get_publish(self, stream: str, field: str) -> MsgPublisher or None:
         subj = self.get_subject(stream=stream, field=field)
