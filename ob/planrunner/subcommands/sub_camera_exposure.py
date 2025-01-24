@@ -12,7 +12,7 @@ import math
 import re
 from serverish.messenger import request
 from serverish.base.datetime import dt_utcnow_array
-from serverish.base.exceptions import MessengerRequestNoResponders, MessengerRequestNoResponse, MessengerRequestTimeout
+from serverish.base.exceptions import MessengerRequestNoResponders, MessengerRequestTimeout, MessengerRequestCanceled
 from pyaraucaria.date import get_oca_jd
 from pyaraucaria.airmass import airmass
 from ob.planrunner.status import PlanStatusEnum
@@ -23,14 +23,14 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class CameraExposure(BaseSubCommand):
 
-    FORCED_RM_MODE_SETTLE_TIME = 2 # seconds
+    FORCED_RM_MODE_SETTLE_TIME = 3 # seconds
 
     def __init__(
             self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable], seq_data: 'Seq', uobi: int,
             exp_type: str, filter_: str, light: bool, sub_exp: int, exp_no: int, auto_exposure: bool,
-            epoch: str, observer: str, obj_name: str, req_ra: float or None = None, req_dec: float or None = None,
-            test: int = 0, forced_read_mod: int or None = None, name: str = 'camera-exposure',
-            param: Dict[str, Any] or None = None) -> None:
+            epoch: str, observer: str, obj_name: str, seq_dataset: Dict, req_ra: float or None = None,
+            req_dec: float or None = None, test: int = 0, forced_read_mod: int or None = None,
+            name: str = 'camera-exposure', param: Dict[str, Any] or None = None) -> None:
 
         self.seq_data = seq_data
         self.exp_type = exp_type
@@ -52,6 +52,7 @@ class CameraExposure(BaseSubCommand):
         self.readout_time_start: float or None = None
         self.exp_time_start: str or None = None
         self.fits_file_name: str or None = None
+        self.seq_dataset = seq_dataset
         super().__init__(id=id, info_callback=info_callback, telescope=telescope, name=name, uobi=uobi, param=param)
         self.mount = self.telescope.get_mount()
         self.camera = self.telescope.get_camera()
@@ -282,10 +283,18 @@ class CameraExposure(BaseSubCommand):
         logger.debug(inf)
         await self.journal.info(inf)
         logger.info(f'Data: {dat}')
-        logger.info(f'Data: {met}')
+        logger.info(f'Meta: {met}')
         if 'error' in met:
             logger.error(f'Meta error: {met["error"]}')
         return dat
+
+    async def add_file_name_to_seq_dataset(self, sub: int):
+        self.seq_dataset[f'{self.get_julian_date(self.exp_time_start)}'] = {
+            'file_name': self.fits_file_name,
+            'filter': self.filter_,
+            'loop': sub,
+            'n_loops': self.exp_no
+        }
 
     def _get_folders_and_symlinks(self) -> None:
         self.symlinks = []
@@ -462,8 +471,8 @@ class CameraExposure(BaseSubCommand):
             await self.journal.error(inf)
             self.info_callback['stream_1'](inf)
             return False
-        except MessengerRequestNoResponse:
-            inf = f'{self.id} {self.name} camera_exposure rpc to ofp downloader get MessengerRequestNoResponse.'
+        except MessengerRequestCanceled:
+            inf = f'{self.id} {self.name} camera_exposure rpc to ofp downloader get MessengerRequestCanceled.'
             logger.error(inf)
             await self.journal.error(inf)
             self.info_callback['stream_1'](inf)
@@ -480,6 +489,7 @@ class CameraExposure(BaseSubCommand):
                     logger.info('Rpc response received.')
                     adu_mean = round(dat['param']['mean'])
                     logger.info(f'Adu mean {adu_mean}.')
+                    await self.add_file_name_to_seq_dataset(sub=sub)
                     if self.auto_exposure:
                         await self.seq_data.auto_flat.add_record(
                             ts_start=float(self.exp_time_start.timestamp()),

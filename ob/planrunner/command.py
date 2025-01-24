@@ -1,8 +1,10 @@
+import copy
 import logging
 import time
 import re
 from typing import Dict, Any, List, Callable
 from ob.planrunner.base_sequence import BaseSequence
+from ob.planrunner.iter_async import AsyncListIter
 from ob.planrunner.subcommands.sub_mount_slew import MountSlew
 from ob.planrunner.subcommands.sub_dome_slew import DomeSlew
 from ob.planrunner.subcommands.sub_change_filter import ChangeFilter
@@ -37,6 +39,7 @@ class Command(BaseSequence):
             telescope=telescope.id,
             base_folder=telescope.observatory.get_app_cfg(key='base_cycle_time_calc_dir')
         )
+        self.seq_dataset: Dict[str, Dict[str, Any]] = {}
         super().__init__(
             id=id, name=sequence_dict['command_name'], info_callback=info_callback,
             telescope=telescope, sequence_dict=sequence_dict, c_type='command', param=param
@@ -469,6 +472,7 @@ class Command(BaseSequence):
                                                             observer=self.observer,
                                                             seq_data=seq_data,
                                                             param=self.param,
+                                                            seq_dataset = self.seq_dataset,
                                                             test=self.test,
                                                             forced_read_mod=self.forced_read_mod,
                                                             uobi=self.uobi), id_next=id_next)
@@ -607,6 +611,7 @@ class Command(BaseSequence):
                                                             observer=self.observer,
                                                             seq_data=seq_data,
                                                             param=self.param,
+                                                            seq_dataset=self.seq_dataset,
                                                             test=self.test,
                                                             forced_read_mod=self.forced_read_mod,
                                                             uobi=self.uobi), id_next=id_next)
@@ -675,6 +680,7 @@ class Command(BaseSequence):
                                                             observer=self.observer,
                                                             seq_data=seq_data,
                                                             param=self.param,
+                                                            seq_dataset=self.seq_dataset,
                                                             test=self.test,
                                                             forced_read_mod=self.forced_read_mod,
                                                             uobi=self.uobi), id_next=id_next)
@@ -717,6 +723,7 @@ class Command(BaseSequence):
             'telescope': self.telescope.id,
             'status': status,
             'command_dict': self.sequence_dict,
+            'fits_files_names': self.seq_dataset,
             'time': {
                 'start_dt': dt_from_array(time_start).strftime("%Y-%m-%dT%H:%M:%S"),
                 'end_dt': dt_from_array(time_stop).strftime("%Y-%m-%dT%H:%M:%S"),
@@ -726,7 +733,7 @@ class Command(BaseSequence):
             }
         }
         try:
-            await self.command_log_pub.publish(data=data, timeout=30)
+            await self.command_log_pub.publish(data=data, timeout=60)
         except TimeoutError:
             logger.error(f'Nats publish get timeout error')
 
