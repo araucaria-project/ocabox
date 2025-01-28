@@ -1,6 +1,6 @@
 import logging
 import os
-
+from serverish.base import dt_utcnow_array
 from ob.planrunner.abstract_base import AbstractBase
 from datetime import datetime
 from typing import Dict, List, Any, Callable
@@ -29,6 +29,25 @@ class BaseSubCommand(AbstractBase):
 
     async def arun(self) -> int:
         raise NotImplementedError
+
+    async def status_error_publish(
+            self, level: str, description: str, plan_runner_quits: bool) -> bool:
+        levels = ['minor', 'major', 'critical']
+
+        data = {
+            'id': self.id,
+            'uobi': self.uobi,
+            'telescope': self.telescope.id,
+            'subcommand_name':  self.name,
+            'error_level': level,
+            'error_description': description,
+            'plan_runner_quits': plan_runner_quits,
+            'error_time': dt_utcnow_array
+        }
+        try:
+            await self.status_error_pub.publish(data=data, timeout=30)
+        except TimeoutError:
+            logger.error(f'Nats status_error_publish get timeout error.')
 
     @property
     def fits_main_folder(self) -> str:

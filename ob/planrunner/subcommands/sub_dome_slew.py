@@ -83,6 +83,11 @@ class DomeSlew(BaseSubCommand):
                     self.skipped = True
                     await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
                     self.info_callback['exec_json'](self.exec_json(**self.info_dict))
+                    await self.status_error_publish(
+                        level='critical',
+                        description=inf,
+                        plan_runner_quits=True
+                    )
                     return 2
                 mount_az, info_dict = dome_eq_azimuth(
                     ra=ra, dec=dec, r_dome=r_dome, spx=spx, spy=spy,
@@ -102,6 +107,11 @@ class DomeSlew(BaseSubCommand):
                 self.skipped = True
                 await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
                 self.info_callback['exec_json'](self.exec_json(**self.info_dict))
+                await self.status_error_publish(
+                    level='critical',
+                    description=inf,
+                    plan_runner_quits=True
+                )
                 return 2
             dome_az = await self.value_proof_get(name='sub_dome_az', awaitab=self.dome.aget_az, expect_type=float)
             if (360 > abs(mount_az - dome_az) > (360 - self.follow_tol)) or \
@@ -122,9 +132,14 @@ class DomeSlew(BaseSubCommand):
         if not ds:
             self.skipped = True
             await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
-            inf = f'Can not execute dome slew, program stopping'
+            inf = f'Can not execute dome slew to azimuth, program stopping'
             logger.error(inf)
             await self.journal.error(inf)
+            await self.status_error_publish(
+                level='critical',
+                description=inf,
+                plan_runner_quits=True
+            )
             return 2
         await self._wait_to_slew(az)
         logger.info(f'{self.id} done')

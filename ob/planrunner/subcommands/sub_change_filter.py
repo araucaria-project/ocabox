@@ -53,6 +53,11 @@ class ChangeFilter(BaseSubCommand):
             self.skipped = True
             await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
             self.info_callback['exec_json'](self.exec_json(**self.info_dict))
+            await self.status_error_publish(
+                level='critical',
+                description=inf,
+                plan_runner_quits=True
+            )
             return 2
         logger.info(f'Ordered filter slot pos {pos}')
         fit_pos = await self.value_proof_get(
@@ -77,6 +82,11 @@ class ChangeFilter(BaseSubCommand):
             inf = f'Can not execute change filter, program stopping'
             logger.error(inf)
             await self.journal.error(inf)
+            await self.status_error_publish(
+                level='critical',
+                description=inf,
+                plan_runner_quits=True
+            )
             return 2
         await self._wait_to_move(pos)
         inf = f'{self.id} {self.name} done.'

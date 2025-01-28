@@ -56,6 +56,11 @@ class MirrorCover(BaseSubCommand):
                     inf = f'Can not open cover, program stopping'
                     logger.error(inf)
                     await self.journal.error(inf)
+                    await self.status_error_publish(
+                        level='critical',
+                        description=inf,
+                        plan_runner_quits=True
+                    )
                     return 2
                 await self._wait_for_move(expected_status="3")
             inf = f'{self.id} {self.name} opening done.'
@@ -82,6 +87,11 @@ class MirrorCover(BaseSubCommand):
                     inf = f'Can not close cover, program stopping'
                     logger.error(inf)
                     await self.journal.error(inf)
+                    await self.status_error_publish(
+                        level='critical',
+                        description=inf,
+                        plan_runner_quits=True
+                    )
                     return 2
                 await self._wait_for_move(expected_status="1")
             inf = f'{self.id} {self.name} closing done.'
