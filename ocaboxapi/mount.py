@@ -189,15 +189,17 @@ class Mount(TelescopeComponent):
         logger.debug(f'Putting action to {self.tel_addr}')
         await self.aput_value('action', Action=action, Parameters=param)
 
-    # async def aput_opencover(self) -> None:
-    #     #TODO TO REMOVE
-    #     logger.debug(f'Putting telescope opencover to {self.tel_addr}')
-    #     await self.aput_value('action', Action='telescope:opencover', Parameters='')
-    #
-    # async def aput_closecover(self) -> None:
-    #     # TODO TO REMOVE
-    #     logger.debug(f'Putting telescope closecover to {self.tel_addr}')
-    #     await self.aput_value('action', Action='telescope:closecover', Parameters='')
+    async def aput_selectnasmythport(self, nasmyth_port: int) -> None:
+        logger.debug(f'Putting telescope selectnasmythport to {self.tel_addr}')
+        await self.aput_value('action', Action='selectnasmythport', Parameters=nasmyth_port)
+
+    async def aput_errorstring(self, nasmyth_port: int) -> None:
+        logger.debug(f'Putting telescope:errorstring to {self.tel_addr}')
+        await self.aput_value('action', Action='telescope:errorstring', Parameters="")
+
+    async def aput_clearerror(self, error: int) -> None:
+        logger.debug(f'Putting telescope clearerror to {self.tel_addr}')
+        await self.aput_value('action', Action='clearerror', Parameters=error)
 
     async def aput_motoron(self) -> None:
         logger.debug(f'Putting telescope motoron to {self.tel_addr}')
