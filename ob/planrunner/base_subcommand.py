@@ -33,19 +33,23 @@ class BaseSubCommand(AbstractBase):
     async def status_error_publish(
             self, level: str, description: str, plan_runner_quits: bool) -> bool:
         levels = ['minor', 'major', 'critical']
-
+        logger.info(f'Starting publishing status error.')
         data = {
-            'id': self.id,
+            'subcommand_id': self.id,
             'uobi': self.uobi,
             'telescope': self.telescope.id,
             'subcommand_name':  self.name,
             'error_level': level,
             'error_description': description,
             'plan_runner_quits': plan_runner_quits,
-            'error_time': dt_utcnow_array
+            'error_time': dt_utcnow_array()
         }
+
+        logger.info(data)
+        logger.info(self.status_error_pub)
         try:
             await self.status_error_pub.publish(data=data, timeout=30)
+            logger.info(f'Done publishing status error.')
         except TimeoutError:
             logger.error(f'Nats status_error_publish get timeout error.')
 
