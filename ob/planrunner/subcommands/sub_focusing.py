@@ -56,6 +56,11 @@ class Focusing(BaseSubCommand):
                 inf = f'Can not move focuser, program stopping'
                 logger.error(inf)
                 await self.journal.error(inf)
+                await self.status_error_publish(
+                    level='critical',
+                    description=inf,
+                    plan_runner_quits=True
+                )
                 return 2
             await self._wait_for_move(self.position)
         elif self.position is None and self.auto is True:
@@ -81,6 +86,11 @@ class Focusing(BaseSubCommand):
                 self.skipped = True
                 await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.skipped)
                 self.info_callback['exec_json'](self.exec_json())
+                await self.status_error_publish(
+                    level='critical',
+                    description=inf,
+                    plan_runner_quits=True
+                )
                 return 2
             if rang[1] > sharp > rang[0]:
                 inf = f'{self.id} {self.name} calculated focus position {round(sharp)}.'
@@ -94,6 +104,11 @@ class Focusing(BaseSubCommand):
                     inf = f'Can not move focuser, program stopping'
                     logger.error(inf)
                     await self.journal.error(inf)
+                    await self.status_error_publish(
+                        level='critical',
+                        description=inf,
+                        plan_runner_quits=True
+                    )
                     return 2
                 await self._wait_for_move(sharp)
             else:
@@ -104,6 +119,11 @@ class Focusing(BaseSubCommand):
                 self.skipped = True
                 await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.skipped)
                 self.info_callback['exec_json'](self.exec_json())
+                await self.status_error_publish(
+                    level='critical',
+                    description=inf,
+                    plan_runner_quits=True
+                )
                 return 2
         else:
             inf = f'{self.id} {self.name} wrong input.'

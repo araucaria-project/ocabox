@@ -156,6 +156,11 @@ class MountSlew(BaseSubCommand):
                     inf = f'Can not execute tracking, program stopping'
                     logger.error(inf)
                     await self.journal.error(inf)
+                    await self.status_error_publish(
+                        level='critical',
+                        description=inf,
+                        plan_runner_quits=True
+                    )
                     return 2
                 sl0 = await self.proof_put(awaitab=self.mount.aput_slewtoaltaz_async, az=az, alt=alt)
                 if not sl0:
@@ -164,6 +169,11 @@ class MountSlew(BaseSubCommand):
                     inf = f'Can not slew altaz mount, program stopping'
                     logger.error(inf)
                     await self.journal.error(inf)
+                    await self.status_error_publish(
+                        level='critical',
+                        description=inf,
+                        plan_runner_quits=True
+                    )
                     return 2
                 tr1 = await self.proof_put(awaitab=self.mount.aput_tracking, track=False)
                 if not tr1:
@@ -172,6 +182,11 @@ class MountSlew(BaseSubCommand):
                     inf = f'Can not execute tracking, program stopping'
                     logger.error(inf)
                     await self.journal.error(inf)
+                    await self.status_error_publish(
+                        level='critical',
+                        description=inf,
+                        plan_runner_quits=True
+                    )
                     return 2
                 await self._wait_to_slew_alt_az(az_in=az, alt_in=alt)
                 if self.tracking is not None:
@@ -184,6 +199,11 @@ class MountSlew(BaseSubCommand):
                         inf = f'Can not execute tracking, program stopping'
                         logger.error(inf)
                         await self.journal.error(inf)
+                        await self.status_error_publish(
+                            level='critical',
+                            description=inf,
+                            plan_runner_quits=True
+                        )
                         return 2
                     self.info_callback['stream_1'](f'{self.id} {self.name} tracking: {self.tracking}.')
                     await self.journal.debug(f'{self.id} {self.name} tracking: {self.tracking}.')
@@ -220,6 +240,11 @@ class MountSlew(BaseSubCommand):
                     inf = f'Can not execute tracking, program stopping'
                     logger.error(inf)
                     await self.journal.error(inf)
+                    await self.status_error_publish(
+                        level='critical',
+                        description=inf,
+                        plan_runner_quits=True
+                    )
                     return 2
                 logger.info(f'Putting slew coo.')
                 sl1 = await self.proof_put(
@@ -231,6 +256,11 @@ class MountSlew(BaseSubCommand):
                     inf = f'Can not mount coo slew, program stopping'
                     logger.error(inf)
                     await self.journal.error(inf)
+                    await self.status_error_publish(
+                        level='critical',
+                        description=inf,
+                        plan_runner_quits=True
+                    )
                     return 2
                 logger.info(f'Start wait slew coo.')
                 await self._wait_to_slew_coo(ra_in=float(self.ra_now), dec_in=float(self.dec_now))
@@ -241,6 +271,11 @@ class MountSlew(BaseSubCommand):
                     inf = f'Can not execute tracking, program stopping'
                     logger.error(inf)
                     await self.journal.error(inf)
+                    await self.status_error_publish(
+                        level='critical',
+                        description=inf,
+                        plan_runner_quits=True
+                    )
                     return 2
                 logger.info(f'{self.id} done')
                 self.info_callback['stream_1'](f'{self.id} {self.name} done')
@@ -280,6 +315,11 @@ class MountSlew(BaseSubCommand):
                 inf = f'Can not execute tracking, program stopping'
                 logger.error(inf)
                 await self.journal.error(inf)
+                await self.status_error_publish(
+                    level='critical',
+                    description=inf,
+                    plan_runner_quits=True
+                )
                 return 2
             sl2= await self.proof_put(awaitab=self.mount.aput_slewtocoo_async, ra=ra_d, dec=dec_d)
             if not sl2:
@@ -288,6 +328,11 @@ class MountSlew(BaseSubCommand):
                 inf = f'Can not mount coo slew, program stopping'
                 logger.error(inf)
                 await self.journal.error(inf)
+                await self.status_error_publish(
+                    level='critical',
+                    description=inf,
+                    plan_runner_quits=True
+                )
                 return 2
             await self._wait_to_slew_coo(ra_in=ra_d, dec_in=dec_d, slew_wait_only=True)
             logger.info(f'{self.id} dither done')

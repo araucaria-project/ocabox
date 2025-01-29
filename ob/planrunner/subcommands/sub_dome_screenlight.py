@@ -46,6 +46,11 @@ class DomeScreenLight(BaseSubCommand):
                     inf = f'Can not turn dome lamp on, program stopping'
                     logger.error(inf)
                     await self.journal.error(inf)
+                    await self.status_error_publish(
+                        level='critical',
+                        description=inf,
+                        plan_runner_quits=True
+                    )
                     return 2
         else:
             inf = f'{self.id} {self.name} turning off.'
@@ -62,6 +67,11 @@ class DomeScreenLight(BaseSubCommand):
                     inf = f'Can not turn dome lamp off, program stopping'
                     logger.error(inf)
                     await self.journal.error(inf)
+                    await self.status_error_publish(
+                        level='critical',
+                        description=inf,
+                        plan_runner_quits=True
+                    )
                     return 2
             await self._wait_for_turn_on_off()
         inf = f'{self.id} {self.name} done.'

@@ -595,6 +595,11 @@ class CameraExposure(BaseSubCommand):
         if self.forced_read_mod is not None:
             _exit = await self.forced_read_mod_change()
             if _exit == 2:
+                await self.status_error_publish(
+                    level='critical',
+                    description='Can not execute forced_read_mod_change.',
+                    plan_runner_quits=True
+                )
                 return 2
 
         exposure_time = self.seq_data.exp_time
@@ -605,6 +610,11 @@ class CameraExposure(BaseSubCommand):
             if _exit == 1:
                 return 0
             elif _exit == 2:
+                await self.status_error_publish(
+                    level='critical',
+                    description='Can not execute auto_flat.',
+                    plan_runner_quits=True
+                )
                 return 2
         inf = f'{self.id} {self.name} exp: {self.sub_exp}/{self.exp_no} started.'
         logger.info(inf)
@@ -625,6 +635,11 @@ class CameraExposure(BaseSubCommand):
             inf = f'Can not execute startexposure, program stopping'
             logger.error(inf)
             await self.journal.error(inf)
+            await self.status_error_publish(
+                level='critical',
+                description='Can not execute startexposure.',
+                plan_runner_quits=True
+            )
             return 2
         await self.wait_for_subexposure(float(exposure_time))
         self.readout_time = time.time() - self.readout_time_start - float(exposure_time)
@@ -638,6 +653,11 @@ class CameraExposure(BaseSubCommand):
         ))
         wff = await self._wait_for_save_fits(sub=self.sub_exp, sub_time=float(exposure_time))
         if not wff:
+            await self.status_error_publish(
+                level='critical',
+                description='Wait for save fits failed.',
+                plan_runner_quits=True
+            )
             return 2
         await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.done)
         self.info_callback['exec_json'](self.exec_json(exp_time=float(exposure_time), **self.info_dict))
