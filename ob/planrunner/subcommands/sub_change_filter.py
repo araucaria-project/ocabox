@@ -12,9 +12,10 @@ class ChangeFilter(BaseSubCommand):
 
     def __init__(
             self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable],
-            filter_: str, uobi: int,  name: str = 'change-filter', param: Dict[str, Any] or None = None) -> None:
+            seq_data: 'Seq', uobi: int,  name: str = 'change-filter', param: Dict[str, Any] or None = None) -> None:
 
-        self.filter_ = filter_
+        self.filter_ = seq_data.filter_
+        self.seq_data = seq_data
         super().__init__(id=id, info_callback=info_callback, telescope=telescope, name=name, uobi=uobi, param=param)
         self.filterwheel = self.telescope.get_filterwheel()
         self.info_dict = {'filter': self.filter_}
@@ -43,7 +44,7 @@ class ChangeFilter(BaseSubCommand):
         filter_dict = await self.get_filters_dict()
         logger.info(filter_dict)
         try:
-            pos = filter_dict[self.filter_]
+            ordered_filter_slot = filter_dict[self.filter_]
         except (LookupError, TypeError):
             inf = f'{self.id} {self.name} filter index {self.filter_} is wrong, error.'
             self.info_callback['stream_1'](
@@ -59,12 +60,12 @@ class ChangeFilter(BaseSubCommand):
                 plan_runner_quits=True
             )
             return 2
-        logger.info(f'Ordered filter slot pos {pos}')
-        fit_pos = await self.value_proof_get(
+        logger.info(f'Ordered filter slot pos {ordered_filter_slot}')
+        current_filter_slot = await self.value_proof_get(
             name='fw_pos', awaitab=self.filterwheel.aget_position, expect_type=int
         )
-        logger.info(f'Current filter pos {fit_pos}')
-        if fit_pos is None:
+        logger.info(f'Current filter pos {current_filter_slot}')
+        if current_filter_slot is None:
             inf = f'{self.id} {self.name} can not get filter index, quiting.'
             self.info_callback['stream_1'](inf)
             await self.journal.error(inf)
@@ -78,7 +79,8 @@ class ChangeFilter(BaseSubCommand):
                 plan_runner_quits=True
             )
             return 2
-        if pos == fit_pos:
+        self.seq_data.filer_slot_before_change = current_filter_slot
+        if ordered_filter_slot == current_filter_slot:
             inf = f'{self.id} {self.name} no need to change filter, skipping.'
             self.info_callback['stream_1'](inf)
             self.info_callback['stream_5'](f'{self.id}')
@@ -89,7 +91,7 @@ class ChangeFilter(BaseSubCommand):
             self.info_callback['exec_json'](self.exec_json(**self.info_dict))
             return 0
         logger.info(f'Put position')
-        fp = await self.proof_put(awaitab=self.filterwheel.aput_position, pos=pos)
+        fp = await self.proof_put(awaitab=self.filterwheel.aput_position, pos=ordered_filter_slot)
         if not fp:
             self.skipped = True
             await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
@@ -102,7 +104,7 @@ class ChangeFilter(BaseSubCommand):
                 plan_runner_quits=True
             )
             return 2
-        await self._wait_to_move(pos)
+        await self._wait_to_move(ordered_filter_slot)
         inf = f'{self.id} {self.name} done.'
         await self.journal.info(inf)
         logger.info(inf)

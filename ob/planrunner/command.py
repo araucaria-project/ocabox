@@ -448,7 +448,7 @@ class Command(BaseSequence):
                 id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),
                                                       telescope=self.telescope,
                                                       info_callback=self.info_callback,
-                                                      filter_=seq_data.filter_,
+                                                      seq_data=seq_data,
                                                       param=self.param,
                                                       uobi=self.uobi), id_next=id_next)
 
@@ -554,7 +554,7 @@ class Command(BaseSequence):
                 id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),
                                                       telescope=self.telescope,
                                                       info_callback=self.info_callback,
-                                                      filter_=seq_data.filter_,
+                                                      seq_data=seq_data,
                                                       param=self.param,
                                                       uobi=self.uobi), id_next=id_next)
 
@@ -656,7 +656,7 @@ class Command(BaseSequence):
                 id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),
                                                       telescope=self.telescope,
                                                       info_callback=self.info_callback,
-                                                      filter_=seq_data.filter_,
+                                                      seq_data=seq_data,
                                                       param=self.param,
                                                       uobi=self.uobi), id_next=id_next)
 
