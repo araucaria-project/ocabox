@@ -114,6 +114,20 @@ class DomeSlew(BaseSubCommand):
                 )
                 return 2
             dome_az = await self.value_proof_get(name='sub_dome_az', awaitab=self.dome.aget_az, expect_type=float)
+            if dome_az is None:
+                inf = f'{self.id} {self.name} can not get dome az, quiting.'
+                self.info_callback['stream_1'](inf)
+                await self.journal.error(inf)
+                self.info_callback['stream_5'](f'{self.id}')
+                self.skipped = True
+                await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
+                self.info_callback['exec_json'](self.exec_json(**self.info_dict))
+                await self.status_error_publish(
+                    level='critical',
+                    description=inf,
+                    plan_runner_quits=True
+                )
+                return 2
             if (360 > abs(mount_az - dome_az) > (360 - self.follow_tol)) or \
                     0 < (abs(mount_az - dome_az) < self.follow_tol):
                 inf = f'{self.id} {self.name} in position tolerance (set az: {mount_az} dome az: {dome_az}), skipping.'

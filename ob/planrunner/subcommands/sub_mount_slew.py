@@ -299,6 +299,20 @@ class MountSlew(BaseSubCommand):
             logger.info(f'{self.id} started dither')
             ra_t = await self.value_proof_get(name='mount_ra', awaitab=self.mount.aget_ra, expect_type=float)
             dec_t = await self.value_proof_get(name='mount_dec', awaitab=self.mount.aget_dec, expect_type=float)
+            if ra_t or dec_t is None:
+                inf = f'{self.id} {self.name} can not get ra or dec from telescope, quiting.'
+                self.info_callback['stream_1'](inf)
+                await self.journal.error(inf)
+                self.info_callback['stream_5'](f'{self.id}')
+                self.skipped = True
+                await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
+                self.info_callback['exec_json'](self.exec_json(**self.info_dict))
+                await self.status_error_publish(
+                    level='critical',
+                    description=inf,
+                    plan_runner_quits=True
+                )
+                return 2
             ra_d = self.ra_random_dither(
                 ra=ra_t,  dec=dec_t, dith_val=self.seq_data.dither_distance, mode=self.seq_data.dither_mode
             )
