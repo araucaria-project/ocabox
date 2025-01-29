@@ -42,7 +42,7 @@ class ChangeFilter(BaseSubCommand):
         await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.running)
         self.info_callback['exec_json'](self.exec_json(**self.info_dict))
         filter_dict = await self.get_filters_dict()
-        logger.info(filter_dict)
+        # logger.info(filter_dict)
         try:
             ordered_filter_slot = filter_dict[self.filter_]
         except (LookupError, TypeError):

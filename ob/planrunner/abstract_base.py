@@ -187,13 +187,13 @@ class AbstractBase(ABC):
         return ex_js
 
     async def get_filters_dict(self) -> Dict[str, int] or None:
-        filers = self.param['cfg_gen'].get_value(seq=[
+        filters = self.param['cfg_gen'].get_value(seq=[
             'telescopes', self.telescope.id, 'observatory', 'components', 'filterwheel', 'filters'
         ], source='nats')
         try:
-            return {f['name']: f['position'] for f in filers}
+            return {f['name']: f['position'] for f in filters}
         except (LookupError, TypeError):
             inf = f'Can not take filters from cfg general'
             logger.error(inf)
-            await self.journal.info(inf)
+            await self.journal.error(inf)
             return None
