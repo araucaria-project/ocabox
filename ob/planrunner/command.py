@@ -325,6 +325,13 @@ class Command(BaseSequence):
         return False
 
     @property
+    def focus_offset(self) -> bool:
+        if 'focus_offset' in self.kwargs.keys():
+            if self.kwargs['focus_offset'] == 'on':
+                return True
+        return False
+
+    @property
     def domeflat_mount_alt(self) -> float or None:
         # TODO take this value from settings
         if self.exp_type == 'flat':
@@ -448,8 +455,18 @@ class Command(BaseSequence):
                 id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),
                                                       telescope=self.telescope,
                                                       info_callback=self.info_callback,
-                                                      filter_=seq_data.filter_,
+                                                      seq_data=seq_data,
                                                       param=self.param,
+                                                      uobi=self.uobi), id_next=id_next)
+
+                if self.focus_offset:
+                    id_next = self._add_comp(Focusing(id=self._op_id(id_next=id_next),
+                                                      telescope=self.telescope,
+                                                      info_callback=self.info_callback,
+                                                      position=None,
+                                                      param=self.param,
+                                                      filter_offset=True,
+                                                      seq_data=seq_data,
                                                       uobi=self.uobi), id_next=id_next)
 
                 for ex in range(1, seq_data.exp_no + 1):
@@ -554,8 +571,18 @@ class Command(BaseSequence):
                 id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),
                                                       telescope=self.telescope,
                                                       info_callback=self.info_callback,
-                                                      filter_=seq_data.filter_,
+                                                      seq_data=seq_data,
                                                       param=self.param,
+                                                      uobi=self.uobi), id_next=id_next)
+
+                if self.focus_offset:
+                    id_next = self._add_comp(Focusing(id=self._op_id(id_next=id_next),
+                                                      telescope=self.telescope,
+                                                      info_callback=self.info_callback,
+                                                      position=None,
+                                                      param=self.param,
+                                                      filter_offset=True,
+                                                      seq_data=seq_data,
                                                       uobi=self.uobi), id_next=id_next)
 
                 for ex in range(1, seq_data.exp_no + 1):
@@ -656,8 +683,18 @@ class Command(BaseSequence):
                 id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),
                                                       telescope=self.telescope,
                                                       info_callback=self.info_callback,
-                                                      filter_=seq_data.filter_,
+                                                      seq_data=seq_data,
                                                       param=self.param,
+                                                      uobi=self.uobi), id_next=id_next)
+
+                if self.focus_offset:
+                    id_next = self._add_comp(Focusing(id=self._op_id(id_next=id_next),
+                                                      telescope=self.telescope,
+                                                      info_callback=self.info_callback,
+                                                      position=None,
+                                                      param=self.param,
+                                                      filter_offset=True,
+                                                      seq_data=seq_data,
                                                       uobi=self.uobi), id_next=id_next)
 
                 for ex in range(1, seq_data.exp_no + 1):

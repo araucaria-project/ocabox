@@ -20,6 +20,7 @@ class Seq:
         self.focus_folder: str or None = None
         self.skip = False
         self.auto_flat: AutoFlatNoTest or None = None
+        self.filer_slot_before_change: int or None = None
         self.set_focus_id()
 
     @property
