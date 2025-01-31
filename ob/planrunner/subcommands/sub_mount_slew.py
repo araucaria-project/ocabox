@@ -299,7 +299,7 @@ class MountSlew(BaseSubCommand):
             logger.info(f'{self.id} started dither')
             ra_t = await self.value_proof_get(name='mount_ra', awaitab=self.mount.aget_ra, expect_type=float)
             dec_t = await self.value_proof_get(name='mount_dec', awaitab=self.mount.aget_dec, expect_type=float)
-            if ra_t or dec_t is None:
+            if ra_t is None or dec_t is None:
                 inf = f'{self.id} {self.name} can not get ra or dec from telescope, quiting.'
                 self.info_callback['stream_1'](inf)
                 await self.journal.error(inf)
