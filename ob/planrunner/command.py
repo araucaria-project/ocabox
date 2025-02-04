@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class Command(BaseSequence):
 
-    TYPES = {'SKYFLAT': 'flat', 'FOCUS': 'focusing', 'DOMEFLAT': 'flat',
+    TYPES = {'SKYFLAT': 'flat', 'FOCUS': 'focusing', 'DOMEFLAT': 'domeflat',
              'DARK': 'dark', 'ZERO': 'zero', 'OBJECT': 'science', 'WAIT': 'wait', 'STOP': 'stop', 'SNAP': 'snap'}
 
     def __init__(

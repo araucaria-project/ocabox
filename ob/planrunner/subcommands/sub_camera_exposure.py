@@ -217,7 +217,7 @@ class CameraExposure(BaseSubCommand):
             return f'test'
         elif self.exp_type == 'focusing':
             return f'focus'
-        elif self.exp_type in ['flat', 'dark', 'zero']:
+        elif self.exp_type in ['flat', 'dark', 'zero', 'domeflat']:
             return f'calib'
         else:
             return f'science'
