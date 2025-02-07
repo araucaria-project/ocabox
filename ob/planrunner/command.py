@@ -304,7 +304,7 @@ class Command(BaseSequence):
     @property
     def domeflat_dome_az(self) -> float or None:
         # TODO take this value from settings
-        if self.exp_type == 'flat':
+        if self.exp_type == 'domeflat':
             return 0.0
         else:
             return None
@@ -312,7 +312,7 @@ class Command(BaseSequence):
     @property
     def domeflat_mount_az(self) -> float or None:
         # TODO take this value from settings
-        if self.exp_type == 'flat':
+        if self.exp_type == 'domeflat':
             return self.domeflat_dome_az + 180.0
         else:
             return None
@@ -334,7 +334,7 @@ class Command(BaseSequence):
     @property
     def domeflat_mount_alt(self) -> float or None:
         # TODO take this value from settings
-        if self.exp_type == 'flat':
+        if self.exp_type == 'domeflat':
             return 15.0
         else:
             return None

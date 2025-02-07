@@ -3,6 +3,17 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.2.0]
+### Added
+- `planrunner` separate flat and domeflat flags, added filter offset kwarg
+- `planrunner` added filter offset kwarg
+- `planrunner` error subject works now
+- `planrunner` add fits list to command log
+- `ocaboxapi` add nasmyth port api and autoslew errors read api
+### Changed
+- `planrunner` better errors serve (access denied)
+- `autoflat` now saves only reads higher than 0, 3-rd point is now linear
+
 ## [2.1.0]
 ### Added
 - Served better proof_put and proof_get in `planrunner`, add access denied error serve
