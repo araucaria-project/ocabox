@@ -36,10 +36,30 @@ class AutoFlatNoTest:
     def set_camera_exposure_parent(self, camera_exposure: Any) -> None:
         self.ce = camera_exposure
 
-    async def _load_params(self):
+    async def _load_params(self) -> bool:
         sky_flat_conf = self.ce.param['cfg_gen'].get_value(seq=[
             'telescopes', self.ce.telescope.id, 'observatory', 'components', 'camera', 'sky_flats'
         ], source='nats')
+        gain_mode = await self.ce.value_proof_get(
+            name='fitsh_cam_gain', awaitab=self.ce.camera.aget_gain, expect_type=int
+        )
+        readout_mode = await self.ce.value_proof_get(
+            name='fitsh_cam_rm', awaitab=self.ce.camera.aget_readoutmode, expect_type=int
+        )
+        if gain_mode is not None and readout_mode is not None:
+            mode = f'g-{gain_mode}_r-{readout_mode}'
+        else:
+            logger.error(
+                f'Can not read gain mode: {gain_mode} or readout mode: {readout_mode}, quitting.'
+            )
+            return False
+        try:
+            sky_flat_conf['modes'][mode]
+        except (LookupError, TypeError):
+            logger.error(
+                f'No sky flats mode - please add for gain mode: {gain_mode} and readout mode: {readout_mode}, quitting.'
+            )
+            return False
         try:
             self.test_exposure_time = sky_flat_conf['test_exp_time']
         except (LookupError, TypeError):
@@ -51,7 +71,7 @@ class AutoFlatNoTest:
             logger.warning(f'No test_exp_interval in general config.')
             pass
         try:
-            self.range_min_max_adu = sky_flat_conf['test_adu_range']
+            self.range_min_max_adu = sky_flat_conf['modes'][mode]['test_adu_range']
         except (LookupError, TypeError):
             logger.warning(f'No test_adu_range in general config.')
             pass
@@ -61,10 +81,14 @@ class AutoFlatNoTest:
             logger.warning(f'No exposure_time_range in general config.')
             pass
         try:
-            self.zero_level = sky_flat_conf['bias_level'] - self.ZERO_LEVEL_SAFE
+            self.zero_level = sky_flat_conf['modes'][mode]['bias_level'] - self.ZERO_LEVEL_SAFE
         except (LookupError, TypeError):
             logger.warning(f'No bias_level in general config.')
             pass
+        logger.info(f'Skyflat params: test_exposure_time: {self.test_exposure_time},'
+                    f' test_time_interval: {self.test_time_interval}, range_min_max_adu: {self.range_min_max_adu}'
+                    f' range_min_max_time_exp: {self.range_min_max_time_exp}, zero_level: {self.zero_level}')
+        return True
 
     async def _set_evening(self):
         loc = self.ce.param['cfg_gen'].get_value(seq=['site', 'global', 'geo_location'], source='nats')
@@ -328,7 +352,9 @@ class AutoFlatNoTest:
         await self.ce.journal.info(inf)
         self.ce.info_callback['stream_1'](inf)
 
-        await self._load_params()
+        ok = await self._load_params()
+        if not ok:
+            return 0, 2
         await self._set_evening()
 
         while True:
