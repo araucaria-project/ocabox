@@ -208,6 +208,14 @@ class AutoFlatNoTest:
             await self.ce.journal.info(inf)
             self.ce.info_callback['stream_1'](inf)
 
+        if _new_exposure_min <= 0 or _new_exposure_max <= 0:
+            inf = f'Calc. exp. time is 0 or below, no time calculation.'
+            logger.info(inf)
+            if test_time is None:
+                await self.ce.journal.info(inf)
+                self.ce.info_callback['stream_1'](inf)
+            return None, None
+
         return _new_exposure_min, _new_exposure_max
 
     async def _evaluate_exposure_time(
