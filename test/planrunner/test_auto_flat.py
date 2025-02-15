@@ -29,6 +29,7 @@ class TestAutoFlatNoTest(unittest.IsolatedAsyncioTestCase):
         _max_result = None
         single_exposure = AutoFlatNoTest()
         single_exposure.ts_start = [5]
+        single_exposure.exp_type = ['f', 't']
         single_exposure.exposure = [1]
         single_exposure.adu = [20000]
         single_exposure.evening = True
@@ -43,6 +44,7 @@ class TestAutoFlatNoTest(unittest.IsolatedAsyncioTestCase):
         double_exposure = AutoFlatNoTest()
         double_exposure.ts_start = [48, 99]
         double_exposure.exposure = [4, 2]
+        double_exposure.exp_type = ['f', 't']
         double_exposure.zero_level = 0
         double_exposure.adu = [20000, 20000]
         double_exposure.evening = True
@@ -56,6 +58,7 @@ class TestAutoFlatNoTest(unittest.IsolatedAsyncioTestCase):
         double_exposure = AutoFlatNoTest()
         double_exposure.ts_start = [48, 99]
         double_exposure.exposure = [4, 2]
+        double_exposure.exp_type = ['f', 't']
         double_exposure.zero_level = 0
         double_exposure.adu = [20000, 20000]
         double_exposure.evening = True
@@ -87,6 +90,7 @@ class TestAutoFlatNoTest(unittest.IsolatedAsyncioTestCase):
         ]
         triple_exposure.exposure = [4.38, 3.80 , 3.35, 2.94, 2.60]
         triple_exposure.zero_level = 290
+        triple_exposure.exp_type = ['f', 't']
         triple_exposure.adu = [
             20000,
             20000,
@@ -102,6 +106,7 @@ class TestAutoFlatNoTest(unittest.IsolatedAsyncioTestCase):
 
         _min_result = 28.39
         triple_exposure = AutoFlatNoTest()
+        triple_exposure.exp_type = ['f', 't']
         triple_exposure.zero_level = 985
         ts = [1731747996.3501148, 1731748015.2929509, 1731748034.1337261, 1731748053.092465,
                               1731748071.6134248, 1731748090.8051546, 1731748110.106679, 1731748129.6404352,
@@ -171,6 +176,7 @@ class TestAutoFlatNoTest(unittest.IsolatedAsyncioTestCase):
         # Case 1 evening exposure min is ok
         afnt = AutoFlatNoTest()
         afnt.range_min_max_time_exp = [2, 30]
+        afnt.exp_type = ['f', 't']
         test_1 = 2.5
         test_2 = 0
         afnt.evening = True
@@ -264,6 +270,7 @@ class TestAutoFlatNoTest(unittest.IsolatedAsyncioTestCase):
         double_exposure = AutoFlatNoTest()
         double_exposure.ts_start = [1, 10]
         double_exposure.exposure = [1, 1]
+        double_exposure.exp_type = ['f', 't']
         double_exposure.zero_level = 0
         double_exposure.adu = [3500, 500]
         double_exposure.evening = True

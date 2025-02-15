@@ -32,6 +32,7 @@ class AutoFlatNoTest:
         self.exposure: List[float] = []
         self.adu: List[float] = []
         self.auto_exp_sub_no = 0
+        self.exp_type: List[str] = []
 
     def set_camera_exposure_parent(self, camera_exposure: Any) -> None:
         self.ce = camera_exposure
@@ -101,11 +102,12 @@ class AutoFlatNoTest:
             self.evening = False
         logger.info(f'Evening set {self.evening}')
 
-    async def add_record(self, ts_start: float, adu_mean: float, exp: float) -> None:
+    async def add_record(self, ts_start: float, adu_mean: float, exp: float, exp_type: str = 'f') -> None:
         if adu_mean > self.zero_level:
             self.ts_start.append(ts_start)
             self.adu.append(adu_mean)
             self.exposure.append(exp)
+            self.exp_type.append(exp_type)
         else:
             logger.warning(f'Mean adu {adu_mean} is lower than zero level {self.zero_level}, record not add.')
 
@@ -162,9 +164,9 @@ class AutoFlatNoTest:
         else:
             _ts_now = test_time - _ts_start.min()
 
-        if len(self.adu) == 1:
-            if _ts_start[0] + self.TEST_TIME_TOLERANCE > _ts_now:
-                _adu_predict = _sat_sec[0]
+        if len(self.adu) == 1 or ('f' not in self.exp_type and len(self.adu) < 4):
+            if _ts_start[-1] + self.TEST_TIME_TOLERANCE > _ts_now:
+                _adu_predict = _sat_sec[-1]
             else:
                 logger.info('Single point is to old - proceed to test exposure.')
                 return None, None
@@ -322,7 +324,7 @@ class AutoFlatNoTest:
             try:
                 if dat['response'] == 'stats_done':
                     await self.add_record(
-                        ts_start=_ts_start, adu_mean=dat['param']['mean'], exp=self.test_exposure_time
+                        ts_start=_ts_start, adu_mean=dat['param']['mean'], exp=self.test_exposure_time, exp_type='t'
                     )
                 else:
                     inf = f'{self.ce.id} {self.ce.name} wrong rpc response, no stats_done.'
