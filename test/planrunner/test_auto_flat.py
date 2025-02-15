@@ -258,5 +258,18 @@ class TestAutoFlatNoTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(first=ret1, second=test_1)
         self.assertEqual(first=ret2, second=test_2)
 
+    async def test_auto_flat_minus_value_calc(self):
+        _min_result = None
+        _max_result = None
+        double_exposure = AutoFlatNoTest()
+        double_exposure.ts_start = [1, 10]
+        double_exposure.exposure = [1, 1]
+        double_exposure.zero_level = 0
+        double_exposure.adu = [3500, 500]
+        double_exposure.evening = True
+        _min, _max = await double_exposure._calculate_exposure_time(test_time=30)
+        self.assertEqual(first=_min_result, second=_min)
+        self.assertEqual(first=_max_result, second=_max)
+
 if __name__ == '__main__':
     unittest.main()
