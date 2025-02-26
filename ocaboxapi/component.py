@@ -102,7 +102,7 @@ class Component(param.Parameterized):
             try:
                 if resps[0].status:
                     v = resps[0].value.v
-                    self.param.set_param(f'_{param_name}_value', v)
+                    self.param.update(**{f'_{param_name}_value': v})
                 else:
                     logger.error(f'Error in {param_name} ({resps[0].address}) subscription {resps[0].error}')
             except Exception as e:
@@ -139,7 +139,7 @@ class Component(param.Parameterized):
         self.subscribed = []
 
     def reset_params_values(self):
-        to_reset = [n for n, p in self.param.values().items() if isinstance(p, OcaBoxParam)]
+        to_reset = [n for n, p in self.param.objects(instance='existing').items() if isinstance(p, OcaBoxParam)]
         for n in to_reset:
             setattr(self, f'_{n}_value', None)
 
@@ -147,7 +147,7 @@ class Component(param.Parameterized):
         self.unsubscribe_all()
 
     def _initialize(self):
-        to_connect = [n for n, p in self.param.values().items() if isinstance(p, OcaBoxParam)]
+        to_connect = [n for n, p in self.param.objects(instance='existing').items() if isinstance(p, OcaBoxParam)]
         for n in to_connect:
             self._connect_variables(n)
 
@@ -157,7 +157,7 @@ class Component(param.Parameterized):
         self.param.add_parameter(f'_{param_name}_value', param.Parameter(None, allow_None=True))
         self.param.add_parameter(f'_{param_name}_timestamp', param.Number(0.0))
         with param.discard_events(self):
-            self.param.set_param(param_name, lambda: self._ensure_value(param_name))
+            self.param.update(**{param_name: lambda: self._ensure_value(param_name)})
         self.param.watch(lambda event: self._watcher(event, param_name), f'_{param_name}_value')
 
     def _watcher(self, event, param_name):
