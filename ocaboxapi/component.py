@@ -139,7 +139,7 @@ class Component(param.Parameterized):
         self.subscribed = []
 
     def reset_params_values(self):
-        to_reset = [n for n, p in self.param.params().items() if isinstance(p, OcaBoxParam)]
+        to_reset = [n for n, p in self.param.values().items() if isinstance(p, OcaBoxParam)]
         for n in to_reset:
             setattr(self, f'_{n}_value', None)
 
@@ -147,13 +147,13 @@ class Component(param.Parameterized):
         self.unsubscribe_all()
 
     def _initialize(self):
-        to_connect = [n for n, p in self.param.params().items() if isinstance(p, OcaBoxParam)]
+        to_connect = [n for n, p in self.param.values().items() if isinstance(p, OcaBoxParam)]
         for n in to_connect:
             self._connect_variables(n)
 
     def _connect_variables(self, param_name):
         logger.debug(f'Connecting {param_name} to {self.id}')
-        # parameter = self.param.params()[param_name]
+        # parameter = self.param.values()params()[param_name]
         self.param.add_parameter(f'_{param_name}_value', param.Parameter(None, allow_None=True))
         self.param.add_parameter(f'_{param_name}_timestamp', param.Number(0.0))
         with param.discard_events(self):
