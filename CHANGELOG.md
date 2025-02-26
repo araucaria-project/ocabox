@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.2.1]
+### Fixed
+- `params` deprecation warning in `component` no longer appears, stopped using deprecated method.
+
 ## [2.2.0]
 ### Added
 - `planrunner` separate flat and domeflat flags, added filter offset kwarg
