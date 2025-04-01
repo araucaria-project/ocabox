@@ -23,9 +23,9 @@ class ConfigGeneral:
         for n in seq:
             try:
                 ret = ret[n]
-            except (IndexError, KeyError):
+            except (LookupError, TypeError, IndexError):
                 log.error(f'No value name {n} in config or wrong seq')
                 return None
-        if '{telescope}' in ret:
+        if isinstance(ret, str) and '{telescope}' in ret:
             ret = ret.format(telescope=self.telescope.id)
         return ret
