@@ -49,7 +49,7 @@ class DomeSlew(BaseSubCommand):
                     logger.info(f'Dome on position set: {azimuth} real: {dome_az}')
                     return True
             if time.time() > slew_start_time + self.slew_timeout:
-                logger.error(f'Dome slew get timeout {self.slew_timeout}.')
+                logger.error(f'Dome slew get timeout {self.slew_timeout}s.')
                 return False
 
     async def get_from_config_general(self) -> None:
@@ -182,7 +182,7 @@ class DomeSlew(BaseSubCommand):
         if not wait_slew_ok:
             self.skipped = True
             await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
-            inf = f'Dome slew get timeout {self.slew_timeout}, program stopping.'
+            inf = f'Dome slew get timeout {self.slew_timeout}s, program stopping.'
             logger.error(inf)
             await self.journal.error(inf)
             await self.status_error_publish(

@@ -131,7 +131,6 @@ class MountSlew(BaseSubCommand):
             'telescopes', self.telescope.id, 'observatory', 'components', 'mount', 'min_alt'
         ], source='nats')
 
-
     async def arun(self, step_id: str or None = None) -> int:
         inf = "Mount slew started."
         logger.info(inf)
