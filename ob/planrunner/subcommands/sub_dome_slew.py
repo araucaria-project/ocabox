@@ -1,5 +1,7 @@
 import asyncio
 import logging
+import time
+
 from pyaraucaria.dome_eq import dome_eq_azimuth
 from ob.planrunner.base_subcommand import BaseSubCommand
 from typing import Callable, Dict, Any
@@ -18,28 +20,52 @@ class DomeSlew(BaseSubCommand):
 
         self.seq_data = seq_data
         self.az = az
-        self.follow_tol = follow_tol # TODO take from settings
-        self.slew_tolerance = slew_tolerance # TODO take from settings
+        self.follow_tol = follow_tol
+        self.slew_tolerance = slew_tolerance
         super().__init__(id=id, info_callback=info_callback, telescope=telescope, name=name, uobi=uobi, param=param)
         self.dome = self.telescope.get_dome()
         self.mount = self.telescope.get_mount()
+        self.slew_timeout: float or None = None
+        self.mount_type: str or None = None
+        self.loc: Dict or None = None
         self.info_dict = {'az': self.az, 'follow_tol': self.follow_tol}
         self.create_sub_command_string(**self.info_dict)
 
-    async def _wait_to_slew(self, azimuth) -> None:
+    async def _wait_to_slew(self, azimuth) -> bool:
         logger.info(f'Starting wait_to slew az: {azimuth}')
+        slew_start_time = time.time()
         while True:
+            await asyncio.sleep(0.5)
             dome_az = await self.value_proof_get(
-                name='sub_dome_az', awaitab=self.dome.aget_az, expect_type=float, log=True)
+                name='sub_dome_az', awaitab=self.dome.aget_az, expect_type=float, log=True
+            )
             dome_slewing = await self.value_proof_get(
                 name='sub_dome_slew', awaitab=self.dome.aget_slewing, expect_type=bool, log=True
             )
-            await asyncio.sleep(0.5)
+
             if dome_az is not None and dome_slewing is False:
                 if (abs(azimuth - float(dome_az))) < self.slew_tolerance \
                         or (abs(azimuth - float(dome_az))) > 360.0 - self.slew_tolerance:
                     logger.info(f'Dome on position set: {azimuth} real: {dome_az}')
-                    break
+                    return True
+            if time.time() > slew_start_time + self.slew_timeout:
+                logger.error(f'Dome slew get timeout {self.slew_timeout}.')
+                return False
+
+    async def get_from_config_general(self) -> None:
+        self.loc = self.param['cfg_gen'].get_value(seq=['site', 'global', 'geo_location'], source='nats')
+        self.mount_type = self.param['cfg_gen'].get_value(seq=[
+            'telescopes', self.telescope.id, 'observatory', 'components', 'mount', 'type'
+        ], source='nats')
+        self.slew_timeout = self.param['cfg_gen'].get_value(seq=[
+            'telescopes', self.telescope.id, 'observatory', 'components', 'dome', 'slew_timeout'
+        ], source='nats')
+        self.follow_tol = self.param['cfg_gen'].get_value(seq=[
+            'telescopes', self.telescope.id, 'observatory', 'components', 'dome', 'follow_tolerance'
+        ], source='nats')
+        self.slew_tolerance = self.param['cfg_gen'].get_value(seq=[
+            'telescopes', self.telescope.id, 'observatory', 'components', 'dome', 'slew_tolerance'
+        ], source='nats')
 
     async def arun(self, step_id: str or None = None) -> int:
         self.started = True
@@ -53,16 +79,13 @@ class DomeSlew(BaseSubCommand):
         logger.info(f'{self.id} started')
         self.info_callback['stream_1'](f'{self.id} {self.name} started.')
         await self.journal.info(f"{self.id} {self.name} started.")
-        mount_type = self.param['cfg_gen'].get_value(seq=[
-            'telescopes', self.telescope.id, 'observatory', 'components', 'mount', 'type'
-        ], source='nats')
-        logger.debug(f'Mount type {mount_type}')
+        await self.get_from_config_general()
+        logger.debug(f'Mount type {self.mount_type}')
         if self.az is not None:
             az = self.az
         else:
-            if mount_type == 'eq':
+            if self.mount_type == 'eq':
                 await self.journal.info(f"For eq started")
-                loc = self.param['cfg_gen'].get_value(seq=['site', 'global', 'geo_location'], source='nats')
                 ra = await self.value_proof_get(name='mount_ra', awaitab=self.mount.aget_ra, expect_type=float)
                 dec = await self.value_proof_get(name='mount_dec', awaitab=self.mount.aget_dec, expect_type=float)
                 side_of_pier = await self.value_proof_get(
@@ -91,12 +114,12 @@ class DomeSlew(BaseSubCommand):
                     return 2
                 mount_az, info_dict = dome_eq_azimuth(
                     ra=ra, dec=dec, r_dome=r_dome, spx=spx, spy=spy,
-                    gem=gem, side_of_pier=side_of_pier, latitude=loc['lat'],
-                    longitude=loc['lon'], elevation=loc['elev']
+                    gem=gem, side_of_pier=side_of_pier, latitude=self.loc['lat'],
+                    longitude=self.loc['lon'], elevation=self.loc['elev']
                 )
                 logger.info(f'Calculated eq dome az: {mount_az}')
                 logger.info(f'Calculated info dict eq dome az: {info_dict}')
-            elif mount_type == 'az':
+            elif self.mount_type == 'az':
                 mount_az = await self.value_proof_get(
                     name='sub_dome_mount_az', awaitab=self.mount.aget_az, expect_type=float
                 )
@@ -155,7 +178,19 @@ class DomeSlew(BaseSubCommand):
                 plan_runner_quits=True
             )
             return 2
-        await self._wait_to_slew(az)
+        wait_slew_ok = await self._wait_to_slew(az)
+        if not wait_slew_ok:
+            self.skipped = True
+            await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
+            inf = f'Dome slew get timeout {self.slew_timeout}, program stopping.'
+            logger.error(inf)
+            await self.journal.error(inf)
+            await self.status_error_publish(
+                level='critical',
+                description=inf,
+                plan_runner_quits=True
+            )
+            return 2
         logger.info(f'{self.id} done')
         self.info_callback['stream_1'](f'{self.id} {self.name} done.')
         self.info_callback['stream_5'](f'{self.id}')

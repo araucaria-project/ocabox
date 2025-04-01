@@ -37,15 +37,20 @@ class MountSlew(BaseSubCommand):
         self.dec_now: float or None = None
         super().__init__(id=id, info_callback=info_callback, telescope=telescope, name=name, uobi=uobi, param=param)
         self.mount = self.telescope.get_mount()
-        self.info_dict = { 'obj_name': self.obj_name,
-                            'seq_data': self.seq_data,
-                            'ra': self.ra,
-                            'dec': self.dec,
-                            'epoch': self.epoch,
-                            'tracking': self.tracking,
-                            'dither': self.dithering,
-                            'alt': self.alt,
-                            'az': self.az}
+        self.loc: Dict or None = None
+        self.mount_min_alt: float or None = None
+        self.slew_timeout: float or None = None
+        self.info_dict = {
+            'obj_name': self.obj_name,
+            'seq_data': self.seq_data,
+            'ra': self.ra,
+            'dec': self.dec,
+            'epoch': self.epoch,
+            'tracking': self.tracking,
+            'dither': self.dithering,
+            'alt': self.alt,
+            'az': self.az
+        }
         self.create_sub_command_string(**self.info_dict)
 
     async def _wait_to_slew_coo(self, ra_in: float, dec_in: float,
@@ -64,9 +69,10 @@ class MountSlew(BaseSubCommand):
                 if slew is False:
                     await asyncio.sleep(self.SLEW_SETTLE_TIME)
                     break
+            await asyncio.sleep(0.1)
 
     async def _wait_to_slew_alt_az(self, az_in: float, alt_in: float) -> None:
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(1)
         while True:
             az = await self.value_proof_get(name='mount_az', awaitab=self.mount.aget_az, expect_type=float)
             alt = await self.value_proof_get(name='mount_alt', awaitab=self.mount.aget_alt, expect_type=float)
@@ -100,6 +106,9 @@ class MountSlew(BaseSubCommand):
                 diff = m
             logger.info(f'Dithering value for Ra is {diff} for Dec {dec}')
             return ra + diff
+        else:
+            logger.error(f'Dither mode {mode} is not implemented, no dithering.')
+            return ra
 
     @staticmethod
     def dec_random_dither(dec: float, dith_val: float, mode: str = 'basic') -> float:
@@ -109,6 +118,19 @@ class MountSlew(BaseSubCommand):
             if abs(diff) < m:
                 diff = m
             return dec + diff
+        else:
+            logger.error(f'Dither mode {mode} is not implemented, no dithering.')
+            return dec
+
+    async def get_from_config_general(self) -> None:
+        self.loc = self.param['cfg_gen'].get_value(seq=['site', 'global', 'geo_location'], source='nats')
+        self.slew_timeout = self.param['cfg_gen'].get_value(seq=[
+            'telescopes', self.telescope.id, 'observatory', 'components', 'mount', 'slew_timeout'
+        ], source='nats')
+        self.mount_min_alt = self.param['cfg_gen'].get_value(seq=[
+            'telescopes', self.telescope.id, 'observatory', 'components', 'mount', 'min_alt'
+        ], source='nats')
+
 
     async def arun(self, step_id: str or None = None) -> int:
         inf = "Mount slew started."
@@ -126,10 +148,7 @@ class MountSlew(BaseSubCommand):
         logger.info(f'{self.id} started')
         self.info_callback['stream_1'](f'{self.id} {self.name} started')
         await self.journal.info(f'{self.id} {self.name} started.')
-        loc = self.param['cfg_gen'].get_value(seq=['site', 'global', 'geo_location'], source='nats')
-        # TODO mount_min_alt should be taken from settings
-        mount_min_alt = 14.9
-        logger.info(f'Info done')
+        await self.get_from_config_general()
 
         if self.alt is not None and self.az is not None and self.dithering is False:
             logger.debug(f'{self.id} {self.name} Alt: {self.alt} Az: {self.az}')
@@ -148,7 +167,7 @@ class MountSlew(BaseSubCommand):
                     logger.error(f"Wrong az alt format")
                     await self.journal.error(f"{self.id} {self.name} wrong az alt format.")
                     return 1
-            if alt > mount_min_alt:
+            if alt > self.mount_min_alt:
                 tr0 = await self.proof_put(awaitab=self.mount.aput_tracking, track=False)
                 if not tr0:
                     self.skipped = True
@@ -229,10 +248,10 @@ class MountSlew(BaseSubCommand):
             self.ra_now, self.dec_now = ra_dec_epoch(ra=self.ra, dec=self.dec, epoch=self.epoch)
             await self.journal.debug(f'{self.id} {self.name} Ra now: {self.ra_now} Dec now: {self.dec_now}')
             az, alt = ra_dec_2_az_alt(
-                ra=self.ra_now, dec=self.dec_now, latitude=loc['lat'], longitude=loc['lon'],
-                elevation=loc['elev'], epoch=self.epoch
+                ra=self.ra_now, dec=self.dec_now, latitude=self.loc['lat'], longitude=self.loc['lon'],
+                elevation=self.loc['elev'], epoch=self.epoch
             )
-            if alt > mount_min_alt:
+            if alt > self.mount_min_alt:
                 tr3 = await self.proof_put(awaitab=self.mount.aput_tracking, track=self.tracking)
                 if not tr3:
                     self.skipped = True
