@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class CameraExposure(BaseSubCommand):
 
-    FORCED_RM_MODE_SETTLE_TIME = 3 # seconds
+    FORCED_RM_MODE_SETTLE_TIME = 5 # seconds
 
     def __init__(
             self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable], seq_data: 'Seq', uobi: int,
