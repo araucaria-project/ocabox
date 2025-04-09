@@ -95,20 +95,26 @@ class AbstractBase(ABC):
                               wait: float = 3.0, log: bool = False) -> Any:
         async for n in AsyncRangeIter(start=1, end=n_times):
             if log:
-                logger.info(f'Proof get {name} start.')
+                inf = f'Proof get {name} start.'
+                logger.info(inf)
+                await self.journal.debug(f'msg: {inf}, uid: {pwd.getpwuid(os.getuid())[0]}.')
             res = await self._value_proof_get(name=name, awaitab=awaitab, expect_type=expect_type)
             if log:
-                logger.info(f'Proof get {name} got {res}.')
+                inf = f'Proof get {name} got response: {res}.'
+                logger.info(inf)
+                await self.journal.debug(f'msg: {inf}, uid: {pwd.getpwuid(os.getuid())[0]}.')
             if res is not None:
                 return res
             else:
-                logger.warning(f"Can't get {name}, (is None)")
+                inf = f"Can't get {name}, (is None)"
+                logger.warning(inf)
+                if log:
+                    await self.journal.warning(f'msg: {inf}, uid: {pwd.getpwuid(os.getuid())[0]}.')
                 await asyncio.sleep(wait)
             if n == n_times:
                 return None
 
-    @staticmethod
-    async def proof_put(awaitab: Callable, name: str = '', n_times: int = 5, wait: float = 3.0, **kwargs) -> bool:
+    async def proof_put(self, awaitab: Callable, name: str = '', n_times: int = 5, wait: float = 3.0, **kwargs) -> bool:
         async for n in AsyncRangeIter(start=1, end=n_times):
             try:
                 logger.info(f'Proof put {name} start.')
@@ -116,15 +122,21 @@ class AbstractBase(ABC):
                 # logger.info(f'Sending proof put request {name} req no. {n}/{n_times}')
                 return True
             except OcaboxServerError:
-                logger.warning(f'Tic OcaboxServerError')
+                inf = f'Tic OcaboxServerError'
+                logger.warning(inf)
+                await self.journal.warning(f'msg: {inf}, uid: {pwd.getpwuid(os.getuid())[0]}.')
                 await asyncio.sleep(wait)
                 continue
             except CommunicationTimeoutError:
-                logger.warning(f'Tic CommunicationTimeoutError')
+                inf = f'Tic CommunicationTimeoutError'
+                logger.warning(inf)
+                await self.journal.warning(f'msg: {inf}, uid: {pwd.getpwuid(os.getuid())[0]}.')
                 await asyncio.sleep(wait)
                 continue
             except OcaboxAccessDenied:
-                logger.warning(f'Tic OcaboxAccessDenied')
+                inf = f'Tic OcaboxAccessDenied'
+                logger.warning(inf)
+                await self.journal.warning(f'msg: {inf}, uid: {pwd.getpwuid(os.getuid())[0]}.')
                 await asyncio.sleep(wait)
                 continue
         logger.error(f'Sending {name} failed')
