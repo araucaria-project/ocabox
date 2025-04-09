@@ -1,5 +1,7 @@
 import asyncio
 import logging
+import os
+import pwd
 import time
 
 from pyaraucaria.dome_eq import dome_eq_azimuth
@@ -46,10 +48,14 @@ class DomeSlew(BaseSubCommand):
             if dome_az is not None and dome_slewing is False:
                 if (abs(azimuth - float(dome_az))) < self.slew_tolerance \
                         or (abs(azimuth - float(dome_az))) > 360.0 - self.slew_tolerance:
-                    logger.info(f'Dome on position set: {azimuth} real: {dome_az}')
+                    inf = f'Dome on position set: {azimuth} real: {dome_az}'
+                    logger.info(inf)
+                    await self.journal.debug(f'msg: {inf}, uid: {pwd.getpwuid(os.getuid())[0]}.')
                     return True
             if time.time() > slew_start_time + self.slew_timeout:
-                logger.error(f'Dome slew get timeout {self.slew_timeout}s.')
+                inf = f'Dome slew get timeout {self.slew_timeout}s.'
+                logger.error(inf)
+                await self.journal.debug(f'msg: {inf}, uid: {pwd.getpwuid(os.getuid())[0]}.')
                 return False
 
     async def get_from_config_general(self) -> None:
@@ -164,7 +170,9 @@ class DomeSlew(BaseSubCommand):
                 return 0
             else:
                 az = mount_az
-        await self.journal.info(f"{self.id} {self.name} slewing az: {az}")
+        inf = f"{self.id} {self.name} slewing az: {az}"
+        await self.journal.info(inf)
+        await self.journal.debug(f'msg: {inf}, uid: {pwd.getpwuid(os.getuid())[0]}.')
         ds = await self.proof_put(awaitab=self.dome.aput_slewtoazimuth, az=az)
         if not ds:
             self.skipped = True
