@@ -303,17 +303,31 @@ class Command(BaseSequence):
 
     @property
     def domeflat_dome_az(self) -> float or None:
-        # TODO take this value from settings
         if self.exp_type == 'domeflat':
-            return 0.0
+            dome_az = self.param['cfg_gen'].get_value(seq=[
+                'telescopes', self.telescope.id, 'observatory', 'components', 'dome', 'domeflat_az'
+            ], source='nats')
+            if dome_az:
+                return dome_az
+            else:
+                default_dome_az = 0.0
+                logger.warning(f'No domeflat dome az in config, returning default {default_dome_az}.')
+                return default_dome_az
         else:
             return None
 
     @property
     def domeflat_mount_az(self) -> float or None:
-        # TODO take this value from settings
         if self.exp_type == 'domeflat':
-            return self.domeflat_dome_az + 180.0
+            offset_az = self.param['cfg_gen'].get_value(seq=[
+                'telescopes', self.telescope.id, 'observatory', 'components', 'mount', 'domeflat_az_offset'
+            ], source='nats')
+            if offset_az:
+                return self.domeflat_dome_az + offset_az
+            else:
+                default_offset_az = 180.0
+                logger.warning(f'No domeflat mount az offset in config, returning default {default_offset_az}.')
+                return self.domeflat_dome_az + default_offset_az
         else:
             return None
 
@@ -333,9 +347,16 @@ class Command(BaseSequence):
 
     @property
     def domeflat_mount_alt(self) -> float or None:
-        # TODO take this value from settings
         if self.exp_type == 'domeflat':
-            return 15.0
+            alt = self.param['cfg_gen'].get_value(seq=[
+                'telescopes', self.telescope.id, 'observatory', 'components', 'mount', 'domeflat_alt'
+            ], source='nats')
+            if alt:
+                return alt
+            else:
+                default_alt = 15.0
+                logger.warning(f'No domeflat mount alt in config, returning default {default_alt}.')
+                return default_alt
         else:
             return None
 

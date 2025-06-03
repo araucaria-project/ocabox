@@ -556,7 +556,7 @@ class CameraExposure(BaseSubCommand):
                 await self.journal.info(inf)
                 self.info_callback['stream_1'](inf)
                 return 0
-            elif _current_rm_mode != self.forced_read_mod:
+            else:
                 exe = await self.proof_put(
                     awaitab=self.camera.aput_readoutmode, romode=self.forced_read_mod
                 )
