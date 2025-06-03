@@ -31,7 +31,7 @@ class BaseSubCommand(AbstractBase):
         raise NotImplementedError
 
     async def status_error_publish(
-            self, level: str, description: str, plan_runner_quits: bool) -> bool:
+            self, level: str, description: str, plan_runner_quits: bool) -> None:
         levels = ['minor', 'major', 'critical']
         logger.info(f'Starting publishing status error.')
         data = {
