@@ -102,7 +102,7 @@ class Seq:
         return ret
 
     @property
-    def filter_(self) -> Optional[str, int]:
+    def filter_(self) -> str | int:
         return self.seq_list[1]
 
     @property
