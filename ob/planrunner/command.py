@@ -671,6 +671,7 @@ class Command(BaseSequence):
                                               info_callback=self.info_callback,
                                               auto=True,
                                               param=self.param,
+                                              seq_data=Seq(seq=self.plan_seq[0], command_kwargs=self.kwargs),
                                               uobi=self.uobi), id_next=id_next)
 
         # Mirror cover close
