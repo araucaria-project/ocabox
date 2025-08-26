@@ -172,13 +172,14 @@ class Focusing(BaseSubCommand):
             self.info_callback['stream_1'](inf)
             await self.journal.debug(inf)
             logger.debug(inf)
-            logger.info(self.seq_data.focus_method)
-            if self.seq_data.focus_method is not None:
-                focus_method = self.seq_data.focus_method
-                crop = 500
-            else:
-                focus_method = 'rms_quad'
-                crop = 10
+            logger.info(self.seq_data)
+            # if self.seq_data.focus_method is not None:
+            #     focus_method = self.seq_data.focus_method
+            #     crop = 500
+            # else:
+            #     focus_method = 'rms_quad'
+            #     crop = 10
+            focus_method = 'rms_quad'
             logger.info(f'Focusing method: {focus_method}')
             try:
                 sharp, calc_metadata = Focus.calculate(
