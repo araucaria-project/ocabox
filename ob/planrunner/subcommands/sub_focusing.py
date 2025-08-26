@@ -178,6 +178,7 @@ class Focusing(BaseSubCommand):
             else:
                 focus_method = 'rms_quad'
                 crop = 10
+            logger.info(f'Focusing method: {focus_method}')
             try:
                 sharp, calc_metadata = Focus.calculate(
                     fits_path=self.fits_focus_folder_actual, crop=crop, range=rang, method=focus_method
