@@ -172,7 +172,8 @@ class Focusing(BaseSubCommand):
             self.info_callback['stream_1'](inf)
             await self.journal.debug(inf)
             logger.debug(inf)
-            if self.seq_data.focus_method is not None and isinstance(self.seq_data.focus_method, str):
+            logger.info(self.seq_data.focus_method)
+            if self.seq_data.focus_method is not None:
                 focus_method = self.seq_data.focus_method
                 crop = 500
             else:

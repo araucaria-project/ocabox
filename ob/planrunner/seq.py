@@ -70,7 +70,8 @@ class Seq:
 
     @property
     def focus_method(self) -> Optional[str]:
-        if self.focus_list:
+        logger.info(self.focus_list)
+        if self.focus_list is not None:
             if len(self.focus_list) > 2:
                 return str(self.focus_list[2])
             else:
