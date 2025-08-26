@@ -197,7 +197,7 @@ class Focusing(BaseSubCommand):
                     plan_runner_quits=True
                 )
                 return 2
-            if rang[1] > sharp > rang[0]:
+            if calc_metadata['status'] == 'ok' and rang[1] > sharp > rang[0]:
                 inf = f'{self.id} {self.name} calculated focus position {round(sharp)}.'
                 self.info_callback['stream_1'](inf)
                 await self.journal.info(inf)
