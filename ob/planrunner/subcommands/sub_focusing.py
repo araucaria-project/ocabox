@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from ob.planrunner.base_subcommand import BaseSubCommand
-from typing import Callable, Dict, Any
+from typing import Callable, Dict, Any, Optional
 from pyaraucaria.focus import Focus
 
 from ob.planrunner.iter_async import AsyncListIter
@@ -17,7 +17,8 @@ class Focusing(BaseSubCommand):
     def __init__(
             self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable],
             uobi: int, position: float = None, auto: bool = False, name: str = 'focusing',
-            param: Dict[str, Any] or None = None, filter_offset: bool = False, seq_data: 'Seq' or None = None) -> None:
+            param: Optional[Dict[str, Any]] = None, filter_offset: bool = False,
+            seq_data: Optional['Seq']= None) -> None:
 
         self.position = position
         self.filter_offset = filter_offset
@@ -41,7 +42,7 @@ class Focusing(BaseSubCommand):
                     await asyncio.sleep(1)
                     break
 
-    async def calculate_filter_offset(self) -> int or None:
+    async def calculate_filter_offset(self) -> Optional[int]:
         filter_dict = await self.get_filters_dict()
         try:
             ordered_filter_slot = filter_dict[self.seq_data.filter_]
@@ -70,7 +71,7 @@ class Focusing(BaseSubCommand):
             new_position = None
         return new_position
 
-    async def arun(self, step_id: str or None = None) -> int:
+    async def arun(self, step_id: Optional[str] = None) -> int:
         self.started = True
         await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.running)
         inf = f'{self.id} {self.name} started.'
@@ -171,8 +172,15 @@ class Focusing(BaseSubCommand):
             self.info_callback['stream_1'](inf)
             await self.journal.debug(inf)
             logger.debug(inf)
+            if self.seq_data.focus_method is not None:
+                focus_method = self.seq_data.focus_method
+            else:
+                focus_method = 'rms_quad'
+            logger.info(f'Focusing method: {focus_method}')
             try:
-                sharp, calc_metadata = Focus.calculate(fits_path=self.fits_focus_folder_actual, range=rang)
+                sharp, calc_metadata = Focus.calculate(
+                    fits_path=self.fits_focus_folder_actual, crop=10, range=rang, method=focus_method
+                )
             except TypeError:
                 inf = f'{self.id} {self.name} wrong focus calculation.'
                 self.info_callback['stream_1'](inf)
@@ -187,7 +195,7 @@ class Focusing(BaseSubCommand):
                     plan_runner_quits=True
                 )
                 return 2
-            if rang[1] > sharp > rang[0]:
+            if calc_metadata['status'] == 'ok' and rang[1] > sharp > rang[0]:
                 inf = f'{self.id} {self.name} calculated focus position {round(sharp)}.'
                 self.info_callback['stream_1'](inf)
                 await self.journal.info(inf)

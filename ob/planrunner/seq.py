@@ -1,4 +1,4 @@
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 import logging
 import random
 from ob.planrunner.coded_error import SequenceTreeError
@@ -15,23 +15,23 @@ class Seq:
 
     def __init__(self, seq: str, command_kwargs: Dict):
         self.seq: str = seq
-        self._focus_id: int or None = None
+        self._focus_id: Optional[int] = None
         self.command_kwargs: Dict = command_kwargs
-        self.focus_folder: str or None = None
+        self.focus_folder: Optional[str] = None
         self.skip = False
-        self.auto_flat: AutoFlatNoTest or None = None
-        self.filer_slot_before_change: int or None = None
+        self.auto_flat: Optional[AutoFlatNoTest] = None
+        self.filer_slot_before_change: Optional[int] = None
         self.set_focus_id()
 
     @property
-    def focus_id(self) -> int or None:
+    def focus_id(self) -> Optional[int]:
         return self._focus_id
 
     def set_focus_id(self):
         self._focus_id = random.randrange(0, 100000)
 
     @property
-    def focus_list(self) -> List[str] or None:
+    def focus_list(self) -> Optional[List[Any]]:
         """
         Input format focus_target/focus_step
         :return: [focus_target/focus_step]
@@ -42,34 +42,45 @@ class Seq:
             return None
 
     @property
-    def focus_target(self) -> int or None:
+    def focus_target(self) -> Optional[int]:
         if self.focus_list:
             return int(self.focus_list[0])
         else:
             return None
 
-    def focus_position(self, exp_no: int) -> float or None:
+    def focus_position(self, exp_no: int) -> Optional[float]:
         if self.focus_values_list:
             return self.focus_values_list[exp_no - 1]
         else:
             return None
 
     @property
-    def focus_min(self) -> int or None:
+    def focus_min(self) -> Optional[int]:
         if self.focus_list:
             return int(round(self.focus_target - (self.focus_step * ((self.exp_no - 1) / 2))))
         else:
             return None
 
     @property
-    def focus_step(self) -> int or None:
+    def focus_step(self) -> Optional[int]:
         if self.focus_list:
             return int(self.focus_list[1])
         else:
             return None
 
     @property
-    def focus_values_list(self) -> List[str] or None:
+    def focus_method(self) -> Optional[str]:
+        logger.info(self.focus_list)
+        if self.focus_list is not None:
+            if len(self.focus_list) > 2:
+                return str(self.focus_list[2])
+            else:
+                return None
+        else:
+            return None
+
+    @property
+    def focus_values_list(self) -> Optional[List[int]]:
         if self.focus_list:
             f = []
             for n in range(0, self.exp_no):
@@ -92,11 +103,11 @@ class Seq:
         return ret
 
     @property
-    def filter_(self) -> str or int:
+    def filter_(self) -> str | int:
         return self.seq_list[1]
 
     @property
-    def exp_time(self) -> float or None:
+    def exp_time(self) -> Optional[float]:
         try:
             return float(self.seq_list[2])
         except ValueError:
@@ -111,7 +122,7 @@ class Seq:
             return False
 
     @property
-    def dither_list(self) -> List[str] or None:
+    def dither_list(self) -> Optional[List[str]]:
         # [dither_mode, dither_every_sub, dither_distance]
         if 'dither' in self.command_kwargs.keys():
             if self.command_kwargs['dither'] == 'off':
