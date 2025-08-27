@@ -28,9 +28,9 @@ class CameraExposure(BaseSubCommand):
     def __init__(
             self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable], seq_data: 'Seq', uobi: int,
             exp_type: str, filter_: str, light: bool, sub_exp: int, exp_no: int, auto_exposure: bool,
-            epoch: str, observer: str, obj_name: str, seq_dataset: Dict, req_ra: float or None = None,
-            req_dec: float or None = None, test: int = 0, forced_read_mod: int or None = None,
-            name: str = 'camera-exposure', param: Dict[str, Any] or None = None) -> None:
+            epoch: str, observer: str, obj_name: str, seq_dataset: Dict, req_ra: Optional[float] = None,
+            req_dec: Optional[float] = None, test: int = 0, forced_read_mod: Optional[int] = None,
+            name: str = 'camera-exposure', param: Optional[Dict[str, Any]] = None) -> None:
 
         self.seq_data = seq_data
         self.exp_type = exp_type
@@ -46,12 +46,12 @@ class CameraExposure(BaseSubCommand):
         self.req_dec = req_dec
         self.test = test
         self.forced_read_mod = forced_read_mod
-        self.target_folder: str or None = None
+        self.target_folder: Optional[str] = None
         self.symlinks: List = []
-        self.readout_time: float or None = None
-        self.readout_time_start: float or None = None
-        self.exp_time_start: str or None = None
-        self.fits_file_name: str or None = None
+        self.readout_time: Optional[float] = None
+        self.readout_time_start: Optional[float] = None
+        self.exp_time_start: Optional[datetime] = None
+        self.fits_file_name: Optional[str] = None
         self.seq_dataset = seq_dataset
         super().__init__(id=id, info_callback=info_callback, telescope=telescope, name=name, uobi=uobi, param=param)
         self.mount = self.telescope.get_mount()
@@ -60,6 +60,7 @@ class CameraExposure(BaseSubCommand):
         self.filter_wheel = self.telescope.get_filterwheel()
         self.focuser = self.telescope.get_focuser()
         self.rotator = self.telescope.get_rotator()
+        self.dome = self.telescope.get_dome()
 
         self.info_dict = {
             'type': self.exp_type,
@@ -80,7 +81,7 @@ class CameraExposure(BaseSubCommand):
     def add_zero(numb: int):
         return f'{numb:02d}'
 
-    async def gain_value(self, gain_mode: int) -> float or str:
+    async def gain_value(self, gain_mode: int) -> float | str:
         _gain = self.param['cfg_gen'].get_value(seq=[
             'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'gain_modes', str(gain_mode)
         ], source='nats')
@@ -91,7 +92,7 @@ class CameraExposure(BaseSubCommand):
             return ''
 
     @staticmethod
-    async def airmass_value(alt: float) -> float or str:
+    async def airmass_value(alt: float) -> float | str:
         try:
             air = airmass(elevation=alt)
             if air is None:
@@ -101,7 +102,7 @@ class CameraExposure(BaseSubCommand):
         except ValueError:
             return ''
 
-    async def readout_noise_value(self, rmmode: int) -> float or str:
+    async def readout_noise_value(self, rmmode: int) -> float | str:
         _gain = self.param['cfg_gen'].get_value(seq=[
             'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'readout_modes', str(rmmode)
         ], source='nats')
@@ -111,7 +112,7 @@ class CameraExposure(BaseSubCommand):
             logger.info(f'No readout noise value in readout modes in general config')
             return ''
 
-    async def pixel_scale(self) -> float or str:
+    async def pixel_scale(self) -> float | str:
         _cam = self.param['cfg_gen'].get_value(seq=[
             'telescopes', self.telescope.id, 'observatory', 'components', 'camera'
         ], source='nats')
@@ -121,7 +122,7 @@ class CameraExposure(BaseSubCommand):
             logger.info(f'No pixel scale value in camera in general config')
             return ''
 
-    async def vertical_shift_speed(self) -> float or str:
+    async def vertical_shift_speed(self) -> float | str:
         _cam = self.param['cfg_gen'].get_value(seq=[
             'telescopes', self.telescope.id, 'observatory', 'components', 'camera'
         ], source='nats')
@@ -131,7 +132,7 @@ class CameraExposure(BaseSubCommand):
             logger.info(f'No vertical shift speed value in camera in general config')
             return ''
 
-    async def zero_era(self) -> int or str:
+    async def zero_era(self) -> int | str:
         _era = self.param['cfg_gen'].get_value(seq=[
             'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'zero'
         ], source='nats')
@@ -141,7 +142,7 @@ class CameraExposure(BaseSubCommand):
             logger.info(f'No zero era value in camera in general config')
             return ''
 
-    async def dark_era(self) -> int or str:
+    async def dark_era(self) -> int | str:
         _era = self.param['cfg_gen'].get_value(seq=[
             'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'dark'
         ], source='nats')
@@ -151,7 +152,7 @@ class CameraExposure(BaseSubCommand):
             logger.info(f'No dark era value in camera in general config')
             return ''
 
-    async def sky_flats_era(self) -> int or str:
+    async def sky_flats_era(self) -> int | str:
         _era = self.param['cfg_gen'].get_value(seq=[
             'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'sky_flats'
         ], source='nats')
@@ -161,7 +162,7 @@ class CameraExposure(BaseSubCommand):
             logger.info(f'No sky flats era value in camera in general config')
             return ''
 
-    async def baseline_clamp(self) -> float or str:
+    async def baseline_clamp(self) -> float | str:
         _cam = self.param['cfg_gen'].get_value(seq=[
             'telescopes', self.telescope.id, 'observatory', 'components', 'camera'
         ], source='nats')
@@ -174,7 +175,7 @@ class CameraExposure(BaseSubCommand):
             logger.info(f'No baseline clamp value in camera in general config')
             return ''
 
-    async def sensor_port(self) -> float or str:
+    async def sensor_port(self) -> float | str:
         _cam = self.param['cfg_gen'].get_value(seq=[
             'telescopes', self.telescope.id, 'observatory', 'components', 'camera'
         ], source='nats')
@@ -184,7 +185,7 @@ class CameraExposure(BaseSubCommand):
             logger.info(f'No sensor port value in camera in general config')
             return ''
 
-    async def sensor_compensation(self) -> float or str:
+    async def sensor_compensation(self) -> float | str:
         _cam = self.param['cfg_gen'].get_value(seq=[
             'telescopes', self.telescope.id, 'observatory', 'components', 'camera'
         ], source='nats')
@@ -266,7 +267,7 @@ class CameraExposure(BaseSubCommand):
 
     async def rpc_request(
             self, fits_id: str, header: Dict, req: str = 'fits_download', mean_points_no_stats: int = 400,
-            dtyp: str = 'sideint16', timeout: float or None = None) -> Dict or None:
+            dtyp: str = 'sideint16', timeout: float | None = None) -> Dict | None:
 
         inf = f'{self.id} {self.name} send rpc request {self.rpc_subject}'
         logger.info(inf)
@@ -497,6 +498,7 @@ class CameraExposure(BaseSubCommand):
         ], source='nats')
         if mount_type == 'eq':
             rot_pos = 'n/a'
+            rot_mech_pos = 'n/a'
             side_of_pier = await self.value_proof_get(
                 name='mount_sideofpier', awaitab=self.mount.aget_sideofpier, expect_type=int
             )
@@ -520,11 +522,32 @@ class CameraExposure(BaseSubCommand):
         d_era = await self.dark_era()
         f_era = await self.sky_flats_era()
 
+        weather_davies = await self.weather_davies_read()
+        try:
+            _wdm = weather_davies['measurements']
+            press_ws = _wdm['pressure_Pa']
+            humidity_ws = _wdm['humidity']
+            temp_ws = _wdm['temperature_C']
+            wind_dir_ws = _wdm['wind_dir_deg']
+            wind_avg_ws = _wdm['wind_10min_ms']
+            wind_gust_ws = _wdm['wind_ms']
+        except (ValueError, LookupError, TypeError):
+            press_ws = 'n/a'
+            humidity_ws = 'n/a'
+            temp_ws = 'n/a'
+            wind_dir_ws = 'n/a'
+            wind_avg_ws = 'n/a'
+            wind_gust_ws = 'n/a'
+
         header = fits_header(
             obs_lat=loc['lat'],
             obs_lon=loc['lon'],
             obs_elev=loc['elev'],
             tel_id=str(self.telescope.id),
+            pi_name="", #TODO
+            sci_prog="", #TODO
+            obs_id="", #TODO
+            uobi=self.uobi,
             utc_now=str(self.exp_time_start.isoformat(sep='T', timespec='auto')),
             jd=self.get_julian_date(self.exp_time_start),
             req_ra=req_ra,
@@ -538,6 +561,7 @@ class CameraExposure(BaseSubCommand):
                 name='fitsh_focus_pos', awaitab=self.focuser.aget_position, expect_type=int
             ),
             rotator_pos=rot_pos,
+            rotator_mech_pos=rot_mech_pos,
             observer=str(self.observer),
             image_type=str(self.exp_type),
             obs_type=self.obs_type,
@@ -556,6 +580,9 @@ class CameraExposure(BaseSubCommand):
             gain=await self.gain_value(gain_mode=instrument_data["gainmode"]),
             scale=await self.pixel_scale(),
             pierside=side_of_pier,
+            tracking=await self.value_proof_get(
+                name='fitsh_mount_track', awaitab=self.mount.aget_tracking, expect_type=bool
+            ),
             airmass=await self.airmass_value(alt=tel_alt),
             vertical_shift_speed=await self.vertical_shift_speed(),
             baseline_clamp=await self.baseline_clamp(),
@@ -564,6 +591,28 @@ class CameraExposure(BaseSubCommand):
             zero_era=z_era,
             dark_era=d_era,
             flat_era=f_era,
+            dome_az=await self.value_proof_get(name='fitsh_dome_az', awaitab=self.dome.aget_az, expect_type=float),
+            dome_sht=await self.value_proof_get(
+                name='fitsh_dome_shutterstat', awaitab=self.dome.aget_shutterstatus, expect_type=int
+            ),
+            mirror_cover=await self.value_proof_get(
+                name='fitsh_coverstate', awaitab=self.cover.aget_coverstate, expect_type=int
+            ),
+            fan_mirr=await self.value_proof_get(
+                name='fitsh_focuser_mirrfanstat', awaitab=self.focuser.aget_fansstatus, expect_type=bool
+            ),
+            fan_dome=await self.value_proof_get(
+                name='fitsh_dome_fansrun', awaitab=self.dome.aget_dome_fans_running, expect_type=bool
+            ),
+            lamp_flat=await self.value_proof_get(
+                name='fitsh_cover_flatlampstate', awaitab=self.cover.aget_calibratorstate, expect_type=int
+            ),
+            press_ws=press_ws,
+            humidity_ws=humidity_ws,
+            temp_ws=temp_ws,
+            wind_dir_ws=wind_dir_ws,
+            wind_avg_ws=wind_avg_ws,
+            wind_gust_ws=wind_gust_ws,
             test=self.test
         )
         logger.info(f"Preparing header done: {time.time() - t:.2f}s")
@@ -598,7 +647,7 @@ class CameraExposure(BaseSubCommand):
             "biny": biny
         }
 
-    async def arun(self, step_id: str or None = None) -> int:
+    async def arun(self, step_id: Optional[str] = None) -> int:
 
         self.started = True
         await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.running)
