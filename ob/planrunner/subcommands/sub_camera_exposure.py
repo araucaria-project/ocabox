@@ -522,7 +522,8 @@ class CameraExposure(BaseSubCommand):
         d_era = await self.dark_era()
         f_era = await self.sky_flats_era()
 
-        weather_davies = await self.weather_davies_read()
+        # weather_davies = await self.weather_davies_read()
+        weather_davies = None
         try:
             _wdm = weather_davies['measurements']
             press_ws = _wdm['pressure_Pa']
