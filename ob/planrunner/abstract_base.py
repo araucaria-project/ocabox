@@ -51,7 +51,6 @@ class AbstractBase(ABC):
         super().__init__()
 
     def get_subject(self, stream: str, field: Optional[str]) -> Optional[str]:
-        r = self.param['cfg_gen'].get_value(seq=['site', 'global', 'nats', 'subjects', stream, field], source='nats')
         if field is None:
             r = self.param['cfg_gen'].get_value(
                 seq=['site', 'global', 'nats', 'subjects', stream], source='nats'
