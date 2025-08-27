@@ -174,14 +174,12 @@ class Focusing(BaseSubCommand):
             logger.debug(inf)
             if self.seq_data.focus_method is not None:
                 focus_method = self.seq_data.focus_method
-                crop = 500
             else:
                 focus_method = 'rms_quad'
-                crop = 10
             logger.info(f'Focusing method: {focus_method}')
             try:
                 sharp, calc_metadata = Focus.calculate(
-                    fits_path=self.fits_focus_folder_actual, crop=crop, range=rang, method=focus_method
+                    fits_path=self.fits_focus_folder_actual, crop=10, range=rang, method=focus_method
                 )
             except TypeError:
                 inf = f'{self.id} {self.name} wrong focus calculation.'
