@@ -493,9 +493,9 @@ class CameraExposure(BaseSubCommand):
             req_dec = ''
         else:
             req_dec = self.req_dec
-        mount_type = self.param['cfg_gen'].get_value(seq=[
-            'telescopes', self.telescope.id, 'observatory', 'components', 'mount', 'type'
-        ], source='nats')
+        mount_type = self.param['cfg_gen'].get_value(
+            seq=['telescopes', self.telescope.id, 'observatory', 'components', 'mount', 'type'], source='nats'
+        )
         if mount_type == 'eq':
             rot_pos = 'n/a'
             rot_mech_pos = 'n/a'
@@ -507,7 +507,7 @@ class CameraExposure(BaseSubCommand):
                 name='fitsh_rot_pos', awaitab=self.rotator.aget_position, expect_type=float, n_times=1
             )
             rot_mech_pos = await self.value_proof_get(
-                name='fitsh_rot_mech_pos', awaitab=self.rotator.aget_mechanicalposition(),
+                name='fitsh_rot_mech_pos', awaitab=self.rotator.aget_mechanicalposition,
                 expect_type=float, n_times=1
             )
             if rot_pos is None:
@@ -522,8 +522,8 @@ class CameraExposure(BaseSubCommand):
         d_era = await self.dark_era()
         f_era = await self.sky_flats_era()
 
-        # weather_davies = await self.weather_davies_read()
-        weather_davies = None
+        weather_davies = await self.weather_davies_read()
+        # weather_davies = None
         logger.info(weather_davies)
         try:
             _wdm = weather_davies['measurements']
