@@ -523,7 +523,6 @@ class CameraExposure(BaseSubCommand):
         f_era = await self.sky_flats_era()
 
         weather_davies = await self.weather_davies_read()
-        # weather_davies = None
         logger.info(weather_davies)
         try:
             _wdm = weather_davies['measurements']
@@ -583,7 +582,7 @@ class CameraExposure(BaseSubCommand):
             scale=await self.pixel_scale(),
             pierside=side_of_pier,
             tracking=await self.value_proof_get(
-                name='fitsh_mount_track', awaitab=self.mount.aget_tracking, expect_type=bool
+                name='fitsh_mount_track', awaitab=self.mount.aget_tracking, expect_type=bool, n_times=1
             ),
             airmass=await self.airmass_value(alt=tel_alt),
             vertical_shift_speed=await self.vertical_shift_speed(),
@@ -595,19 +594,19 @@ class CameraExposure(BaseSubCommand):
             flat_era=f_era,
             dome_az=await self.value_proof_get(name='fitsh_dome_az', awaitab=self.dome.aget_az, expect_type=float),
             dome_sht=await self.value_proof_get(
-                name='fitsh_dome_shutterstat', awaitab=self.dome.aget_shutterstatus, expect_type=int
+                name='fitsh_dome_shutterstat', awaitab=self.dome.aget_shutterstatus, expect_type=int, n_times=1
             ),
             mirror_cover=await self.value_proof_get(
-                name='fitsh_coverstate', awaitab=self.cover.aget_coverstate, expect_type=int
+                name='fitsh_coverstate', awaitab=self.cover.aget_coverstate, expect_type=int, n_times=1
             ),
-            fan_mirr=await self.value_proof_get(
-                name='fitsh_focuser_mirrfanstat', awaitab=self.focuser.aget_fansstatus, expect_type=bool
-            ),
+            # fan_mirr=await self.value_proof_get(
+            #     name='fitsh_focuser_mirrfanstat', awaitab=self.focuser.aget_fansstatus, expect_type=bool
+            # ),
             fan_dome=await self.value_proof_get(
-                name='fitsh_dome_fansrun', awaitab=self.dome.aget_dome_fans_running, expect_type=bool
+                name='fitsh_dome_fansrun', awaitab=self.dome.aget_dome_fans_running, expect_type=bool, n_times=1
             ),
             lamp_flat=await self.value_proof_get(
-                name='fitsh_cover_flatlampstate', awaitab=self.cover.aget_calibratorstate, expect_type=int
+                name='fitsh_cover_flatlampstate', awaitab=self.cover.aget_calibratorstate, expect_type=int, n_times=1
             ),
             press_ws=press_ws,
             humidity_ws=humidity_ws,
