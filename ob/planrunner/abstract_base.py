@@ -110,10 +110,10 @@ class AbstractBase(ABC):
             except ValueError:
                 pass
         if expect_type == bool and isinstance(res, str):
-            try:
-                res = bool(res)
-            except (TypeError, ValueError):
-                pass
+            if res == 'False':
+                res = False
+            if res == 'True':
+                res = True
         if isinstance(res, expect_type):
             # logger.info(f"Get {name} value done: {res}")
             return res
