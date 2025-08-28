@@ -521,7 +521,8 @@ class CameraExposure(BaseSubCommand):
         z_era = await self.zero_era()
         d_era = await self.dark_era()
         f_era = await self.sky_flats_era()
-
+        logger.info('FAN STATUS:')
+        logger.info(await self.focuser.aget_fansstatus())
         weather_davies = await self.weather_davies_read()
         logger.info(weather_davies)
         try:
