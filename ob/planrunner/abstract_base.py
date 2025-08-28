@@ -109,6 +109,11 @@ class AbstractBase(ABC):
                 res = float(res)
             except ValueError:
                 pass
+        if expect_type == bool and isinstance(res, str):
+            try:
+                res = bool(res)
+            except (TypeError, ValueError):
+                pass
         if isinstance(res, expect_type):
             # logger.info(f"Get {name} value done: {res}")
             return res
