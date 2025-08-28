@@ -109,8 +109,6 @@ class AbstractBase(ABC):
                 res = float(res)
             except ValueError:
                 pass
-        logger.info(type(res))
-        logger.info(expect_type)
         if isinstance(res, expect_type):
             # logger.info(f"Get {name} value done: {res}")
             return res

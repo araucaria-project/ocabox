@@ -31,7 +31,7 @@ class Focuser(TelescopeComponent):
         logger.debug(f'Subscribing temp. compensation from {self.tel_addr}')
         return await self.subscribe('tempcomp', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_fansstatus(self):
+    async def aget_fansstatus(self) -> bool:
         logger.debug(f'Getting dome fans status from {self.tel_addr}')
         ret = await self.aget_value('fansstatus')
         return ret
