@@ -497,8 +497,8 @@ class CameraExposure(BaseSubCommand):
             seq=['telescopes', self.telescope.id, 'observatory', 'components', 'mount', 'type'], source='nats'
         )
         if mount_type == 'eq':
-            rot_pos = 'n/a'
-            rot_mech_pos = 'n/a'
+            rot_pos = ''
+            rot_mech_pos = ''
             side_of_pier = await self.value_proof_get(
                 name='mount_sideofpier', awaitab=self.mount.aget_sideofpier, expect_type=int
             )
@@ -514,7 +514,7 @@ class CameraExposure(BaseSubCommand):
                 rot_pos = 'unknown'
             if rot_mech_pos is None:
                 rot_mech_pos = 'unknown'
-            side_of_pier = 'n/a'
+            side_of_pier = ''
 
         loc = self.param['cfg_gen'].get_value(seq=['site', 'global', 'geo_location'], source='nats')
         tel_alt = await self.value_proof_get(name='fitsh_tel_alt', awaitab=self.mount.aget_alt, expect_type=float)
@@ -533,12 +533,12 @@ class CameraExposure(BaseSubCommand):
             wind_avg_ws = _wdm['wind_10min_ms']
             wind_gust_ws = _wdm['wind_ms']
         except (ValueError, LookupError, TypeError):
-            press_ws = 'n/a'
-            humidity_ws = 'n/a'
-            temp_ws = 'n/a'
-            wind_dir_ws = 'n/a'
-            wind_avg_ws = 'n/a'
-            wind_gust_ws = 'n/a'
+            press_ws = ''
+            humidity_ws = ''
+            temp_ws = ''
+            wind_dir_ws = ''
+            wind_avg_ws = ''
+            wind_gust_ws = ''
 
         header = fits_header(
             obs_lat=loc['lat'],
