@@ -599,9 +599,9 @@ class CameraExposure(BaseSubCommand):
             mirror_cover=await self.value_proof_get(
                 name='fitsh_coverstate', awaitab=self.cover.aget_coverstate, expect_type=int, n_times=1
             ),
-            # fan_mirr=await self.value_proof_get(
-            #     name='fitsh_focuser_mirrfanstat', awaitab=self.focuser.aget_fansstatus, expect_type=bool
-            # ),
+            fan_mirr=await self.value_proof_get(
+                name='fitsh_focuser_mirrfanstat', awaitab=self.focuser.aget_fansstatus, expect_type=bool, n_times=1
+            ),
             fan_dome=await self.value_proof_get(
                 name='fitsh_dome_fansrun', awaitab=self.dome.aget_dome_fans_running, expect_type=bool, n_times=1
             ),
