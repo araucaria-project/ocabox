@@ -178,13 +178,10 @@ class Focusing(BaseSubCommand):
                 focus_method = 'rms_quad'
             logger.info(f'Focusing method: {focus_method}')
             try:
-                sharp, calc_metadata = await run_in_process_executor(
+                sharp, calc_metadata = await run_in_thread_executor(
                     self.fits_focus_folder_actual, "FOCUS", None, 10, focus_method, rang,
                     func=Focus.calculate
                 )
-                # sharp, calc_metadata = Focus.calculate(
-                #     fits_path=self.fits_focus_folder_actual, crop=10, range=rang, method=focus_method
-                # )
             except TypeError:
                 inf = f'{self.id} {self.name} wrong focus calculation.'
                 self.info_callback['stream_1'](inf)
