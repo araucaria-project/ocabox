@@ -6,7 +6,7 @@ from pyaraucaria.focus import Focus
 
 from ob.planrunner.iter_async import AsyncListIter
 from ob.planrunner.status import PlanStatusEnum
-from ob.planrunner.utils import run_in_thread_executor
+from ob.planrunner.utils import run_in_thread_executor, run_in_process_executor
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -178,7 +178,7 @@ class Focusing(BaseSubCommand):
                 focus_method = 'rms_quad'
             logger.info(f'Focusing method: {focus_method}')
             try:
-                await run_in_thread_executor(
+                await run_in_process_executor(
                     self.fits_focus_folder_actual, "FOCUS", None, 10, focus_method, rang,
                     func=Focus.calculate
                 )
