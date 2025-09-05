@@ -178,7 +178,7 @@ class Focusing(BaseSubCommand):
                 focus_method = 'rms_quad'
             logger.info(f'Focusing method: {focus_method}')
             try:
-                await run_in_process_executor(
+                sharp, calc_metadata = await run_in_process_executor(
                     self.fits_focus_folder_actual, "FOCUS", None, 10, focus_method, rang,
                     func=Focus.calculate
                 )
