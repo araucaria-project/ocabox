@@ -28,9 +28,9 @@ class CameraExposure(BaseSubCommand):
     def __init__(
             self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable], seq_data: 'Seq', uobi: int,
             exp_type: str, filter_: str, light: bool, sub_exp: int, exp_no: int, auto_exposure: bool,
-            epoch: str, observer: str, obj_name: str, seq_dataset: Dict, req_ra: float or None = None,
-            req_dec: float or None = None, test: int = 0, forced_read_mod: int or None = None,
-            name: str = 'camera-exposure', param: Dict[str, Any] or None = None) -> None:
+            epoch: str, observer: str, obj_name: str, seq_dataset: Dict, req_ra: Optional[float] = None,
+            req_dec: Optional[float] = None, test: int = 0, forced_read_mod: Optional[int] = None,
+            name: str = 'camera-exposure', param: Optional[Dict[str, Any]] = None) -> None:
 
         self.seq_data = seq_data
         self.exp_type = exp_type
@@ -46,12 +46,12 @@ class CameraExposure(BaseSubCommand):
         self.req_dec = req_dec
         self.test = test
         self.forced_read_mod = forced_read_mod
-        self.target_folder: str or None = None
+        self.target_folder: Optional[str] = None
         self.symlinks: List = []
-        self.readout_time: float or None = None
-        self.readout_time_start: float or None = None
-        self.exp_time_start: str or None = None
-        self.fits_file_name: str or None = None
+        self.readout_time: Optional[float] = None
+        self.readout_time_start: Optional[float] = None
+        self.exp_time_start: Optional[datetime] = None
+        self.fits_file_name: Optional[str] = None
         self.seq_dataset = seq_dataset
         super().__init__(id=id, info_callback=info_callback, telescope=telescope, name=name, uobi=uobi, param=param)
         self.mount = self.telescope.get_mount()
@@ -60,6 +60,7 @@ class CameraExposure(BaseSubCommand):
         self.filter_wheel = self.telescope.get_filterwheel()
         self.focuser = self.telescope.get_focuser()
         self.rotator = self.telescope.get_rotator()
+        self.dome = self.telescope.get_dome()
 
         self.info_dict = {
             'type': self.exp_type,
@@ -80,7 +81,7 @@ class CameraExposure(BaseSubCommand):
     def add_zero(numb: int):
         return f'{numb:02d}'
 
-    async def gain_value(self, gain_mode: int) -> float or str:
+    async def gain_value(self, gain_mode: int) -> float | str:
         _gain = self.param['cfg_gen'].get_value(seq=[
             'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'gain_modes', str(gain_mode)
         ], source='nats')
@@ -91,7 +92,7 @@ class CameraExposure(BaseSubCommand):
             return ''
 
     @staticmethod
-    async def airmass_value(alt: float) -> float or str:
+    async def airmass_value(alt: float) -> float | str:
         try:
             air = airmass(elevation=alt)
             if air is None:
@@ -101,7 +102,7 @@ class CameraExposure(BaseSubCommand):
         except ValueError:
             return ''
 
-    async def readout_noise_value(self, rmmode: int) -> float or str:
+    async def readout_noise_value(self, rmmode: int) -> float | str:
         _gain = self.param['cfg_gen'].get_value(seq=[
             'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'readout_modes', str(rmmode)
         ], source='nats')
@@ -111,7 +112,7 @@ class CameraExposure(BaseSubCommand):
             logger.info(f'No readout noise value in readout modes in general config')
             return ''
 
-    async def pixel_scale(self) -> float or str:
+    async def pixel_scale(self) -> float | str:
         _cam = self.param['cfg_gen'].get_value(seq=[
             'telescopes', self.telescope.id, 'observatory', 'components', 'camera'
         ], source='nats')
@@ -121,7 +122,7 @@ class CameraExposure(BaseSubCommand):
             logger.info(f'No pixel scale value in camera in general config')
             return ''
 
-    async def vertical_shift_speed(self) -> float or str:
+    async def vertical_shift_speed(self) -> float | str:
         _cam = self.param['cfg_gen'].get_value(seq=[
             'telescopes', self.telescope.id, 'observatory', 'components', 'camera'
         ], source='nats')
@@ -131,7 +132,7 @@ class CameraExposure(BaseSubCommand):
             logger.info(f'No vertical shift speed value in camera in general config')
             return ''
 
-    async def zero_era(self) -> int or str:
+    async def zero_era(self) -> int | str:
         _era = self.param['cfg_gen'].get_value(seq=[
             'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'zero'
         ], source='nats')
@@ -141,7 +142,7 @@ class CameraExposure(BaseSubCommand):
             logger.info(f'No zero era value in camera in general config')
             return ''
 
-    async def dark_era(self) -> int or str:
+    async def dark_era(self) -> int | str:
         _era = self.param['cfg_gen'].get_value(seq=[
             'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'dark'
         ], source='nats')
@@ -151,7 +152,7 @@ class CameraExposure(BaseSubCommand):
             logger.info(f'No dark era value in camera in general config')
             return ''
 
-    async def sky_flats_era(self) -> int or str:
+    async def sky_flats_era(self) -> int | str:
         _era = self.param['cfg_gen'].get_value(seq=[
             'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'sky_flats'
         ], source='nats')
@@ -161,7 +162,7 @@ class CameraExposure(BaseSubCommand):
             logger.info(f'No sky flats era value in camera in general config')
             return ''
 
-    async def baseline_clamp(self) -> float or str:
+    async def baseline_clamp(self) -> float | str:
         _cam = self.param['cfg_gen'].get_value(seq=[
             'telescopes', self.telescope.id, 'observatory', 'components', 'camera'
         ], source='nats')
@@ -171,20 +172,20 @@ class CameraExposure(BaseSubCommand):
             else:
                 return 0
         except (LookupError, TypeError):
-            logger.info(f' No baseline clamp value in camera in general config')
+            logger.info(f'No baseline clamp value in camera in general config')
             return ''
 
-    async def sensor_port(self) -> float or str:
+    async def sensor_port(self) -> float | str:
         _cam = self.param['cfg_gen'].get_value(seq=[
             'telescopes', self.telescope.id, 'observatory', 'components', 'camera'
         ], source='nats')
         try:
             return _cam['sensor_port']
         except (LookupError, TypeError):
-            logger.info(f' No sensor port value in camera in general config')
+            logger.info(f'No sensor port value in camera in general config')
             return ''
 
-    async def sensor_compensation(self) -> float or str:
+    async def sensor_compensation(self) -> float | str:
         _cam = self.param['cfg_gen'].get_value(seq=[
             'telescopes', self.telescope.id, 'observatory', 'components', 'camera'
         ], source='nats')
@@ -194,7 +195,7 @@ class CameraExposure(BaseSubCommand):
             else:
                 return 0
         except (LookupError, TypeError):
-            logger.info(f' No sensor compensation value in camera in general config')
+            logger.info(f'No sensor compensation value in camera in general config')
             return ''
 
     def array_bits(self, rmmode: int) -> str:
@@ -204,7 +205,7 @@ class CameraExposure(BaseSubCommand):
         try:
             bit = rm['bits']
         except (LookupError, TypeError):
-            logger.error(f' No bit value in rm modes in general config')
+            logger.error(f'No bit value in rm modes in general config')
             bit = 16
         if bit <= 16:
             return 'sideint16'
@@ -235,7 +236,7 @@ class CameraExposure(BaseSubCommand):
     def _get_today_fits_folder_name(self) -> str:
         return f"{math.floor(get_oca_jd(self.get_julian_date(str(datetime.datetime.utcnow())))):04.0f}"
 
-    def _get_fits_file_name(self):
+    def get_fits_file_name(self):
         if self.exp_type == 'snap':
             self.fits_file_name = f'snap'
         else:
@@ -266,7 +267,7 @@ class CameraExposure(BaseSubCommand):
 
     async def rpc_request(
             self, fits_id: str, header: Dict, req: str = 'fits_download', mean_points_no_stats: int = 400,
-            dtyp: str = 'sideint16', timeout: float or None = None) -> Dict or None:
+            dtyp: str = 'sideint16', timeout: float | None = None) -> Dict | None:
 
         inf = f'{self.id} {self.name} send rpc request {self.rpc_subject}'
         logger.info(inf)
@@ -296,7 +297,7 @@ class CameraExposure(BaseSubCommand):
             'n_loops': self.exp_no
         }
 
-    def _get_folders_and_symlinks(self) -> None:
+    def get_folders_and_symlinks(self) -> None:
         self.symlinks = []
         if self.exp_type == 'focusing':
             if self.seq_data.focus_folder:
@@ -349,118 +350,9 @@ class CameraExposure(BaseSubCommand):
                 'symlink': os.path.join(self.fits_main_folder, 'last_shoot.fits')
             })
 
-    async def _wait_for_save_fits(self, sub: int, sub_time: float) -> bool:
+    async def wait_for_save_fits(self, sub: int, sub_time: float, header: Dict, readoutmode: int) -> bool:
         logger.info('Wait for save fits ...')
-        self._get_fits_file_name()
-        self._get_folders_and_symlinks()
 
-        gainmode = await self.value_proof_get(
-            name='fitsh_cam_gain', awaitab=self.camera.aget_gain, expect_type=int
-        )
-        readoutmode = await self.value_proof_get(
-            name='fitsh_cam_rm', awaitab=self.camera.aget_readoutmode, expect_type=int
-        )
-        _filter = await self.value_proof_get(
-            name='fitsh_filter', awaitab=self.filter_wheel.aget_position, expect_type=int
-        )
-        filters = await self.get_filters_dict()
-        try:
-            inv_f_map = {v: k for k, v in filters.items()}
-            filter_str = inv_f_map[_filter]
-        except KeyError:
-            filter_str = str(self.filter_)
-
-        if self.req_ra is None:
-            req_ra = ''
-        else:
-            req_ra = self.req_ra
-
-        if self.req_dec is None:
-            req_dec = ''
-        else:
-            req_dec = self.req_dec
-        mount_type = self.param['cfg_gen'].get_value(seq=[
-            'telescopes', self.telescope.id, 'observatory', 'components', 'mount', 'type'
-        ], source='nats')
-        if mount_type == 'eq':
-            rot_pos = ''
-            side_of_pier = await self.value_proof_get(
-                name='mount_sideofpier', awaitab=self.mount.aget_sideofpier, expect_type=int
-            )
-        else:
-            rot_pos = await self.value_proof_get(
-                name='fitsh_rot_pos', awaitab=self.rotator.aget_position, expect_type=float, n_times=1
-            )
-            # if rot_pos is None:
-            #     rot_pos = await self.value_proof_get(
-            #         name='fitsh_rot_mechpos', awaitab=self.rotator.aget_mechanicalposition(),
-            #         expect_type=float, n_times=1
-            #     )
-            if rot_pos is None:
-                rot_pos = ''
-            side_of_pier = ''
-        instrument_name = str(await self.value_proof_get(
-            name='fitsh_cam_sens_name', awaitab=self.camera.aget_sensorname, expect_type=str)
-                              )
-        if self.telescope.id == 'dev':
-            instrument_name = 'simul'
-        loc = self.param['cfg_gen'].get_value(seq=['site', 'global', 'geo_location'], source='nats')
-        tel_alt = await self.value_proof_get(name='fitsh_tel_alt', awaitab=self.mount.aget_alt, expect_type=float)
-        z_era = await self.zero_era()
-        d_era = await self.dark_era()
-        f_era = await self.sky_flats_era()
-        header = fits_header(
-            obs_lat=loc['lat'],
-            obs_lon=loc['lon'],
-            obs_elev=loc['elev'],
-            tel_id=str(self.telescope.id),
-            utc_now=str(self.exp_time_start.isoformat(sep='T', timespec='auto')),
-            jd=self.get_julian_date(self.exp_time_start),
-            req_ra=req_ra,
-            req_dec=req_dec,
-            epoch=self.epoch,
-            tel_ra=await self.value_proof_get(name='fitsh_tel_ra', awaitab=self.mount.aget_ra, expect_type=float),
-            tel_dec=await self.value_proof_get(name='fitsh_tel_dec', awaitab=self.mount.aget_dec, expect_type=float),
-            tel_alt=tel_alt,
-            tel_az=await self.value_proof_get(name='fitsh_tel_az', awaitab=self.mount.aget_az, expect_type=float),
-            focus=await self.value_proof_get(
-                name='fitsh_focus_pos', awaitab=self.focuser.aget_position, expect_type=int
-            ),
-            rotator_pos=rot_pos,
-            observer=str(self.observer),
-            image_type=str(self.exp_type),
-            obs_type=self.obs_type,
-            object=str(self.obj_name),
-            n_loops=self.exp_no,
-            loop=sub,
-            filter=filter_str,
-            exp_time=sub_time,
-            instrume_name=instrument_name,
-            ccd_temp=await self.value_proof_get(
-                name='fitsh_cam_temp', awaitab=self.camera.aget_ccdtemperature, expect_type=float
-            ),
-            binx=await self.value_proof_get(
-                name='fitsh_cam_binx', awaitab=self.camera.aget_binx, expect_type=int
-            ),
-            biny=await self.value_proof_get(
-                name='fitsh_cam_biny', awaitab=self.camera.aget_biny, expect_type=int
-            ),
-            read_mod=readoutmode,
-            gain_mod=gainmode,
-            r_noise=await self.readout_noise_value(rmmode=readoutmode),
-            gain=await self.gain_value(gain_mode=gainmode),
-            scale=await self.pixel_scale(),
-            pierside=side_of_pier,
-            airmass=await self.airmass_value(alt=tel_alt),
-            vertical_shift_speed=await self.vertical_shift_speed(),
-            baseline_clamp=await self.baseline_clamp(),
-            sensor_port=await self.sensor_port(),
-            sensor_compensation=await self.sensor_compensation(),
-            zero_era=z_era,
-            dark_era=d_era,
-            flat_era=f_era,
-            test=self.test
-        )
         try:
             dat = await self.rpc_request(
                 fits_id=self.fits_file_name, header=header, dtyp=self.array_bits(rmmode=readoutmode), timeout=120
@@ -579,7 +471,183 @@ class CameraExposure(BaseSubCommand):
             self.info_callback['stream_1'](inf)
             return 2
 
-    async def arun(self, step_id: str or None = None) -> int:
+    async def prepare_header(self, sub: int, sub_time: float, instrument_data: Dict) -> Dict:
+        logger.info(f"Preparing header...")
+        t = time.time()
+        _filter = await self.value_proof_get(
+            name='fitsh_filter', awaitab=self.filter_wheel.aget_position, expect_type=int
+        )
+        filters = await self.get_filters_dict()
+        try:
+            inv_f_map = {v: k for k, v in filters.items()}
+            filter_str = inv_f_map[_filter]
+        except KeyError:
+            filter_str = str(self.filter_)
+
+        if self.req_ra is None:
+            req_ra = ''
+        else:
+            req_ra = self.req_ra
+
+        if self.req_dec is None:
+            req_dec = ''
+        else:
+            req_dec = self.req_dec
+        mount_type = self.param['cfg_gen'].get_value(
+            seq=['telescopes', self.telescope.id, 'observatory', 'components', 'mount', 'type'], source='nats'
+        )
+        if mount_type == 'eq':
+            rot_pos = ''
+            rot_mech_pos = ''
+            side_of_pier = await self.value_proof_get(
+                name='mount_sideofpier', awaitab=self.mount.aget_sideofpier, expect_type=int
+            )
+        else:
+            rot_pos = await self.value_proof_get(
+                name='fitsh_rot_pos', awaitab=self.rotator.aget_position, expect_type=float, n_times=1
+            )
+            rot_mech_pos = await self.value_proof_get(
+                name='fitsh_rot_mech_pos', awaitab=self.rotator.aget_mechanicalposition,
+                expect_type=float, n_times=1
+            )
+            if rot_pos is None:
+                rot_pos = 'unknown'
+            if rot_mech_pos is None:
+                rot_mech_pos = 'unknown'
+            side_of_pier = ''
+
+        loc = self.param['cfg_gen'].get_value(seq=['site', 'global', 'geo_location'], source='nats')
+        tel_alt = await self.value_proof_get(name='fitsh_tel_alt', awaitab=self.mount.aget_alt, expect_type=float)
+        z_era = await self.zero_era()
+        d_era = await self.dark_era()
+        f_era = await self.sky_flats_era()
+        weather_davies = await self.weather_davies_read()
+        logger.info(weather_davies)
+        try:
+            _wdm = weather_davies['measurements']
+            press_ws = _wdm['pressure_Pa']
+            humidity_ws = _wdm['humidity']
+            temp_ws = _wdm['temperature_C']
+            wind_dir_ws = _wdm['wind_dir_deg']
+            wind_avg_ws = _wdm['wind_10min_ms']
+            wind_gust_ws = _wdm['wind_ms']
+        except (ValueError, LookupError, TypeError):
+            press_ws = ''
+            humidity_ws = ''
+            temp_ws = ''
+            wind_dir_ws = ''
+            wind_avg_ws = ''
+            wind_gust_ws = ''
+
+        header = fits_header(
+            obs_lat=loc['lat'],
+            obs_lon=loc['lon'],
+            obs_elev=loc['elev'],
+            tel_id=str(self.telescope.id),
+            pi_name="", #TODO
+            sci_prog="", #TODO
+            obs_id="", #TODO
+            uobi=self.uobi,
+            utc_now=str(self.exp_time_start.isoformat(sep='T', timespec='auto')),
+            jd=self.get_julian_date(self.exp_time_start),
+            req_ra=req_ra,
+            req_dec=req_dec,
+            epoch=self.epoch,
+            tel_ra=await self.value_proof_get(name='fitsh_tel_ra', awaitab=self.mount.aget_ra, expect_type=float),
+            tel_dec=await self.value_proof_get(name='fitsh_tel_dec', awaitab=self.mount.aget_dec, expect_type=float),
+            tel_alt=tel_alt,
+            tel_az=await self.value_proof_get(name='fitsh_tel_az', awaitab=self.mount.aget_az, expect_type=float),
+            focus=await self.value_proof_get(
+                name='fitsh_focus_pos', awaitab=self.focuser.aget_position, expect_type=int
+            ),
+            rotator_pos=rot_pos,
+            rotator_mech_pos=rot_mech_pos,
+            observer=str(self.observer),
+            image_type=str(self.exp_type),
+            obs_type=self.obs_type,
+            object=str(self.obj_name),
+            n_loops=self.exp_no,
+            loop=sub,
+            filter=filter_str,
+            exp_time=sub_time,
+            instrume_name=instrument_data["instrument_name"],
+            ccd_temp=instrument_data["ccd_temp"],
+            binx=instrument_data["binx"],
+            biny=instrument_data["biny"],
+            read_mod=instrument_data["readoutmode"],
+            gain_mod=instrument_data["gainmode"],
+            r_noise=await self.readout_noise_value(rmmode=instrument_data["readoutmode"]),
+            gain=await self.gain_value(gain_mode=instrument_data["gainmode"]),
+            scale=await self.pixel_scale(),
+            pierside=side_of_pier,
+            tracking=await self.value_proof_get(
+                name='fitsh_mount_track', awaitab=self.mount.aget_tracking, expect_type=bool, n_times=1
+            ),
+            airmass=await self.airmass_value(alt=tel_alt),
+            vertical_shift_speed=await self.vertical_shift_speed(),
+            baseline_clamp=await self.baseline_clamp(),
+            sensor_port=await self.sensor_port(),
+            sensor_compensation=await self.sensor_compensation(),
+            zero_era=z_era,
+            dark_era=d_era,
+            flat_era=f_era,
+            dome_az=await self.value_proof_get(name='fitsh_dome_az', awaitab=self.dome.aget_az, expect_type=float),
+            dome_sht=await self.value_proof_get(
+                name='fitsh_dome_shutterstat', awaitab=self.dome.aget_shutterstatus, expect_type=int, n_times=1
+            ),
+            mirror_cover=await self.value_proof_get(
+                name='fitsh_coverstate', awaitab=self.cover.aget_coverstate, expect_type=int, n_times=1
+            ),
+            fan_mirr=await self.value_proof_get(
+                name='fitsh_focuser_mirrfanstat', awaitab=self.focuser.aget_fansstatus, expect_type=bool, n_times=1
+            ),
+            fan_dome=await self.value_proof_get(
+                name='fitsh_dome_fansrun', awaitab=self.dome.aget_dome_fans_running, expect_type=bool, n_times=1
+            ),
+            lamp_flat=await self.value_proof_get(
+                name='fitsh_cover_flatlampstate', awaitab=self.cover.aget_calibratorstate, expect_type=int, n_times=1
+            ),
+            press_ws=press_ws,
+            humidity_ws=humidity_ws,
+            temp_ws=temp_ws,
+            wind_dir_ws=wind_dir_ws,
+            wind_avg_ws=wind_avg_ws,
+            wind_gust_ws=wind_gust_ws,
+            test=self.test
+        )
+        logger.info(f"Preparing header done: {time.time() - t:.2f}s")
+        return header
+
+    async def get_instrument_data(self) -> Dict:
+
+        readoutmode = await self.value_proof_get(
+            name='fitsh_cam_rm', awaitab=self.camera.aget_readoutmode, expect_type=int
+        )
+        gainmode = await self.value_proof_get(
+            name='fitsh_cam_gain', awaitab=self.camera.aget_gain, expect_type=int
+        )
+        instrument_name = str(await self.value_proof_get(
+            name='fitsh_cam_sens_name', awaitab=self.camera.aget_sensorname, expect_type=str)
+        )
+        ccd_temp = await self.value_proof_get(
+            name='fitsh_cam_temp', awaitab=self.camera.aget_ccdtemperature, expect_type=float
+        )
+        binx = await self.value_proof_get(
+            name='fitsh_cam_binx', awaitab=self.camera.aget_binx, expect_type=int
+        )
+        biny = await self.value_proof_get(
+            name='fitsh_cam_biny', awaitab=self.camera.aget_biny, expect_type=int
+        )
+        return {
+            "readoutmode": readoutmode,
+            "gainmode": gainmode,
+            "instrument_name": instrument_name,
+            "ccd_temp": ccd_temp,
+            "binx": binx,
+            "biny": biny
+        }
+
+    async def arun(self, step_id: Optional[str] = None) -> int:
 
         self.started = True
         await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.running)
@@ -624,6 +692,7 @@ class CameraExposure(BaseSubCommand):
             exp_started=True, exp_done=False, exp_saved=False, n_exp=self.sub_exp,
             **self.info_dict, exp_time=float(exposure_time))
         )
+        instrument_data = await self.get_instrument_data()
         self.readout_time_start = time.time()
         self.exp_time_start = datetime.datetime.utcnow()
         exe = await self.proof_put(
@@ -641,6 +710,13 @@ class CameraExposure(BaseSubCommand):
                 plan_runner_quits=True
             )
             return 2
+        self.get_fits_file_name()
+        self.get_folders_and_symlinks()
+        header = await self.prepare_header(
+            sub=self.sub_exp,
+            sub_time=float(exposure_time),
+            instrument_data=instrument_data
+        )
         await self.wait_for_subexposure(float(exposure_time))
         self.readout_time = time.time() - self.readout_time_start - float(exposure_time)
         inf = f'{self.id} {self.name} exp:{self.sub_exp}/{self.exp_no} saving.'
@@ -651,7 +727,9 @@ class CameraExposure(BaseSubCommand):
             exp_started=True, exp_done=True, exp_saved=False, **self.info_dict,
             readout_time=self.readout_time, n_exp=self.sub_exp, exp_time=float(exposure_time)
         ))
-        wff = await self._wait_for_save_fits(sub=self.sub_exp, sub_time=float(exposure_time))
+        wff = await self.wait_for_save_fits(
+            sub=self.sub_exp, sub_time=float(exposure_time), header=header, readoutmode=instrument_data["readoutmode"]
+        )
         if not wff:
             await self.status_error_publish(
                 level='critical',

@@ -6,7 +6,7 @@ from pyaraucaria.focus import Focus
 
 from ob.planrunner.iter_async import AsyncListIter
 from ob.planrunner.status import PlanStatusEnum
-
+from ob.planrunner.utils import run_in_thread_executor, run_in_process_executor
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -175,12 +175,14 @@ class Focusing(BaseSubCommand):
             if self.seq_data.focus_method is not None:
                 focus_method = self.seq_data.focus_method
             else:
-                focus_method = 'rms_quad'
+                focus_method = 'lorentzian'
             logger.info(f'Focusing method: {focus_method}')
             try:
-                sharp, calc_metadata = Focus.calculate(
-                    fits_path=self.fits_focus_folder_actual, crop=10, range=rang, method=focus_method
+                sharp, calc_metadata = await run_in_thread_executor(
+                    self.fits_focus_folder_actual, "FOCUS", None, 10, focus_method, rang,
+                    func=Focus.calculate
                 )
+
             except TypeError:
                 inf = f'{self.id} {self.name} wrong focus calculation.'
                 self.info_callback['stream_1'](inf)
@@ -190,12 +192,13 @@ class Focusing(BaseSubCommand):
                 await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.skipped)
                 self.info_callback['exec_json'](self.exec_json())
                 await self.status_error_publish(
-                    level='critical',
+                    level='error',
                     description=inf,
                     plan_runner_quits=True
                 )
                 return 2
-            if calc_metadata['status'] == 'ok' and rang[1] > sharp > rang[0]:
+            if sharp and calc_metadata and isinstance(dict, calc_metadata) and "status" in calc_metadata.keys() \
+                    and calc_metadata['status'] == 'ok' and rang[1] > sharp > rang[0]:
                 inf = f'{self.id} {self.name} calculated focus position {round(sharp)}.'
                 self.info_callback['stream_1'](inf)
                 await self.journal.info(inf)
@@ -208,7 +211,7 @@ class Focusing(BaseSubCommand):
                     logger.error(inf)
                     await self.journal.error(inf)
                     await self.status_error_publish(
-                        level='critical',
+                        level='error',
                         description=inf,
                         plan_runner_quits=True
                     )
@@ -223,7 +226,7 @@ class Focusing(BaseSubCommand):
                 await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.skipped)
                 self.info_callback['exec_json'](self.exec_json())
                 await self.status_error_publish(
-                    level='critical',
+                    level='error',
                     description=inf,
                     plan_runner_quits=True
                 )

@@ -1,15 +1,19 @@
 import asyncio
 import logging
 from abc import ABC
-from typing import Dict, List, Any, Callable
+from typing import Dict, List, Any, Callable, Optional
 import pwd
 import os
+
+import nats.errors
 from pyaraucaria.date import datetime_to_julian
 from datetime import datetime
 import math
-from serverish.messenger import get_journalpublisher, get_publisher
+from serverish.messenger import get_journalpublisher, get_publisher, get_reader, get_singlereader
 from serverish.messenger.msg_journal_pub import MsgJournalPublisher
 from serverish.messenger.msg_publisher import MsgPublisher
+from serverish.messenger.msg_reader import MsgReader
+from serverish.messenger.msg_single_read import MsgSingleReader
 
 from ob.planrunner.iter_async import AsyncRangeIter
 from ocaboxapi.exceptions import OcaboxServerError, OcaboxAccessDenied
@@ -27,7 +31,7 @@ class AbstractBase(ABC):
               'test']
 
     def __init__(self, id: str, name: str, telescope: 'Telescope',
-                 info_callback: Dict[str, Callable], c_type: str, param: Dict[str, Any] or None = None) -> None:
+                 info_callback: Dict[str, Callable], c_type: str, param: Optional[Dict[str, Any]] = None) -> None:
         self.id = id
         self.telescope = telescope
         self.info_callback = info_callback
@@ -38,21 +42,42 @@ class AbstractBase(ABC):
         self.skipped: bool = False
         self.param = param if param is not None else {}
         self.journal: MsgJournalPublisher | None = None
+        self.reader_weather_davies: MsgSingleReader | None = None
         self.get_journal()
+        self.get_reader_weather_davies()
         self.build_plan_status()
         self.command_log_pub = self.get_publish(stream='status', field='planner_command_log')
         self.status_error_pub = self.get_publish(stream='planner', field='status_error')
         super().__init__()
 
-    def get_subject(self, stream: str, field: str) -> str:
-        r = self.param['cfg_gen'].get_value(seq=['site', 'global', 'nats', 'subjects', stream, field], source='nats')
+    def get_subject(self, stream: str, field: Optional[str]) -> Optional[str]:
+        if field is None:
+            r = self.param['cfg_gen'].get_value(
+                seq=['site', 'global', 'nats', 'subjects', stream], source='nats'
+            )
+        else:
+            r = self.param['cfg_gen'].get_value(
+                seq=['site', 'global', 'nats', 'subjects', stream, field], source='nats'
+            )
         logger.debug(f'Status subject {r}')
         return r
 
     def get_journal(self) -> None:
         self.journal = get_journalpublisher(subject=self.get_subject(stream='journal', field='planner'))
 
-    def get_publish(self, stream: str, field: str) -> MsgPublisher or None:
+    def get_reader_weather_davies(self) -> None:
+        self.reader_weather_davies = get_singlereader(
+            subject=self.get_subject(stream='weather', field=None), deliver_policy='last'
+        )
+
+    async def weather_davies_read(self) -> Optional[Dict]:
+        data, meta = await self.reader_weather_davies.read()
+        try:
+            return data
+        except (TimeoutError, LookupError, ValueError, TypeError, nats.errors.TimeoutError):
+            return None
+
+    def get_publish(self, stream: str, field: str) -> Optional[MsgPublisher]:
         subj = self.get_subject(stream=stream, field=field)
         if subj is None:
             logger.error(f'Wrong subject for field {field}')
@@ -84,6 +109,11 @@ class AbstractBase(ABC):
                 res = float(res)
             except ValueError:
                 pass
+        if expect_type == bool and isinstance(res, str):
+            if res == 'False':
+                res = False
+            if res == 'True':
+                res = True
         if isinstance(res, expect_type):
             # logger.info(f"Get {name} value done: {res}")
             return res
@@ -149,7 +179,7 @@ class AbstractBase(ABC):
             logger.info(f'Creating folder {folder}')
 
     @staticmethod
-    def get_julian_date(date: str or datetime) -> float:
+    def get_julian_date(date: str | datetime) -> float:
         return datetime_to_julian(date)
 
     @property
@@ -198,7 +228,7 @@ class AbstractBase(ABC):
         self._add_to_log_night(ex_js, {'c_type': 'command'})
         return ex_js
 
-    async def get_filters_dict(self) -> Dict[str, int] or None:
+    async def get_filters_dict(self) -> Optional[Dict[str, int]]:
         filters = self.param['cfg_gen'].get_value(seq=[
             'telescopes', self.telescope.id, 'observatory', 'components', 'filterwheel', 'filters'
         ], source='nats')
