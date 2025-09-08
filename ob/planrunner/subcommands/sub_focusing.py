@@ -182,7 +182,7 @@ class Focusing(BaseSubCommand):
                     self.fits_focus_folder_actual, "FOCUS", None, 10, focus_method, rang,
                     func=Focus.calculate
                 )
-
+                logger.info(f"Focus calc. done")
             except TypeError:
                 inf = f'{self.id} {self.name} wrong focus calculation.'
                 self.info_callback['stream_1'](inf)
@@ -197,7 +197,7 @@ class Focusing(BaseSubCommand):
                     plan_runner_quits=True
                 )
                 return 2
-            if sharp and calc_metadata and isinstance(dict, calc_metadata) and "status" in calc_metadata.keys() \
+            if sharp and calc_metadata and isinstance(calc_metadata, dict) and "status" in calc_metadata.keys() \
                     and calc_metadata['status'] == 'ok' and rang[1] > sharp > rang[0]:
                 inf = f'{self.id} {self.name} calculated focus position {round(sharp)}.'
                 self.info_callback['stream_1'](inf)
