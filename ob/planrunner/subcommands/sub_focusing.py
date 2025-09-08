@@ -31,6 +31,7 @@ class Focusing(BaseSubCommand):
         self.info_dict = {'position': self.position, 'auto_focus': self.auto}
         self.create_sub_command_string(**self.info_dict)
 
+    @property
     def focus_chart_path(self) -> str:
         return str(os.path.join(self.fits_focus_folder, "last_focus.png"))
 
@@ -184,8 +185,7 @@ class Focusing(BaseSubCommand):
             logger.info(f'Focusing method: {focus_method}')
             try:
                 sharp, calc_metadata = await run_in_thread_executor(
-                    self.fits_focus_folder_actual, "FOCUS", None, 10, focus_method, rang,
-                    self.focus_chart_path,
+                    self.fits_focus_folder_actual, "FOCUS", None, 10, focus_method, rang, self.focus_chart_path,
                     func=Focus.calculate
                 )
                 logger.info(f"Focus calc. done")
