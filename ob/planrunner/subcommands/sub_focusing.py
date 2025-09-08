@@ -1,5 +1,7 @@
 import asyncio
 import logging
+import os
+
 from ob.planrunner.base_subcommand import BaseSubCommand
 from typing import Callable, Dict, Any, Optional
 from pyaraucaria.focus import Focus
@@ -28,6 +30,9 @@ class Focusing(BaseSubCommand):
         self.auto = auto
         self.info_dict = {'position': self.position, 'auto_focus': self.auto}
         self.create_sub_command_string(**self.info_dict)
+
+    def focus_chart_path(self) -> str:
+        return str(os.path.join(self.fits_focus_folder, "last_focus.png"))
 
     async def _wait_for_move(self, position) -> None:
         # TODO focuser_value get from config
@@ -180,6 +185,7 @@ class Focusing(BaseSubCommand):
             try:
                 sharp, calc_metadata = await run_in_thread_executor(
                     self.fits_focus_folder_actual, "FOCUS", None, 10, focus_method, rang,
+                    self.focus_chart_path,
                     func=Focus.calculate
                 )
                 logger.info(f"Focus calc. done")
