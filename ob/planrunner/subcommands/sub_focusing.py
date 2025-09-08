@@ -1,5 +1,7 @@
 import asyncio
 import logging
+import os
+
 from ob.planrunner.base_subcommand import BaseSubCommand
 from typing import Callable, Dict, Any, Optional
 from pyaraucaria.focus import Focus
@@ -28,6 +30,10 @@ class Focusing(BaseSubCommand):
         self.auto = auto
         self.info_dict = {'position': self.position, 'auto_focus': self.auto}
         self.create_sub_command_string(**self.info_dict)
+
+    @property
+    def focus_chart_path(self) -> str:
+        return str(os.path.join(self.fits_focus_folder, "last_focus.png"))
 
     async def _wait_for_move(self, position) -> None:
         # TODO focuser_value get from config
@@ -179,10 +185,10 @@ class Focusing(BaseSubCommand):
             logger.info(f'Focusing method: {focus_method}')
             try:
                 sharp, calc_metadata = await run_in_thread_executor(
-                    self.fits_focus_folder_actual, "FOCUS", None, 10, focus_method, rang,
+                    self.fits_focus_folder_actual, "FOCUS", None, 10, focus_method, rang, self.focus_chart_path,
                     func=Focus.calculate
                 )
-
+                logger.info(f"Focus calc. done")
             except TypeError:
                 inf = f'{self.id} {self.name} wrong focus calculation.'
                 self.info_callback['stream_1'](inf)
@@ -197,7 +203,7 @@ class Focusing(BaseSubCommand):
                     plan_runner_quits=True
                 )
                 return 2
-            if sharp and calc_metadata and isinstance(dict, calc_metadata) and "status" in calc_metadata.keys() \
+            if sharp and calc_metadata and isinstance(calc_metadata, dict) and "status" in calc_metadata.keys() \
                     and calc_metadata['status'] == 'ok' and rang[1] > sharp > rang[0]:
                 inf = f'{self.id} {self.name} calculated focus position {round(sharp)}.'
                 self.info_callback['stream_1'](inf)
