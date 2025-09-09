@@ -3,7 +3,7 @@ import unittest
 
 def main():
     loader = unittest.TestLoader()
-    suite = loader.discover('tests')
+    suite = loader.discover('test')
 
     runner = unittest.TextTestRunner()
     runner.run(suite)
