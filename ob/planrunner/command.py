@@ -2,7 +2,7 @@ import copy
 import logging
 import time
 import re
-from typing import Dict, Any, List, Callable
+from typing import Dict, Any, List, Callable, Optional
 from ob.planrunner.base_sequence import BaseSequence
 from ob.planrunner.iter_async import AsyncListIter
 from ob.planrunner.subcommands.sub_mount_slew import MountSlew
@@ -33,7 +33,7 @@ class Command(BaseSequence):
 
     def __init__(
             self, id: str, sequence_dict: Dict[Any, Any], telescope: 'Telescope',
-            info_callback: Dict[str, Callable], param: Dict[str, Any] or None = None) -> None:
+            info_callback: Dict[str, Callable], param: Optional[Dict[str, Any]] = None) -> None:
 
         self._cycle_time_data_build = CycleTimeDataBuild(
             telescope=telescope.id,
