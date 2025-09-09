@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.2.2]
+### Fixed
+- Removed `definitions.py` and references to it.
+
 ## [2.2.1]
 ### Fixed
 - `params` deprecation warning in `component` no longer appears, stopped using deprecated method.
