@@ -2,13 +2,12 @@ import asyncio
 import logging
 import os
 from typing import Optional
+from importlib.resources import files
 
 import nats
 import yaml
 
 from serverish.messenger import Messenger, get_singlereader
-
-from importlib.resources import files
 
 logger = logging.getLogger("NatsCfgLoader")
 
