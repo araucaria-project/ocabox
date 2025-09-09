@@ -33,7 +33,7 @@ class Focusing(BaseSubCommand):
 
     @property
     def focus_chart_path(self) -> str:
-        return str(os.path.join(self.fits_focus_folder, "last_focus.png"))
+        return str(os.path.join(os.path.expanduser("~/Desktop"), f"{self.telescope.id}_last_focus.png"))
 
     async def _wait_for_move(self, position) -> None:
         # TODO focuser_value get from config
