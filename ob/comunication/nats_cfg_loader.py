@@ -8,18 +8,19 @@ import yaml
 
 from serverish.messenger import Messenger, get_singlereader
 
-from definitions import OB_DIR
+from importlib.resources import files
 
 logger = logging.getLogger("NatsCfgLoader")
 
 
 class NatsCfgLoader:
-    _DEFAULT_CONFIG_FILE = os.path.join(OB_DIR, 'data', 'default_site_config.yml')
+    # _DEFAULT_CONFIG_FILE = os.path.join(OB_DIR, 'data', 'default_site_config.yml')
+    default_config_file_path = files('ob.data') / 'default_site_config.yml'
 
     def __init__(self, stream: str, use_file: bool = False, fallback_file: Optional[str] = None):
         self._stream: str = stream
         self._cfg_all: dict = {}
-        self.fallback_file: str = fallback_file if fallback_file else NatsCfgLoader._DEFAULT_CONFIG_FILE
+        self.fallback_file: str = fallback_file if fallback_file else str(self.default_config_file_path)
         self._use_file = use_file
 
     def get_cfg(self) -> dict:
