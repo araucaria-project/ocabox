@@ -690,14 +690,19 @@ class Command(BaseSequence):
                 )
 
                 if self.focus_offset:
-                    id_next = self._add_comp(sub=Focusing(id=self._op_id(id_next=id_next),
-                                                      telescope=self.telescope,
-                                                      info_callback=self.info_callback,
-                                                      position=None,
-                                                      param=self.param,
-                                                      filter_offset=True,
-                                                      seq_data=seq_data,
-                                                      uobi=self.uobi), id_next=id_next)
+                    id_next = self._add_comp(
+                        sub=Focusing(
+                            id=self._op_id(id_next=id_next),
+                            telescope=self.telescope,
+                            info_callback=self.info_callback,
+                            position=None,
+                            param=self.param,
+                            filter_offset=True,
+                            seq_data=seq_data,
+                            uobi=self.uobi
+                        ),
+                        id_next=id_next
+                    )
 
                 for ex in range(1, seq_data.exp_no + 1):
                     # Camera single sequence, single exposure
