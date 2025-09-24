@@ -2,9 +2,8 @@ import copy
 import logging
 import time
 import re
-from typing import Dict, Any, List, Callable, Optional
+from typing import Dict, Any, List, Callable, Optional, Union
 from ob.planrunner.base_sequence import BaseSequence
-from ob.planrunner.iter_async import AsyncListIter
 from ob.planrunner.subcommands.sub_mount_slew import MountSlew
 from ob.planrunner.subcommands.sub_dome_slew import DomeSlew
 from ob.planrunner.subcommands.sub_change_filter import ChangeFilter
@@ -134,7 +133,7 @@ class Command(BaseSequence):
             return 0
 
     @property
-    def forced_read_mod(self) -> int or None:
+    def forced_read_mod(self) -> Optional[int]:
         if 'read_mod' in self.kwargs.keys():
             return int(self.kwargs['read_mod'])
         else:
@@ -206,7 +205,7 @@ class Command(BaseSequence):
         return id_next + 1
 
     @property
-    def plan_object_name(self) -> str or None:
+    def plan_object_name(self) -> Optional[str]:
         if len(self.args) == 3:
             name = self.args[0]
         elif len(self.args) == 1:
@@ -216,7 +215,7 @@ class Command(BaseSequence):
         return name
 
     @property
-    def plan_ra(self) -> float or None:
+    def plan_ra(self) -> Optional[float]:
         if len(self.args) == 2:
             ra = ra_to_decimal(self.args[0])
         elif len(self.args) == 3:
@@ -226,7 +225,7 @@ class Command(BaseSequence):
         return ra
 
     @property
-    def plan_dec(self) -> float or None:
+    def plan_dec(self) -> Optional[float]:
         if len(self.args) == 2:
             dec = dec_to_decimal(self.args[1])
         elif len(self.args) == 3:
@@ -236,7 +235,7 @@ class Command(BaseSequence):
         return dec
 
     @property
-    def plan_az(self) -> float or None:
+    def plan_az(self) -> Optional[float]:
         if 'az' in self.kwargs.keys():
             try:
                 return float(self.kwargs['az'])
@@ -249,7 +248,7 @@ class Command(BaseSequence):
             return None
 
     @property
-    def plan_alt(self) -> float or None:
+    def plan_alt(self) -> Optional[float]:
         if 'alt' in self.kwargs.keys():
             try:
                 return float(self.kwargs['alt'])
@@ -291,7 +290,7 @@ class Command(BaseSequence):
         return seq_list
 
     @staticmethod
-    def fw_named(f_pos: int, f_names: Dict) -> str or int:
+    def fw_named(f_pos: int, f_names: Dict) -> Union[str, int]:
         if f_names is not None:
             inv_f_map = {v: k for k, v in f_names.items()}
         else:
@@ -302,7 +301,7 @@ class Command(BaseSequence):
             return f_pos
 
     @property
-    def domeflat_dome_az(self) -> float or None:
+    def domeflat_dome_az(self) -> Optional[float]:
         if self.exp_type == 'domeflat':
             dome_az = self.param['cfg_gen'].get_value(seq=[
                 'telescopes', self.telescope.id, 'observatory', 'components', 'dome', 'domeflat_az'
@@ -317,7 +316,7 @@ class Command(BaseSequence):
             return None
 
     @property
-    def domeflat_mount_az(self) -> float or None:
+    def domeflat_mount_az(self) -> Optional[float]:
         if self.exp_type == 'domeflat':
             offset_az = self.param['cfg_gen'].get_value(seq=[
                 'telescopes', self.telescope.id, 'observatory', 'components', 'mount', 'domeflat_az_offset'
@@ -339,6 +338,27 @@ class Command(BaseSequence):
         return False
 
     @property
+    def pi(self) -> Optional[str]:
+        if 'pi' in self.kwargs.keys():
+            return self.kwargs['pi']
+        else:
+            return None
+
+    @property
+    def sciprog(self) -> Optional[str]:
+        if 'sciprog' in self.kwargs.keys():
+            return self.kwargs['sciprog']
+        else:
+            return None
+
+    @property
+    def tag(self) -> Optional[str]:
+        if 'tag' in self.kwargs.keys():
+            return self.kwargs['tag']
+        else:
+            return None
+
+    @property
     def focus_offset(self) -> bool:
         if 'focus_offset' in self.kwargs.keys():
             if self.kwargs['focus_offset'] == 'on':
@@ -346,7 +366,7 @@ class Command(BaseSequence):
         return False
 
     @property
-    def domeflat_mount_alt(self) -> float or None:
+    def domeflat_mount_alt(self) -> Optional[float]:
         if self.exp_type == 'domeflat':
             alt = self.param['cfg_gen'].get_value(seq=[
                 'telescopes', self.telescope.id, 'observatory', 'components', 'mount', 'domeflat_alt'
@@ -428,44 +448,63 @@ class Command(BaseSequence):
         id_next = 0
 
         # Dome slewing to domeflat position
-        if self._dome_follow is True:
-            id_next = self._add_comp(DomeSlew(id=self._op_id(id_next=id_next),
-                                              telescope=self.telescope,
-                                              info_callback=self.info_callback,
-                                              az=self.domeflat_dome_az,
-                                              param=self.param,
-                                              uobi=self.uobi), id_next=id_next)
+        if self._dome_follow:
+            id_next = self._add_comp(
+                sub=DomeSlew(
+                    id=self._op_id(id_next=id_next),
+                    telescope=self.telescope,
+                    info_callback=self.info_callback,
+                    az=self.domeflat_dome_az,
+                    param=self.param,
+                    uobi=self.uobi
+                ),
+                id_next=id_next
+            )
 
         # Mount slewing to domeflat position
-        id_next = self._add_comp(MountSlew(id=self._op_id(id_next=id_next),
-                                           telescope=self.telescope,
-                                           info_callback=self.info_callback,
-                                           obj_name=self.object_name,
-                                           alt=self.domeflat_mount_alt,
-                                           az=self.domeflat_mount_az,
-                                           tracking=self.tracking,
-                                           epoch=self.epoch,
-                                           param=self.param,
-                                           uobi=self.uobi
-                                           ), id_next=id_next)
+        id_next = self._add_comp(
+            sub=MountSlew(
+                id=self._op_id(id_next=id_next),
+                telescope=self.telescope,
+                info_callback=self.info_callback,
+                obj_name=self.object_name,
+                alt=self.domeflat_mount_alt,
+                az=self.domeflat_mount_az,
+                tracking=self.tracking,
+                epoch=self.epoch,
+                param=self.param,
+                uobi=self.uobi
+            ),
+            id_next=id_next
+        )
 
         # Turn screen light on
         if self.screen_light_mode in ['auto', 'on']:
-            id_next = self._add_comp(DomeScreenLight(id=self._op_id(id_next=id_next),
-                                                     telescope=self.telescope,
-                                                     info_callback=self.info_callback,
-                                                     light=True,
-                                                     param=self.param,
-                                                     uobi=self.uobi), id_next=id_next)
+            id_next = self._add_comp(
+                sub=DomeScreenLight(
+                    id=self._op_id(id_next=id_next),
+                    telescope=self.telescope,
+                    info_callback=self.info_callback,
+                    light=True,
+                    param=self.param,
+                    uobi=self.uobi
+                ),
+                id_next=id_next
+            )
 
         # Open mirror cover
         if self.mirror_cover_mode in ['auto', 'open']:
-            id_next = self._add_comp(MirrorCover(id=self._op_id(id_next=id_next),
-                                                 telescope=self.telescope,
-                                                 info_callback=self.info_callback,
-                                                 open=True,
-                                                 param=self.param,
-                                                 uobi=self.uobi), id_next=id_next)
+            id_next = self._add_comp(
+                sub=MirrorCover(
+                    id=self._op_id(id_next=id_next),
+                    telescope=self.telescope,
+                    info_callback=self.info_callback,
+                    open=True,
+                    param=self.param,
+                    uobi=self.uobi
+                ),
+                id_next=id_next
+            )
 
         # Camera exposure sequences
         if self.plan_seq:
@@ -473,65 +512,93 @@ class Command(BaseSequence):
                 seq_data = Seq(seq=s, command_kwargs=self.kwargs)
 
                 # Change filter
-                id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),
-                                                      telescope=self.telescope,
-                                                      info_callback=self.info_callback,
-                                                      seq_data=seq_data,
-                                                      param=self.param,
-                                                      uobi=self.uobi), id_next=id_next)
+                id_next = self._add_comp(
+                    sub=ChangeFilter(
+                        id=self._op_id(id_next=id_next),
+                        telescope=self.telescope,
+                        info_callback=self.info_callback,
+                        seq_data=seq_data,
+                        param=self.param,
+                        uobi=self.uobi
+                    ),
+                    id_next=id_next
+                )
 
                 if self.focus_offset:
-                    id_next = self._add_comp(Focusing(id=self._op_id(id_next=id_next),
-                                                      telescope=self.telescope,
-                                                      info_callback=self.info_callback,
-                                                      position=None,
-                                                      param=self.param,
-                                                      filter_offset=True,
-                                                      seq_data=seq_data,
-                                                      uobi=self.uobi), id_next=id_next)
+                    id_next = self._add_comp(
+                        sub=Focusing(
+                            id=self._op_id(id_next=id_next),
+                            telescope=self.telescope,
+                            info_callback=self.info_callback,
+                            position=None,
+                            param=self.param,
+                            filter_offset=True,
+                            seq_data=seq_data,
+                            uobi=self.uobi
+                        ),
+                        id_next=id_next
+                    )
 
                 for ex in range(1, seq_data.exp_no + 1):
                     # Camera single sequence, single exposure
 
                     # Camera exposure
-                    id_next = self._add_comp(CameraExposure(id=self._op_id(id_next=id_next),
-                                                            telescope=self.telescope,
-                                                            info_callback=self.info_callback,
-                                                            sub_exp=ex,
-                                                            exp_no=seq_data.exp_no,
-                                                            exp_type=self.exp_type,
-                                                            light=True,
-                                                            obj_name=self.object_name,
-                                                            req_ra='',
-                                                            req_dec='',
-                                                            epoch=self.epoch,
-                                                            filter_=seq_data.filter_,
-                                                            auto_exposure=False,
-                                                            observer=self.observer,
-                                                            seq_data=seq_data,
-                                                            param=self.param,
-                                                            seq_dataset = self.seq_dataset,
-                                                            test=self.test,
-                                                            forced_read_mod=self.forced_read_mod,
-                                                            uobi=self.uobi), id_next=id_next)
+                    id_next = self._add_comp(
+                        sub=CameraExposure(
+                            id=self._op_id(id_next=id_next),
+                            telescope=self.telescope,
+                            info_callback=self.info_callback,
+                            sub_exp=ex,
+                            exp_no=seq_data.exp_no,
+                            exp_type=self.exp_type,
+                            light=True,
+                            obj_name=self.object_name,
+                            req_ra='',
+                            req_dec='',
+                            epoch=self.epoch,
+                            filter_=seq_data.filter_,
+                            auto_exposure=False,
+                            observer=self.observer,
+                            seq_data=seq_data,
+                            param=self.param,
+                            seq_dataset = self.seq_dataset,
+                            test=self.test,
+                            pi=self.pi,
+                            sciprog=self.sciprog,
+                            tag=self.tag,
+                            forced_read_mod=self.forced_read_mod,
+                            uobi=self.uobi
+                        ),
+                        id_next=id_next
+                    )
 
         # Turning off light
         if self.screen_light_mode in ['auto', 'off']:
-            id_next = self._add_comp(DomeScreenLight(id=self._op_id(id_next=id_next),
-                                                     telescope=self.telescope,
-                                                     info_callback=self.info_callback,
-                                                     light=False,
-                                                     param=self.param,
-                                                     uobi=self.uobi), id_next=id_next)
+            id_next = self._add_comp(
+                sub=DomeScreenLight(
+                    id=self._op_id(id_next=id_next),
+                    telescope=self.telescope,
+                    info_callback=self.info_callback,
+                    light=False,
+                    param=self.param,
+                    uobi=self.uobi
+                ),
+                id_next=id_next
+            )
 
         # Close mirror covers
         if self.mirror_cover_mode in ['close']:
-            id_next = self._add_comp(MirrorCover(id=self._op_id(id_next=id_next),
-                                                 telescope=self.telescope,
-                                                 info_callback=self.info_callback,
-                                                 open=False,
-                                                 param=self.param,
-                                                 uobi=self.uobi), id_next=id_next)
+            id_next = self._add_comp(
+                sub=MirrorCover(
+                    id=self._op_id(id_next=id_next),
+                    telescope=self.telescope,
+                    info_callback=self.info_callback,
+                    open=False,
+                    param=self.param,
+                    uobi=self.uobi
+                ),
+                id_next=id_next
+            )
 
     def _write_object_skyflat_focusing(self) -> None:
 
@@ -539,49 +606,70 @@ class Command(BaseSequence):
 
         # Mount slewing radec
         if (self.plan_ra and self.plan_dec) is not None and (self.plan_az and self.plan_alt) is None:
-            id_next = self._add_comp(MountSlew(id=self._op_id(id_next=id_next),
-                                               telescope=self.telescope,
-                                               info_callback=self.info_callback,
-                                               obj_name=self.object_name,
-                                               ra=self.plan_ra,
-                                               dec=self.plan_dec,
-                                               tracking=self.tracking,
-                                               epoch=self.epoch,
-                                               param=self.param,
-                                               uobi=self.uobi), id_next=id_next)
+            id_next = self._add_comp(
+                sub=MountSlew(
+                    id=self._op_id(id_next=id_next),
+                    telescope=self.telescope,
+                    info_callback=self.info_callback,
+                    obj_name=self.object_name,
+                    ra=self.plan_ra,
+                    dec=self.plan_dec,
+                    tracking=self.tracking,
+                    epoch=self.epoch,
+                    param=self.param,
+                    uobi=self.uobi
+                ),
+                id_next=id_next
+            )
 
         # Mount slewing altaz
         if (self.plan_ra and self.plan_dec) is None and (self.plan_az and self.plan_alt) is not None:
-            id_next = self._add_comp(MountSlew(id=self._op_id(id_next=id_next),
-                                               telescope=self.telescope,
-                                               info_callback=self.info_callback,
-                                               obj_name=self.object_name,
-                                               alt=self.plan_alt,
-                                               az=self.plan_az,
-                                               tracking=self.tracking,
-                                               epoch=self.epoch,
-                                               param=self.param,
-                                               uobi=self.uobi), id_next=id_next)
+            id_next = self._add_comp(
+                sub=MountSlew(
+                    id=self._op_id(id_next=id_next),
+                    telescope=self.telescope,
+                    info_callback=self.info_callback,
+                    obj_name=self.object_name,
+                    alt=self.plan_alt,
+                    az=self.plan_az,
+                    tracking=self.tracking,
+                    epoch=self.epoch,
+                    param=self.param,
+                    uobi=self.uobi
+                ),
+                id_next=id_next
+            )
+
         # No coordinates - no slewing
         else:
             pass
 
         # Dome follow
-        if self._dome_follow is True:
-            id_next = self._add_comp(DomeSlew(id=self._op_id(id_next=id_next),
-                                              telescope=self.telescope,
-                                              info_callback=self.info_callback,
-                                              param=self.param,
-                                              uobi=self.uobi), id_next=id_next)
+        if self._dome_follow:
+            id_next = self._add_comp(
+                sub=DomeSlew(
+                    id=self._op_id(id_next=id_next),
+                    telescope=self.telescope,
+                    info_callback=self.info_callback,
+                    param=self.param,
+                    uobi=self.uobi
+                ),
+                id_next=id_next
+            )
 
         # Mirror cover
         if self.mirror_cover_mode in ['auto', 'open']:
-            id_next = self._add_comp(MirrorCover(id=self._op_id(id_next=id_next),
-                                                 telescope=self.telescope,
-                                                 info_callback=self.info_callback,
-                                                 open=True,
-                                                 param=self.param,
-                                                 uobi=self.uobi), id_next=id_next)
+            id_next = self._add_comp(
+                sub=MirrorCover(
+                    id=self._op_id(id_next=id_next),
+                    telescope=self.telescope,
+                    info_callback=self.info_callback,
+                    open=True,
+                    param=self.param,
+                    uobi=self.uobi
+                ),
+                id_next=id_next
+            )
 
         # Camera exposure sequences
         if self.plan_seq:
@@ -589,99 +677,142 @@ class Command(BaseSequence):
                 seq_data = Seq(seq=s, command_kwargs=self.kwargs)
 
                 # Change filter
-                id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),
-                                                      telescope=self.telescope,
-                                                      info_callback=self.info_callback,
-                                                      seq_data=seq_data,
-                                                      param=self.param,
-                                                      uobi=self.uobi), id_next=id_next)
+                id_next = self._add_comp(
+                    sub=ChangeFilter(
+                        id=self._op_id(id_next=id_next),
+                        telescope=self.telescope,
+                        info_callback=self.info_callback,
+                        seq_data=seq_data,
+                        param=self.param,
+                        uobi=self.uobi
+                    ),
+                    id_next=id_next
+                )
 
                 if self.focus_offset:
-                    id_next = self._add_comp(Focusing(id=self._op_id(id_next=id_next),
-                                                      telescope=self.telescope,
-                                                      info_callback=self.info_callback,
-                                                      position=None,
-                                                      param=self.param,
-                                                      filter_offset=True,
-                                                      seq_data=seq_data,
-                                                      uobi=self.uobi), id_next=id_next)
+                    id_next = self._add_comp(
+                        sub=Focusing(
+                            id=self._op_id(id_next=id_next),
+                            telescope=self.telescope,
+                            info_callback=self.info_callback,
+                            position=None,
+                            param=self.param,
+                            filter_offset=True,
+                            seq_data=seq_data,
+                            uobi=self.uobi
+                        ),
+                        id_next=id_next
+                    )
 
                 for ex in range(1, seq_data.exp_no + 1):
                     # Camera single sequence, single exposure
 
                     # Focusig
                     if self.name == 'FOCUS':
-                        id_next = self._add_comp(Focusing(id=self._op_id(id_next=id_next),
-                                                          telescope=self.telescope,
-                                                          info_callback=self.info_callback,
-                                                          position=seq_data.focus_position(exp_no=ex),
-                                                          param=self.param,
-                                                          uobi=self.uobi), id_next=id_next)
+                        id_next = self._add_comp(
+                            sub=Focusing(
+                                id=self._op_id(id_next=id_next),
+                                telescope=self.telescope,
+                                info_callback=self.info_callback,
+                                position=seq_data.focus_position(exp_no=ex),
+                                param=self.param,
+                                uobi=self.uobi
+                            ),
+                            id_next=id_next
+                        )
 
                     # Dithering
                     if seq_data.dither_this_exp(ex=ex) is True and self.dither_on is True:
 
                         # Mount slew dithering
-                        id_next = self._add_comp(MountSlew(id=self._op_id(id_next=id_next),
-                                                           telescope=self.telescope,
-                                                           info_callback=self.info_callback,
-                                                           obj_name=self.object_name,
-                                                           dithering=True,
-                                                           tracking=self.tracking,
-                                                           epoch=self.epoch,
-                                                           seq_data=seq_data,
-                                                           param=self.param,
-                                                           uobi=self.uobi), id_next=id_next)
+                        id_next = self._add_comp(
+                            sub=MountSlew(
+                                id=self._op_id(id_next=id_next),
+                                telescope=self.telescope,
+                                info_callback=self.info_callback,
+                                obj_name=self.object_name,
+                                dithering=True,
+                                tracking=self.tracking,
+                                epoch=self.epoch,
+                                seq_data=seq_data,
+                                param=self.param,
+                                uobi=self.uobi
+                            ),
+                            id_next=id_next
+                        )
 
                     # Dome follow between exposures
-                    if self._dome_follow is True:
-                        id_next = self._add_comp(DomeSlew(id=self._op_id(id_next=id_next),
-                                                          telescope=self.telescope,
-                                                          info_callback=self.info_callback,
-                                                          seq_data=seq_data,
-                                                          param=self.param,
-                                                          uobi=self.uobi), id_next=id_next)
+                    if self._dome_follow:
+                        id_next = self._add_comp(
+                            sub=DomeSlew(
+                                id=self._op_id(id_next=id_next),
+                                telescope=self.telescope,
+                                info_callback=self.info_callback,
+                                seq_data=seq_data,
+                                param=self.param,
+                                uobi=self.uobi
+                            ),
+                            id_next=id_next
+                        )
 
                     # Camera exposure
-                    id_next = self._add_comp(CameraExposure(id=self._op_id(id_next=id_next),
-                                                            telescope=self.telescope,
-                                                            info_callback=self.info_callback,
-                                                            sub_exp=ex,
-                                                            exp_no=seq_data.exp_no,
-                                                            exp_type=self.exp_type,
-                                                            light=True,
-                                                            obj_name=self.object_name,
-                                                            req_ra=self.plan_ra,
-                                                            req_dec=self.plan_dec,
-                                                            epoch=self.epoch,
-                                                            filter_=seq_data.filter_,
-                                                            auto_exposure=seq_data.auto_exposure,
-                                                            observer=self.observer,
-                                                            seq_data=seq_data,
-                                                            param=self.param,
-                                                            seq_dataset=self.seq_dataset,
-                                                            test=self.test,
-                                                            forced_read_mod=self.forced_read_mod,
-                                                            uobi=self.uobi), id_next=id_next)
+                    id_next = self._add_comp(
+                        sub=CameraExposure(
+                            id=self._op_id(id_next=id_next),
+                            telescope=self.telescope,
+                            info_callback=self.info_callback,
+                            sub_exp=ex,
+                            exp_no=seq_data.exp_no,
+                            exp_type=self.exp_type,
+                            light=True,
+                            obj_name=self.object_name,
+                            req_ra=self.plan_ra,
+                            req_dec=self.plan_dec,
+                            epoch=self.epoch,
+                            filter_=seq_data.filter_,
+                            auto_exposure=seq_data.auto_exposure,
+                            observer=self.observer,
+                            seq_data=seq_data,
+                            param=self.param,
+                            seq_dataset=self.seq_dataset,
+                            test=self.test,
+                            pi=self.pi,
+                            sciprog=self.sciprog,
+                            tag=self.tag,
+                            forced_read_mod=self.forced_read_mod,
+                            uobi=self.uobi
+                        ),
+                        id_next=id_next
+                    )
 
         # Focusig
         if self.name == 'FOCUS' and self.auto_focus is True:
-            id_next = self._add_comp(Focusing(id=self._op_id(id_next=id_next),
-                                              telescope=self.telescope,
-                                              info_callback=self.info_callback,
-                                              auto=True,
-                                              param=self.param,
-                                              seq_data=Seq(seq=self.plan_seq[0], command_kwargs=self.kwargs),
-                                              uobi=self.uobi), id_next=id_next)
+            id_next = self._add_comp(
+                sub=Focusing(
+                    id=self._op_id(id_next=id_next),
+                    telescope=self.telescope,
+                    info_callback=self.info_callback,
+                    auto=True,
+                    param=self.param,
+                    seq_data=Seq(seq=self.plan_seq[0], command_kwargs=self.kwargs),
+                    uobi=self.uobi
+                ),
+                id_next=id_next
+            )
 
         # Mirror cover close
         if self.mirror_cover_mode in ['close']:
-            id_next = self._add_comp(MirrorCover(id=self._op_id(id_next=id_next),
-                                                 telescope=self.telescope,
-                                                 info_callback=self.info_callback,
-                                                 open=False,
-                                                 param=self.param,
-                                                 uobi=self.uobi), id_next=id_next)
+            id_next = self._add_comp(
+                sub=MirrorCover(
+                    id=self._op_id(id_next=id_next),
+                    telescope=self.telescope,
+                    info_callback=self.info_callback,
+                    open=False,
+                    param=self.param,
+                    uobi=self.uobi
+                ),
+                id_next=id_next
+            )
 
     def _write_zero_dark(self) -> None:
 
@@ -689,12 +820,17 @@ class Command(BaseSequence):
 
         # Mirror cover
         if self.mirror_cover_mode in ['auto', 'close']:
-            id_next = self._add_comp(MirrorCover(id=self._op_id(id_next=id_next),
-                                                 telescope=self.telescope,
-                                                 info_callback=self.info_callback,
-                                                 open=False,
-                                                 param=self.param,
-                                                 uobi=self.uobi), id_next=id_next)
+            id_next = self._add_comp(
+                sub=MirrorCover(
+                    id=self._op_id(id_next=id_next),
+                    telescope=self.telescope,
+                    info_callback=self.info_callback,
+                    open=False,
+                    param=self.param,
+                    uobi=self.uobi
+                ),
+                id_next=id_next
+            )
 
         # Camera exposure sequences
         if self.plan_seq:
@@ -702,70 +838,98 @@ class Command(BaseSequence):
                 seq_data = Seq(seq=s, command_kwargs=self.kwargs)
 
                 # Change filter
-                id_next = self._add_comp(ChangeFilter(id=self._op_id(id_next=id_next),
-                                                      telescope=self.telescope,
-                                                      info_callback=self.info_callback,
-                                                      seq_data=seq_data,
-                                                      param=self.param,
-                                                      uobi=self.uobi), id_next=id_next)
+                id_next = self._add_comp(
+                    sub=ChangeFilter(
+                        id=self._op_id(id_next=id_next),
+                        telescope=self.telescope,
+                        info_callback=self.info_callback,
+                        seq_data=seq_data,
+                        param=self.param,
+                        uobi=self.uobi
+                    ),
+                    id_next=id_next
+                )
 
                 if self.focus_offset:
-                    id_next = self._add_comp(Focusing(id=self._op_id(id_next=id_next),
-                                                      telescope=self.telescope,
-                                                      info_callback=self.info_callback,
-                                                      position=None,
-                                                      param=self.param,
-                                                      filter_offset=True,
-                                                      seq_data=seq_data,
-                                                      uobi=self.uobi), id_next=id_next)
+                    id_next = self._add_comp(
+                        sub=Focusing(
+                            id=self._op_id(id_next=id_next),
+                            telescope=self.telescope,
+                            info_callback=self.info_callback,
+                            position=None,
+                            param=self.param,
+                            filter_offset=True,
+                            seq_data=seq_data,
+                            uobi=self.uobi
+                        ),
+                        id_next=id_next
+                    )
 
                 for ex in range(1, seq_data.exp_no + 1):
                     # Camera single sequence, single exposure
 
                     # Camera exposure
-                    id_next = self._add_comp(CameraExposure(id=self._op_id(id_next=id_next),
-                                                            telescope=self.telescope,
-                                                            info_callback=self.info_callback,
-                                                            sub_exp=ex,
-                                                            exp_no=seq_data.exp_no,
-                                                            exp_type=self.exp_type,
-                                                            light=False,
-                                                            obj_name=self.object_name,
-                                                            req_ra='',
-                                                            req_dec='',
-                                                            epoch=self.epoch,
-                                                            filter_=seq_data.filter_,
-                                                            auto_exposure=False,
-                                                            observer=self.observer,
-                                                            seq_data=seq_data,
-                                                            param=self.param,
-                                                            seq_dataset=self.seq_dataset,
-                                                            test=self.test,
-                                                            forced_read_mod=self.forced_read_mod,
-                                                            uobi=self.uobi), id_next=id_next)
+                    id_next = self._add_comp(
+                        sub=CameraExposure(
+                            id=self._op_id(id_next=id_next),
+                            telescope=self.telescope,
+                            info_callback=self.info_callback,
+                            sub_exp=ex,
+                            exp_no=seq_data.exp_no,
+                            exp_type=self.exp_type,
+                            light=False,
+                            obj_name=self.object_name,
+                            req_ra='',
+                            req_dec='',
+                            epoch=self.epoch,
+                            filter_=seq_data.filter_,
+                            auto_exposure=False,
+                            observer=self.observer,
+                            seq_data=seq_data,
+                            param=self.param,
+                            seq_dataset=self.seq_dataset,
+                            test=self.test,
+                            pi=self.pi,
+                            sciprog=self.sciprog,
+                            tag=self.tag,
+                            forced_read_mod=self.forced_read_mod,
+                            uobi=self.uobi
+                        ),
+                        id_next=id_next
+                    )
 
     def _write_wait(self):
         id_next = 0
         self.param["plan_status"].upd_dynamic_time(id=self.id, value=True)
         if len(self.kwargs.keys()) == 1:
             key = list(self.kwargs.keys())[0]
-            id_next = self._add_comp(Wait(id=self._op_id(id_next=id_next),
-                                          telescope=self.telescope,
-                                          info_callback=self.info_callback,
-                                          key=key,
-                                          value=self.kwargs[key],
-                                          param=self.param,
-                                          uobi=self.uobi), id_next=id_next)
+            id_next = self._add_comp(
+                sub=Wait(
+                    id=self._op_id(id_next=id_next),
+                    telescope=self.telescope,
+                    info_callback=self.info_callback,
+                    key=key,
+                    value=self.kwargs[key],
+                    param=self.param,
+                    uobi=self.uobi
+                ),
+                id_next=id_next
+            )
         else:
             pass
 
     def _write_stop(self):
         id_next = 0
-        id_next = self._add_comp(Stop(id=self._op_id(id_next=id_next),
-                                      telescope=self.telescope,
-                                      info_callback=self.info_callback,
-                                      param=self.param,
-                                      uobi=self.uobi), id_next=id_next)
+        id_next = self._add_comp(
+            sub=Stop(
+                id=self._op_id(id_next=id_next),
+                telescope=self.telescope,
+                info_callback=self.info_callback,
+                param=self.param,
+                uobi=self.uobi
+            ),
+            id_next=id_next
+        )
 
     async def send_command_log(self, time_start: list, time_stop: list, skip: int) -> None:
         if skip == 0:
@@ -796,7 +960,7 @@ class Command(BaseSequence):
         except TimeoutError:
             logger.error(f'Nats publish get timeout error')
 
-    async def arun(self, step_id: str or None = None) -> int:
+    async def arun(self, step_id: Optional[str] = None) -> int:
         self.info_callback['stream_1'](f'Command {self.id} {self.name} started.')
         t_0 = time.time()
         dt_0 = dt_utcnow_array()
