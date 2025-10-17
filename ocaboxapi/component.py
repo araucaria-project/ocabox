@@ -32,6 +32,7 @@ class Component(param.Parameterized):
         id: str
 
     def __init__(self, **params):
+        self.request_special_permission = False
         super().__init__(**params)
         self.subscribed: List[Component.CQHolder] = []
         self._watchers: list = []
@@ -198,6 +199,10 @@ class Component(param.Parameterized):
                          parameters_dict: dict | None = None) -> Any:
         address = f'{self.my_address()}.{param_name}'
         logger.debug(f'Awaiting for put_async {address}')
+        if self.request_special_permission:
+            if parameters_dict is None:
+                parameters_dict = {}
+            parameters_dict['request_special_permission_param'] = True
         ret = await self.observatory.put_async(address,
                                                time_of_data=time_of_data,
                                                time_of_data_tolerance=time_of_data_tolerance,
