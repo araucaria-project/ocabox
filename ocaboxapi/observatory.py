@@ -73,12 +73,17 @@ class Observatory:
             value = default
         return value
 
-    def connect(self, client: BaseClientAPI | None = None):
+    def connect(self, client: BaseClientAPI | None = None, ocabox_server_host: str | None = None, ocabox_server_port: int | None = None):
         if client is None:
             host = socket.gethostname()
             user = pwd.getpwuid(os.getuid())[0]
             cfg = self._get_client_connection_cfg_from_nats()
-            c = Client(name=self.client_name, port=cfg.get("port", None), host=cfg.get("url", None))
+            if ocabox_server_host is None:
+                ocabox_server_host = cfg.get("url", None)
+            if ocabox_server_port is None:
+                ocabox_server_port = cfg.get("port", None)
+
+            c = Client(name=self.client_name, port=ocabox_server_port, host=ocabox_server_host)
             self._client = ClientAPI(name=self.client_name,
                                      client=c,
                                      user_name=f'{user}@{host}' + (
