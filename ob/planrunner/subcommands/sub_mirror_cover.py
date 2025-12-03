@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from ob.planrunner.base_subcommand import BaseSubCommand
-from typing import Callable, Dict, Any
+from typing import Callable, Dict, Any, Optional
 from ob.planrunner.status import PlanStatusEnum
 
 
@@ -12,11 +12,11 @@ class MirrorCover(BaseSubCommand):
 
     def __init__(
             self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable],
-            open: bool, uobi: int, name: str = 'mirror-cover', param: Dict[str, Any] or None = None) -> None:
+            open: bool, uobi: int, name: str = 'mirror-cover', param: Optional[Dict[str, Any]] = None) -> None:
 
         self.open = open
-        self.ra_now: str or None = None
-        self.dec_now: str or None = None
+        self.ra_now: Optional[str] = None
+        self.dec_now: Optional[str] = None
         super().__init__(id=id, info_callback=info_callback, telescope=telescope, name=name, uobi=uobi, param=param)
         self.cover = self.telescope.get_covercalibrator()
         self.info_dict = {'open': self.open}
@@ -31,7 +31,7 @@ class MirrorCover(BaseSubCommand):
                 break
             await asyncio.sleep(0.5)
 
-    async def arun(self, step_id: str or None = None) -> int:
+    async def arun(self, step_id: Optional[str] = None) -> int:
         self.started = True
         await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.running)
         inf = f'{self.id} {self.name} started.'
@@ -42,10 +42,10 @@ class MirrorCover(BaseSubCommand):
             name='coverstate', awaitab=self.cover.aget_coverstate, expect_type=bool
         )
         if self.open and str(cover_status) == "1":
-            inf = f'{self.id} {self.name} opening.'
+            inf = f'{self.id} {self.name} opening mirror cover...'
             self.info_callback['stream_1'](inf)
-            await self.journal.debug(inf)
-            logger.debug(inf)
+            await self.journal.info(inf)
+            logger.info(inf)
             if self.telescope.id == 'dev':
                 pass
             else:
@@ -63,7 +63,7 @@ class MirrorCover(BaseSubCommand):
                     )
                     return 2
                 await self._wait_for_move(expected_status="3")
-            inf = f'{self.id} {self.name} opening done.'
+            inf = f'{self.id} {self.name} opening mirror cover done'
             self.info_callback['stream_1'](inf)
             logger.info(inf)
             self.info_callback['stream_5'](f'{self.id}')
@@ -73,10 +73,10 @@ class MirrorCover(BaseSubCommand):
             self.info_callback['exec_json'](self.exec_json(**self.info_dict))
             return 0
         elif not self.open and str(cover_status) == "3":
-            inf = f'{self.id} {self.name} closing.'
+            inf = f'{self.id} {self.name} closing cover...'
             self.info_callback['stream_1'](inf)
-            await self.journal.debug(inf)
-            logger.debug(inf)
+            await self.journal.info(inf)
+            logger.info(inf)
             if self.telescope.id == 'dev':
                 pass
             else:
@@ -94,7 +94,7 @@ class MirrorCover(BaseSubCommand):
                     )
                     return 2
                 await self._wait_for_move(expected_status="1")
-            inf = f'{self.id} {self.name} closing done.'
+            inf = f'{self.id} {self.name} closing mirror cover done'
             logger.info(inf)
             self.done = True
             await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.done)

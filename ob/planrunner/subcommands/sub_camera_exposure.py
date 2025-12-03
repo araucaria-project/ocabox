@@ -587,6 +587,7 @@ class CameraExposure(BaseSubCommand):
             exp_time=sub_time,
             instrume_name=instrument_data["instrument_name"],
             ccd_temp=instrument_data["ccd_temp"],
+            set_temp=instrument_data["set_ccd_temp"],
             binx=instrument_data["binx"],
             biny=instrument_data["biny"],
             read_mod=instrument_data["readoutmode"],
@@ -647,6 +648,9 @@ class CameraExposure(BaseSubCommand):
         ccd_temp = await self.value_proof_get(
             name='fitsh_cam_temp', awaitab=self.camera.aget_ccdtemperature, expect_type=float
         )
+        set_ccd_temp = await self.value_proof_get(
+            name='fitsh_cam_set_temp', awaitab=self.camera.aget_setccdtemperature, expect_type=float
+        )
         binx = await self.value_proof_get(
             name='fitsh_cam_binx', awaitab=self.camera.aget_binx, expect_type=int
         )
@@ -658,6 +662,7 @@ class CameraExposure(BaseSubCommand):
             "gainmode": gainmode,
             "instrument_name": instrument_name,
             "ccd_temp": ccd_temp,
+            "set_ccd_temp": set_ccd_temp,
             "binx": binx,
             "biny": biny
         }

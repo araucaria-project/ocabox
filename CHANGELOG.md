@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.3.0]
+### Added
+- `planrunner` set CCD temperature added to fits header
+
 ## [2.2.2]
 ### Fixed
 - Removed `definitions.py` and references to it.
