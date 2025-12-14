@@ -3,6 +3,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.3.1]
+### Changed
+- minimum python version bumped to 3.10
+- Dependencies versions bumped
+
 ## [2.3.0]
 ### Added
 - `planrunner` set CCD temperature added to fits header
