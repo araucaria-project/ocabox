@@ -73,12 +73,17 @@ class Observatory:
             value = default
         return value
 
-    def connect(self, client: BaseClientAPI | None = None):
+    def connect(self, client: BaseClientAPI | None = None, ocabox_server_host: str | None = None, ocabox_server_port: int | None = None):
         if client is None:
             host = socket.gethostname()
             user = pwd.getpwuid(os.getuid())[0]
             cfg = self._get_client_connection_cfg_from_nats()
-            c = Client(name=self.client_name, port=cfg.get("port", None), host=cfg.get("url", None))
+            if ocabox_server_host is None:
+                ocabox_server_host = cfg.get("url", None)
+            if ocabox_server_port is None:
+                ocabox_server_port = cfg.get("port", None)
+
+            c = Client(name=self.client_name, port=ocabox_server_port, host=ocabox_server_host)
             self._client = ClientAPI(name=self.client_name,
                                      client=c,
                                      user_name=f'{user}@{host}' + (
@@ -147,12 +152,12 @@ class Observatory:
                 logger.info(f' {address}: {res.error.message}')
                 raise OcaboxAccessDenied(f'Access Denied for {address}: {res.error}')
             else:
-                raise OcaboxServerError(f'OCABOX error on {address}: {res.error}')
+                raise OcaboxServerError(f'OCABOX error on PUT {address}: {res.error}')
         try:
             ret = res.value.v
         except Exception as e:
             logger.error(f'Return value not exisit regardless status=True, when setting value to {address}: {e}')
-            raise OcaboxServerError(f'Value error on {address}: {res.error}', e)
+            raise OcaboxServerError(f'Value error on PUT {address}: {res.error}', e)
         return ret
 
     async def get_async(self, address: str,
@@ -185,12 +190,12 @@ class Observatory:
             raise e
 
         if not res.status:
-            raise OcaboxServerError(f'OCABOX error on {address}: {res.error}')
+            raise OcaboxServerError(f'OCABOX error on GET {address}: {res.error}')
         try:
             ret = res.value.v
         except Exception as e:
             logger.error(f'Return value not exisit regardless status=True when getting value from {address}: {e}')
-            raise OcaboxServerError(f'Value error on {address}: {res.error}', e)
+            raise OcaboxServerError(f'Value error on GET {address}: {res.error}', e)
 
         return ret
 

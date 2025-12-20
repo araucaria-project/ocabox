@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Callable, Dict, Any, Optional
+from typing import Callable, Dict, Any, Optional, Union
 from ob.planrunner.base_subcommand import BaseSubCommand
 from pyaraucaria.fits import fits_header
 from pyaraucaria.date import julian_to_tuple
@@ -28,8 +28,9 @@ class CameraExposure(BaseSubCommand):
     def __init__(
             self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable], seq_data: 'Seq', uobi: int,
             exp_type: str, filter_: str, light: bool, sub_exp: int, exp_no: int, auto_exposure: bool,
-            epoch: str, observer: str, obj_name: str, seq_dataset: Dict, req_ra: Optional[float] = None,
-            req_dec: Optional[float] = None, test: int = 0, forced_read_mod: Optional[int] = None,
+            epoch: str, observer: str, obj_name: str, seq_dataset: Dict, req_ra: Optional[Union[float, str]] = None,
+            req_dec: Optional[Union[float, str]] = None, test: int = 0, forced_read_mod: Optional[int] = None,
+            pi: Optional[str] = None, sciprog: Optional[str] = None, tag: Optional[str] = None,
             name: str = 'camera-exposure', param: Optional[Dict[str, Any]] = None) -> None:
 
         self.seq_data = seq_data
@@ -46,6 +47,9 @@ class CameraExposure(BaseSubCommand):
         self.req_dec = req_dec
         self.test = test
         self.forced_read_mod = forced_read_mod
+        self.pi = pi
+        self.sciprog = sciprog
+        self.tag = tag
         self.target_folder: Optional[str] = None
         self.symlinks: List = []
         self.readout_time: Optional[float] = None
@@ -283,8 +287,8 @@ class CameraExposure(BaseSubCommand):
         inf = f'{self.id} {self.name} rpc response received.'
         logger.debug(inf)
         await self.journal.info(inf)
-        logger.info(f'Data: {dat}')
-        logger.info(f'Meta: {met}')
+        # logger.info(f'Data: {dat}')
+        # logger.info(f'Meta: {met}')
         if 'error' in met:
             logger.error(f'Meta error: {met["error"]}')
         return dat
@@ -493,6 +497,17 @@ class CameraExposure(BaseSubCommand):
             req_dec = ''
         else:
             req_dec = self.req_dec
+
+        if self.sciprog:
+            _sciprog = self.sciprog
+        else:
+            _sciprog = ''
+
+        if self.pi:
+            _pi = self.pi
+        else:
+            _pi = ''
+
         mount_type = self.param['cfg_gen'].get_value(
             seq=['telescopes', self.telescope.id, 'observatory', 'components', 'mount', 'type'], source='nats'
         )
@@ -544,8 +559,8 @@ class CameraExposure(BaseSubCommand):
             obs_lon=loc['lon'],
             obs_elev=loc['elev'],
             tel_id=str(self.telescope.id),
-            pi_name="", #TODO
-            sci_prog="", #TODO
+            pi_name=_pi,
+            sci_prog=_sciprog,
             obs_id="", #TODO
             uobi=self.uobi,
             utc_now=str(self.exp_time_start.isoformat(sep='T', timespec='auto')),
@@ -572,6 +587,7 @@ class CameraExposure(BaseSubCommand):
             exp_time=sub_time,
             instrume_name=instrument_data["instrument_name"],
             ccd_temp=instrument_data["ccd_temp"],
+            set_temp=instrument_data["set_ccd_temp"],
             binx=instrument_data["binx"],
             biny=instrument_data["biny"],
             read_mod=instrument_data["readoutmode"],
@@ -632,6 +648,9 @@ class CameraExposure(BaseSubCommand):
         ccd_temp = await self.value_proof_get(
             name='fitsh_cam_temp', awaitab=self.camera.aget_ccdtemperature, expect_type=float
         )
+        set_ccd_temp = await self.value_proof_get(
+            name='fitsh_cam_set_temp', awaitab=self.camera.aget_setccdtemperature, expect_type=float
+        )
         binx = await self.value_proof_get(
             name='fitsh_cam_binx', awaitab=self.camera.aget_binx, expect_type=int
         )
@@ -643,6 +662,7 @@ class CameraExposure(BaseSubCommand):
             "gainmode": gainmode,
             "instrument_name": instrument_name,
             "ccd_temp": ccd_temp,
+            "set_ccd_temp": set_ccd_temp,
             "binx": binx,
             "biny": biny
         }

@@ -28,7 +28,8 @@ class AbstractBase(ABC):
     COMMAND_NAMES = ['SKYFLAT', 'FOCUS', 'DOMEFLAT', 'DARK', 'ZERO', 'OBJECT', 'WAIT', 'STOP', 'SNAP', 'SEQUENCE']
     KWARGS = ['uobi', 'dome_follow', 'epoch', 'mirror_cover', 'observer', 'screen_light', 'az', 'alt', 'seq',
               'pos', 'dither', 'sec', 'ut', 'tracking', 'comment', 'sunrise', 'sunset', 'auto_focus', 'read_mod',
-              'test']
+              'test', 'pi', 'sciprog', 'tag']
+    WEATHER_READER_WAIT = 5
 
     def __init__(self, id: str, name: str, telescope: 'Telescope',
                  info_callback: Dict[str, Callable], c_type: str, param: Optional[Dict[str, Any]] = None) -> None:
@@ -71,10 +72,12 @@ class AbstractBase(ABC):
         )
 
     async def weather_davies_read(self) -> Optional[Dict]:
-        data, meta = await self.reader_weather_davies.read()
+
         try:
+            data, meta = await self.reader_weather_davies.read(wait=self.WEATHER_READER_WAIT)
             return data
-        except (TimeoutError, LookupError, ValueError, TypeError, nats.errors.TimeoutError):
+        except (TimeoutError, LookupError, ValueError, TypeError, nats.errors.TimeoutError) as e:
+            logger.warning(f'Weather reader for header failed: {e}')
             return None
 
     def get_publish(self, stream: str, field: str) -> Optional[MsgPublisher]:
