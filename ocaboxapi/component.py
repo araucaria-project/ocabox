@@ -45,10 +45,14 @@ class Component(param.Parameterized):
                 new_val = await self._apull_value(param_name,
                                                   request_timeout=request_timeout,
                                                   parameters_dict=parameters_dict)
-            except OcaboxServerError as e:
-                logger.info(f'Error while pulling value for {param_name}: {e}')
-                new_val = None
-            setattr(self, f'_{param_name}_value', new_val)
+                setattr(self, f'_{param_name}_value', new_val)
+                return new_val
+            except (OcaboxServerError, CommunicationTimeoutError, CommunicationRuntimeError, OcaboxAccessDenied)  as e:
+                logger.warning(f'Refresh failed for {self.id}.{param_name} ({e}), serving stale data to prevent crash.')
+                # Cheat that the value is newer
+                setattr(self, f'_{param_name}_timestamp', time.time())
+
+
         return getattr(self, f'_{param_name}_value')
 
     async def aput_value(self, param_name, **kwargs):
@@ -110,6 +114,12 @@ class Component(param.Parameterized):
                 logger.error(f'Error in callback for {address} with resp: {resps}: {e}')
                 return
 
+        # === FIX: Watcher first ===
+        watcher = None
+        if callback is not None:
+            watcher = self.watch(param_names=param_name, callback=callback)
+        # ========================================
+
         cq = await self.observatory.subscribe_async(address,
                                                     callback_method=sub_callback,
                                                     time_of_data_tolerance=time_of_data_tolerance,
@@ -117,11 +127,6 @@ class Component(param.Parameterized):
                                                     )
 
         self.subscribed.append(Component.CQHolder(cq, param_name))
-        if callback is not None:
-            # self.watch(param_name=param_name, callback=lambda event: callback(getattr(event.obj, param_name)))
-            watcher = self.watch(param_names=param_name, callback=callback)
-        else:
-            watcher = None
         return cq, watcher
 
     def unsubscribe(self, cq):
