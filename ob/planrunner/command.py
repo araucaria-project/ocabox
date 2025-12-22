@@ -61,6 +61,7 @@ class Command(BaseSequence):
         logger.info(f'{self.id} {self.name} {self.args} {self.kwargs} is written')
 
     def ctc_calc_time(self) -> float:
+        logger.info(self.param["cycle_time"]._rmode)
         return self.param["cycle_time"].calc_time(command_dict=self.sequence_dict)
 
     def _write_subcommands(self) -> None:
