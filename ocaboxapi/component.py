@@ -47,7 +47,7 @@ class Component(param.Parameterized):
                                                   parameters_dict=parameters_dict)
                 setattr(self, f'_{param_name}_value', new_val)
                 return new_val
-            except (OcaboxServerError, CommunicationTimeoutError, CommunicationRuntimeError, OcaboxAccessDenied)  as e:
+            except Exception  as e:
                 logger.warning(f'Refresh failed for {self.id}.{param_name} ({e}), serving stale data to prevent crash.')
                 # Cheat that the value is newer
                 setattr(self, f'_{param_name}_timestamp', time.time())
