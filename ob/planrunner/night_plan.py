@@ -54,6 +54,7 @@ class NightPlan(BaseSequence):
         crm = self.camera.readoutmode
         if not isinstance(crm, int):
             crm = 0
+        logger.info(f'Ctc rm {crm}')
         self.param['cycle_time'].set_start_rmode(rmode=crm)
 
     def _get_altaz(self):
