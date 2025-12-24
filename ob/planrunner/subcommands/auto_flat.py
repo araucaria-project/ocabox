@@ -112,14 +112,16 @@ class AutoFlatNoTest:
 
     @staticmethod
     def _exp_func(x, a, b, c):
-        return a * b ** x + c
+        with np.errstate(invalid='raise', over='raise'):
+            return a * b ** x + c
+        # return a * b ** x + c
 
     @staticmethod
     async def _curve_fit(x: np.ndarray, y: np.ndarray) -> Optional[np.ndarray]:
         try:
-            params = curve_fit(AutoFlatNoTest._exp_func, x, y)
+            params = curve_fit(f=AutoFlatNoTest._exp_func, xdata=x, ydata=y)
             return params[0]
-        except RuntimeError:
+        except (RuntimeError, FloatingPointError):
             logger.warning(f'Can not fit curve')
             return None
 
@@ -183,6 +185,7 @@ class AutoFlatNoTest:
 
         elif len(self.adu) > 3:
             params = await self._curve_fit(x=_ts_mid_shift, y=_sat_sec)
+
             if params is None:
                 _adu_predict = await self._linear_adu_predict(
                     ts_mid_shift=_ts_mid_shift[-self.LINE_FIT_LAST_POINTS:],
@@ -190,7 +193,14 @@ class AutoFlatNoTest:
                     ts_now=_ts_now
                 )
             else:
-                _adu_predict = self._exp_func(_ts_now, params[0], params[1], params[2])
+                try:
+                    _adu_predict = self._exp_func(_ts_now, params[0], params[1], params[2])
+                except FloatingPointError:
+                    _adu_predict = await self._linear_adu_predict(
+                        ts_mid_shift=_ts_mid_shift[-self.LINE_FIT_LAST_POINTS:],
+                        sat_sec=_sat_sec[-self.LINE_FIT_LAST_POINTS:],
+                        ts_now=_ts_now
+                    )
 
         else:
             inf = f'No data to calc. time'
