@@ -1,6 +1,6 @@
 import datetime
 import logging
-from typing import List, Any, Dict, Callable
+from typing import List, Any, Dict, Callable, Optional
 from ob.planrunner.base_sequence import BaseSequence
 from ob.planrunner.sequence import Sequence
 from ctc import CycleTimeDataBuild
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 class NightPlan(BaseSequence):
     def __init__(self, id: str, sequence_dict: Dict[str, Any], telescope: 'Telescope',
-                 info_callback: Dict[str, Callable], param: Dict[str, Any] or None = None) -> None:
+                 info_callback: Dict[str, Callable], param: Optional[Dict[str, Any]] = None) -> None:
         self.sequence_dict = sequence_dict
         self._r_id: int
         param = param if param is not None else {}
@@ -54,6 +54,7 @@ class NightPlan(BaseSequence):
         crm = self.camera.readoutmode
         if not isinstance(crm, int):
             crm = 0
+        # logger.info(f'Ctc rm {crm}')
         self.param['cycle_time'].set_start_rmode(rmode=crm)
 
     def _get_altaz(self):
@@ -77,7 +78,7 @@ class NightPlan(BaseSequence):
         self.info_callback['stream_1'](f'Nightplan {self.id}'
                                        f' estimated time lenght: {self.param["cycle_time"].time_lenght_min}min')
 
-    async def arun(self, step_id: str or None = None) -> int:
+    async def arun(self, step_id: Optional[str] = None) -> int:
         self.info_callback['stream_1'](f'{self.id} {self.name} started.')
         logger.info(f'Night plan {self.id} started')
         await self.journal.info(f'{self.id} {self.name} started,'

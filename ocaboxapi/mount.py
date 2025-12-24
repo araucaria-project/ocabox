@@ -217,7 +217,7 @@ class Mount(TelescopeComponent):
         logger.debug(f'Putting dome lamp off to {self.tel_addr}')
         await self.aput_value('domeflatlampoff')
 
-    async def aput_clearerror(self) -> None:
+    async def aput_telescope_clearerror(self) -> None:
         logger.debug(f'Putting telescope clearerror to {self.tel_addr}')
         await self.aput_value('action', Action='telescope:clearerror', Parameters='')
 

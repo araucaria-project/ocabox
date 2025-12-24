@@ -6,7 +6,7 @@ import time
 
 from pyaraucaria.dome_eq import dome_eq_azimuth
 from ob.planrunner.base_subcommand import BaseSubCommand
-from typing import Callable, Dict, Any
+from typing import Callable, Dict, Any, Optional
 from ob.planrunner.status import PlanStatusEnum
 
 
@@ -17,8 +17,8 @@ class DomeSlew(BaseSubCommand):
 
     def __init__(
             self, id: str, telescope: 'Telescope', info_callback: Dict[str, Callable], uobi: int,
-            seq_data: 'Seq' or None = None, follow_tol: float = 3.0, az: float or None = None,
-            slew_tolerance: float = 3.0, name: str = 'dome-slew', param: Dict[str, Any] or None = None) -> None:
+            seq_data: Optional['Seq'] = None, follow_tol: float = 3.0, az: Optional[float] = None,
+            slew_tolerance: float = 3.0, name: str = 'dome-slew', param: Optional[Dict[str, Any]] = None) -> None:
 
         self.seq_data = seq_data
         self.az = az
@@ -27,9 +27,9 @@ class DomeSlew(BaseSubCommand):
         super().__init__(id=id, info_callback=info_callback, telescope=telescope, name=name, uobi=uobi, param=param)
         self.dome = self.telescope.get_dome()
         self.mount = self.telescope.get_mount()
-        self.slew_timeout: float or None = None
-        self.mount_type: str or None = None
-        self.loc: Dict or None = None
+        self.slew_timeout: Optional[float] = None
+        self.mount_type: Optional[str] = None
+        self.loc: Optional[Dict] = None
         self.info_dict = {'az': self.az, 'follow_tol': self.follow_tol}
         self.create_sub_command_string(**self.info_dict)
 
@@ -73,7 +73,7 @@ class DomeSlew(BaseSubCommand):
             'telescopes', self.telescope.id, 'observatory', 'components', 'dome', 'slew_tolerance'
         ], source='nats')
 
-    async def arun(self, step_id: str or None = None) -> int:
+    async def arun(self, step_id: Optional[str] = None) -> int:
         self.started = True
         await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.running)
         if self.seq_data:

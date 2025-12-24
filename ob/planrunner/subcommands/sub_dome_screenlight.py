@@ -22,6 +22,7 @@ class DomeScreenLight(BaseSubCommand):
 
     @staticmethod
     async def _wait_for_turn_on_off():
+        # TODO take from settings
         await asyncio.sleep(15)
 
     async def arun(self, step_id: str or None = None) -> int:
