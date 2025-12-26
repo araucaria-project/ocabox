@@ -16,7 +16,7 @@ from ocaboxapi.plan import ObservationPlan
 from ocaboxapi.exceptions import OcaboxServerError
 from ocaboxapi.cycle_time import CycleTime
 from ocaboxapi.guiding_controller import GuidingController
-from typing import Dict
+from typing import Dict, Optional
 from obcom.comunication.comunication_error import CommunicationTimeoutError, CommunicationRuntimeError
 
 from ocaboxapi.tertiary import Tertiary
@@ -157,7 +157,7 @@ class Telescope(AbstractTelescope):
         except (CommunicationTimeoutError, CommunicationRuntimeError, OcaboxServerError):
             return {'alpaca': False}
 
-    async def shutdown(self) -> None:
+    async def shutdown(self, dome_park_az: Optional[float] = None) -> None:
         logger.info(f'Starting shutdown')
         mount = self.get_mount()
         dome = self.get_dome()
@@ -189,10 +189,13 @@ class Telescope(AbstractTelescope):
                 break
             await asyncio.sleep(0.1)
         await mount.aput_park()
-        await dome.aput_park()
+        if dome_park_az:
+            await dome.aput_slewtoazimuth(az=dome_park_az)
+        else:
+            await dome.aput_park()
         logger.info(f'Shutdown done')
 
-    async def weather_stop(self) -> None:
+    async def weather_stop(self, dome_park_az: Optional[float] = None) -> None:
         logger.info(f'Starting weather stop')
         mount = self.get_mount()
         dome = self.get_dome()
@@ -224,7 +227,10 @@ class Telescope(AbstractTelescope):
             if shutterstatus == 1:
                 break
             await asyncio.sleep(0.1)
-        await dome.aput_park()
+        if dome_park_az:
+            await dome.aput_slewtoazimuth(az=dome_park_az)
+        else:
+            await dome.aput_park()
         logger.info(f'Weather stop done')
 
     async def emergency_stop(self) -> None:
