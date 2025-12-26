@@ -3,6 +3,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.3.4]
+### Changed
+- `ocaboxapi.telescope.shutdown` added timeout on wait operations
+- `ocaboxapi.telescope.weather_stop` added timeout on wait operations
+
 ## [2.3.3]
 ### Added
 - `Observatory.dischard_cached_telescope` 

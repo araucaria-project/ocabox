@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 
 from ocaboxapi.abstelescope import AbstractTelescope
 from ocaboxapi.access import AccessGrantor
@@ -25,6 +26,9 @@ logger = logging.getLogger("telescope")
 
 class Telescope(AbstractTelescope):
     """The Telescope maintains components of signgle telescope"""
+
+    MIRROR_COVER_TIMEOUT = 180
+    DOME_SHUTTER_TIMEOUT = 180
 
     def __init__(self, id: str, observatory: "Observatory") -> None:
         super().__init__(id=id, observatory=observatory)
@@ -153,64 +157,90 @@ class Telescope(AbstractTelescope):
         except (CommunicationTimeoutError, CommunicationRuntimeError, OcaboxServerError):
             return {'alpaca': False}
 
-    async def shutdown(self):
-        m = self.get_mount()
-        d = self.get_dome()
-        c = self.get_covercalibrator()
-        a = self.get_access_grantor()
-        await a.aput_break_control()
-        await a.aput_take_control(600)
-        if await m.aget_slewing():
-            await m.aput_abortslew()
-        if await d.aget_slewing():
-            await d.aput_abortslew()
-        await m.aput_tracking(False)
-        await c.aput_closecover()
+    async def shutdown(self) -> None:
+        logger.info(f'Starting shutdown')
+        mount = self.get_mount()
+        dome = self.get_dome()
+        cover = self.get_covercalibrator()
+        access = self.get_access_grantor()
+        await access.aput_break_control()
+        await access.aput_take_control(600)
+        if await mount.aget_slewing():
+            await mount.aput_abortslew()
+        if await dome.aget_slewing():
+            await dome.aput_abortslew()
+        await mount.aput_tracking(False)
+        await cover.aput_closecover()
+        t_stamp_m = time.time()
         while True:
-            current = await c.aget_coverstate()
-            if current == 1:
-                await d.aput_closeshutter()
+            if time.time() > t_stamp_m + self.MIRROR_COVER_TIMEOUT:
+                logger.error(f'Mirror cover close get timeout')
+            coverstate = await cover.aget_coverstate()
+            if coverstate == 1:
                 break
             await asyncio.sleep(0.1)
-        await m.aput_park()
-        await d.aput_park()
-        # await asyncio.sleep(30)
-        # await m.aput_motoroff()
-
-    async def weather_stop(self):
-        m = self.get_mount()
-        d = self.get_dome()
-        c = self.get_covercalibrator()
-        a = self.get_access_grantor()
-        await a.aput_break_control()
-        await a.aput_take_control(600)
-        if await m.aget_slewing():
-            await m.aput_abortslew()
-        if await d.aget_slewing():
-            await d.aput_abortslew()
-        await m.aput_tracking(False)
-        await m.aput_park()
-        await c.aput_closecover()
+        await dome.aput_closeshutter()
+        t_stamp_d = time.time()
         while True:
-            current = await c.aget_coverstate()
-            if current == 1:
-                await d.aput_closeshutter()
+            if time.time() > t_stamp_d + self.DOME_SHUTTER_TIMEOUT:
+                logger.error(f'Dome shutter close get timeout')
+            shutterstatus = await dome.aget_shutterstatus()
+            if shutterstatus == 0:
                 break
             await asyncio.sleep(0.1)
-        await d.aput_park()
+        await mount.aput_park()
+        await dome.aput_park()
+        logger.info(f'Shutdown done')
 
-    async def emergency_stop(self):
-        m = self.get_mount()
-        d = self.get_dome()
-        a = self.get_access_grantor()
-        await a.aput_break_control()
-        await a.aput_take_control(600)
-        await m.aput_tracking(False)
-        if await m.aget_slewing():
-            await m.aput_abortslew()
-        await m.aput_motoroff()
-        if await d.aget_slewing():
-            await d.aput_abortslew()
+    async def weather_stop(self) -> None:
+        logger.info(f'Starting weather stop')
+        mount = self.get_mount()
+        dome = self.get_dome()
+        cover = self.get_covercalibrator()
+        access = self.get_access_grantor()
+        await access.aput_break_control()
+        await access.aput_take_control(600)
+        if await mount.aget_slewing():
+            await mount.aput_abortslew()
+        if await dome.aget_slewing():
+            await dome.aput_abortslew()
+        await mount.aput_tracking(False)
+        await mount.aput_park()
+        await cover.aput_closecover()
+        t_stamp_m = time.time()
+        while True:
+            if time.time() > t_stamp_m + self.MIRROR_COVER_TIMEOUT:
+                logger.error(f'Mirror cover close get timeout')
+            coverstate = await cover.aget_coverstate()
+            if coverstate == 1:
+                break
+            await asyncio.sleep(0.1)
+        await dome.aput_closeshutter()
+        t_stamp_d = time.time()
+        while True:
+            if time.time() > t_stamp_d + self.DOME_SHUTTER_TIMEOUT:
+                logger.error(f'Dome shutter close get timeout')
+            shutterstatus = await dome.aget_shutterstatus()
+            if shutterstatus == 0:
+                break
+            await asyncio.sleep(0.1)
+        await dome.aput_park()
+        logger.info(f'Weather stop done')
+
+    async def emergency_stop(self) -> None:
+        logger.info(f'Starting emergency stop')
+        mount = self.get_mount()
+        dome = self.get_dome()
+        access = self.get_access_grantor()
+        await access.aput_break_control()
+        await access.aput_take_control(600)
+        await mount.aput_tracking(False)
+        if await mount.aget_slewing():
+            await mount.aput_abortslew()
+        await mount.aput_motoroff()
+        if await dome.aget_slewing():
+            await dome.aput_abortslew()
+        logger.info(f'Emergency stop done')
 
     def unsubscribe_all_component(self):
         for comp in self.mounts.values():
