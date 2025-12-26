@@ -115,6 +115,15 @@ class Observatory:
             self.telescopes[telescope_id] = tele
             return tele
 
+    def dischard_cached_telescope(self, telescope: str | Telescope):
+        """Dischards cached telescope instance by its id or by instance"""
+        if telescope in self.telescopes:
+            del self.telescopes[telescope]
+        else:
+            for key, val in list(self.telescopes.items()):
+                if val == telescope:
+                    del self.telescopes[key]
+
     def get_ephemeris(self) -> Ephemeris:
         if self.ephemeris is None:
             from ocaboxapi.ephemeris import Ephemeris

@@ -164,7 +164,7 @@ class Component(param.Parameterized):
         self.param.add_parameter(f'_{param_name}_timestamp', param.Number(0.0))
         with param.discard_events(self):
             self.param.update(**{param_name: lambda: self._ensure_value(param_name)})
-        self.param.watch(lambda event: self._watcher(event, param_name), f'_{param_name}_value')
+        self.param.watch(lambda event: self._watcher(event, param_name), f'_{param_name}_value') #, onlychanged=False)
 
     def _watcher(self, event, param_name):
         setattr(self, f'_{param_name}_timestamp', time.time())
