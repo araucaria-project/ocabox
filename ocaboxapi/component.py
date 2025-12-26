@@ -108,8 +108,8 @@ class Component(param.Parameterized):
                 if resps[0].status:
                     if param_name == 'domefansrunning':
                         logger.error(f'========DOME FANS QUERY CALLBACK old_val: '
-                                     f'{self.__getattribute__('_domefansrunning_value')} at '
-                                     f'{self.__getattribute__('_domefansrunning_timestamp')}')
+                                     f'{self.__getattribute__("_domefansrunning_value")} at '
+                                     f'{self.__getattribute__("_domefansrunning_timestamp")}')
                     v = resps[0].value.v
                     if param_name == 'domefansrunning':
                         logger.error(f'========DOME FANS QUERY CALLBACK incomming status: {resps[0].status}, error: {resps[0].error} at '
@@ -120,8 +120,8 @@ class Component(param.Parameterized):
                     self.param.update(**{f'_{param_name}_value': v})
                     if param_name == 'domefansrunning':
                         logger.error(f'========DOME FANS QUERY CALLBACK new_val: '
-                                     f'{self.__getattribute__('_domefansrunning_value')} at '
-                                     f'{self.__getattribute__('_domefansrunning_timestamp')}')
+                                     f'{self.__getattribute__("_domefansrunning_value")} at '
+                                     f'{self.__getattribute__("_domefansrunning_timestamp")}')
                 else:
                     logger.error(f'Error in {param_name} ({resps[0].address}) subscription {resps[0].error}')
             except Exception as e:
