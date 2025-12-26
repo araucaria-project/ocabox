@@ -185,7 +185,7 @@ class Telescope(AbstractTelescope):
             if time.time() > t_stamp_d + self.DOME_SHUTTER_TIMEOUT:
                 logger.error(f'Dome shutter close get timeout')
             shutterstatus = await dome.aget_shutterstatus()
-            if shutterstatus == 0:
+            if shutterstatus == 1:
                 break
             await asyncio.sleep(0.1)
         await mount.aput_park()
