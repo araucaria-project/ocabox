@@ -108,21 +108,27 @@ class Observatory:
         If telescope of specified id have been created already, it is returned, otherwise
         new Telescope instance is created, saved and returned"""
         try:
-            return self.telescopes[telescope_id]
+            t = self.telescopes[telescope_id]
+            logger.error(f'========DOME FANS reusing  telescope {telescope_id} object {t}')
+            return t
         except LookupError:
             from ocaboxapi.telescope import Telescope
             tele = Telescope(telescope_id, self)
             self.telescopes[telescope_id] = tele
+            logger.error(f'========DOME FANS new  telescope {telescope_id} object {tele}')
             return tele
 
     def dischard_cached_telescope(self, telescope: str | Telescope):
         """Dischards cached telescope instance by its id or by instance"""
+        logger.error(f'========DOME FANS discarding telescope {telescope}')
         if telescope in self.telescopes:
             del self.telescopes[telescope]
+            logger.error(f'========DOME FANS discarded telescope by id {telescope}')
         else:
             for key, val in list(self.telescopes.items()):
                 if val == telescope:
                     del self.telescopes[key]
+                    logger.error(f'========DOME FANS discarded telescope {telescope.id} object:  {telescope}')
 
     def get_ephemeris(self) -> Ephemeris:
         if self.ephemeris is None:
