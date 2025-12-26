@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 ## [2.3.3]
 ### Added
 - `Observatory.dischard_cached_telescope` 
+### Fixed
+- auto-flat calculation
 
 ## [2.3.1]
 ### Changed
