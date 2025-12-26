@@ -116,7 +116,7 @@ class Component(param.Parameterized):
                                      f'{resps[0].value.ts} [{resps[0].value.tags}]')
                         logger.error(f'========DOME FANS QUERY CALLBACK incomming v: {v}: {resps[0].value.type} at '
                                      f'{resps[0].value.ts} [{resps[0].value.tags}]')
-                        logger.error(f'========DOME FANS QUERY CALLBACK watchers: {[w.fn.__name__ for w in self.param.watchers[param_name]['value']]}')
+                        logger.error(f'========DOME FANS QUERY CALLBACK watchers: {[w.fn.__name__ for w in self.param.watchers[param_name]["value"]]}')
                     self.param.update(**{f'_{param_name}_value': v})
                     if param_name == 'domefansrunning':
                         logger.error(f'========DOME FANS QUERY CALLBACK new_val: '
@@ -134,14 +134,14 @@ class Component(param.Parameterized):
             if param_name == 'domefansrunning':
                 try:
                     logger.error(
-                        f'========DOME FANS QUERY SUBSC adding watchers before: {[w.fn.__name__ for w in self.param.watchers[param_name]['value']]}')
+                        f'========DOME FANS QUERY SUBSC adding watchers before: {[w.fn.__name__ for w in self.param.watchers[param_name]["value"]]}')
                 except KeyError:
                     logger.error(
                         f'========DOME FANS QUERY SUBSC adding watchers before: No watchers')
             watcher = self.watch(param_names=param_name, callback=callback)
             if param_name == 'domefansrunning':
                 logger.error(
-                    f'========DOME FANS QUERY SUBSC adding watchers after: {[w.fn.__name__ for w in self.param.watchers[param_name]['value']]}')
+                    f'========DOME FANS QUERY SUBSC adding watchers after: {[w.fn.__name__ for w in self.param.watchers[param_name]["value"]]}')
         # ========================================
 
         if param_name == 'domefansrunning':
@@ -189,7 +189,6 @@ class Component(param.Parameterized):
 
     def _connect_variables(self, param_name):
         if param_name == 'domefansrunning':
-            logger.error(f'========DOME FANS PARAM connecting variables')
             logger.error(f'========DOME FANS PARAM connecting variables')
 
         logger.debug(f'Connecting {param_name} to {self.id}')
