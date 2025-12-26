@@ -157,7 +157,8 @@ class Telescope(AbstractTelescope):
         except (CommunicationTimeoutError, CommunicationRuntimeError, OcaboxServerError):
             return {'alpaca': False}
 
-    async def shutdown(self):
+    async def shutdown(self) -> None:
+        logger.info(f'Starting shutdown')
         mount = self.get_mount()
         dome = self.get_dome()
         cover = self.get_covercalibrator()
@@ -189,8 +190,10 @@ class Telescope(AbstractTelescope):
             await asyncio.sleep(0.1)
         await mount.aput_park()
         await dome.aput_park()
+        logger.info(f'Shutdown done')
 
-    async def weather_stop(self):
+    async def weather_stop(self) -> None:
+        logger.info(f'Starting weather stop')
         mount = self.get_mount()
         dome = self.get_dome()
         cover = self.get_covercalibrator()
@@ -222,8 +225,10 @@ class Telescope(AbstractTelescope):
                 break
             await asyncio.sleep(0.1)
         await dome.aput_park()
+        logger.info(f'Weather stop done')
 
-    async def emergency_stop(self):
+    async def emergency_stop(self) -> None:
+        logger.info(f'Starting emergency stop')
         mount = self.get_mount()
         dome = self.get_dome()
         access = self.get_access_grantor()
@@ -235,6 +240,7 @@ class Telescope(AbstractTelescope):
         await mount.aput_motoroff()
         if await dome.aget_slewing():
             await dome.aput_abortslew()
+        logger.info(f'Emergency stop done')
 
     def unsubscribe_all_component(self):
         for comp in self.mounts.values():
