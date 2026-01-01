@@ -106,22 +106,22 @@ class Component(param.Parameterized):
             logger.debug(f'Sub callback for {address}: {resps}')
             try:
                 if resps[0].status:
-                    if param_name == 'domefansrunning':
-                        logger.error(f'========DOME FANS QUERY CALLBACK old_val: '
-                                     f'{self.__getattribute__("_domefansrunning_value")} at '
-                                     f'{self.__getattribute__("_domefansrunning_timestamp")}')
+                    # if param_name == 'domefansrunning':
+                        # logger.error(f'========DOME FANS QUERY CALLBACK old_val: '
+                        #              f'{self.__getattribute__("_domefansrunning_value")} at '
+                        #              f'{self.__getattribute__("_domefansrunning_timestamp")}')
                     v = resps[0].value.v
-                    if param_name == 'domefansrunning':
-                        logger.error(f'========DOME FANS QUERY CALLBACK incomming status: {resps[0].status}, error: {resps[0].error} at '
-                                     f'{resps[0].value.ts} [{resps[0].value.tags}]')
-                        logger.error(f'========DOME FANS QUERY CALLBACK incomming v: {v}: {resps[0].value.type} at '
-                                     f'{resps[0].value.ts} [{resps[0].value.tags}]')
-                        logger.error(f'========DOME FANS QUERY CALLBACK watchers: {[w.fn.__name__ for w in self.param.watchers[param_name]["value"]]}')
+                    # if param_name == 'domefansrunning':
+                        # logger.error(f'========DOME FANS QUERY CALLBACK incomming status: {resps[0].status}, error: {resps[0].error} at '
+                        #              f'{resps[0].value.ts} [{resps[0].value.tags}]')
+                        # logger.error(f'========DOME FANS QUERY CALLBACK incomming v: {v}: {resps[0].value.type} at '
+                        #              f'{resps[0].value.ts} [{resps[0].value.tags}]')
+                        # logger.error(f'========DOME FANS QUERY CALLBACK watchers: {[w.fn.__name__ for w in self.param.watchers[param_name]["value"]]}')
                     self.param.update(**{f'_{param_name}_value': v})
-                    if param_name == 'domefansrunning':
-                        logger.error(f'========DOME FANS QUERY CALLBACK new_val: '
-                                     f'{self.__getattribute__("_domefansrunning_value")} at '
-                                     f'{self.__getattribute__("_domefansrunning_timestamp")}')
+                    # if param_name == 'domefansrunning':
+                        # logger.error(f'========DOME FANS QUERY CALLBACK new_val: '
+                        #              f'{self.__getattribute__("_domefansrunning_value")} at '
+                        #              f'{self.__getattribute__("_domefansrunning_timestamp")}')
                 else:
                     logger.error(f'Error in {param_name} ({resps[0].address}) subscription {resps[0].error}')
             except Exception as e:
@@ -131,22 +131,22 @@ class Component(param.Parameterized):
         # === FIX: Watcher first ===
         watcher = None
         if callback is not None:
-            if param_name == 'domefansrunning':
-                try:
-                    logger.error(
-                        f'========DOME FANS QUERY SUBSC adding watchers before: {[w.fn.__name__ for w in self.param.watchers[param_name]["value"]]}')
-                except KeyError:
-                    logger.error(
-                        f'========DOME FANS QUERY SUBSC adding watchers before: No watchers')
+            # if param_name == 'domefansrunning':
+            #     try:
+            #         logger.error(
+            #             f'========DOME FANS QUERY SUBSC adding watchers before: {[w.fn.__name__ for w in self.param.watchers[param_name]["value"]]}')
+            #     except KeyError:
+            #         logger.error(
+            #             f'========DOME FANS QUERY SUBSC adding watchers before: No watchers')
             watcher = self.watch(param_names=param_name, callback=callback)
-            if param_name == 'domefansrunning':
-                logger.error(
-                    f'========DOME FANS QUERY SUBSC adding watchers after: {[w.fn.__name__ for w in self.param.watchers[param_name]["value"]]}')
-        # ========================================
+        #     if param_name == 'domefansrunning':
+        #         logger.error(
+        #             f'========DOME FANS QUERY SUBSC adding watchers after: {[w.fn.__name__ for w in self.param.watchers[param_name]["value"]]}')
+        # # ========================================
 
-        if param_name == 'domefansrunning':
-            logger.error(
-                f'========DOME FANS QUERY SUBSC subscribing before: {[s.cq for s in self.subscribed]}')
+        # if param_name == 'domefansrunning':
+        #     logger.error(
+        #         f'========DOME FANS QUERY SUBSC subscribing before: {[s.cq for s in self.subscribed]}')
         cq = await self.observatory.subscribe_async(address,
                                                     callback_method=sub_callback,
                                                     time_of_data_tolerance=time_of_data_tolerance,
@@ -154,9 +154,9 @@ class Component(param.Parameterized):
                                                     )
 
         self.subscribed.append(Component.CQHolder(cq, param_name))
-        if param_name == 'domefansrunning':
-            logger.error(
-                f'========DOME FANS QUERY SUBSC subscribing after: {[s.cq for s in self.subscribed]}')
+        # if param_name == 'domefansrunning':
+        #     logger.error(
+        #         f'========DOME FANS QUERY SUBSC subscribing after: {[s.cq for s in self.subscribed]}')
         return cq, watcher
 
     def unsubscribe(self, cq):
@@ -188,8 +188,8 @@ class Component(param.Parameterized):
             self._connect_variables(n)
 
     def _connect_variables(self, param_name):
-        if param_name == 'domefansrunning':
-            logger.error(f'========DOME FANS PARAM connecting variables')
+        # if param_name == 'domefansrunning':
+        #     logger.error(f'========DOME FANS PARAM connecting variables')
 
         logger.debug(f'Connecting {param_name} to {self.id}')
         # parameter = self.param.values()params()[param_name]
