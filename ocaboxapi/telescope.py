@@ -164,7 +164,7 @@ class Telescope(AbstractTelescope):
         cover = self.get_covercalibrator()
         access = self.get_access_grantor()
         await access.aput_break_control()
-        await access.aput_take_control(600)
+        await access.aput_take_control(84000)
         if await mount.aget_slewing():
             await mount.aput_abortslew()
         if await dome.aget_slewing():
@@ -202,7 +202,7 @@ class Telescope(AbstractTelescope):
         cover = self.get_covercalibrator()
         access = self.get_access_grantor()
         await access.aput_break_control()
-        await access.aput_take_control(600)
+        await access.aput_take_control(84000)
         if await mount.aget_slewing():
             await mount.aput_abortslew()
         if await dome.aget_slewing():
@@ -239,7 +239,7 @@ class Telescope(AbstractTelescope):
         dome = self.get_dome()
         access = self.get_access_grantor()
         await access.aput_break_control()
-        await access.aput_take_control(600)
+        await access.aput_take_control(84000)
         await mount.aput_tracking(False)
         if await mount.aget_slewing():
             await mount.aput_abortslew()
