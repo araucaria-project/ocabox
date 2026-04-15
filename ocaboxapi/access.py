@@ -11,6 +11,7 @@ class AccessGrantor(TelescopeComponent):
     current_user = OcaBoxParam(default=0.0, doc="User Controlling Telescope")
     timeout_current_control  = OcaBoxParam(default=0.0, doc="Timeout current telescope control")
     is_access = OcaBoxParam(default=0.0, doc="Is user still have telescope control")
+    safety_cutoff_state = OcaBoxParam(default=None, doc="Safety cutoff switch state")
 
     async def aget_current_user(self) -> Dict[str] | None:
         logger.debug(f'Getting telescope controlling user from {self.tel_addr}')
@@ -59,3 +60,22 @@ class AccessGrantor(TelescopeComponent):
     async def aput_return_control(self):
         logger.debug(f'Putting return_control to {self.tel_addr}')
         return await self.aput_value('return_control')
+
+    async def aput_engage_safety_cutoff(self):
+        logger.debug(f'Putting engage_safety_cutoff to {self.tel_addr}')
+        return await self.aput_value('engage_safety_cutoff')
+
+    async def aput_disengage_safety_cutoff(self):
+        logger.debug(f'Putting disengage_safety_cutoff to {self.tel_addr}')
+        return await self.aput_value('disengage_safety_cutoff')
+
+    async def aget_safety_cutoff_state(self) -> Dict:
+        logger.debug(f'Getting safety_cutoff_state from {self.tel_addr}')
+        ret = await self.aget_value('safety_cutoff_state')
+        return ret
+
+    async def asubscribe_safety_cutoff_state(self, callback: Callable | None = None,
+                                             time_of_data_tolerance: float | None = None):
+        logger.debug(f'Subscribing safety_cutoff_state from {self.tel_addr}')
+        return await self.subscribe('safety_cutoff_state', callback=callback,
+                                    time_of_data_tolerance=time_of_data_tolerance)
