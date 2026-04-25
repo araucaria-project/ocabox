@@ -21,7 +21,7 @@ confuse = ">=1.7.0"
 astropy = ">=1.6.0"
 pyaraucaria = {git = "https://github.com/araucaria-project/pyaraucaria.git"}
 ctc = {git = "https://github.com/araucaria-project/ctc.git"}
-serverish = {version = "^1.1.1", extras = ["messenger"]}
+serverish = {version = "^2.0.0", extras = ["messenger"]}
 
 
 
