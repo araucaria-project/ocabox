@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ocabox"
-version = "2.4.0" # Change version also in ocabox_bases.py and CHANGELOG.md
+version = "2.4.1" # Change version also in ocabox_bases.py and CHANGELOG.md
 license = "MIT"
 description = ""
 authors = ["Ernest Lasek <elasek@akond.com>, Mikołaj Kałuszyński <mkalusz@camk.edu.pl>"]
@@ -16,7 +16,7 @@ packages = [
 
 [tool.poetry.dependencies]
 python = "^3.10"
-ocabox-common = {git = "https://github.com/araucaria-project/ocabox-common.git"}
+ocabox-common = {git = "https://github.com/araucaria-project/ocabox-common.git", tag = "1.0.3"}
 confuse = ">=1.7.0"
 astropy = ">=1.6.0"
 pyaraucaria = {git = "https://github.com/araucaria-project/pyaraucaria.git"}
