@@ -2,6 +2,20 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+### Added
+- `Observatory.subscribe_async(... error_policy=ErrorPolicy.SERVICE)` —
+  per-severity policy for subscription error handling. Re-exports
+  `ErrorPolicy`, `SeverityAction`, `SeverityRule`, `Backoff`, `Budget`,
+  and `LogPolicy` from `ob` for convenience. Default keeps the historical
+  GUI-friendly behaviour (`ErrorPolicy.INTERACTIVE`); long-running
+  daemons should opt into `ErrorPolicy.SERVICE` so the library handles
+  recovery from transient `severity=NORMAL` errors instead of letting
+  the subscription die. Requires the matching ocabox-common change
+  (`obcom.comunication.error_policy`).
+### Deprecated
+- `ignore_errors=` on `subscribe_async` — pass `error_policy=` instead.
+  Still honoured for one release with a `DeprecationWarning`.
+
 ## [2.4.0]
 ### Added
 - support for safety cut-off in `safety` module of `ocaboxapi`
