@@ -2,6 +2,8 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+
+## [2.5.0]
 ### Added
 - `Observatory.subscribe_async(... error_policy=ErrorPolicy.SERVICE)` —
   per-severity policy for subscription error handling. Re-exports
@@ -10,8 +12,13 @@ All notable changes to this project will be documented in this file.
   GUI-friendly behaviour (`ErrorPolicy.INTERACTIVE`); long-running
   daemons should opt into `ErrorPolicy.SERVICE` so the library handles
   recovery from transient `severity=NORMAL` errors instead of letting
-  the subscription die. Requires the matching ocabox-common change
+  the subscription die. Requires ocabox-common 1.1.0
   (`obcom.comunication.error_policy`).
+### Requires
+- `ocabox-common` 1.1.0+ at runtime, for `obcom.comunication.error_policy`.
+  The `pyproject.toml` dep entry tracks ocabox-common's default branch
+  by URL, so a `poetry update` after ocabox-common 1.1.0 merges picks up
+  the new module automatically.
 ### Deprecated
 - `ignore_errors=` on `subscribe_async` — pass `error_policy=` instead.
   Still honoured for one release with a `DeprecationWarning`.
