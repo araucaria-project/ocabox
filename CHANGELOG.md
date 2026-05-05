@@ -3,7 +3,7 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-## [2.4.1]
+## [2.5.1]
 ### Added
 - `CameraBusy(OcaboxServerError)` exception, raised by `Observatory.put_async` when the server returns `TreeOtherError(code=4008)`. Lets callers react to "device busy" cleanly instead of string-matching wrapped Alpaca errors.
 - `Camera.STARTEXPOSURE_REQUEST_TIMEOUT` (default 30 s, configurable). `aput_startexposure` uses it as `request_timeout` to prevent the silent first-attempt comm-timeout that armed the camera while the planner thought the put failed and retried, colliding with `DRV_ACQUIRING`.
@@ -11,6 +11,27 @@ All notable changes to this project will be documented in this file.
 ### Dependencies
 - ocabox-common bumped to `1.0.3` (registers code 4008 description).
 - Runtime: requires ocabox-server `2.3.13` to actually receive code `4008` (otherwise `CameraBusy` never fires; falls through to legacy `OcaboxServerError` path with no behavioural regression).
+
+
+## [2.5.0]
+### Added
+- `Observatory.subscribe_async(... error_policy=ErrorPolicy.SERVICE)` —
+  per-severity policy for subscription error handling. Re-exports
+  `ErrorPolicy`, `SeverityAction`, `SeverityRule`, `Backoff`, `Budget`,
+  and `LogPolicy` from `ob` for convenience. Default keeps the historical
+  GUI-friendly behaviour (`ErrorPolicy.INTERACTIVE`); long-running
+  daemons should opt into `ErrorPolicy.SERVICE` so the library handles
+  recovery from transient `severity=NORMAL` errors instead of letting
+  the subscription die. Requires ocabox-common 1.1.0
+  (`obcom.comunication.error_policy`).
+### Requires
+- `ocabox-common` 1.1.0+ at runtime, for `obcom.comunication.error_policy`.
+  The `pyproject.toml` dep entry tracks ocabox-common's default branch
+  by URL, so a `poetry update` after ocabox-common 1.1.0 merges picks up
+  the new module automatically.
+### Deprecated
+- `ignore_errors=` on `subscribe_async` — pass `error_policy=` instead.
+  Still honoured for one release with a `DeprecationWarning`.
 
 ## [2.4.0]
 ### Added

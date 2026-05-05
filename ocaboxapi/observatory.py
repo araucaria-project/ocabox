@@ -4,6 +4,7 @@ import logging
 import asyncio
 
 from obcom.comunication.base_client_api import BaseClientAPI
+from obcom.comunication.error_policy import ErrorPolicy
 from time import time
 import os
 import pwd
@@ -224,7 +225,8 @@ class Observatory:
                               parameters_dict: dict = None,
                               callback_method=None,
                               async_callback_method=None,
-                              ignore_errors: bool = False
+                              ignore_errors: bool = False,
+                              error_policy: ErrorPolicy | None = None,
                               ):
         """Subscribes to specified address
         Blocks!
@@ -232,6 +234,13 @@ class Observatory:
         @param time_of_data_tolerance:
         @param delay: minimum delay between pulling updated values
         @param parameters_dict: additional parameters for get
+        @param ignore_errors: deprecated; pass ``error_policy=ErrorPolicy.SERVICE``
+            for the same effect on long-running daemons.
+        @param error_policy: per-severity error-handling policy. See
+            :class:`obcom.comunication.error_policy.ErrorPolicy`. The
+            default (``ErrorPolicy.INTERACTIVE``) stops the subscription
+            on NORMAL/CRITICAL so a human consumer can react. Daemons
+            that should self-recover should pass ``ErrorPolicy.SERVICE``.
         """
 
         if time_of_data_tolerance is None:
@@ -251,7 +260,8 @@ class Observatory:
                                                        max_missed_msg=max_missed_msg,
                                                        callback_method=callback_method,
                                                        async_callback_method=async_callback_method,
-                                                       ignore_errors=ignore_errors
+                                                       ignore_errors=ignore_errors,
+                                                       error_policy=error_policy,
                                                        )
         self._subscribers.append(cq)
         return cq
