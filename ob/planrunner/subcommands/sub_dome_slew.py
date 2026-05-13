@@ -17,7 +17,7 @@ class DomeSlew(BaseSubCommand):
 
     def __init__(
             self, id: str, telescope: 'Telescope', info_callback: Dict[str, Callable], uobi: int,
-            seq_data: Optional['Seq'] = None, follow_tol: float = 3.0, az: Optional[float] = None,
+            seq_data = None, follow_tol: float = 3.0, az: Optional[float] = None,
             slew_tolerance: float = 3.0, name: str = 'dome-slew', param: Optional[Dict[str, Any]] = None) -> None:
 
         self.seq_data = seq_data
