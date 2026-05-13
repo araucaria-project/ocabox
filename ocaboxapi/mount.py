@@ -161,9 +161,9 @@ class Mount(TelescopeComponent):
         """
         logger.debug(f'Getting nasmythport from {self.tel_addr}')
         ret = await self.aget_value(
-            param_name='action',
-            request_timeout=None,
-            parameters_dict={"Action" :"getcurrentnasmythport" ,"Parameters" :"true"}
+            param_name='nasmythport',
+            # request_timeout=None,
+            # parameters_dict={"Action" :"getcurrentnasmythport" ,"Parameters" :"true"}
         )
         return ret
 
@@ -171,10 +171,10 @@ class Mount(TelescopeComponent):
                                     time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing nasmythport from {self.tel_addr}')
         return await self.subscribe(
-            param_name='action',
+            param_name='nasmythport',
             callback=callback,
             time_of_data_tolerance=time_of_data_tolerance,
-            parameters_dict={"Action" :"getcurrentnasmythport" ,"Parameters" :"true"}
+            # parameters_dict={"Action" :"getcurrentnasmythport" ,"Parameters" :"true"}
         )
 
     async def aget_tertiarystatus(self) -> Dict:
@@ -187,9 +187,9 @@ class Mount(TelescopeComponent):
         """
         logger.debug(f'Getting tertiarystatus from {self.tel_addr}')
         ret = await self.aget_value(
-            param_name='action',
-            request_timeout=None,
-            parameters_dict={"Action" :"tertiarystatus" ,"Parameters" :"true"}
+            param_name='tertiarystatus',
+            # request_timeout=None,
+            # parameters_dict={"Action" :"tertiarystatus" ,"Parameters" :"true"}
         )
         return ret
 
@@ -197,10 +197,10 @@ class Mount(TelescopeComponent):
                                     time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing tertiarystatus from {self.tel_addr}')
         return await self.subscribe(
-            param_name='action',
+            param_name='tertiarystatus',
             callback=callback,
             time_of_data_tolerance=time_of_data_tolerance,
-            parameters_dict={"Action": "tertiarystatus", "Parameters": "true"}
+            # parameters_dict={"Action": "tertiarystatus", "Parameters": "true"}
         )
 
     async def aput_slewtocoo(self, ra: float, dec: float) -> None:
