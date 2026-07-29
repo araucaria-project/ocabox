@@ -9,6 +9,7 @@ from ocaboxapi.filterwheel import FilterWheel
 from ocaboxapi.access import AccessGrantor
 from ocaboxapi.covercalibrator import CoverCalibrator
 from ocaboxapi.rotator import Rotator
+from ocaboxapi.tertiary import Tertiary
 from ocaboxapi.cctv import CCTV
 from ocaboxapi.guiding_controller import GuidingController
 from ob.planrunner.config_general import ConfigGeneral
@@ -25,6 +26,7 @@ __all__ = ['Observatory',
            'ClientAPI',
            'CoverCalibrator',
            'Rotator',
+           'Tertiary',
            'CCTV',
            'GuidingController',
            'ConfigGeneral',

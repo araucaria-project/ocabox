@@ -3,6 +3,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.6.1]
+### Added
+- `Tertiary` (M3) read-back — `aget_`/`asubscribe_` for `nasmythport`
+  (current physical port, int), `tertiarystatus` (full dict) and its
+  decomposed fields `angle`, `moving`, `motoron`, `errorraised`, `portname`,
+  matching ocabox-server ≥ 2.3.18 (`tertiaryOCA` kind). Port numbers are
+  physical AutoSlew ports (jk15: 1=ADR6/beso, 2=ADR10/andor) — NOT 0-based.
+  `aput_selectnasmythport` unchanged.
+
 ## [2.6.0]
 ### Added
 - `OcaboxError` base exception and `OcaboxDeviceError` — the server now
