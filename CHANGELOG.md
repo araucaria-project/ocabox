@@ -3,6 +3,16 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.5.1]
+### Added
+- `CameraBusy(OcaboxServerError)` exception, raised by `Observatory.put_async` when the server returns `TreeOtherError(code=4008)`. Lets callers react to "device busy" cleanly instead of string-matching wrapped Alpaca errors.
+- `Camera.STARTEXPOSURE_REQUEST_TIMEOUT` (default 30 s, configurable). `aput_startexposure` uses it as `request_timeout` to prevent the silent first-attempt comm-timeout that armed the camera while the planner thought the put failed and retried, colliding with `DRV_ACQUIRING`.
+- `AbstractBase.proof_put_startexposure`: specialised retry that catches `CameraBusy` and disambiguates by attempt number, never inheriting a foreign acquisition. Used by `sub_camera_exposure.py` and `auto_flat.py`.
+### Dependencies
+- ocabox-common bumped to `1.0.3` (registers code 4008 description).
+- Runtime: requires ocabox-server `2.3.13` to actually receive code `4008` (otherwise `CameraBusy` never fires; falls through to legacy `OcaboxServerError` path with no behavioural regression).
+
+
 ## [2.5.0]
 ### Added
 - `Observatory.subscribe_async(... error_policy=ErrorPolicy.SERVICE)` —

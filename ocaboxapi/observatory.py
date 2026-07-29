@@ -17,7 +17,7 @@ from ob.util_functions.asyncio_util_functions import wait_for_psce
 from obcom.comunication.comunication_error import CommunicationTimeoutError, CommunicationRuntimeError
 
 from ocaboxapi import ClientAPI
-from ocaboxapi.exceptions import OcaboxServerError, OcaboxAccessDenied
+from ocaboxapi.exceptions import OcaboxServerError, OcaboxAccessDenied, CameraBusy
 
 if TYPE_CHECKING:
     from ocaboxapi.telescope import Telescope
@@ -167,6 +167,8 @@ class Observatory:
             if res.error.code == 1004:
                 logger.info(f' {address}: {res.error.message}')
                 raise OcaboxAccessDenied(f'Access Denied for {address}: {res.error}')
+            elif res.error.code == 4008:
+                raise CameraBusy(f'Camera busy for PUT {address}: {res.error}')
             else:
                 raise OcaboxServerError(f'OCABOX error on PUT {address}: {res.error}')
         try:

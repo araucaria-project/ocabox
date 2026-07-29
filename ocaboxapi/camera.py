@@ -345,9 +345,16 @@ class Camera(TelescopeComponent):
         logger.debug(f'Putting subexposure duration to {self.tel_addr}')
         await self.aput_value('subexposureduration', SubExposureDuration=duration)
 
-    async def aput_startexposure(self, duration: float, light: bool) -> None:
+    STARTEXPOSURE_REQUEST_TIMEOUT: float = 30.0  # seconds
+
+    async def aput_startexposure(self, duration: float, light: bool,
+                                 request_timeout: float | None = None) -> None:
         logger.debug(f'Putting start exposure to {self.tel_addr}')
-        await self.aput_value('startexposure', Duration=duration, Light=light)
+        if request_timeout is None:
+            request_timeout = time.time() + self.STARTEXPOSURE_REQUEST_TIMEOUT
+        await self._put_async('startexposure',
+                              request_timeout=request_timeout,
+                              parameters_dict={'Duration': duration, 'Light': light})
 
     async def aput_stopexposure(self) -> None:
         logger.debug(f'Putting stop exposure to {self.tel_addr}')
