@@ -30,7 +30,7 @@ All notable changes to this project will be documented in this file.
   observed `slewtocoordinatesasync` retry storm on a TCU in error state.
   Transient `OcaboxServerError` / `CommunicationTimeoutError` still retry.
 ### Dependencies
-- Requires ocabox-common ≥ `1.1.2` (code 4009) and ocabox-server ≥ `2.3.16`
+- Requires ocabox-common ≥ `1.2.1` (code 4009) and ocabox-server ≥ `2.3.16`
   (emits 4009). Degrades gracefully against older servers: a device fault
   without 4009 still surfaces as `OcaboxServerError`.
 
