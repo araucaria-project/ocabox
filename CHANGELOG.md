@@ -3,6 +3,37 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.6.0]
+### Added
+- `OcaboxError` base exception and `OcaboxDeviceError` — the server now
+  distinguishes a fault *reported by an instrument/driver* (code 4009, the
+  server worked and relayed the device error) from a TIC-internal failure.
+  `OcaboxDeviceError` carries structured metadata so callers never parse
+  message strings or read server logs: `.code`, `.component_name`,
+  `.device_errno` (e.g. ASCOM `1035` "Telescope is not ready, please clear
+  Error"), `.severity`, `.address`, `.operation`.
+- `OcaboxError.from_response(operation, address, error)` — single source of
+  truth mapping a server error *code* to the right exception *type*. Used by
+  **both** `get_async` and `put_async`, fixing the prior GET/PUT asymmetry
+  (GET previously collapsed 1004/4008 into a generic error).
+### Changed
+- Exception hierarchy is now rooted at `OcaboxError`:
+  `OcaboxServerError`, `OcaboxAccessDenied`, `OcaboxDeviceError` all derive
+  from it, and `CameraBusy` moved under `OcaboxDeviceError` (a busy device is a
+  device state, code 4008). `OcaboxAccessDenied` is no longer a bare `Exception`
+  sibling. Catch `OcaboxError` for "any ocabox error"; `telescope.py` and
+  `component.py` were widened accordingly.
+- Planrunner `proof_put` / `proof_put_startexposure` **no longer auto-retry**
+  `OcaboxDeviceError` (incl. `CameraBusy`) or `OcaboxAccessDenied` — a latched
+  device state or a denied request won't clear by repeating, so they fail fast
+  (logged to the journal) instead of hammering the device. This stops the
+  observed `slewtocoordinatesasync` retry storm on a TCU in error state.
+  Transient `OcaboxServerError` / `CommunicationTimeoutError` still retry.
+### Dependencies
+- Requires ocabox-common ≥ `1.1.2` (code 4009) and ocabox-server ≥ `2.3.16`
+  (emits 4009). Degrades gracefully against older servers: a device fault
+  without 4009 still surfaces as `OcaboxServerError`.
+
 ## [2.5.1]
 ### Added
 - `CameraBusy(OcaboxServerError)` exception, raised by `Observatory.put_async` when the server returns `TreeOtherError(code=4008)`. Lets callers react to "device busy" cleanly instead of string-matching wrapped Alpaca errors.

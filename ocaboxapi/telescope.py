@@ -13,7 +13,7 @@ from ocaboxapi.filterwheel import FilterWheel
 from ocaboxapi.covercalibrator import CoverCalibrator
 from ocaboxapi.rotator import Rotator
 from ocaboxapi.plan import ObservationPlan
-from ocaboxapi.exceptions import OcaboxServerError
+from ocaboxapi.exceptions import OcaboxError
 from ocaboxapi.cycle_time import CycleTime
 from ocaboxapi.guiding_controller import GuidingController
 from typing import Dict, Optional
@@ -154,7 +154,7 @@ class Telescope(AbstractTelescope):
                                                   request_timeout=request_timeout)
             if va == True or va == False:
                 return {'alpaca': True}
-        except (CommunicationTimeoutError, CommunicationRuntimeError, OcaboxServerError):
+        except (CommunicationTimeoutError, CommunicationRuntimeError, OcaboxError):
             return {'alpaca': False}
 
     async def shutdown(self, dome_park_az: Optional[float] = None) -> None:
