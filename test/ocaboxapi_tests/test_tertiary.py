@@ -30,7 +30,6 @@ class TertiaryClientApiTest(unittest.IsolatedAsyncioTestCase):
                               ('aget_angle', 'angle'),
                               ('aget_moving', 'moving'),
                               ('aget_motoron', 'motoron'),
-                              ('aget_errorraised', 'errorraised'),
                               ('aget_portname', 'portname')]:
             with self.subTest(method=method):
                 tertiary.aget_value.reset_mock()
@@ -45,7 +44,6 @@ class TertiaryClientApiTest(unittest.IsolatedAsyncioTestCase):
                               ('asubscribe_angle', 'angle'),
                               ('asubscribe_moving', 'moving'),
                               ('asubscribe_motoron', 'motoron'),
-                              ('asubscribe_errorraised', 'errorraised'),
                               ('asubscribe_portname', 'portname')]:
             with self.subTest(method=method):
                 tertiary.subscribe.reset_mock()

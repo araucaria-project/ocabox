@@ -16,6 +16,11 @@ class Tertiary(TelescopeComponent):
     ``tertiarystatus`` dict plus its decomposed fields. Port numbers are the
     physical AutoSlew ports (jk15: 1=ADR6/beso, 2=ADR10/andor) — NOT 0-based;
     the observatory config maps them to instruments via ``tertiary_position``.
+
+    A controller fault surfaces through the standard error model: every
+    decomposed read raises ``OcaboxDeviceError`` (server code 4009) while the
+    controller reports an error — there is no vendor-specific error flag to
+    poll. ``tertiarystatus`` stays readable as the raw diagnostic view.
     """
 
     nasmythport = OcaBoxParam(default=0, doc="Current physical M3 nasmyth port")
@@ -24,7 +29,6 @@ class Tertiary(TelescopeComponent):
     angle = OcaBoxParam(default=0.0, doc="M3 rotation angle [deg]")
     moving = OcaBoxParam(default=False, doc="True while M3 is rotating")
     motoron = OcaBoxParam(default=False, doc="True when M3 motor is powered")
-    errorraised = OcaBoxParam(default=False, doc="True when M3 controller reports an error")
     portname = OcaBoxParam(default='', doc="Vendor name of the current port, e.g. 'ADR10'")
 
     async def aget_nasmythport(self) -> int:
@@ -75,16 +79,6 @@ class Tertiary(TelescopeComponent):
                                  time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing tertiary motoron from {self.tel_addr}')
         return await self.subscribe('motoron', callback=callback,
-                                    time_of_data_tolerance=time_of_data_tolerance)
-
-    async def aget_errorraised(self) -> bool:
-        logger.debug(f'Getting tertiary errorraised from {self.tel_addr}')
-        return await self.aget_value('errorraised')
-
-    async def asubscribe_errorraised(self, callback: Optional[Callable] = None,
-                                     time_of_data_tolerance: float | None = None):
-        logger.debug(f'Subscribing tertiary errorraised from {self.tel_addr}')
-        return await self.subscribe('errorraised', callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
     async def aget_portname(self) -> str:
