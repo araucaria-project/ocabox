@@ -34,7 +34,13 @@ class TertiaryClientApiTest(unittest.IsolatedAsyncioTestCase):
             with self.subTest(method=method):
                 tertiary.aget_value.reset_mock()
                 await getattr(tertiary, method)()
-                tertiary.aget_value.assert_awaited_once_with(param)
+                tertiary.aget_value.assert_awaited_once_with(param, time_of_data_tolerance=None)
+
+    async def test_getters_forward_freshness_tolerance(self):
+        """TIC's cache default is 60 s — movement polling must be able to demand fresh data."""
+        tertiary = _make_tertiary()
+        await tertiary.aget_moving(time_of_data_tolerance=0.4)
+        tertiary.aget_value.assert_awaited_once_with('moving', time_of_data_tolerance=0.4)
 
     async def test_subscriptions_use_server_attribute_names(self):
         tertiary = _make_tertiary()
