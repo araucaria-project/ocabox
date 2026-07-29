@@ -3,6 +3,16 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.6.2]
+### Added
+- `Component.aget_value` (and the `Tertiary` getters) accept
+  `time_of_data_tolerance` — forwarded to the server so caches must refresh
+  entries older than the tolerance. Without it TIC serves values up to its
+  default 60 s tolerance, which made movement polling (`aget_moving`) and
+  post-move status reads observe stale state on components that no service
+  subscribes to (found live on jk15 M3: `set 1 --wait` returned instantly
+  showing the old port).
+
 ## [2.6.1]
 ### Added
 - `Tertiary` (M3) read-back — `aget_`/`asubscribe_` for `nasmythport`
