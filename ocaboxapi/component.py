@@ -11,7 +11,7 @@ from obcom.comunication.cycle_query import BaseCycleQuery
 
 from obcom.data_colection.value_call import ValueResponse
 from ocaboxapi import Observatory
-from ocaboxapi.exceptions import OcaboxServerError
+from ocaboxapi.exceptions import OcaboxError
 
 logger = logging.getLogger('component')
 
@@ -59,7 +59,7 @@ class Component(param.Parameterized):
         """Asynchronously put value, value will be pushed to OCABOX"""
         try:
             return await self._aput_value(param_name, **kwargs)
-        except OcaboxServerError as e:
+        except OcaboxError as e:
             logger.info(f'Error while putting value {kwargs} for {param_name}: {e}')
             raise
 
