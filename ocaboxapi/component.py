@@ -11,7 +11,7 @@ from obcom.comunication.cycle_query import BaseCycleQuery
 
 from obcom.data_colection.value_call import ValueResponse
 from ocaboxapi import Observatory
-from ocaboxapi.exceptions import OcaboxServerError
+from ocaboxapi.exceptions import OcaboxError
 
 logger = logging.getLogger('component')
 
@@ -38,12 +38,20 @@ class Component(param.Parameterized):
         self._watchers: list = []
         self._initialize()
 
-    async def aget_value(self, param_name, request_timeout: float = None, **parameters_dict):
-        """Asynchronously get value, value will be pulled form OCABOX only if needed"""
-        if self._needs_refresh(param_name):
+    async def aget_value(self, param_name, request_timeout: float = None,
+                         time_of_data_tolerance: float = None, **parameters_dict):
+        """Asynchronously get value, value will be pulled form OCABOX only if needed
+
+        time_of_data_tolerance: maximum acceptable age (s) of the value; forwarded
+        to the server so caches must refresh when their entry is older (the TIC
+        default is 60 s — pass an explicit tolerance when observing changing
+        state, e.g. polling a movement).
+        """
+        if self._needs_refresh(param_name, time_of_data_tolerance):
             try:
                 new_val = await self._apull_value(param_name,
                                                   request_timeout=request_timeout,
+                                                  time_of_data_tolerance=time_of_data_tolerance,
                                                   parameters_dict=parameters_dict)
                 setattr(self, f'_{param_name}_value', new_val)
                 return new_val
@@ -59,7 +67,7 @@ class Component(param.Parameterized):
         """Asynchronously put value, value will be pushed to OCABOX"""
         try:
             return await self._aput_value(param_name, **kwargs)
-        except OcaboxServerError as e:
+        except OcaboxError as e:
             logger.info(f'Error while putting value {kwargs} for {param_name}: {e}')
             raise
 
@@ -203,8 +211,9 @@ class Component(param.Parameterized):
         setattr(self, f'_{param_name}_timestamp', time.time())
         self.param.trigger(param_name)
 
-    def _needs_refresh(self, param_name):
-        time_of_data_tolerance = self.observatory.time_of_data_tolerance
+    def _needs_refresh(self, param_name, time_of_data_tolerance: float | None = None):
+        if time_of_data_tolerance is None:
+            time_of_data_tolerance = self.observatory.time_of_data_tolerance
         return (getattr(self, f'_{param_name}_timestamp') + time_of_data_tolerance < time.time()
                 or getattr(self, f'_{param_name}_value') is None)
 
@@ -218,8 +227,12 @@ class Component(param.Parameterized):
             setattr(self, f'_{param_name}_value', self._pull_value(param_name))
         return getattr(self, f'_{param_name}_value')
 
-    async def _apull_value(self, param_name, request_timeout: float | None = None, parameters_dict: dict | None = None):
-        return await self._get_async(param_name, request_timeout=request_timeout, parameters_dict=parameters_dict)
+    async def _apull_value(self, param_name, request_timeout: float | None = None,
+                           time_of_data_tolerance: float | None = None,
+                           parameters_dict: dict | None = None):
+        return await self._get_async(param_name, request_timeout=request_timeout,
+                                     time_of_data_tolerance=time_of_data_tolerance,
+                                     parameters_dict=parameters_dict)
 
     def _pull_value(self, param_name):
         return self._get(param_name)

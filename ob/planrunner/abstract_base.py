@@ -16,7 +16,7 @@ from serverish.messenger.msg_reader import MsgReader
 from serverish.messenger.msg_single_read import MsgSingleReader
 
 from ob.planrunner.iter_async import AsyncRangeIter
-from ocaboxapi.exceptions import OcaboxServerError, OcaboxAccessDenied
+from ocaboxapi.exceptions import OcaboxServerError, OcaboxAccessDenied, OcaboxDeviceError, CameraBusy
 from obcom.comunication.comunication_error import CommunicationTimeoutError
 
 
@@ -98,6 +98,10 @@ class AbstractBase(ABC):
     async def _value_proof_get(name: str, awaitab: Callable, expect_type) -> Any:
         try:
             res = await awaitab()
+        except OcaboxDeviceError as e:
+            # incl. CameraBusy — device/driver reported a fault; a read can't fix it
+            logger.warning(f'Tic OcaboxDeviceError (errno={e.device_errno}): {e}')
+            return None
         except OcaboxServerError:
             logger.warning(f'Tic OcaboxServerError.')
             return None
@@ -154,6 +158,21 @@ class AbstractBase(ABC):
                 await awaitab(**kwargs)
                 # logger.info(f'Sending proof put request {name} req no. {n}/{n_times}')
                 return True
+            except OcaboxDeviceError as e:
+                # incl. CameraBusy. The device/driver reported a fault (e.g.
+                # "Telescope is not ready, please clear Error"). A latched device
+                # state won't clear on retry — fail fast so the operator acts
+                # instead of hammering the device with the same command.
+                inf = f'Device error on {name} (errno={e.device_errno}): {e} - not retrying'
+                logger.error(inf)
+                await self.journal.error(f'msg: {inf}, uid: {pwd.getpwuid(os.getuid())[0]}.')
+                return False
+            except OcaboxAccessDenied as e:
+                # A denied request won't be granted by repeating it — fail fast.
+                inf = f'Access denied on {name}: {e} - not retrying'
+                logger.error(inf)
+                await self.journal.error(f'msg: {inf}, uid: {pwd.getpwuid(os.getuid())[0]}.')
+                return False
             except OcaboxServerError:
                 inf = f'Tic OcaboxServerError'
                 logger.warning(inf)
@@ -166,13 +185,65 @@ class AbstractBase(ABC):
                 await self.journal.warning(f'msg: {inf}, uid: {pwd.getpwuid(os.getuid())[0]}.')
                 await asyncio.sleep(wait)
                 continue
-            except OcaboxAccessDenied:
-                inf = f'Tic OcaboxAccessDenied'
+        logger.error(f'Sending {name} failed')
+        return False
+
+    async def proof_put_startexposure(self, camera, duration: float, light: bool,
+                                      n_times: int = 5, wait: float = 3.0) -> bool:
+        """`proof_put` specialised for `camera.aput_startexposure`. Treats `CameraBusy`
+        on retry #N>1 as success when attempt #1 raised `CommunicationTimeoutError`
+        (our prior put silently armed the camera); fails fast on `CameraBusy` at
+        attempt #1 (foreign acquisition - do not inherit)."""
+        first_was_comm_timeout = False
+        async for n in AsyncRangeIter(start=1, end=n_times):
+            try:
+                logger.info(f'Proof put startexposure start (attempt {n}/{n_times}).')
+                await camera.aput_startexposure(duration=duration, light=light)
+                return True
+            except CameraBusy:
+                if n == 1:
+                    inf = 'Camera busy with prior acquisition - refusing to inherit foreign exposure'
+                    logger.error(inf)
+                    await self.journal.error(f'msg: {inf}, uid: {pwd.getpwuid(os.getuid())[0]}.')
+                    return False
+                if first_was_comm_timeout:
+                    inf = 'Camera busy after first-attempt comm timeout - claiming acquisition started by attempt #1'
+                    logger.warning(inf)
+                    await self.journal.warning(f'msg: {inf}, uid: {pwd.getpwuid(os.getuid())[0]}.')
+                    return True
+                inf = f'Tic CameraBusy'
                 logger.warning(inf)
                 await self.journal.warning(f'msg: {inf}, uid: {pwd.getpwuid(os.getuid())[0]}.')
                 await asyncio.sleep(wait)
                 continue
-        logger.error(f'Sending {name} failed')
+            except OcaboxDeviceError as e:
+                # A non-busy device/driver fault (CameraBusy is handled above).
+                # Latched device state won't clear on retry — fail fast.
+                inf = f'Device error on startexposure (errno={e.device_errno}): {e} - not retrying'
+                logger.error(inf)
+                await self.journal.error(f'msg: {inf}, uid: {pwd.getpwuid(os.getuid())[0]}.')
+                return False
+            except OcaboxServerError:
+                inf = f'Tic OcaboxServerError'
+                logger.warning(inf)
+                await self.journal.warning(f'msg: {inf}, uid: {pwd.getpwuid(os.getuid())[0]}.')
+                await asyncio.sleep(wait)
+                continue
+            except CommunicationTimeoutError:
+                if n == 1:
+                    first_was_comm_timeout = True
+                inf = f'Tic CommunicationTimeoutError'
+                logger.warning(inf)
+                await self.journal.warning(f'msg: {inf}, uid: {pwd.getpwuid(os.getuid())[0]}.')
+                await asyncio.sleep(wait)
+                continue
+            except OcaboxAccessDenied as e:
+                # A denied request won't be granted by repeating it — fail fast.
+                inf = f'Access denied on startexposure: {e} - not retrying'
+                logger.error(inf)
+                await self.journal.error(f'msg: {inf}, uid: {pwd.getpwuid(os.getuid())[0]}.')
+                return False
+        logger.error(f'Sending startexposure failed')
         return False
 
     @staticmethod

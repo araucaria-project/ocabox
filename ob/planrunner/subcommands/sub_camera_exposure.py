@@ -715,8 +715,8 @@ class CameraExposure(BaseSubCommand):
         instrument_data = await self.get_instrument_data()
         self.readout_time_start = time.time()
         self.exp_time_start = datetime.datetime.utcnow()
-        exe = await self.proof_put(
-            awaitab=self.camera.aput_startexposure, duration=float(exposure_time), light=self.light
+        exe = await self.proof_put_startexposure(
+            camera=self.camera, duration=float(exposure_time), light=self.light
         )
         if not exe:
             self.skipped = True

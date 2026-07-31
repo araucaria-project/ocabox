@@ -304,8 +304,8 @@ class AutoFlatNoTest:
         )
 
         _ts_start = datetime.datetime.utcnow().timestamp()
-        exe = await self.ce.proof_put(
-            awaitab=self.ce.camera.aput_startexposure, duration=self.test_exposure_time, light=self.ce.light
+        exe = await self.ce.proof_put_startexposure(
+            camera=self.ce.camera, duration=self.test_exposure_time, light=self.ce.light
         )
 
         if not exe:

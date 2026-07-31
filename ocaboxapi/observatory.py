@@ -17,7 +17,7 @@ from ob.util_functions.asyncio_util_functions import wait_for_psce
 from obcom.comunication.comunication_error import CommunicationTimeoutError, CommunicationRuntimeError
 
 from ocaboxapi import ClientAPI
-from ocaboxapi.exceptions import OcaboxServerError, OcaboxAccessDenied
+from ocaboxapi.exceptions import OcaboxError, OcaboxServerError
 
 if TYPE_CHECKING:
     from ocaboxapi.telescope import Telescope
@@ -166,14 +166,12 @@ class Observatory:
         if not res.status:
             if res.error.code == 1004:
                 logger.info(f' {address}: {res.error.message}')
-                raise OcaboxAccessDenied(f'Access Denied for {address}: {res.error}')
-            else:
-                raise OcaboxServerError(f'OCABOX error on PUT {address}: {res.error}')
+            raise OcaboxError.from_response('PUT', address, res.error)
         try:
             ret = res.value.v
         except Exception as e:
             logger.error(f'Return value not exisit regardless status=True, when setting value to {address}: {e}')
-            raise OcaboxServerError(f'Value error on PUT {address}: {res.error}', e)
+            raise OcaboxServerError(f'Value error on PUT {address}: {res.error}') from e
         return ret
 
     async def get_async(self, address: str,
@@ -206,12 +204,12 @@ class Observatory:
             raise e
 
         if not res.status:
-            raise OcaboxServerError(f'OCABOX error on GET {address}: {res.error}')
+            raise OcaboxError.from_response('GET', address, res.error)
         try:
             ret = res.value.v
         except Exception as e:
             logger.error(f'Return value not exisit regardless status=True when getting value from {address}: {e}')
-            raise OcaboxServerError(f'Value error on GET {address}: {res.error}', e)
+            raise OcaboxServerError(f'Value error on GET {address}: {res.error}') from e
 
         return ret
 
