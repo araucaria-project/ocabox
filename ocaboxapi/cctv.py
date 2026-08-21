@@ -20,7 +20,7 @@ class CCTV(TelescopeComponent):
         logger.debug(f'Putting cctv ir to {on}')
         await self.aput_value('ir', state=on)
 
-    async def aget_ir(self) -> bool:
+    async def aget_ir(self) -> bool | None:
         logger.debug(f'Getting cctv ir status')
         ret =  await self.aget_value('ir')
         return ret

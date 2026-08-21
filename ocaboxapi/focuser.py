@@ -13,7 +13,7 @@ class Focuser(TelescopeComponent):
     ismoving = OcaBoxParam(default=False, doc="Focuser is moving")
     fansstatus = OcaBoxParam(default=0, doc="Mirror fans status")
 
-    async def aget_position(self) -> int:
+    async def aget_position(self) -> int | None:
         logger.debug(f'Getting focuser position from {self.tel_addr}')
         ret = await self.aget_value('position')
         return ret
@@ -22,7 +22,7 @@ class Focuser(TelescopeComponent):
         logger.debug(f'Subscribing focuser position from {self.tel_addr}')
         return await self.subscribe('position', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_tempcomp(self) -> bool:
+    async def aget_tempcomp(self) -> bool | None:
         logger.debug(f'Getting temp. compensation from {self.tel_addr}')
         ret = await self.aget_value('tempcomp')
         return ret
@@ -31,7 +31,7 @@ class Focuser(TelescopeComponent):
         logger.debug(f'Subscribing temp. compensation from {self.tel_addr}')
         return await self.subscribe('tempcomp', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_fansstatus(self) -> bool:
+    async def aget_fansstatus(self) -> bool | None:
         logger.debug(f'Getting dome fans status from {self.tel_addr}')
         ret = await self.aget_value('fansstatus')
         return ret
@@ -42,7 +42,7 @@ class Focuser(TelescopeComponent):
                                     callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_ismoving(self) -> bool:
+    async def aget_ismoving(self) -> bool | None:
         logger.debug(f'Getting focuser is moving from {self.tel_addr}')
         ret = await self.aget_value('ismoving')
         return ret

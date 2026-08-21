@@ -32,7 +32,7 @@ class Tertiary(TelescopeComponent):
     motoron = OcaBoxParam(default=False, doc="True when M3 motor is powered")
     portname = OcaBoxParam(default='', doc="Device name of the current port")
 
-    async def aget_nasmythport(self, time_of_data_tolerance: float | None = None) -> int:
+    async def aget_nasmythport(self, time_of_data_tolerance: float | None = None) -> int | None:
         logger.debug(f'Getting tertiary nasmythport from {self.tel_addr}')
         return await self.aget_value('nasmythport', time_of_data_tolerance=time_of_data_tolerance)
 
@@ -42,7 +42,7 @@ class Tertiary(TelescopeComponent):
         return await self.subscribe('nasmythport', callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_tertiarystatus(self, time_of_data_tolerance: float | None = None) -> Dict:
+    async def aget_tertiarystatus(self, time_of_data_tolerance: float | None = None) -> Dict | None:
         logger.debug(f'Getting tertiarystatus from {self.tel_addr}')
         return await self.aget_value('tertiarystatus', time_of_data_tolerance=time_of_data_tolerance)
 
@@ -52,7 +52,7 @@ class Tertiary(TelescopeComponent):
         return await self.subscribe('tertiarystatus', callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_angle(self, time_of_data_tolerance: float | None = None) -> float:
+    async def aget_angle(self, time_of_data_tolerance: float | None = None) -> float | None:
         logger.debug(f'Getting tertiary angle from {self.tel_addr}')
         return await self.aget_value('angle', time_of_data_tolerance=time_of_data_tolerance)
 
@@ -62,7 +62,7 @@ class Tertiary(TelescopeComponent):
         return await self.subscribe('angle', callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_moving(self, time_of_data_tolerance: float | None = None) -> bool:
+    async def aget_moving(self, time_of_data_tolerance: float | None = None) -> bool | None:
         logger.debug(f'Getting tertiary moving from {self.tel_addr}')
         return await self.aget_value('moving', time_of_data_tolerance=time_of_data_tolerance)
 
@@ -72,7 +72,7 @@ class Tertiary(TelescopeComponent):
         return await self.subscribe('moving', callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_motoron(self, time_of_data_tolerance: float | None = None) -> bool:
+    async def aget_motoron(self, time_of_data_tolerance: float | None = None) -> bool | None:
         logger.debug(f'Getting tertiary motoron from {self.tel_addr}')
         return await self.aget_value('motoron', time_of_data_tolerance=time_of_data_tolerance)
 
@@ -82,7 +82,7 @@ class Tertiary(TelescopeComponent):
         return await self.subscribe('motoron', callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_portname(self, time_of_data_tolerance: float | None = None) -> str:
+    async def aget_portname(self, time_of_data_tolerance: float | None = None) -> str | None:
         logger.debug(f'Getting tertiary portname from {self.tel_addr}')
         return await self.aget_value('portname', time_of_data_tolerance=time_of_data_tolerance)
 

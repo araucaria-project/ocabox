@@ -57,7 +57,7 @@ class MirrorCell(TelescopeComponent):
 
     # --- aggregate reads -----------------------------------------------------
 
-    async def aget_available(self, time_of_data_tolerance: float | None = None) -> bool:
+    async def aget_available(self, time_of_data_tolerance: float | None = None) -> bool | None:
         logger.debug(f'Getting mirrorcell available from {self.tel_addr}')
         return await self.aget_value('available', time_of_data_tolerance=time_of_data_tolerance)
 
@@ -67,7 +67,7 @@ class MirrorCell(TelescopeComponent):
         return await self.subscribe('available', callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_mirrorcellstatus(self, time_of_data_tolerance: float | None = None) -> Dict:
+    async def aget_mirrorcellstatus(self, time_of_data_tolerance: float | None = None) -> Dict | None:
         logger.debug(f'Getting mirrorcellstatus from {self.tel_addr}')
         return await self.aget_value('mirrorcellstatus', time_of_data_tolerance=time_of_data_tolerance)
 
@@ -77,7 +77,7 @@ class MirrorCell(TelescopeComponent):
         return await self.subscribe('mirrorcellstatus', callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_positions(self, time_of_data_tolerance: float | None = None) -> List[float]:
+    async def aget_positions(self, time_of_data_tolerance: float | None = None) -> List[float] | None:
         logger.debug(f'Getting mirrorcell positions from {self.tel_addr}')
         return await self.aget_value('positions', time_of_data_tolerance=time_of_data_tolerance)
 
@@ -87,7 +87,7 @@ class MirrorCell(TelescopeComponent):
         return await self.subscribe('positions', callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_motorstatuses(self, time_of_data_tolerance: float | None = None) -> List[int]:
+    async def aget_motorstatuses(self, time_of_data_tolerance: float | None = None) -> List[int] | None:
         logger.debug(f'Getting mirrorcell motorstatuses from {self.tel_addr}')
         return await self.aget_value('motorstatuses', time_of_data_tolerance=time_of_data_tolerance)
 
@@ -97,7 +97,7 @@ class MirrorCell(TelescopeComponent):
         return await self.subscribe('motorstatuses', callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_motorstatustexts(self, time_of_data_tolerance: float | None = None) -> List[str]:
+    async def aget_motorstatustexts(self, time_of_data_tolerance: float | None = None) -> List[str] | None:
         logger.debug(f'Getting mirrorcell motorstatustexts from {self.tel_addr}')
         return await self.aget_value('motorstatustexts', time_of_data_tolerance=time_of_data_tolerance)
 
@@ -107,7 +107,7 @@ class MirrorCell(TelescopeComponent):
         return await self.subscribe('motorstatustexts', callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_atsetpoint(self, time_of_data_tolerance: float | None = None) -> bool:
+    async def aget_atsetpoint(self, time_of_data_tolerance: float | None = None) -> bool | None:
         logger.debug(f'Getting mirrorcell atsetpoint from {self.tel_addr}')
         return await self.aget_value('atsetpoint', time_of_data_tolerance=time_of_data_tolerance)
 
@@ -117,7 +117,7 @@ class MirrorCell(TelescopeComponent):
         return await self.subscribe('atsetpoint', callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_moving(self, time_of_data_tolerance: float | None = None) -> bool:
+    async def aget_moving(self, time_of_data_tolerance: float | None = None) -> bool | None:
         logger.debug(f'Getting mirrorcell moving from {self.tel_addr}')
         return await self.aget_value('moving', time_of_data_tolerance=time_of_data_tolerance)
 
@@ -130,7 +130,7 @@ class MirrorCell(TelescopeComponent):
     # --- per-motor reads (one value per telemetry subject) -------------------
 
     async def aget_motor_position(self, index: int,
-                                  time_of_data_tolerance: float | None = None) -> float:
+                                  time_of_data_tolerance: float | None = None) -> float | None:
         """[m] Position of one motor; faults (4009) only on its own motor."""
         param = self._motor_param(index, 'position')
         logger.debug(f'Getting mirrorcell {param} from {self.tel_addr}')
@@ -144,7 +144,7 @@ class MirrorCell(TelescopeComponent):
                                     time_of_data_tolerance=time_of_data_tolerance)
 
     async def aget_motor_status(self, index: int,
-                                time_of_data_tolerance: float | None = None) -> int:
+                                time_of_data_tolerance: float | None = None) -> int | None:
         """Status code of one motor; stays readable while the motor is faulted."""
         param = self._motor_param(index, 'status')
         logger.debug(f'Getting mirrorcell {param} from {self.tel_addr}')
@@ -158,7 +158,7 @@ class MirrorCell(TelescopeComponent):
                                     time_of_data_tolerance=time_of_data_tolerance)
 
     async def aget_motor_statustext(self, index: int,
-                                    time_of_data_tolerance: float | None = None) -> str:
+                                    time_of_data_tolerance: float | None = None) -> str | None:
         """Status name of one motor; stays readable while the motor is faulted."""
         param = self._motor_param(index, 'statustext')
         logger.debug(f'Getting mirrorcell {param} from {self.tel_addr}')

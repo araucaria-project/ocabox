@@ -35,7 +35,7 @@ class AccessGrantor(TelescopeComponent):
                                     callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_is_access(self) -> bool:
+    async def aget_is_access(self) -> bool | None:
         logger.debug(f'Getting telescope is access from {self.tel_addr}')
         ret = await self.aget_value('is_access')
         return ret
@@ -69,7 +69,7 @@ class AccessGrantor(TelescopeComponent):
         logger.debug(f'Putting disengage_safety_cutoff to {self.tel_addr}')
         return await self.aput_value('disengage_safety_cutoff')
 
-    async def aget_safety_cutoff_state(self) -> Dict:
+    async def aget_safety_cutoff_state(self) -> Dict | None:
         logger.debug(f'Getting safety_cutoff_state from {self.tel_addr}')
         ret = await self.aget_value('safety_cutoff_state')
         return ret

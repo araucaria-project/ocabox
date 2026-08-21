@@ -17,27 +17,27 @@ class GuidingController(TelescopeComponent):
 
     #TODO get info about darks collection
 
-    async def aget_status(self) -> str:
+    async def aget_status(self) -> str | None:
         logger.debug(f'Getting guiding status {self.tel_addr}')
         ret = await self.aget_value(param_name='status')
         return ret
 
-    async def aget_exposure(self) -> float:
+    async def aget_exposure(self) -> float | None:
         logger.debug(f'Getting guiding exposure {self.tel_addr}')
         ret = await self.aget_value(param_name='exposure')
         return ret
 
-    async def aget_period(self) -> float:
+    async def aget_period(self) -> float | None:
         logger.debug(f'Getting guiding exposure {self.tel_addr}')
         ret = await self.aget_value(param_name='period')
         return ret
 
-    async def aget_calib_step(self) -> float:
+    async def aget_calib_step(self) -> float | None:
         logger.debug(f'Getting guiding calibration step {self.tel_addr}')
         ret = await self.aget_value(param_name='calib_step')
         return ret
 
-    async def aget_calib_data(self) -> Dict:
+    async def aget_calib_data(self) -> Dict | None:
         logger.debug(f'Getting guiding calibration data {self.tel_addr}')
         ret = await self.aget_value(param_name='calib_data')
         return ret

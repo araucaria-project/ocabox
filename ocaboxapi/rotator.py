@@ -16,7 +16,7 @@ class Rotator(TelescopeComponent):
     stepsize = OcaBoxParam(default=0, doc="Rotator stepsize")
     targetposition = OcaBoxParam(default=0, doc="Rotator target position")
 
-    async def aget_ismoving(self) -> bool:
+    async def aget_ismoving(self) -> bool | None:
         logger.debug(f'Getting rotator is moving from {self.tel_addr}')
         ret = await self.aget_value('ismoving')
         return ret
@@ -38,7 +38,7 @@ class Rotator(TelescopeComponent):
                                     callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_position(self) -> float:
+    async def aget_position(self) -> float | None:
         logger.debug(f'Getting rotator position from {self.tel_addr}')
         ret = await self.aget_value('position')
         return ret
@@ -51,7 +51,7 @@ class Rotator(TelescopeComponent):
                                     callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_reverse(self) -> bool:
+    async def aget_reverse(self) -> bool | None:
         logger.debug(f'Getting rotator reverse state from {self.tel_addr}')
         ret = await self.aget_value('reverse')
         return ret
@@ -60,7 +60,7 @@ class Rotator(TelescopeComponent):
         logger.debug(f'Subscribing rotator reverse state from {self.tel_addr}')
         return await self.subscribe('reverse', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_stepsize(self) -> float:
+    async def aget_stepsize(self) -> float | None:
         logger.debug(f'Getting rotator stepsize from {self.tel_addr}')
         ret = await self.aget_value('stepsize')
         return ret
@@ -71,7 +71,7 @@ class Rotator(TelescopeComponent):
                                     callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_targetposition(self) -> float:
+    async def aget_targetposition(self) -> float | None:
         logger.debug(f'Getting rotator target position from {self.tel_addr}')
         ret = await self.aget_value('targetposition')
         return ret

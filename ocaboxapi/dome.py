@@ -29,7 +29,7 @@ class Dome(TelescopeComponent):
     }
     shutter_code_to_status = {v: k for k, v in shutter_status_to_code.items()}
 
-    async def aget_az(self) -> float:
+    async def aget_az(self) -> float | None:
         logger.debug(f'Getting dome AZ from {self.tel_addr}')
         ret = await self.aget_value('azimuth')
         return ret
@@ -39,7 +39,7 @@ class Dome(TelescopeComponent):
         return await self.subscribe('azimuth', callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_shutterstatus(self) -> int:
+    async def aget_shutterstatus(self) -> int | None:
         logger.debug(f'Getting dome shutterstatus from {self.tel_addr}')
         ret = await self.aget_value('shutterstatus')
         return ret
@@ -58,7 +58,7 @@ class Dome(TelescopeComponent):
         logger.debug(f'Putting closeshutter to {self.tel_addr}')
         return await self.aput_value('closeshutter')
 
-    async def aget_slaved(self) -> bool:
+    async def aget_slaved(self) -> bool | None:
         logger.debug(f'Getting dome slaved from {self.tel_addr}')
         ret = await self.aget_value('slaved')
         return ret
@@ -68,7 +68,7 @@ class Dome(TelescopeComponent):
         return await self.subscribe('slaved', callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_slewing(self) -> bool:
+    async def aget_slewing(self) -> bool | None:
         logger.debug(f'Getting dome slewing from {self.tel_addr}')
         ret = await self.aget_value('slewing')
         return ret
@@ -78,7 +78,7 @@ class Dome(TelescopeComponent):
         return await self.subscribe('slewing', callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_atpark(self) -> bool:
+    async def aget_atpark(self) -> bool | None:
         logger.debug(f'Getting dome atpark from {self.tel_addr}')
         ret = await self.aget_value('atpark')
         return ret
@@ -115,7 +115,7 @@ class Dome(TelescopeComponent):
         logger.debug(f'Putting dome ventilators off to {self.tel_addr}')
         await self.aput_value('domefansturnoff')
 
-    async def aget_dome_fans_running(self) -> bool:
+    async def aget_dome_fans_running(self) -> bool | None:
         logger.debug(f'Getting dome ventilators are running from {self.tel_addr}')
         ret = await self.aget_value('domefansrunning')
         return ret

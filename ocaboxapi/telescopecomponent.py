@@ -39,7 +39,7 @@ class TelescopeComponent(Component):
         logger.debug(f'Subscribing connected from {self.tel_addr}')
         return await self.subscribe('connected', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_connected(self) -> bool:
+    async def aget_connected(self) -> bool | None:
         logger.debug(f'Getting  connected from {self.tel_addr}')
         ret = await self.aget_value('connected')
         return ret
@@ -53,7 +53,7 @@ class TelescopeComponent(Component):
         logger.debug(f'Subscribing name from {self.tel_addr}')
         return await self.subscribe('name', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_name(self) -> str:
+    async def aget_name(self) -> str | None:
         logger.debug(f'Getting name from {self.tel_addr}')
         ret = await self.aget_value('name')
         return ret
@@ -63,7 +63,7 @@ class TelescopeComponent(Component):
         logger.debug(f'Subscribing description from {self.tel_addr}')
         return await self.subscribe('description', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_description(self) -> str:
+    async def aget_description(self) -> str | None:
         logger.debug(f'Getting  description from {self.tel_addr}')
         ret = await self.aget_value('description')
         return ret

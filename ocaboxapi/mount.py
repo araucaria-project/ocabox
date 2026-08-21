@@ -22,7 +22,7 @@ class Mount(TelescopeComponent):
     errorstring = OcaBoxParam(default='', doc="Telescope errorstring")
     sideofpier = OcaBoxParam(default=0, doc="Telescope eq side of pier")
 
-    async def aget_ra(self) -> float:
+    async def aget_ra(self) -> float | None:
         logger.debug(f'Getting mount RA from {self.tel_addr}')
         ret = await self.aget_value('rightascension')
         return ret
@@ -32,7 +32,7 @@ class Mount(TelescopeComponent):
         return await self.subscribe('rightascension', callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_dec(self) -> float:
+    async def aget_dec(self) -> float | None:
         logger.debug(f'Getting mount DEC from {self.tel_addr}')
         ret = await self.aget_value('declination')
         return ret
@@ -42,7 +42,7 @@ class Mount(TelescopeComponent):
         return await self.subscribe('declination', callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_az(self) -> float:
+    async def aget_az(self) -> float | None:
         logger.debug(f'Getting mount AZ from {self.tel_addr}')
         ret = await self.aget_value('azimuth')
         return ret
@@ -52,7 +52,7 @@ class Mount(TelescopeComponent):
         return await self.subscribe('azimuth', callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_alt(self) -> float:
+    async def aget_alt(self) -> float | None:
         logger.debug(f'Getting mount ALT from {self.tel_addr}')
         ret = await self.aget_value('altitude')
         return ret
@@ -62,7 +62,7 @@ class Mount(TelescopeComponent):
         return await self.subscribe('altitude', callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_athome(self) -> bool:
+    async def aget_athome(self) -> bool | None:
         logger.debug(f'Getting mount athome from {self.tel_addr}')
         ret = await self.aget_value('athome')
         return ret
@@ -72,7 +72,7 @@ class Mount(TelescopeComponent):
         return await self.subscribe('athome', callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_atpark(self) -> bool:
+    async def aget_atpark(self) -> bool | None:
         logger.debug(f'Getting mount atpark from {self.tel_addr}')
         ret = await self.aget_value('atpark')
         return ret
@@ -82,7 +82,7 @@ class Mount(TelescopeComponent):
         return await self.subscribe('atpark', callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_slewing(self) -> bool:
+    async def aget_slewing(self) -> bool | None:
         logger.debug(f'Getting mount slewing from {self.tel_addr}')
         ret = await self.aget_value('slewing')
         return ret
@@ -92,7 +92,7 @@ class Mount(TelescopeComponent):
         return await self.subscribe('slewing', callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_tracking(self) -> bool:
+    async def aget_tracking(self) -> bool | None:
         logger.debug(f'Getting mount tracking from {self.tel_addr}')
         ret = await self.aget_value('tracking')
         return ret
@@ -102,7 +102,7 @@ class Mount(TelescopeComponent):
         return await self.subscribe('tracking', callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_ispulseguiding(self) -> bool:
+    async def aget_ispulseguiding(self) -> bool | None:
         logger.debug(f'Getting mount ispulseguiding from {self.tel_addr}')
         ret = await self.aget_value('ispulseguiding')
         return ret
@@ -114,7 +114,7 @@ class Mount(TelescopeComponent):
                                     callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_motorstatus(self) -> str:
+    async def aget_motorstatus(self) -> str | None:
         logger.debug(f'Getting mount motorstatus from {self.tel_addr}')
         ret = await self.aget_value('motorstatus')
         return ret
@@ -126,7 +126,7 @@ class Mount(TelescopeComponent):
                                     callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_errorstring(self) -> str:
+    async def aget_errorstring(self) -> str | None:
         logger.debug(f'Getting telescope errorstring from {self.tel_addr}')
         ret = await self.aget_value('errorstring')
         return ret
@@ -138,7 +138,7 @@ class Mount(TelescopeComponent):
                                     callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_sideofpier(self) -> int:
+    async def aget_sideofpier(self) -> int | None:
         logger.debug(f'Getting eq mount sideofpier from {self.tel_addr}')
         ret = await self.aget_value('sideofpier')
         return ret
