@@ -37,17 +37,17 @@ class Observatory:
         self.client_name = client_name
         self.software_id = software_id
         # What component getters do when a refresh fails — the client declares
-        # its nature once here (see ``OnReadError``). The implicit default is
-        # STALE (the historical behaviour) and will flip to RAISE in the 2.7
-        # line — set it explicitly to silence the warning and survive the flip.
+        # its nature once here (see ``OnReadError``). Since the 2.7 line the
+        # implicit default is RAISE: a read either yields data as fresh as
+        # requested or fails loudly — set the policy explicitly to silence
+        # the warning.
         if on_read_error is None:
-            self._on_read_error = OnReadError.STALE
+            self._on_read_error = OnReadError.RAISE
             logger.warning(
-                f"Observatory({client_name!r}): no on_read_error policy set — defaulting to STALE "
-                f"(failed reads serve the last cached value, the historical behaviour). "
-                f"ocabox 2.7 will default to RAISE: failed aget_* reads will raise OcaboxError "
-                f"(puts already raise). Pass on_read_error=OnReadError.STALE (GUIs) or "
-                f"OnReadError.RAISE explicitly to be ready.")
+                f"Observatory({client_name!r}): no on_read_error policy set — defaulting to RAISE "
+                f"(since ocabox 2.7): failed aget_* reads raise OcaboxError. GUIs that must keep "
+                f"rendering through blips: pass on_read_error=OnReadError.STALE; otherwise pass "
+                f"OnReadError.RAISE explicitly to silence this warning.")
         else:
             self._on_read_error = OnReadError(on_read_error)
         self.telescopes = {}

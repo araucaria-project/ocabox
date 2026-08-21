@@ -49,10 +49,10 @@ class Component(param.Parameterized):
         state, e.g. polling a movement).
 
         A failed refresh is handled per the observatory-wide read policy
-        (``Observatory(on_read_error=…)``, see ``OnReadError``): ``RAISE``
-        propagates the exception (e.g. ``OcaboxDeviceError``); ``STALE`` keeps
-        the historical stale-serving (the implicit default until the 2.7 line
-        flips it to ``RAISE``); ``NONE`` returns ``None``.
+        (``Observatory(on_read_error=…)``, see ``OnReadError``): the default
+        ``RAISE`` propagates the exception (e.g. ``OcaboxDeviceError``);
+        ``STALE`` keeps the historical stale-serving; ``NONE`` returns
+        ``None``.
         """
         if self._needs_refresh(param_name, time_of_data_tolerance):
             try:

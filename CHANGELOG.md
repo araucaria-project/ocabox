@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 ....
 
+## [2.7.0]
+### Changed
+- **BREAKING:** the implicit `on_read_error` default flipped **STALE → RAISE**
+  (announced by the 2.6.4 warning and the team note): an `Observatory`
+  constructed without an explicit policy now propagates `OcaboxError` from
+  failed `aget_*` reads instead of serving stale values. GUIs that must
+  render through blips: pass `OnReadError.STALE` explicitly. A warning still
+  nudges clients that set no policy. Deploy gate: all in-house clients (TOI,
+  pms, oca-monitor, ocabox-cli) adapted + a person at OCM.
+- `aget_*` return annotations across all component wrappers now include
+  `| None` (94 getters): honest under the STALE/NONE policies and the
+  first-read-unavailable case — previously they promised non-optional
+  results that the legacy behaviour never guaranteed.
+
 ## [2.6.4]
 ### Added
 - Per-observatory **read-error policy** —

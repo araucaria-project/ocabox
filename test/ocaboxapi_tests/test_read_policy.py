@@ -5,8 +5,8 @@ the stale cached value with a refreshed timestamp — so the error model built
 through the whole stack (server severity codes → ``OcaboxError`` hierarchy)
 never reached one-shot callers, and stale positions could masquerade as live
 telemetry. The policy makes the behaviour an explicit, per-client choice.
-The implicit default stays STALE (bit-for-bit historical) with a once-per-
-observatory warning; the ocabox 2.7 line flips the default to RAISE.
+Since the 2.7 line the implicit default is RAISE (announced by a warning in
+2.6.4); a once-per-observatory warning still nudges towards an explicit policy.
 """
 import unittest
 from unittest.mock import AsyncMock
@@ -33,16 +33,17 @@ def _cache_stale(component, param_name, value):
 
 class OnReadErrorPolicyTest(unittest.IsolatedAsyncioTestCase):
 
-    async def test_implicit_default_is_stale_and_warns_about_27_flip(self):
-        """No explicit policy: historical behaviour, plus the migration warning."""
+    async def test_implicit_default_is_raise_and_still_warns(self):
+        """No explicit policy: RAISE (the 2.7 flip), plus the declare-yourself warning."""
         with self.assertLogs('observatory', level='WARNING') as logs:
             observatory = Observatory(client_name='test-read-policy')
-        self.assertIn('2.7', '\n'.join(logs.output))
-        self.assertIs(observatory.on_read_error, OnReadError.STALE)
+        self.assertIn('RAISE', '\n'.join(logs.output))
+        self.assertIs(observatory.on_read_error, OnReadError.RAISE)
         tertiary = observatory.get_telescope('jk15').get_tertiary()
         tertiary._get_async = AsyncMock(side_effect=OcaboxDeviceError('fault', code=4009))
         _cache_stale(tertiary, 'moving', True)
-        self.assertIs(await tertiary.aget_moving(time_of_data_tolerance=1.0), True)
+        with self.assertRaises(OcaboxDeviceError):
+            await tertiary.aget_moving(time_of_data_tolerance=1.0)
 
     async def test_explicit_policy_is_silent(self):
         with self.assertNoLogs('observatory', level='WARNING'):

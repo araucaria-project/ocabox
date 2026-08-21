@@ -15,17 +15,16 @@ class OnReadError(Enum):
 
     Members:
 
-    * ``RAISE`` — propagate the exception (e.g. ``OcaboxDeviceError``).
-      The honest contract for CLIs, scripts and services: a read either yields
-      data satisfying the requested freshness or fails loudly. This is also
-      the semantics that maps onto the planned direct-NATS reads (serverish):
-      last published message older than the tolerance ⇒ error. **Becomes the
-      default in the ocabox 2.7 line** — an Observatory constructed without
-      an explicit policy logs a warning until then.
+    * ``RAISE`` (default since the 2.7 line) — propagate the exception
+      (e.g. ``OcaboxDeviceError``). The honest contract for CLIs, scripts and
+      services: a read either yields data satisfying the requested freshness
+      or fails loudly. This is also the semantics that maps onto the planned
+      direct-NATS reads (serverish): last published message older than the
+      tolerance ⇒ error. An Observatory constructed without an explicit
+      policy still logs a warning — declare your client's identity.
     * ``STALE`` — serve the last cached value and log a warning; the
-      historical GUI-friendly behaviour (pre-policy ``aget_value`` did this
-      unconditionally) and the implicit default until the 2.7 flip. For
-      displays that must keep rendering through blips.
+      historical GUI-friendly behaviour (the implicit default before 2.7).
+      For displays that must keep rendering through blips.
     * ``NONE`` — return ``None``. For callers that render "no data" themselves
       and want neither exceptions nor stale values.
 
