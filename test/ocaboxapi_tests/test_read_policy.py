@@ -78,6 +78,15 @@ class OnReadErrorPolicyTest(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(ValueError):
             Observatory(client_name='test-read-policy', on_read_error='explode')
 
+    async def test_policy_is_read_only(self):
+        """Set-once invariant enforced — a later (possibly unvalidated string)
+        assignment must fail loudly, not silently degrade to STALE."""
+        observatory = Observatory(client_name='test-read-policy',
+                                  on_read_error=OnReadError.RAISE)
+        with self.assertRaises(AttributeError):
+            observatory.on_read_error = 'stale'
+        self.assertIs(observatory.on_read_error, OnReadError.RAISE)
+
     async def test_successful_read_ignores_policy(self):
         tertiary = _tertiary(on_read_error=OnReadError.NONE)
         tertiary._get_async = AsyncMock(return_value=True)

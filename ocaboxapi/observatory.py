@@ -36,12 +36,12 @@ class Observatory:
         self._client = None
         self.client_name = client_name
         self.software_id = software_id
-        #: What component getters do when a refresh fails — the client declares
-        #: its nature once here (see ``OnReadError``). The implicit default is
-        #: STALE (the historical behaviour) and will flip to RAISE in the 2.7
-        #: line — set it explicitly to silence the warning and survive the flip.
+        # What component getters do when a refresh fails — the client declares
+        # its nature once here (see ``OnReadError``). The implicit default is
+        # STALE (the historical behaviour) and will flip to RAISE in the 2.7
+        # line — set it explicitly to silence the warning and survive the flip.
         if on_read_error is None:
-            self.on_read_error = OnReadError.STALE
+            self._on_read_error = OnReadError.STALE
             logger.warning(
                 f"Observatory({client_name!r}): no on_read_error policy set — defaulting to STALE "
                 f"(failed reads serve the last cached value, the historical behaviour). "
@@ -49,13 +49,21 @@ class Observatory:
                 f"(puts already raise). Pass on_read_error=OnReadError.STALE (GUIs) or "
                 f"OnReadError.RAISE explicitly to be ready.")
         else:
-            self.on_read_error = OnReadError(on_read_error)
+            self._on_read_error = OnReadError(on_read_error)
         self.telescopes = {}
         self.ephemeris = None
         self._subscribers = []
         self._nats_cfg_loader = NatsCfgLoader(config_stream, use_file=use_fallback_file,
                                               fallback_file=fallback_file_for_config)
         super().__init__()
+
+    @property
+    def on_read_error(self) -> OnReadError:
+        """The read-error policy (see ``OnReadError``) — the client's identity,
+        set once in the constructor; read-only so it cannot drift (an
+        accidental string assignment would bypass validation and silently
+        fall through to STALE in ``Component.aget_value``)."""
+        return self._on_read_error
 
     async def load_client_cfg(self, timeout: Optional[float] = None):
         """
