@@ -2,6 +2,9 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+....
+
+## [2.6.4]
 ### Added
 - Per-observatory **read-error policy** —
   `Observatory(on_read_error=OnReadError.RAISE | STALE | NONE)`: what
