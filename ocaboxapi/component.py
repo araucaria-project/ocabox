@@ -12,6 +12,7 @@ from obcom.comunication.cycle_query import BaseCycleQuery
 from obcom.data_colection.value_call import ValueResponse
 from ocaboxapi import Observatory
 from ocaboxapi.exceptions import OcaboxError
+from ocaboxapi.read_policy import OnReadError
 
 logger = logging.getLogger('component')
 
@@ -46,6 +47,12 @@ class Component(param.Parameterized):
         to the server so caches must refresh when their entry is older (the TIC
         default is 60 s — pass an explicit tolerance when observing changing
         state, e.g. polling a movement).
+
+        A failed refresh is handled per the observatory-wide read policy
+        (``Observatory(on_read_error=…)``, see ``OnReadError``): ``RAISE``
+        propagates the exception (e.g. ``OcaboxDeviceError``); ``STALE`` keeps
+        the historical stale-serving (the implicit default until the 2.7 line
+        flips it to ``RAISE``); ``NONE`` returns ``None``.
         """
         if self._needs_refresh(param_name, time_of_data_tolerance):
             try:
@@ -56,8 +63,18 @@ class Component(param.Parameterized):
                 setattr(self, f'_{param_name}_value', new_val)
                 return new_val
             except Exception  as e:
-                logger.warning(f'Refresh failed for {self.id}.{param_name} ({e}), serving stale data to prevent crash.')
-                # Cheat that the value is newer
+                policy = self.observatory.on_read_error
+                if policy is OnReadError.RAISE:
+                    raise
+                if policy is OnReadError.NONE:
+                    logger.warning(f'Refresh failed for {self.id}.{param_name} ({e}), '
+                                   f'returning None (policy NONE).')
+                    return None
+                logger.warning(f'Refresh failed for {self.id}.{param_name} ({e}), '
+                               f'serving stale data (policy STALE).')
+                # Cheat that the value is newer — a poor man's backoff, so a dead
+                # host is not re-polled on every repaint; goes away with the
+                # STALE_MARKED mode (see OnReadError).
                 setattr(self, f'_{param_name}_timestamp', time.time())
 
 

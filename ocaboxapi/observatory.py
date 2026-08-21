@@ -18,6 +18,7 @@ from obcom.comunication.comunication_error import CommunicationTimeoutError, Com
 
 from ocaboxapi import ClientAPI
 from ocaboxapi.exceptions import OcaboxError, OcaboxServerError
+from ocaboxapi.read_policy import OnReadError
 
 if TYPE_CHECKING:
     from ocaboxapi.telescope import Telescope
@@ -30,10 +31,25 @@ class Observatory:
     """The Observatory maintains connection to the single observatory server using `ocabox.Client`"""
 
     def __init__(self, client_name='DefaultClient', software_id=None, config_stream: str = None,
-                 use_fallback_file=False, fallback_file_for_config: str = None) -> None:
+                 use_fallback_file=False, fallback_file_for_config: str = None,
+                 on_read_error: OnReadError | str | None = None) -> None:
         self._client = None
         self.client_name = client_name
         self.software_id = software_id
+        #: What component getters do when a refresh fails — the client declares
+        #: its nature once here (see ``OnReadError``). The implicit default is
+        #: STALE (the historical behaviour) and will flip to RAISE in the 2.7
+        #: line — set it explicitly to silence the warning and survive the flip.
+        if on_read_error is None:
+            self.on_read_error = OnReadError.STALE
+            logger.warning(
+                f"Observatory({client_name!r}): no on_read_error policy set — defaulting to STALE "
+                f"(failed reads serve the last cached value, the historical behaviour). "
+                f"ocabox 2.7 will default to RAISE: failed aget_* reads will raise OcaboxError "
+                f"(puts already raise). Pass on_read_error=OnReadError.STALE (GUIs) or "
+                f"OnReadError.RAISE explicitly to be ready.")
+        else:
+            self.on_read_error = OnReadError(on_read_error)
         self.telescopes = {}
         self.ephemeris = None
         self._subscribers = []
