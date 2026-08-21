@@ -20,6 +20,7 @@ from typing import Dict, Optional
 from obcom.comunication.comunication_error import CommunicationTimeoutError, CommunicationRuntimeError
 
 from ocaboxapi.tertiary import Tertiary
+from ocaboxapi.mirrorcell import MirrorCell
 
 logger = logging.getLogger("telescope")
 
@@ -42,6 +43,7 @@ class Telescope(AbstractTelescope):
         self.cctvs = {}
         self.covercalibrators = {}
         self.tertiarys = {}
+        self.mirrorcells = {}
         self._access_grantor = None
         self._observation_plan = None
         self._cycle_time_calculator = None
@@ -79,6 +81,14 @@ class Telescope(AbstractTelescope):
         except LookupError:
             dev = Tertiary(id=id, telescope=self)
             self.tertiarys[id] = dev
+            return dev
+
+    def get_mirrorcell(self, id='mirrorcell') -> MirrorCell:
+        try:
+            return self.mirrorcells[id]
+        except LookupError:
+            dev = MirrorCell(id=id, telescope=self)
+            self.mirrorcells[id] = dev
             return dev
 
     def get_cctv(self, id='cctv') -> CCTV:
@@ -267,6 +277,8 @@ class Telescope(AbstractTelescope):
             comp.unsubscribe_all()
         for comp in self.tertiarys.values():
             comp.unsubscribe_all()
+        for comp in self.mirrorcells.values():
+            comp.unsubscribe_all()
         if self._access_grantor:
             self._access_grantor.unsubscribe_all()
         if self._guiding_controller:
@@ -299,6 +311,9 @@ class Telescope(AbstractTelescope):
             comp.reset_params_values()
         for comp in self.tertiarys.values():
             comp.unsubscribe_all()
+            comp.reset_params_values()
+        for comp in self.mirrorcells.values():
+            comp.unwatch_all()
             comp.reset_params_values()
         if self._access_grantor:
             self._access_grantor.unwatch_all()

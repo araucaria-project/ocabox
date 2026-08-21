@@ -3,6 +3,18 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.6.3]
+### Added
+- `MirrorCell` (M1 active collimation) client component —
+  `telescope.get_mirrorcell()` with `aget_`/`asubscribe_` for `available`,
+  `mirrorcellstatus`, `positions` (metres), `motorstatuses`,
+  `motorstatustexts`, `atsetpoint`, `moving`, and per-motor accessors
+  `aget_motor_{position,status,statustext}(index)` (+ subscriptions).
+  Commands: `amove_all_motors_to/offset`, `amove_one_motor_offset`,
+  `astop_one_motor`, `astop_all_motors` — ⚠️ never commanded on real
+  hardware yet (supervised test pending). Requires ocabox-server ≥ 2.4.0.
+  Error model and details in the class docstring.
+
 ## [2.6.2]
 ### Added
 - `Component.aget_value` (and the `Tertiary` getters) accept

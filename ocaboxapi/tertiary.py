@@ -11,15 +11,16 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 class Tertiary(TelescopeComponent):
     """Tertiary (M3) mirror.
 
-    Read-back is served by the server-side tertiary device (ocabox-server
-    ≥ 2.3.18, kind ``tertiaryOCA`` for ASA AutoSlew): ``nasmythport`` and the
-    ``tertiarystatus`` dict plus its decomposed fields. Port numbers are the
-    physical AutoSlew ports (jk15: 1=ADR6/beso, 2=ADR10/andor) — NOT 0-based;
-    the observatory config maps them to instruments via ``tertiary_position``.
+    Read-back is served by the server-side ``tertiary`` interface
+    (ocabox-server ≥ 2.3.18; which hardware implementation serves it is the
+    server's concern): ``nasmythport`` and the ``tertiarystatus`` dict plus
+    its decomposed fields. Port numbers are the physical mount ports — NOT
+    0-based; the observatory config maps them to instruments via
+    ``tertiary_position``.
 
     A controller fault surfaces through the standard error model: every
     decomposed read raises ``OcaboxDeviceError`` (server code 4009) while the
-    controller reports an error — there is no vendor-specific error flag to
+    controller reports an error — there is no device-specific error flag to
     poll. ``tertiarystatus`` stays readable as the raw diagnostic view.
     """
 
@@ -29,7 +30,7 @@ class Tertiary(TelescopeComponent):
     angle = OcaBoxParam(default=0.0, doc="M3 rotation angle [deg]")
     moving = OcaBoxParam(default=False, doc="True while M3 is rotating")
     motoron = OcaBoxParam(default=False, doc="True when M3 motor is powered")
-    portname = OcaBoxParam(default='', doc="Vendor name of the current port, e.g. 'ADR10'")
+    portname = OcaBoxParam(default='', doc="Device name of the current port")
 
     async def aget_nasmythport(self, time_of_data_tolerance: float | None = None) -> int:
         logger.debug(f'Getting tertiary nasmythport from {self.tel_addr}')
