@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ocabox"
-version = "2.6.4" # Change version also in ocabox_bases.py and CHANGELOG.md
+version = "2.6.5" # Change version also in ocabox_bases.py and CHANGELOG.md
 license = "MIT"
 description = ""
 authors = ["Ernest Lasek <elasek@akond.com>, Mikołaj Kałuszyński <mkalusz@camk.edu.pl>"]

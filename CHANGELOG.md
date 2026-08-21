@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 ....
 
+## [2.6.5]
+### Added
+- Planrunner fills the **M1 mirror-cell FITS cards** `M1-POS1..3` [µm] and
+  `M1-ATSET` in `prepare_header()` (raw frames get `OCASTD 1.1.3`). Positions
+  are converted metres → µm at this consumer; absence (wk06), a motor fault
+  or a communication problem yields empty cards and never fails or delays
+  the exposure. Details in `CameraExposure._m1_header_values`.
+### Dependencies
+- Requires pyaraucaria ≥ 2.14 (M1 cards in the `fits_header()` template) —
+  unpinned git dep, so deployments need `poetry update pyaraucaria`.
+
 ## [2.6.4]
 ### Added
 - Per-observatory **read-error policy** —
