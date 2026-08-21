@@ -2,6 +2,29 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+....
+
+## [2.6.4]
+### Added
+- Per-observatory **read-error policy** —
+  `Observatory(on_read_error=OnReadError.RAISE | STALE | NONE)`: what
+  `aget_*` getters do when a refresh fails. `RAISE` propagates the exception
+  (`OcaboxDeviceError` on 4009 etc.); `STALE` serves the last cached value
+  (the historical behaviour); `NONE` returns `None`. The policy is the
+  client's identity — set once, no per-call override; `aput_value` is
+  untouched (commands always raise). Future modes reserved: `STALE_MARKED`
+  (value + data timestamp — the native semantics of the planned direct-NATS
+  reads), `REPEAT` (bounded retry).
+### Deprecated
+- Constructing `Observatory` **without an explicit `on_read_error`**: the
+  implicit default stays `STALE` for now (bit-for-bit the old behaviour) and
+  logs a once-per-observatory warning — **the ocabox 2.7 line flips the
+  default to `RAISE`**. Under the old (and interim-default) behaviour a
+  failed read serves stale data with a refreshed timestamp, so the server's
+  error model (4009 device fault, 2002 absent subsystem) never reaches
+  one-shot callers and stale values can masquerade as live telemetry. GUIs
+  that must render through blips: pass `OnReadError.STALE` explicitly;
+  CLIs/services: `OnReadError.RAISE`.
 
 ## [2.6.3]
 ### Added
