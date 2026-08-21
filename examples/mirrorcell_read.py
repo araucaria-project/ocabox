@@ -39,13 +39,13 @@ async def main():
             print(f'motor {index}: {text}')
 
         # subscription: prints every change of `moving` for half a minute
-        def on_moving(responses):
-            for response in responses:
-                if response.value is not None:
-                    print('moving:', response.value.v)
+        # (the callback is a param watcher — it receives one Event object)
+        def on_moving(event):
+            print('moving:', event.new)
 
-        cq = await cell.asubscribe_moving(callback=on_moving, time_of_data_tolerance=1.0)
+        cq, watcher = await cell.asubscribe_moving(callback=on_moving, time_of_data_tolerance=1.0)
         await asyncio.sleep(30)
+        cell.unwatch(watcher)
         cell.unsubscribe(cq)
     finally:
         await observatory.aunsubscribe_all()
