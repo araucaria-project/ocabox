@@ -39,9 +39,9 @@ class TelescopeComponent(Component):
         logger.debug(f'Subscribing connected from {self.tel_addr}')
         return await self.subscribe('connected', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_connected(self) -> bool:
+    async def aget_connected(self, time_of_data_tolerance: float | None = None) -> bool:
         logger.debug(f'Getting  connected from {self.tel_addr}')
-        ret = await self.aget_value('connected')
+        ret = await self.aget_value('connected', time_of_data_tolerance=time_of_data_tolerance)
         return ret
 
     async def aput_connect(self, connect: bool):
@@ -53,9 +53,9 @@ class TelescopeComponent(Component):
         logger.debug(f'Subscribing name from {self.tel_addr}')
         return await self.subscribe('name', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_name(self) -> str:
+    async def aget_name(self, time_of_data_tolerance: float | None = None) -> str:
         logger.debug(f'Getting name from {self.tel_addr}')
-        ret = await self.aget_value('name')
+        ret = await self.aget_value('name', time_of_data_tolerance=time_of_data_tolerance)
         return ret
 
     async def asubscribe_description(self, callback: Optional[Callable] = None,
@@ -63,8 +63,8 @@ class TelescopeComponent(Component):
         logger.debug(f'Subscribing description from {self.tel_addr}')
         return await self.subscribe('description', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_description(self) -> str:
+    async def aget_description(self, time_of_data_tolerance: float | None = None) -> str:
         logger.debug(f'Getting  description from {self.tel_addr}')
-        ret = await self.aget_value('description')
+        ret = await self.aget_value('description', time_of_data_tolerance=time_of_data_tolerance)
         return ret
 
