@@ -309,11 +309,18 @@ class Component(param.Parameterized):
             f'to refresh, subscribe, or declare a LAST_GOOD/NONE policy.')
 
     def _is_subscribed(self, param_name) -> bool:
-        """True when a LIVE subscription owns this param's contract.
+        """True when a LIVE, CONTRACT-ENFORCING subscription owns this param.
 
-        A cycle query that terminated on its own (STOP policy) never leaves
-        ``self.subscribed`` — its params must fall back to the local age
-        judgment instead of serving an aging value under the exemption.
+        Two conditions, both required for the age-judgment exemption:
+
+        * the cycle query is still running — a STOP-terminated query never
+          leaves ``self.subscribed``, and its params must fall back to the
+          local judgment instead of serving an aging value forever;
+        * the query *declared a value policy* — only then does the server
+          (or the client library) push a rich ``Value(None)`` past T2. An
+          undeclared (INTERACTIVE/SERVICE-style) subscription retries
+          silently through an outage, so the local value it feeds says
+          nothing about freshness and must still be judged here.
         """
         for holder in self.subscribed:
             if holder.id != param_name:
@@ -321,6 +328,9 @@ class Component(param.Parameterized):
             cq = holder.cq
             if cq is None or not hasattr(cq, 'is_stopped'):
                 return True  # test stubs / exotic holders: assume live
+            policy = getattr(cq, '_error_policy', None)
+            if policy is None or getattr(policy, 'value_policy', None) is None:
+                continue  # live but not contract-enforcing — no exemption
             try:
                 if not cq.is_stopped():
                     return True

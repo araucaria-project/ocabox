@@ -138,6 +138,55 @@ class SyncPropertyAgeTest(unittest.TestCase):
         _cache_stale(tertiary, 'moving', True)
         self.assertIs(tertiary.moving, True)
 
+    def test_live_undeclared_subscription_does_not_exempt(self):
+        """A live INTERACTIVE/SERVICE-style subscription (no value_policy)
+        never pushes a rich None — its params must still be age-judged."""
+        from types import SimpleNamespace
+        from obcom.comunication.error_policy import ErrorPolicy as EP
+        observatory = Observatory(client_name='t', policy='interactive',
+                                  time_of_data_tolerance=0.5)
+        tertiary = observatory.get_telescope('jk15').get_tertiary()
+        _cache_stale(tertiary, 'moving', True)
+        live_undeclared = SimpleNamespace(is_stopped=lambda: False,
+                                          _error_policy=EP.SERVICE)
+        tertiary.subscribed.append(tertiary.CQHolder(cq=live_undeclared, id='moving'))
+        try:
+            with self.assertRaises(OcaboxStaleValueError):
+                _ = tertiary.moving
+        finally:
+            tertiary.subscribed.clear()
+
+    def test_stopped_declared_subscription_does_not_exempt(self):
+        from types import SimpleNamespace
+        from obcom.comunication.error_policy import ErrorPolicy as EP
+        observatory = Observatory(client_name='t', policy='interactive',
+                                  time_of_data_tolerance=0.5)
+        tertiary = observatory.get_telescope('jk15').get_tertiary()
+        _cache_stale(tertiary, 'moving', True)
+        dead_declared = SimpleNamespace(is_stopped=lambda: True,
+                                        _error_policy=EP.DISPLAY)
+        tertiary.subscribed.append(tertiary.CQHolder(cq=dead_declared, id='moving'))
+        try:
+            with self.assertRaises(OcaboxStaleValueError):
+                _ = tertiary.moving
+        finally:
+            tertiary.subscribed.clear()
+
+    def test_live_declared_subscription_exempts(self):
+        from types import SimpleNamespace
+        from obcom.comunication.error_policy import ErrorPolicy as EP
+        observatory = Observatory(client_name='t', policy='interactive',
+                                  time_of_data_tolerance=0.5)
+        tertiary = observatory.get_telescope('jk15').get_tertiary()
+        _cache_stale(tertiary, 'moving', True)
+        live_declared = SimpleNamespace(is_stopped=lambda: False,
+                                        _error_policy=EP.DISPLAY)
+        tertiary.subscribed.append(tertiary.CQHolder(cq=live_declared, id='moving'))
+        try:
+            self.assertIs(tertiary.moving, True)
+        finally:
+            tertiary.subscribed.clear()
+
     def test_subscribed_param_is_exempt_from_age_judgment(self):
         """A live subscription owns the contract — the pushed value is the
         contract-compliant view even when its change-ts is old."""
