@@ -4,7 +4,18 @@ from enum import Enum
 
 
 class OnReadError(Enum):
-    """Per-observatory policy for a failed component read refresh.
+    """DEPRECATED alias — use ``Observatory(policy=…)`` and the unified
+    ``obcom.comunication.error_policy.ValuePolicy`` axis instead.
+
+    Mapping: ``RAISE``→``ValuePolicy.RAISE``, ``STALE``→``ValuePolicy.LAST_GOOD``,
+    ``NONE``→``ValuePolicy.NONE``. Constructing an ``Observatory`` with
+    ``on_read_error=`` still works (one deprecation warning) but never
+    declares a policy on the wire. The 2.7 default flip announced below has
+    happened. The ``STALE_MARKED``/``REPEAT`` placeholders are subsumed by
+    the Staleness Contract (rich ``Value(None)`` tags and per-severity
+    ``ErrorPolicy`` rules respectively).
+
+    Historical documentation of the per-observatory policy:
 
     Applies to ``Component.aget_value`` (hence every ``aget_*`` getter) when
     pulling a fresh value fails — a device fault (server 4009), an absent

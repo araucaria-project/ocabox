@@ -30,8 +30,9 @@ the full path of an error: where it is raised in the **ocabox-server** daemon
 
   | Mode | Retry? | Configurable? |
   |---|---|---|
-  | Subscription (`subscribe` / `subscribe_async`) | Yes — via `ErrorPolicy` | **Yes** (`error_policy=`) |
-  | Simple query (`aget_value` / `aput_value`) | No | No (one shot, `request_timeout` only) |
+  | Subscription (`subscribe` / `subscribe_async`) | Yes — via `ErrorPolicy` (default: the observatory-wide `policy`) | **Yes** (`policy=` / deprecated `error_policy=`) |
+  | Simple query (`aget_value`) | No retry, but a failed refresh is masked while the cache satisfies T2, then judged by `value_policy` (§2.7) | **Yes** (`value_policy=`, `max_data_age=`) |
+  | Simple put (`aput_value`) | No | No (one shot, `request_timeout` only) |
   | Command (planrunner) | Yes — hardcoded `n_times=5, wait=3s` | No (own ad-hoc retry) |
 
 ---
@@ -196,7 +197,7 @@ Exception
 |---|---|
 | `Client` (ZMQ, `client.py`) | Raises `CommunicationTimeoutError`/`CommunicationRuntimeError`; does not swallow. |
 | `Observatory.get_async/put_async` | Re-raises comm errors; translates `status=False` to ocaboxapi exceptions. |
-| `Component.aget_value` (`component.py:41-56`) | **Swallows all exceptions**, logs WARNING, serves **stale cached value** (GUI-survivability). Bumps timestamp → suppresses re-fetch for the tolerance window. |
+| `Component.aget_value` | Failed refresh: serves the cached value while it satisfies `max_data_age` (T2); past T2 applies `value_policy` — RAISE (default) / NONE / LAST_GOOD (§2.7). No timestamp cheat: every read re-asks, the server negative cache absorbs the hammering. |
 | `Component.aput_value` (`:58-64`) | Logs INFO, then **re-raises** `OcaboxError` (any subclass). |
 | `Component.subscribe` callback (`:105-129`) | On `status=False` logs `ERROR`; no watcher fires. |
 | `Observatory.get` (sync) | **Not implemented** — logs error, returns `'n/a'`. |
@@ -206,11 +207,15 @@ Exception
 Introduced PR #268 (`feat/error-policy`, ocabox 2.5.0 / ocabox-common 1.1.0).
 Defined in `obcom/comunication/error_policy.py`, re-exported from `ob/__init__.py`.
 
-**Applies to subscriptions only.** Pass via
-`Observatory.subscribe_async(..., error_policy=...)` (`observatory.py:229`).
+Since ocabox 2.7 the policy is the client's identity, set once:
+`Observatory(policy='interactive'|'service'|'display'|ErrorPolicy)` — every
+subscription inherits it; per-call override via
+`subscribe_async(..., policy=...)` (`error_policy=` is a deprecated alias).
 
-**Model:** `ErrorPolicy{temporary, normal, critical}`, each a
-`SeverityRule(action, backoff, budget, log)`.
+**Model:** `ErrorPolicy{temporary, normal, critical, value_policy}` — three
+per-severity `SeverityRule(action, backoff, budget, log)` (the *transport*
+axis) plus `value_policy ∈ {RAISE, NONE, LAST_GOOD}` (the *truth* axis, §2.7;
+`None` = undeclared → pre-contract behaviour, nothing extra on the wire).
 
 | `SeverityAction` | Behavior |
 |---|---|
@@ -224,17 +229,19 @@ Defined in `obcom/comunication/error_policy.py`, re-exported from `ob/__init__.p
 
 **Presets:**
 
-| Preset | TEMPORARY | NORMAL | CRITICAL | Use for |
-|---|---|---|---|---|
-| `INTERACTIVE` *(default)* | RETRY (exp 0.1→5 s) | **STOP** | STOP | GUIs — human reacts |
-| `SERVICE` | RETRY (exp) | **RETRY** (staged 2s×3→10s×6→60s∞, log 3+hourly) | STOP | Daemons that self-heal |
-| `FAIL_FAST` | RETRY fixed 0.1 s, budget 3 | STOP | STOP | CLI / tests |
+| Preset | TEMPORARY | NORMAL | CRITICAL | value_policy | Use for |
+|---|---|---|---|---|---|
+| `INTERACTIVE` *(default)* | RETRY (exp 0.1→5 s) | **STOP** | STOP | — (RAISE locally) | scripts, CLI — caller reacts |
+| `SERVICE` | RETRY (exp) | **RETRY** (staged 2s×3→10s×6→60s∞, log 3+hourly) | STOP | — (RAISE locally) | daemons that self-heal |
+| `DISPLAY` | RETRY (exp) | RETRY (staged) | **NOTIFY** (staged) | **NONE** | GUIs/walls — render '—' + `value_tags()` |
+| `FAIL_FAST` | RETRY fixed 0.1 s, budget 3 | STOP | STOP | — (RAISE locally) | CLI / tests |
 
 **Deprecation:** `ignore_errors=` is deprecated in favor of `error_policy=`
 (emits `DeprecationWarning`, honored one more release).
 
-> ⚠️ `Component.subscribe` does **not** forward `error_policy` — to use a
-> non-default policy, call `Observatory.subscribe_async` directly. See §4 #5.
+> `Component.subscribe` inherits the observatory-wide policy (set it once in
+> the constructor); it forwards `max_data_age=` but not a per-call policy —
+> for that call `Observatory.subscribe_async` directly.
 
 ### 2.4 The three modes
 
@@ -244,9 +251,11 @@ severity drives RETRY/NOTIFY/STOP inside the cycle-query loop. Default `INTERACT
 Code 4004 is silently renewed regardless of policy. `status=False` with `error=None`
 → raises `CommunicationRuntimeError`.
 
-**(b) Simple queries** — `aget_value` / `aput_value`. **No policy, no retry.** GET
-swallows-and-serves-stale; PUT re-raises. One shot, governed only by `request_timeout`
-(absolute deadline = `time() + delta`).
+**(b) Simple queries** — `aget_value` / `aput_value`. **No transport retry.**
+GET applies the truth axis (§2.7): failed refresh → cached value while within
+`max_data_age`, then `value_policy` decides (RAISE default). PUT re-raises,
+always — deliberately outside the value policy. One shot, governed by
+`request_timeout` (absolute deadline = `time() + delta`).
 
 **(c) Commands (planrunner)** — own application-level retry, predating `ErrorPolicy`
 (`ob/planrunner/abstract_base.py`). Retry only what a retry can fix:
@@ -290,6 +299,48 @@ operator-facing errors are independent of Python logging.
   gracefully against servers that don't emit 4008.
 
 ---
+
+### 2.7 Staleness Contract — the temporal model and the truth axis (2.7.0)
+
+Full design: vault `Architecture/Staleness Contract (unified read policy)`.
+Three thresholds govern every read:
+
+| | Meaning | Parameter | Default |
+|---|---|---|---|
+| **T0** | "don't call me more often than this" (push rate cap) | `delay` | 5 s |
+| **T1** | preferred freshness — "fresher: serve; older: refresh" | `time_of_data_tolerance` | 60 s (wire) / 0.5 s (`Observatory`) |
+| **T2** | truth bound — "older than this must not be presented" | `max_data_age` | `2 * T1` |
+
+`(T1, T2]` is the repair window: refresh problems are masked and retried
+there; only past T2 does `value_policy` decide what you get:
+
+| `value_policy` | Past T2 you get |
+|---|---|
+| `RAISE` *(default)* | the underlying exception (`OcaboxStaleValueError` for sync property reads) |
+| `NONE` | a **rich None**: subscriptions deliver `Value(None, ts=now, tags={reason: <error code>, last_good: <v>, last_good_ts: <ts>})`; `aget_value` returns bare `None` |
+| `LAST_GOOD` | the aging value, forever (bare-`.v` clients that prefer old data over no data) |
+
+Usage:
+
+```python
+obs = Observatory(client_name='my-gui', policy='display')          # identity, once
+await comp.subscribe('azimuth', cb, time_of_data_tolerance=5,      # T1
+                     max_data_age=30)                              # T2 (else 2*T1)
+# cb receives v=None when truth expires; comp.value_tags('azimuth')
+# then holds {reason, last_good, last_good_ts} for grey-out rendering.
+
+v = await comp.aget_value('azimuth', time_of_data_tolerance=5,     # pull path
+                          value_policy='none', max_data_age=30)    # per-call override
+```
+
+Wire/deployment notes: a *declaring* policy (e.g. `DISPLAY`) puts
+`value_policy` into request_data — requires **ocabox-server ≥ 2.5.2** on the
+way to devices (≥ 2.6 for server-side enforcement); `max_data_age` is a plain
+`ValueRequest` field, safe against any server. Legacy
+`Observatory(on_read_error=…)` still works (deprecated) and maps onto the
+truth axis locally without declaring anything on the wire. Params with a live
+subscription are exempt from the sync-property age judgment — the
+subscription owns the contract.
 
 ## 3. Changing the severity of a specific error (maintainers)
 

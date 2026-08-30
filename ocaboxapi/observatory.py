@@ -3,8 +3,10 @@ from __future__ import annotations
 import logging
 import asyncio
 
+import warnings
+
 from obcom.comunication.base_client_api import BaseClientAPI
-from obcom.comunication.error_policy import ErrorPolicy
+from obcom.comunication.error_policy import ErrorPolicy, ValuePolicy
 from time import time
 import os
 import pwd
@@ -30,26 +32,80 @@ logger = logging.getLogger("observatory")
 class Observatory:
     """The Observatory maintains connection to the single observatory server using `ocabox.Client`"""
 
+    #: string aliases accepted wherever a policy is expected
+    POLICY_PRESETS = {
+        'interactive': ErrorPolicy.INTERACTIVE,
+        'service': ErrorPolicy.SERVICE,
+        'display': ErrorPolicy.DISPLAY,
+        'fail_fast': ErrorPolicy.FAIL_FAST,
+    }
+
     def __init__(self, client_name='DefaultClient', software_id=None, config_stream: str = None,
                  use_fallback_file=False, fallback_file_for_config: str = None,
-                 on_read_error: OnReadError | str | None = None) -> None:
+                 on_read_error: OnReadError | str | None = None,
+                 policy: ErrorPolicy | str | None = None,
+                 time_of_data_tolerance: float | None = None,
+                 max_data_age: float | None = None) -> None:
         self._client = None
         self.client_name = client_name
         self.software_id = software_id
-        # What component getters do when a refresh fails — the client declares
-        # its nature once here (see ``OnReadError``). The implicit default is
-        # STALE (the historical behaviour) and will flip to RAISE in the 2.7
-        # line — set it explicitly to silence the warning and survive the flip.
-        if on_read_error is None:
-            self._on_read_error = OnReadError.STALE
+        # ----- Unified read policy (Staleness Contract, ocabox-common#8) -----
+        # One object declares the client's identity for both axes: how the
+        # transport nurses errors (per-severity actions, subscriptions) and
+        # what the client receives once a value breaks its own tolerance
+        # (value_policy: RAISE / NONE / LAST_GOOD). Presets: INTERACTIVE
+        # (scripts/CLI), SERVICE (daemons), DISPLAY (GUIs — declares NONE
+        # on the wire, requires ocabox-server >= 2.6 on the way to devices).
+        #
+        # ``on_read_error`` is a deprecated alias: it maps onto the local
+        # value semantics only and deliberately does NOT declare a policy on
+        # the wire, so a legacy client upgraded to this line stays safe
+        # against pre-2.5.2 servers (the 2.3.12 unknown-field bug class).
+        if policy is not None and on_read_error is not None:
+            raise ValueError("Pass either 'policy' or the deprecated 'on_read_error', not both")
+        self._value_policy_local: ValuePolicy
+        if on_read_error is not None:
+            warnings.warn(
+                "'on_read_error' is deprecated; use policy=ErrorPolicy presets "
+                "(e.g. Observatory(policy='display')) — OnReadError maps onto its value_policy axis.",
+                DeprecationWarning, stacklevel=2)
+            mapped = OnReadError(on_read_error)
+            self._policy = ErrorPolicy.INTERACTIVE
+            self._value_policy_local = {
+                OnReadError.RAISE: ValuePolicy.RAISE,
+                OnReadError.STALE: ValuePolicy.LAST_GOOD,
+                OnReadError.NONE: ValuePolicy.NONE,
+            }[mapped]
+        elif policy is None:
+            # The flip announced through the 2.6 line: an undeclared client
+            # now gets the honest default — failed/stale reads RAISE.
+            self._policy = ErrorPolicy.INTERACTIVE
+            self._value_policy_local = ValuePolicy.RAISE
             logger.warning(
-                f"Observatory({client_name!r}): no on_read_error policy set — defaulting to STALE "
-                f"(failed reads serve the last cached value, the historical behaviour). "
-                f"ocabox 2.7 will default to RAISE: failed aget_* reads will raise OcaboxError "
-                f"(puts already raise). Pass on_read_error=OnReadError.STALE (GUIs) or "
-                f"OnReadError.RAISE explicitly to be ready.")
+                f"Observatory({client_name!r}): no policy set — defaulting to INTERACTIVE/RAISE "
+                f"(as announced, the pre-2.7 implicit STALE is gone: failed or stale reads now "
+                f"raise). Pass policy='interactive'|'service'|'display' or an ErrorPolicy to "
+                f"declare this client's identity explicitly.")
         else:
-            self._on_read_error = OnReadError(on_read_error)
+            if isinstance(policy, str):
+                try:
+                    policy = self.POLICY_PRESETS[policy.lower()]
+                except KeyError:
+                    raise ValueError(f"Unknown policy preset {policy!r}; "
+                                     f"expected one of {sorted(self.POLICY_PRESETS)}")
+            if not isinstance(policy, ErrorPolicy):
+                raise ValueError(f"policy must be an ErrorPolicy or preset name, got {type(policy)}")
+            self._policy = policy
+            self._value_policy_local = policy.value_policy or ValuePolicy.RAISE
+        # Temporal model (Staleness Contract): T1 = time_of_data_tolerance —
+        # preferred freshness / refresh threshold where no per-call tolerance
+        # exists; T2 = max_data_age — the truth bound: data older than T2 must
+        # not be presented. Defaults: T1 0.5 s (historical), T2 = 2*T1.
+        self._time_of_data_tolerance = 0.5 if time_of_data_tolerance is None else float(time_of_data_tolerance)
+        if max_data_age is None:
+            self._max_data_age = 2 * self._time_of_data_tolerance
+        else:
+            self._max_data_age = max(float(max_data_age), self._time_of_data_tolerance)
         self.telescopes = {}
         self.ephemeris = None
         self._subscribers = []
@@ -58,12 +114,25 @@ class Observatory:
         super().__init__()
 
     @property
+    def policy(self) -> ErrorPolicy:
+        """The client's unified read policy — set once in the constructor,
+        read-only so it cannot drift. Subscriptions inherit it as their
+        default error_policy; GET/property reads enforce its value axis."""
+        return self._policy
+
+    @property
+    def value_policy(self) -> ValuePolicy:
+        """Effective truth axis for GET/property enforcement (never None —
+        an undeclared policy behaves as RAISE, the 2.7 default)."""
+        return self._value_policy_local
+
+    @property
     def on_read_error(self) -> OnReadError:
-        """The read-error policy (see ``OnReadError``) — the client's identity,
-        set once in the constructor; read-only so it cannot drift (an
-        accidental string assignment would bypass validation and silently
-        fall through to STALE in ``Component.aget_value``)."""
-        return self._on_read_error
+        """Deprecated alias view of :meth:`value_policy` (kept for the 2.6
+        line's callers): RAISE→RAISE, NONE→NONE, LAST_GOOD→STALE."""
+        return {ValuePolicy.RAISE: OnReadError.RAISE,
+                ValuePolicy.NONE: OnReadError.NONE,
+                ValuePolicy.LAST_GOOD: OnReadError.STALE}[self._value_policy_local]
 
     async def load_client_cfg(self, timeout: Optional[float] = None):
         """
@@ -122,10 +191,15 @@ class Observatory:
             self.connect()
         return self._client
 
-    # TODO to do usunięcia
     @property
     def time_of_data_tolerance(self):
-        return 0.5
+        """T1: default preferred freshness (s) for reads without a per-call tolerance."""
+        return self._time_of_data_tolerance
+
+    @property
+    def max_data_age(self):
+        """T2: the truth bound (s) — data older than this must not be presented."""
+        return self._max_data_age
 
     def get_telescope(self, telescope_id: str):
         """Creates and gets telescope of specified id
@@ -247,6 +321,8 @@ class Observatory:
                               async_callback_method=None,
                               ignore_errors: bool = False,
                               error_policy: ErrorPolicy | None = None,
+                              policy: ErrorPolicy | str | None = None,
+                              max_data_age: float | None = None,
                               ):
         """Subscribes to specified address
         Blocks!
@@ -254,14 +330,26 @@ class Observatory:
         @param time_of_data_tolerance:
         @param delay: minimum delay between pulling updated values
         @param parameters_dict: additional parameters for get
-        @param ignore_errors: deprecated; pass ``error_policy=ErrorPolicy.SERVICE``
+        @param ignore_errors: deprecated; pass ``policy=ErrorPolicy.SERVICE``
             for the same effect on long-running daemons.
-        @param error_policy: per-severity error-handling policy. See
-            :class:`obcom.comunication.error_policy.ErrorPolicy`. The
-            default (``ErrorPolicy.INTERACTIVE``) stops the subscription
-            on NORMAL/CRITICAL so a human consumer can react. Daemons
-            that should self-recover should pass ``ErrorPolicy.SERVICE``.
+        @param error_policy: deprecated alias of ``policy``.
+        @param max_data_age: T2 — data older than this is no longer an
+            acceptable answer for this subscription (defaults to
+            ``2 * time_of_data_tolerance`` when the policy declares a value
+            axis; irrelevant otherwise).
+        @param policy: per-call override of the observatory-wide policy
+            (:class:`obcom.comunication.error_policy.ErrorPolicy` or a preset
+            name). When neither ``policy`` nor ``error_policy`` is given, the
+            subscription inherits ``Observatory(policy=…)`` — including its
+            value_policy axis (a declaring policy rides in request_data and
+            requires ocabox-server >= 2.5.2).
         """
+        if policy is not None:
+            if isinstance(policy, str):
+                policy = self.POLICY_PRESETS[policy.lower()]
+            error_policy = policy
+        elif error_policy is None and not ignore_errors:
+            error_policy = self._policy
 
         if time_of_data_tolerance is None:
             time_of_data_tolerance = self._get_client_config().get('time_of_data_tolerance', None)
@@ -282,6 +370,7 @@ class Observatory:
                                                        async_callback_method=async_callback_method,
                                                        ignore_errors=ignore_errors,
                                                        error_policy=error_policy,
+                                                       max_data_age=max_data_age,
                                                        )
         self._subscribers.append(cq)
         return cq
