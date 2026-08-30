@@ -47,3 +47,34 @@ class M1HeaderValuesTest(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+# ---------------------------------------------------------------------------
+# value_proof_get best-effort semantics (PR #282 review)
+# ---------------------------------------------------------------------------
+import asyncio
+import time as _time
+import unittest as _unittest
+from types import SimpleNamespace as _SNS
+
+from obcom.comunication.comunication_error import CommunicationRuntimeError as _CRE
+
+from ob.planrunner.abstract_base import AbstractBase as _AB
+
+
+class ValueProofGetSemanticsTest(_unittest.IsolatedAsyncioTestCase):
+
+    async def test_communication_runtime_error_is_an_absent_value(self):
+        async def blow_up():
+            raise _CRE(message='router gone')
+        self.assertIsNone(await _AB._value_proof_get('x', blow_up, float))
+
+    async def test_single_attempt_failure_does_not_sleep(self):
+        async def nothing():
+            return None
+        dummy = _SNS(journal=None, _value_proof_get=_AB._value_proof_get)
+        t0 = _time.monotonic()
+        res = await _AB.value_proof_get(dummy, 'x', nothing, float, n_times=1, wait=3.0)
+        elapsed = _time.monotonic() - t0
+        self.assertIsNone(res)
+        self.assertLess(elapsed, 1.0, f'final failed attempt slept the full wait ({elapsed:.1f}s)')

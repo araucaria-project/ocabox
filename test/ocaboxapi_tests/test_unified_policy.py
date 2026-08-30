@@ -152,12 +152,97 @@ class SyncPropertyAgeTest(unittest.TestCase):
             tertiary.subscribed.clear()  # __del__ must not try to unsubscribe the stub
 
 
-class ValueTagsTest(unittest.TestCase):
+class ValueTagsTest(unittest.IsolatedAsyncioTestCase):
 
     def test_value_tags_default_empty(self):
         observatory = Observatory(client_name='t', policy='display')
         tertiary = observatory.get_telescope('jk15').get_tertiary()
         self.assertEqual(tertiary.value_tags('moving'), {})
+
+    async def test_subscription_callback_stores_rich_none_tags(self):
+        """The sub_callback path must copy a rich None's tags so a widget can
+        render reason/last_good while the param value is None."""
+        from types import SimpleNamespace
+        observatory = Observatory(client_name='t', policy='display')
+        tertiary = observatory.get_telescope('jk15').get_tertiary()
+        captured = {}
+
+        async def fake_subscribe_async(address, **kwargs):
+            captured.update(kwargs)
+            return object()
+
+        observatory.subscribe_async = fake_subscribe_async
+        await tertiary.subscribe('moving', callback=None)
+        sub_callback = captured['callback_method']
+        tags = {'reason': 4005, 'last_good': True, 'last_good_ts': 123.0, 'from_cf': True}
+        resp = SimpleNamespace(status=True, address='jk15.tertiary.moving',
+                               value=SimpleNamespace(v=None, ts=200.0, tags=tags))
+        sub_callback([resp])
+        self.assertEqual(tertiary.value_tags('moving'), tags)
+        self.assertIsNone(getattr(tertiary, '_moving_value'))
+        tertiary.subscribed.clear()  # __del__ must not unsubscribe the stub
+
+
+class TimestampStampTest(unittest.IsolatedAsyncioTestCase):
+
+    async def test_unchanged_successful_refresh_stamps_the_clock(self):
+        """The param watcher fires only on change — a successful pull of the
+        SAME value must still refresh the timestamp, or properties raise
+        OcaboxStaleValueError right after a good read."""
+        observatory = Observatory(client_name='t', policy='interactive',
+                                  time_of_data_tolerance=0.5)
+        tertiary = observatory.get_telescope('jk15').get_tertiary()
+        _cache_stale(tertiary, 'moving', True, age=1000.0)
+        tertiary._get_async = AsyncMock(return_value=True)  # same value as cached
+        got = await tertiary.aget_value('moving', time_of_data_tolerance=0.1)
+        self.assertIs(got, True)
+        age = time.time() - getattr(tertiary, '_moving_timestamp')
+        self.assertLess(age, 1.0, 'timestamp not stamped on unchanged successful refresh')
+        self.assertIs(tertiary.moving, True)  # sync property must NOT raise now
+
+
+class EffectiveMaxAgeTest(unittest.TestCase):
+
+    def test_per_call_t2_clamped_to_t1(self):
+        observatory = Observatory(client_name='t', policy='interactive')
+        tertiary = observatory.get_telescope('jk15').get_tertiary()
+        self.assertEqual(tertiary._effective_max_age(60.0, 5.0), 60.0,
+                         'T2 below T1 would open an unchecked (T2, T1) age window')
+        self.assertEqual(tertiary._effective_max_age(0.1, 5.0), 5.0)
+
+
+class ObservatoryT2InheritanceTest(unittest.IsolatedAsyncioTestCase):
+
+    async def test_explicit_observatory_t2_is_inherited(self):
+        observatory = Observatory(client_name='t', policy='display', max_data_age=45.0)
+        captured = {}
+
+        async def fake(address, **kwargs):
+            captured.update(kwargs)
+            return object()
+
+        class FakeClient:
+            subscribe_with_callback = staticmethod(fake)
+
+        observatory._client = FakeClient()
+        await observatory.subscribe_async('jk15.tertiary.moving')
+        self.assertEqual(captured['max_data_age'], 45.0)
+
+    async def test_derived_default_t2_is_not_inherited(self):
+        observatory = Observatory(client_name='t', policy='display')
+        captured = {}
+
+        async def fake(address, **kwargs):
+            captured.update(kwargs)
+            return object()
+
+        class FakeClient:
+            subscribe_with_callback = staticmethod(fake)
+
+        observatory._client = FakeClient()
+        await observatory.subscribe_async('jk15.tertiary.moving')
+        self.assertIsNone(captured['max_data_age'],
+                          'the 2*T1 property-read default must not override per-subscription defaults')
 
 
 if __name__ == '__main__':

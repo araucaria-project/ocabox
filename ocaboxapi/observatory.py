@@ -102,6 +102,10 @@ class Observatory:
         # exists; T2 = max_data_age — the truth bound: data older than T2 must
         # not be presented. Defaults: T1 0.5 s (historical), T2 = 2*T1.
         self._time_of_data_tolerance = 0.5 if time_of_data_tolerance is None else float(time_of_data_tolerance)
+        # An EXPLICIT observatory-wide T2 is inherited by subscriptions; the
+        # derived default (2*T1, tuned to property reads) is not — each
+        # subscription then gets 2x its own tolerance from the library.
+        self._max_data_age_explicit = max_data_age is not None
         if max_data_age is None:
             self._max_data_age = 2 * self._time_of_data_tolerance
         else:
@@ -353,6 +357,9 @@ class Observatory:
 
         if time_of_data_tolerance is None:
             time_of_data_tolerance = self._get_client_config().get('time_of_data_tolerance', None)
+        if max_data_age is None and self._max_data_age_explicit:
+            # inherit the client-wide truth bound (the wire clamps T2 >= T1)
+            max_data_age = self._max_data_age
         if delay is None:
             delay = self._get_client_config().get('delay', None)
         if name is None:
@@ -426,6 +433,9 @@ class Observatory:
 
         if time_of_data_tolerance is None:
             time_of_data_tolerance = self._get_client_config().get('time_of_data_tolerance', None)
+        if max_data_age is None and self._max_data_age_explicit:
+            # inherit the client-wide truth bound (the wire clamps T2 >= T1)
+            max_data_age = self._max_data_age
         if delay is None:
             delay = self._get_client_config().get('delay', None)
         if name is None:

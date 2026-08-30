@@ -70,6 +70,10 @@ class Component(param.Parameterized):
                                                   time_of_data_tolerance=time_of_data_tolerance,
                                                   parameters_dict=parameters_dict)
                 setattr(self, f'_{param_name}_value', new_val)
+                # Stamp explicitly: the param watcher stamps only on CHANGE
+                # (onlychanged=True), so a successful refresh returning the
+                # same value would otherwise look stale forever.
+                setattr(self, f'_{param_name}_timestamp', time.time())
                 if param_name in self._failed_reads:
                     self._failed_reads.discard(param_name)
                     logger.warning(f'{self.id}.{param_name}: refresh recovered.')
@@ -102,9 +106,16 @@ class Component(param.Parameterized):
 
     def _effective_max_age(self, time_of_data_tolerance: float | None,
                            max_data_age: float | None) -> float:
-        """T2 for this read: explicit per-call > 2x the per-call T1 > observatory T2."""
+        """T2 for this read: explicit per-call > 2x the per-call T1 > observatory T2.
+
+        The T2 >= T1 invariant is preserved (same clamp as the Observatory
+        constructor and the wire): a T2 below the refresh threshold would
+        create an age window (T2, T1) served from cache without any check.
+        """
+        t1 = (time_of_data_tolerance if time_of_data_tolerance is not None
+              else self.observatory.time_of_data_tolerance)
         if max_data_age is not None:
-            return float(max_data_age)
+            return max(float(max_data_age), t1)
         if time_of_data_tolerance is not None:
             return 2 * time_of_data_tolerance
         return self.observatory.max_data_age
