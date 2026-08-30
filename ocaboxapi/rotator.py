@@ -25,7 +25,7 @@ class Rotator(TelescopeComponent):
         logger.debug(f'Subscribing rotator is moving from {self.tel_addr}')
         return await self.subscribe('ismoving', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_mechanicalposition(self):
+    async def aget_mechanicalposition(self, time_of_data_tolerance: float | None = None):
         logger.debug(f'Getting rotator mechanical position from {self.tel_addr}')
         ret = await self.aget_value('mechanicalposition', time_of_data_tolerance=time_of_data_tolerance)
         return ret

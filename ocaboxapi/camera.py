@@ -187,12 +187,12 @@ class Camera(TelescopeComponent):
 
     async def aget_imagearrayvariant(self, time_of_data_tolerance: float | None = None) -> List[List[int]]:
         logger.debug(f'Getting imagearray variant from {self.tel_addr}')
-        ret = await self.aget_value('imagearrayvariant', request_timeout=time.time() + 600)
+        ret = await self.aget_value('imagearrayvariant', request_timeout=time.time() + 600, time_of_data_tolerance=time_of_data_tolerance)
         return ret
 
     async def aget_imagearray(self, time_of_data_tolerance: float | None = None) -> List[List[int]]:
         logger.debug(f'Getting imagearray from {self.tel_addr}')
-        ret = await self.aget_value('imagearray', request_timeout=time.time() + 600)
+        ret = await self.aget_value('imagearray', request_timeout=time.time() + 600, time_of_data_tolerance=time_of_data_tolerance)
         return ret
 
     async def aget_imageready(self, time_of_data_tolerance: float | None = None) -> bool:
