@@ -317,7 +317,7 @@ there; only past T2 does `value_policy` decide what you get:
 | `value_policy` | Past T2 you get |
 |---|---|
 | `RAISE` *(default)* | the underlying exception (`OcaboxStaleValueError` for sync property reads) |
-| `NONE` | a **rich None**: subscriptions deliver `Value(None, ts=now, tags={reason: <error code>, last_good: <v>, last_good_ts: <ts>})`; `aget_value` returns bare `None` |
+| `NONE` | a **rich None**: subscriptions deliver `Value(None, ts=now, tags={reason: <error code>, last_good: <v>, last_good_ts: <ts>})`; `aget_value` returns bare `None`. The `last_good*` tags appear only when a last good value is known — read them with `.get()`, a startup outage carries `reason` alone |
 | `LAST_GOOD` | the aging value, forever (bare-`.v` clients that prefer old data over no data) |
 
 Usage:
