@@ -17,7 +17,7 @@ from serverish.messenger.msg_single_read import MsgSingleReader
 
 from ob.planrunner.iter_async import AsyncRangeIter
 from ocaboxapi.exceptions import OcaboxServerError, OcaboxAccessDenied, OcaboxDeviceError, CameraBusy
-from obcom.comunication.comunication_error import CommunicationTimeoutError
+from obcom.comunication.comunication_error import CommunicationRuntimeError, CommunicationTimeoutError
 
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -108,6 +108,9 @@ class AbstractBase(ABC):
         except CommunicationTimeoutError:
             logger.warning(f'Tic CommunicationTimeoutError')
             return None
+        except CommunicationRuntimeError:
+            logger.warning(f'Tic CommunicationRuntimeError')
+            return None
         except OcaboxAccessDenied:
             logger.warning(f'Tic OcaboxAccessDenied')
             return None
@@ -147,9 +150,9 @@ class AbstractBase(ABC):
                 logger.warning(inf)
                 if log:
                     await self.journal.warning(f'msg: {inf}, uid: {pwd.getpwuid(os.getuid())[0]}.')
+                if n == n_times:
+                    return None  # final attempt failed — no point sleeping after it
                 await asyncio.sleep(wait)
-            if n == n_times:
-                return None
 
     async def proof_put(self, awaitab: Callable, name: str = '', n_times: int = 5, wait: float = 3.0, **kwargs) -> bool:
         async for n in AsyncRangeIter(start=1, end=n_times):

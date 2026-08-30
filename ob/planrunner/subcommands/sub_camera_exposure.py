@@ -1,4 +1,5 @@
 import asyncio
+import functools
 import logging
 from typing import Callable, Dict, Any, Optional, Union
 from ob.planrunner.base_subcommand import BaseSubCommand
@@ -65,6 +66,7 @@ class CameraExposure(BaseSubCommand):
         self.focuser = self.telescope.get_focuser()
         self.rotator = self.telescope.get_rotator()
         self.dome = self.telescope.get_dome()
+        self.mirrorcell = self.telescope.get_mirrorcell()
 
         self.info_dict = {
             'type': self.exp_type,
@@ -475,9 +477,42 @@ class CameraExposure(BaseSubCommand):
             self.info_callback['stream_1'](inf)
             return 2
 
+    async def _m1_header_values(self) -> Tuple:
+        """M1 mirror-cell cards ``M1-POS1..3`` [µm] + ``M1-ATSET`` — nice-to-have.
+
+        A telescope without the subsystem (wk06 — server 2002), a faulted
+        motor (4009) or a communication problem must never fail or delay the
+        exposure: ``value_proof_get`` maps every ``OcaboxError`` to ``None``,
+        and ``None`` becomes the documented empty card. Freshness is explicit
+        — nothing here subscribes to the mirror cell and TIC's cache default
+        is 60 s (in production pms subscribes, so the read is usually served
+        from a fresh cache anyway). The API serves metres; headers are for
+        humans — converted to µm here, the card comment states the unit.
+        """
+        positions = await self.value_proof_get(
+            name='fitsh_m1_positions',
+            awaitab=functools.partial(self.mirrorcell.aget_positions, time_of_data_tolerance=10.0),
+            expect_type=list, n_times=1
+        )
+        atsetpoint = await self.value_proof_get(
+            name='fitsh_m1_atsetpoint',
+            awaitab=functools.partial(self.mirrorcell.aget_atsetpoint, time_of_data_tolerance=10.0),
+            expect_type=bool, n_times=1
+        )
+        def _finite_number(x):
+            return isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x)
+        if positions is None or len(positions) != 3 or not all(_finite_number(p) for p in positions):
+            # graceful absence: malformed telemetry must never abort header prep
+            positions_um = ['', '', '']
+        else:
+            positions_um = [round(p * 1e6, 3) for p in positions]
+        return (positions_um[0], positions_um[1], positions_um[2],
+                atsetpoint if atsetpoint is not None else '')
+
     async def prepare_header(self, sub: int, sub_time: float, instrument_data: Dict) -> Dict:
         logger.info(f"Preparing header...")
         t = time.time()
+        m1_pos1, m1_pos2, m1_pos3, m1_atset = await self._m1_header_values()
         _filter = await self.value_proof_get(
             name='fitsh_filter', awaitab=self.filter_wheel.aget_position, expect_type=int
         )
@@ -617,6 +652,10 @@ class CameraExposure(BaseSubCommand):
             fan_mirr=await self.value_proof_get(
                 name='fitsh_focuser_mirrfanstat', awaitab=self.focuser.aget_fansstatus, expect_type=bool, n_times=1
             ),
+            m1_pos1=m1_pos1,
+            m1_pos2=m1_pos2,
+            m1_pos3=m1_pos3,
+            m1_atset=m1_atset,
             fan_dome=await self.value_proof_get(
                 name='fitsh_dome_fansrun', awaitab=self.dome.aget_dome_fans_running, expect_type=bool, n_times=1
             ),
