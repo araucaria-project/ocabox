@@ -499,7 +499,10 @@ class CameraExposure(BaseSubCommand):
             awaitab=functools.partial(self.mirrorcell.aget_atsetpoint, time_of_data_tolerance=10.0),
             expect_type=bool, n_times=1
         )
-        if positions is None or len(positions) != 3:
+        def _finite_number(x):
+            return isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x)
+        if positions is None or len(positions) != 3 or not all(_finite_number(p) for p in positions):
+            # graceful absence: malformed telemetry must never abort header prep
             positions_um = ['', '', '']
         else:
             positions_um = [round(p * 1e6, 3) for p in positions]

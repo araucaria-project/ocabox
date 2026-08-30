@@ -350,9 +350,19 @@ class Observatory:
         """
         if policy is not None:
             if isinstance(policy, str):
-                policy = self.POLICY_PRESETS[policy.lower()]
+                try:
+                    policy = self.POLICY_PRESETS[policy.lower()]
+                except KeyError:
+                    raise ValueError(f"Unknown policy preset {policy!r}; "
+                                     f"expected one of {sorted(self.POLICY_PRESETS)}")
+            if not isinstance(policy, ErrorPolicy):
+                raise ValueError(f"policy must be an ErrorPolicy or preset name, got {type(policy)}")
             error_policy = policy
-        elif error_policy is None and not ignore_errors:
+        elif error_policy is not None:
+            warnings.warn("'error_policy' is deprecated; use 'policy=' (per-call) or "
+                          "Observatory(policy=…) (client-wide).",
+                          DeprecationWarning, stacklevel=2)
+        elif not ignore_errors:
             error_policy = self._policy
 
         if time_of_data_tolerance is None:
@@ -433,9 +443,6 @@ class Observatory:
 
         if time_of_data_tolerance is None:
             time_of_data_tolerance = self._get_client_config().get('time_of_data_tolerance', None)
-        if max_data_age is None and self._max_data_age_explicit:
-            # inherit the client-wide truth bound (the wire clamps T2 >= T1)
-            max_data_age = self._max_data_age
         if delay is None:
             delay = self._get_client_config().get('delay', None)
         if name is None:

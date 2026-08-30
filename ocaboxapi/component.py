@@ -309,7 +309,24 @@ class Component(param.Parameterized):
             f'to refresh, subscribe, or declare a LAST_GOOD/NONE policy.')
 
     def _is_subscribed(self, param_name) -> bool:
-        return any(holder.id == param_name for holder in self.subscribed)
+        """True when a LIVE subscription owns this param's contract.
+
+        A cycle query that terminated on its own (STOP policy) never leaves
+        ``self.subscribed`` — its params must fall back to the local age
+        judgment instead of serving an aging value under the exemption.
+        """
+        for holder in self.subscribed:
+            if holder.id != param_name:
+                continue
+            cq = holder.cq
+            if cq is None or not hasattr(cq, 'is_stopped'):
+                return True  # test stubs / exotic holders: assume live
+            try:
+                if not cq.is_stopped():
+                    return True
+            except Exception:
+                return True  # liveness unknown — keep the historical exemption
+        return False
 
     async def _apull_value(self, param_name, request_timeout: float | None = None,
                            time_of_data_tolerance: float | None = None,
