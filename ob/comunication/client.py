@@ -150,19 +150,25 @@ class Client(BaseZmqCommunicationObject):
             logger.debug(f"<{self.TYPE}><{self.name}> in wait for response _msg_condition is None")
             raise CommunicationRuntimeError(message=f"The condition has not been set")
 
-        async with condition:
-            while True:
-                if not self._receive_task or self._receive_task.done() or not self._is_working_receive_task:
-                    logger.error(f"The receive task was stopped before retrieve some waiting messages")
-                    raise CommunicationRuntimeError(message=f"The receive task was stopped before retrieve some waiting"
-                                                            f"messages")
-                # first check if the message is already there
-                message = self._check_message_comes(msg_create_time_b, msg_id_b)
-                if message:
-                    logger.debug(f"<{self.TYPE}><{self.name}> response comes")
-                    break
-                await condition.wait()
-                await asyncio.sleep(0)  # this will allow other tasks to do something
+        try:
+            async with condition:
+                while True:
+                    if not self._receive_task or self._receive_task.done() or not self._is_working_receive_task:
+                        logger.error(f"The receive task was stopped before retrieve some waiting messages")
+                        raise CommunicationRuntimeError(message=f"The receive task was stopped before retrieve some waiting"
+                                                                f"messages")
+                    # first check if the message is already there
+                    message = self._check_message_comes(msg_create_time_b, msg_id_b)
+                    if message:
+                        logger.debug(f"<{self.TYPE}><{self.name}> response comes")
+                        break
+                    await condition.wait()
+                    await asyncio.sleep(0)  # this will allow other tasks to do something
+        except RuntimeError as error:
+            current_task = asyncio.current_task()
+            if current_task is not None and current_task.cancelling():
+                raise asyncio.CancelledError() from error
+            raise
         self._new_msgs.remove(message)
         return message
 
