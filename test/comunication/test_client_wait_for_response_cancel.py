@@ -1,92 +1,6 @@
 import asyncio
-import sys
 import types
 import unittest
-
-
-def _install_obcom_stubs():
-    if "obcom" in sys.modules:
-        return
-
-    obcom_module = types.ModuleType("obcom")
-    comunication_module = types.ModuleType("obcom.comunication")
-    base_module = types.ModuleType("obcom.comunication.base_zmq_communication_object")
-    cycle_query_module = types.ModuleType("obcom.comunication.cycle_query")
-    error_module = types.ModuleType("obcom.comunication.comunication_error")
-    error_policy_module = types.ModuleType("obcom.comunication.error_policy")
-    serializer_module = types.ModuleType("obcom.comunication.message_serializer")
-    multipart_module = types.ModuleType("obcom.comunication.multipart_structure")
-    obcom_module.__path__ = []
-    comunication_module.__path__ = []
-
-    class BaseZmqCommunicationObject:
-        def __del__(self):
-            return
-
-    class CommunicationRuntimeError(RuntimeError):
-        def __init__(self, message=""):
-            super().__init__(message)
-
-    class CommunicationTimeoutError(RuntimeError):
-        pass
-
-    class MessageSerializer:
-        @staticmethod
-        def pack_b(value):
-            return str(value).encode()
-
-    class MultipartStructure:
-        pass
-
-    class PeriodicCycleQuery:
-        pass
-
-    class ConditionalCycleQuery:
-        pass
-
-    class Backoff:
-        pass
-
-    class Budget:
-        pass
-
-    class ErrorPolicy:
-        pass
-
-    class LogPolicy:
-        pass
-
-    class SeverityAction:
-        pass
-
-    class SeverityRule:
-        pass
-
-    base_module.BaseZmqCommunicationObject = BaseZmqCommunicationObject
-    cycle_query_module.PeriodicCycleQuery = PeriodicCycleQuery
-    cycle_query_module.ConditionalCycleQuery = ConditionalCycleQuery
-    error_module.CommunicationRuntimeError = CommunicationRuntimeError
-    error_module.CommunicationTimeoutError = CommunicationTimeoutError
-    error_policy_module.Backoff = Backoff
-    error_policy_module.Budget = Budget
-    error_policy_module.ErrorPolicy = ErrorPolicy
-    error_policy_module.LogPolicy = LogPolicy
-    error_policy_module.SeverityAction = SeverityAction
-    error_policy_module.SeverityRule = SeverityRule
-    serializer_module.MessageSerializer = MessageSerializer
-    multipart_module.MultipartStructure = MultipartStructure
-
-    sys.modules["obcom"] = obcom_module
-    sys.modules["obcom.comunication"] = comunication_module
-    sys.modules["obcom.comunication.base_zmq_communication_object"] = base_module
-    sys.modules["obcom.comunication.cycle_query"] = cycle_query_module
-    sys.modules["obcom.comunication.comunication_error"] = error_module
-    sys.modules["obcom.comunication.error_policy"] = error_policy_module
-    sys.modules["obcom.comunication.message_serializer"] = serializer_module
-    sys.modules["obcom.comunication.multipart_structure"] = multipart_module
-
-
-_install_obcom_stubs()
 
 from ob.comunication.client import Client
 
@@ -131,7 +45,8 @@ class TestClientWaitForResponseCancel(unittest.IsolatedAsyncioTestCase):
         client._is_working_receive_task = True
         client._new_msgs = []
         client._front_socket = types.SimpleNamespace(close=lambda: None)
-        client.name = "test-client"
+        client.context = types.SimpleNamespace(destroy=lambda: None)
+        client._name = "test-client"
         return client
 
     async def test_wait_for_response_maps_lock_not_acquired_runtimeerror_to_cancelled_error(self):

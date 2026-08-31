@@ -166,7 +166,8 @@ class Client(BaseZmqCommunicationObject):
                     await asyncio.sleep(0)  # this will allow other tasks to do something
         except RuntimeError as error:
             current_task = asyncio.current_task()
-            if current_task is not None and current_task.cancelling():
+            current_task_cancelling = getattr(current_task, "cancelling", None)
+            if current_task is not None and callable(current_task_cancelling) and current_task_cancelling() > 0:
                 raise asyncio.CancelledError() from error
             raise
         self._new_msgs.remove(message)
