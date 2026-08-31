@@ -64,6 +64,13 @@ class OcaboxError(Exception):
         )
 
 
+class OcaboxStaleValueError(OcaboxError):
+    """A sync property read found only a value older than the freshness bound
+    (Staleness Contract, value_policy=RAISE). No I/O happened — refresh with
+    the async getter, subscribe, or declare a LAST_GOOD/NONE policy."""
+    pass
+
+
 class OcaboxServerError(OcaboxError):
     """TIC itself failed to satisfy the request (internal / tree / value-build)."""
 

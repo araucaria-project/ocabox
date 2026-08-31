@@ -2,6 +2,63 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+....
+
+## [2.7.0]
+### Changed
+- **Staleness Contract, phase 3**: unified read policy `Observatory(policy=
+  'interactive'|'service'|'display'|ErrorPolicy)` + `max_data_age` (T2, default
+  `2*T1`); subscriptions inherit both, `aget_*` per-call `value_policy=`/
+  `max_data_age=` with (T1, T2] masking on failed refresh, sync properties
+  judge age vs T2 (subscribed params exempt); `on_read_error`/`OnReadError`
+  deprecated aliases; timestamp cheat removed; announced default flip
+  STALE→RAISE. `value_tags()` exposes rich-None tags. Requires ocabox-server
+  ≥ 2.6 for wire-declaring policies. (ocabox-common#8, #281)
+
+## [2.6.5]
+### Added
+- Planrunner fills the **M1 mirror-cell FITS cards** `M1-POS1..3` [µm] and
+  `M1-ATSET` in `prepare_header()` (raw frames get `OCASTD 1.1.3`). Positions
+  are converted metres → µm at this consumer; absence (wk06), a motor fault
+  or a communication problem yields empty cards and never fails or delays
+  the exposure. Details in `CameraExposure._m1_header_values`.
+### Dependencies
+- Requires pyaraucaria ≥ 2.14 (M1 cards in the `fits_header()` template) —
+  unpinned git dep, so deployments need `poetry update pyaraucaria`.
+
+## [2.6.4]
+### Added
+- Per-observatory **read-error policy** —
+  `Observatory(on_read_error=OnReadError.RAISE | STALE | NONE)`: what
+  `aget_*` getters do when a refresh fails. `RAISE` propagates the exception
+  (`OcaboxDeviceError` on 4009 etc.); `STALE` serves the last cached value
+  (the historical behaviour); `NONE` returns `None`. The policy is the
+  client's identity — set once, no per-call override; `aput_value` is
+  untouched (commands always raise). Future modes reserved: `STALE_MARKED`
+  (value + data timestamp — the native semantics of the planned direct-NATS
+  reads), `REPEAT` (bounded retry).
+### Deprecated
+- Constructing `Observatory` **without an explicit `on_read_error`**: the
+  implicit default stays `STALE` for now (bit-for-bit the old behaviour) and
+  logs a once-per-observatory warning — **the ocabox 2.7 line flips the
+  default to `RAISE`**. Under the old (and interim-default) behaviour a
+  failed read serves stale data with a refreshed timestamp, so the server's
+  error model (4009 device fault, 2002 absent subsystem) never reaches
+  one-shot callers and stale values can masquerade as live telemetry. GUIs
+  that must render through blips: pass `OnReadError.STALE` explicitly;
+  CLIs/services: `OnReadError.RAISE`.
+
+## [2.6.3]
+### Added
+- `MirrorCell` (M1 active collimation) client component —
+  `telescope.get_mirrorcell()` with `aget_`/`asubscribe_` for `available`,
+  `mirrorcellstatus`, `positions` (metres), `motorstatuses`,
+  `motorstatustexts`, `atsetpoint`, `moving`, and per-motor accessors
+  `aget_motor_{position,status,statustext}(index)` (+ subscriptions).
+  Commands: `amove_all_motors_to/offset`, `amove_one_motor_offset`,
+  `astop_one_motor`, `astop_all_motors` — ⚠️ never commanded on real
+  hardware yet (supervised test pending). Requires ocabox-server ≥ 2.4.0.
+  Error model and details in the class docstring.
 
 ## [2.6.2]
 ### Added
