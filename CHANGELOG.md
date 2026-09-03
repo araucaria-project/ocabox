@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 ....
 
+## [2.7.4]
+### Changed
+- `OcaboxStaleValueError` message names the missing freshness witness (not
+  subscribed / subscription stopped / lost contact, with ages) instead of a
+  generic hint
+
 ## [2.7.3]
 ### Fixed
 - Sync property reads: a subscription is a freshness witness, not a veto. A
