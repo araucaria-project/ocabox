@@ -9,6 +9,7 @@ import unittest
 from unittest.mock import AsyncMock
 
 from obcom.comunication.error_policy import ErrorPolicy, ValuePolicy
+from obcom.data_colection.value_call import ValueRequest
 
 from ocaboxapi import Observatory
 from ocaboxapi.exceptions import OcaboxDeviceError, OcaboxStaleValueError
@@ -71,12 +72,13 @@ class AgetMaxAgeTest(unittest.IsolatedAsyncioTestCase):
     async def test_failed_refresh_inside_repair_window_serves_cache_even_for_raise(self):
         tertiary = _tertiary(policy='interactive')  # RAISE
         _cache_stale(tertiary, 'moving', True, age=0.15)
-        # T1=0.1 → refresh due and failing; T2 default 2*T1=0.2 ≥ age 0.15
+        # T1=0.1 → refresh due and failing; the default T2 (floored) covers age 0.15
         self.assertIs(await tertiary.aget_value('moving', time_of_data_tolerance=0.1), True)
 
     async def test_failed_refresh_past_max_age_raises(self):
         tertiary = _tertiary(policy='interactive')
-        _cache_stale(tertiary, 'moving', True, age=0.5)
+        _cache_stale(tertiary, 'moving', True,
+                     age=ValueRequest.default_max_age(0.1) + 0.5)
         with self.assertRaises(OcaboxDeviceError):
             await tertiary.aget_value('moving', time_of_data_tolerance=0.1)
 
@@ -140,8 +142,7 @@ class SyncPropertyAgeTest(unittest.TestCase):
 
     def test_live_subscription_with_fresh_contact_vouches_for_any_policy(self):
         """A stationary value never moves its change-stamp; a live query with
-        healthy contact vouches for it regardless of declared value_policy
-        (the textui crash of 2026-09-03 judged the stamp instead)."""
+        healthy contact vouches for it regardless of declared value_policy."""
         from types import SimpleNamespace
         from obcom.comunication.error_policy import ErrorPolicy as EP
         for policy in (EP.SERVICE, EP.INTERACTIVE, EP.DISPLAY):

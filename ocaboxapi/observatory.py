@@ -7,6 +7,7 @@ import warnings
 
 from obcom.comunication.base_client_api import BaseClientAPI
 from obcom.comunication.error_policy import ErrorPolicy, ValuePolicy
+from obcom.data_colection.value_call import ValueRequest
 from time import time
 import os
 import pwd
@@ -100,14 +101,15 @@ class Observatory:
         # Temporal model (Staleness Contract): T1 = time_of_data_tolerance —
         # preferred freshness / refresh threshold where no per-call tolerance
         # exists; T2 = max_data_age — the truth bound: data older than T2 must
-        # not be presented. Defaults: T1 0.5 s (historical), T2 = 2*T1.
+        # not be presented. Defaults: T1 0.5 s (historical), T2 by the family
+        # rule ``ValueRequest.default_max_age`` (2*T1, floored).
         self._time_of_data_tolerance = 0.5 if time_of_data_tolerance is None else float(time_of_data_tolerance)
         # An EXPLICIT observatory-wide T2 is inherited by subscriptions; the
-        # derived default (2*T1, tuned to property reads) is not — each
+        # derived default is not — each
         # subscription then gets 2x its own tolerance from the library.
         self._max_data_age_explicit = max_data_age is not None
         if max_data_age is None:
-            self._max_data_age = 2 * self._time_of_data_tolerance
+            self._max_data_age = ValueRequest.default_max_age(self._time_of_data_tolerance)
         else:
             self._max_data_age = max(float(max_data_age), self._time_of_data_tolerance)
         self.telescopes = {}

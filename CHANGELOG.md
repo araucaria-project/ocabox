@@ -4,14 +4,19 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 ....
 
+## [2.7.2]
+### Changed
+- Default T2 (`Observatory(max_data_age=)` unset, per-call `aget_*` with only
+  a tolerance) comes from the shared `ValueRequest.default_max_age` rule
+  (2*T1 floored at 5 s; requires ocabox-common >= 1.4.0). Explicit T2 unchanged
+
 ## [2.7.1]
 ### Fixed
 - Sync property reads of a subscribed param are judged by the cycle query's
   contact clock (`is_contact_fresh()`, obcom >= 1.3.4), not by the local
-  change-stamp — a stationary value (`mount.slewing=False`) raised
-  `OcaboxStaleValueError` one second after start for every undeclared client
-  mixing subscriptions with property reads (ocabox-cli textui). Stopped
-  subscriptions still do not vouch; older obcom keeps the historical exemption
+  change-stamp, which a stationary value never moves (undeclared clients
+  raised `OcaboxStaleValueError` on such params after T2). Stopped
+  subscriptions do not vouch; older obcom keeps the historical exemption
 
 ## [2.7.0]
 ### Changed
