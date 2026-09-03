@@ -159,7 +159,25 @@ class SyncPropertyAgeTest(unittest.TestCase):
             finally:
                 tertiary.subscribed.clear()
 
-    def test_live_subscription_with_stale_contact_applies_policy(self):
+    def test_lost_contact_does_not_veto_a_fresh_local_refresh(self):
+        """The subscription is a witness, not a veto: a value the client just
+        refreshed itself is fresh even if its subscription lost contact."""
+        from types import SimpleNamespace
+        from obcom.comunication.error_policy import ErrorPolicy as EP
+        lost = SimpleNamespace(is_stopped=lambda: False,
+                               is_contact_fresh=lambda max_age=None: False,
+                               _error_policy=EP.INTERACTIVE)
+        observatory = Observatory(client_name='t', policy='interactive',
+                                  time_of_data_tolerance=0.5)
+        tertiary = observatory.get_telescope('jk15').get_tertiary()
+        _cache_stale(tertiary, 'moving', True, age=0.0)
+        tertiary.subscribed.append(tertiary.CQHolder(cq=lost, id='moving'))
+        try:
+            self.assertIs(tertiary.moving, True)
+        finally:
+            tertiary.subscribed.clear()
+
+    def test_lost_contact_and_old_stamp_applies_policy(self):
         from types import SimpleNamespace
         from obcom.comunication.error_policy import ErrorPolicy as EP
         lost = SimpleNamespace(is_stopped=lambda: False,
@@ -169,7 +187,7 @@ class SyncPropertyAgeTest(unittest.TestCase):
             observatory = Observatory(client_name='t', policy=policy,
                                       time_of_data_tolerance=0.5)
             tertiary = observatory.get_telescope('jk15').get_tertiary()
-            _cache_stale(tertiary, 'moving', True, age=0.0)  # fresh stamp is irrelevant
+            _cache_stale(tertiary, 'moving', True)  # stamp far past T2
             tertiary.subscribed.append(tertiary.CQHolder(cq=lost, id='moving'))
             try:
                 if expect is None:
@@ -180,13 +198,29 @@ class SyncPropertyAgeTest(unittest.TestCase):
             finally:
                 tertiary.subscribed.clear()
 
+    def test_stopped_subscription_does_not_veto_a_fresh_local_refresh(self):
+        from types import SimpleNamespace
+        from obcom.comunication.error_policy import ErrorPolicy as EP
+        dead = SimpleNamespace(is_stopped=lambda: True,
+                               is_contact_fresh=lambda max_age=None: True,
+                               _error_policy=EP.DISPLAY)
+        observatory = Observatory(client_name='t', policy='interactive',
+                                  time_of_data_tolerance=0.5)
+        tertiary = observatory.get_telescope('jk15').get_tertiary()
+        _cache_stale(tertiary, 'moving', True, age=0.0)
+        tertiary.subscribed.append(tertiary.CQHolder(cq=dead, id='moving'))
+        try:
+            self.assertIs(tertiary.moving, True)
+        finally:
+            tertiary.subscribed.clear()
+
     def test_stopped_subscription_does_not_vouch(self):
         from types import SimpleNamespace
         from obcom.comunication.error_policy import ErrorPolicy as EP
         observatory = Observatory(client_name='t', policy='interactive',
                                   time_of_data_tolerance=0.5)
         tertiary = observatory.get_telescope('jk15').get_tertiary()
-        _cache_stale(tertiary, 'moving', True)
+        _cache_stale(tertiary, 'moving', True)  # stamp far past T2
         dead = SimpleNamespace(is_stopped=lambda: True,
                                is_contact_fresh=lambda max_age=None: True,
                                _error_policy=EP.DISPLAY)

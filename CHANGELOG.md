@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 ....
 
+## [2.7.3]
+### Fixed
+- Sync property reads: a subscription is a freshness witness, not a veto. A
+  value refreshed within T2 is served even if its subscription is stopped or
+  has lost contact; only when neither the subscription nor the local refresh
+  age vouches does the value policy apply
+
 ## [2.7.2]
 ### Changed
 - Default T2 (`Observatory(max_data_age=)` unset, per-call `aget_*` with only
