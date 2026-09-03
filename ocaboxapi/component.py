@@ -13,6 +13,8 @@ from obcom.data_colection.value_call import ValueResponse
 from obcom.comunication.error_policy import ValuePolicy
 
 from ocaboxapi import Observatory
+from obcom.data_colection.value_call import ValueRequest
+
 from ocaboxapi.exceptions import OcaboxError, OcaboxStaleValueError
 
 logger = logging.getLogger('component')
@@ -54,7 +56,8 @@ class Component(param.Parameterized):
         the preferred freshness (a fresher cached value is served without I/O;
         an older one triggers a refresh; the TIC default is 60 s — pass an
         explicit tolerance when observing changing state). ``max_data_age`` is
-        T2 — the truth bound (default ``2 * T1``): when a refresh FAILS, a
+        T2 — the truth bound (default ``ValueRequest.default_max_age(T1)``):
+        when a refresh FAILS, a
         cached value younger than T2 is still an acceptable answer and is
         served regardless of policy; only past T2 does the truth axis decide:
         ``RAISE`` propagates the exception (the honest default); ``NONE``
@@ -106,7 +109,7 @@ class Component(param.Parameterized):
 
     def _effective_max_age(self, time_of_data_tolerance: float | None,
                            max_data_age: float | None) -> float:
-        """T2 for this read: explicit per-call > 2x the per-call T1 > observatory T2.
+        """T2 for this read: explicit per-call > default from the per-call T1 > observatory T2.
 
         The T2 >= T1 invariant is preserved (same clamp as the Observatory
         constructor and the wire): a T2 below the refresh threshold would
@@ -117,7 +120,7 @@ class Component(param.Parameterized):
         if max_data_age is not None:
             return max(float(max_data_age), t1)
         if time_of_data_tolerance is not None:
-            return 2 * time_of_data_tolerance
+            return ValueRequest.default_max_age(time_of_data_tolerance)
         return self.observatory.max_data_age
 
     async def aput_value(self, param_name, **kwargs):
@@ -286,14 +289,10 @@ class Component(param.Parameterized):
                 or getattr(self, f'_{param_name}_value') is None)
 
     def _ensure_value(self, param_name):
-        # Sync property read: no I/O is possible here, so this is a pure
-        # freshness judgment (Staleness Contract). Two kinds of evidence:
-        #  * a param owned by a live subscription is judged by the cycle
-        #    query's CONTACT clock — the source was known healthy within the
-        #    bound the subscription can vouch for. Never by the local
-        #    change-stamp: a stationary value never moves it, so judging it
-        #    raised on every healthy `mount.slewing` read (textui, 2026-09-03);
-        #  * an unsubscribed param is judged by the age of its last refresh.
+        # Sync property read: no I/O possible, pure freshness judgment.
+        # A subscribed param is judged by its cycle query's contact clock —
+        # never by the local change-stamp, which a stationary value never
+        # moves. An unsubscribed param is judged by the age of its last refresh.
         value = getattr(self, f'_{param_name}_value')
         if value is None:
             return value
@@ -324,13 +323,11 @@ class Component(param.Parameterized):
         * ``True`` — a live cycle query has had healthy contact with the source
           within its ``truth_bound`` (long-poll window, or the declared T2):
           the pushed value is the contract-compliant view however old its
-          local change-stamp is. Applies to EVERY policy — an undeclared
-          (INTERACTIVE/SERVICE) subscription's window is simply a looser bound.
-        * ``False`` — the query is stopped (a STOP-terminated subscription is
-          evidence of nothing) or its contact is older than the bound.
+          local change-stamp is. Applies to every policy; an undeclared
+          subscription's window is simply a looser bound.
+        * ``False`` — the query is stopped or its contact is older than the bound.
 
-        obcom < 1.3.4 has no contact accessors: keep the historical exemption,
-        nothing better is knowable there.
+        obcom without the contact accessors: the historical exemption holds.
         """
         verdict = None
         for holder in self.subscribed:
