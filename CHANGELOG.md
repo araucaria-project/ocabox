@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 ....
 
+## [2.7.1]
+### Fixed
+- Sync property reads of a subscribed param are judged by the cycle query's
+  contact clock (`is_contact_fresh()`, obcom >= 1.3.4), not by the local
+  change-stamp — a stationary value (`mount.slewing=False`) raised
+  `OcaboxStaleValueError` one second after start for every undeclared client
+  mixing subscriptions with property reads (ocabox-cli textui). Stopped
+  subscriptions still do not vouch; older obcom keeps the historical exemption
+
 ## [2.7.0]
 ### Changed
 - **Staleness Contract, phase 3**: unified read policy `Observatory(policy=

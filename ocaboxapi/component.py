@@ -286,57 +286,71 @@ class Component(param.Parameterized):
                 or getattr(self, f'_{param_name}_value') is None)
 
     def _ensure_value(self, param_name):
-        # Sync property read: no I/O is possible here, so this is a pure age
-        # judgment (Staleness Contract). A param with a live subscription is
-        # exempt: the server + cycle-query already enforce the contract and
-        # push a rich None when the truth expires — the local value IS the
-        # contract-compliant view (its ts only moves on change, which says
-        # nothing about freshness).
+        # Sync property read: no I/O is possible here, so this is a pure
+        # freshness judgment (Staleness Contract). Two kinds of evidence:
+        #  * a param owned by a live subscription is judged by the cycle
+        #    query's CONTACT clock — the source was known healthy within the
+        #    bound the subscription can vouch for. Never by the local
+        #    change-stamp: a stationary value never moves it, so judging it
+        #    raised on every healthy `mount.slewing` read (textui, 2026-09-03);
+        #  * an unsubscribed param is judged by the age of its last refresh.
         value = getattr(self, f'_{param_name}_value')
-        if value is None or self._is_subscribed(param_name):
+        if value is None:
             return value
-        ts = getattr(self, f'_{param_name}_timestamp')
-        if ts + self.observatory.max_data_age >= time.time():
+        vouch = self._subscription_vouches(param_name)
+        if vouch is True:
             return value
+        if vouch is None:
+            ts = getattr(self, f'_{param_name}_timestamp')
+            if ts + self.observatory.max_data_age >= time.time():
+                return value
+            why = (f'cached value is {time.time() - ts:.1f}s old, older than '
+                   f'max_data_age ({self.observatory.max_data_age}s)')
+        else:
+            why = 'its subscription has no healthy contact with the source'
         vp = self.observatory.value_policy
         if vp is ValuePolicy.LAST_GOOD:
             return value
         if vp is ValuePolicy.NONE:
             return None
         raise OcaboxStaleValueError(
-            f'{self.id}.{param_name}: cached value is {time.time() - ts:.1f}s old, older than '
-            f'max_data_age ({self.observatory.max_data_age}s). Use aget_{param_name}() '
-            f'to refresh, subscribe, or declare a LAST_GOOD/NONE policy.')
+            f'{self.id}.{param_name}: {why}. Use aget_{param_name}() to refresh, '
+            f'subscribe, or declare a LAST_GOOD/NONE policy.')
 
-    def _is_subscribed(self, param_name) -> bool:
-        """True when a LIVE, CONTRACT-ENFORCING subscription owns this param.
+    def _subscription_vouches(self, param_name) -> bool | None:
+        """Freshness verdict of the subscription(s) owning ``param_name``.
 
-        Two conditions, both required for the age-judgment exemption:
+        * ``None`` — no subscription owns the param: judge the local refresh age.
+        * ``True`` — a live cycle query has had healthy contact with the source
+          within its ``truth_bound`` (long-poll window, or the declared T2):
+          the pushed value is the contract-compliant view however old its
+          local change-stamp is. Applies to EVERY policy — an undeclared
+          (INTERACTIVE/SERVICE) subscription's window is simply a looser bound.
+        * ``False`` — the query is stopped (a STOP-terminated subscription is
+          evidence of nothing) or its contact is older than the bound.
 
-        * the cycle query is still running — a STOP-terminated query never
-          leaves ``self.subscribed``, and its params must fall back to the
-          local judgment instead of serving an aging value forever;
-        * the query *declared a value policy* — only then does the server
-          (or the client library) push a rich ``Value(None)`` past T2. An
-          undeclared (INTERACTIVE/SERVICE-style) subscription retries
-          silently through an outage, so the local value it feeds says
-          nothing about freshness and must still be judged here.
+        obcom < 1.3.4 has no contact accessors: keep the historical exemption,
+        nothing better is knowable there.
         """
+        verdict = None
         for holder in self.subscribed:
             if holder.id != param_name:
                 continue
             cq = holder.cq
             if cq is None or not hasattr(cq, 'is_stopped'):
                 return True  # test stubs / exotic holders: assume live
-            policy = getattr(cq, '_error_policy', None)
-            if policy is None or getattr(policy, 'value_policy', None) is None:
-                continue  # live but not contract-enforcing — no exemption
             try:
-                if not cq.is_stopped():
-                    return True
+                if cq.is_stopped():
+                    verdict = False
+                    continue
             except Exception:
                 return True  # liveness unknown — keep the historical exemption
-        return False
+            if not hasattr(cq, 'is_contact_fresh'):
+                return True
+            if cq.is_contact_fresh():
+                return True
+            verdict = False
+        return verdict
 
     async def _apull_value(self, param_name, request_timeout: float | None = None,
                            time_of_data_tolerance: float | None = None,
