@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 ....
 
+## [2.7.4]
+### Changed
+- ocabox-common pinned to the 1.4.0 release (git tag/rev) and checked at import
+  time (ImportError names the found version).
+
 ## [2.7.3]
 ### Fixed
 - Sync property reads: a subscription is a freshness witness, not a veto. A
