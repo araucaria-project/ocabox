@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 ....
 
+## [2.7.5]
+### Fixed
+- A reply that arrived while the consumer's event loop was blocked is
+  delivered instead of reported as a router timeout (false `4002`).
+
 ## [2.7.3]
 ### Fixed
 - Sync property reads: a subscription is a freshness witness, not a veto. A
