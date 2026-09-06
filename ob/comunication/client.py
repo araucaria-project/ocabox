@@ -131,6 +131,18 @@ class Client(BaseZmqCommunicationObject):
                     # read more in the method description !!!
                     return await wait_for_psce(self._wait_for_response(ms.create_time, ms.id_), timeout=time_to_expire)
                 except asyncio.TimeoutError:
+                    # The timer and the receiver's callbacks can be due at the same wake-up if the local event
+                    # loop was blocked (busy TOI/Qt work, image rendering, etc.). In that case the reply may
+                    # already be sitting in the mailbox even though the timer fired first. Yield one loop turn
+                    # so a `recv_multipart` future that resolved during the freeze lets '_receive_msgs' run its
+                    # append step, then check the mailbox before declaring the router silent.
+                    await asyncio.sleep(0)  # let a pending _receive_msgs append step run
+                    message = self._take_message_from_mailbox(ms.create_time, ms.id_)
+                    if message is not None:
+                        logger.debug(f"<{self.TYPE}><{self.name}> reply for ({ms.create_time} | {ms.id_}) was "
+                                     f"already in the mailbox when the timer fired — local loop lag, not a "
+                                     f"timeout")
+                        return message
                     # logger.info(f"the response did not come before timeout {self.timeout}s")
                     raise CommunicationTimeoutError(
                         message=f"Timeout of {time_to_expire:.3}s expired when waiting for response from TIC server {self._front_socket.LAST_ENDPOINT}")
@@ -158,7 +170,7 @@ class Client(BaseZmqCommunicationObject):
                         raise CommunicationRuntimeError(message=f"The receive task was stopped before retrieve some waiting"
                                                                 f"messages")
                     # first check if the message is already there
-                    message = self._check_message_comes(msg_create_time_b, msg_id_b)
+                    message = self._take_message_from_mailbox(msg_create_time_b, msg_id_b)
                     if message:
                         logger.debug(f"<{self.TYPE}><{self.name}> response comes")
                         break
@@ -170,7 +182,19 @@ class Client(BaseZmqCommunicationObject):
             if current_task is not None and callable(current_task_cancelling) and current_task_cancelling() > 0:
                 raise asyncio.CancelledError() from error
             raise
-        self._new_msgs.remove(message)
+        return message
+
+    def _take_message_from_mailbox(self, create_time_b: bytes, id_b: bytes) -> MultipartStructure or None:
+        """
+        Look into the mailbox for a message matching (create_time_b, id_b) and, if found, remove it from
+        '_new_msgs' and return it. This is the single place that removes a matched message from the mailbox,
+        used both by '_wait_for_response' (normal path) and '_send_to_server' (post-timeout mailbox check).
+
+        :return: MultipartStructure or None
+        """
+        message = self._check_message_comes(create_time_b, id_b)
+        if message is not None:
+            self._new_msgs.remove(message)
         return message
 
     async def _receive_msgs(self):
