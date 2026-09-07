@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 ....
 
+## [2.8.0]
+### Changed
+- Python floor 3.11; `wait_for_psce()` retired, all waits use
+  `asyncio.timeout()` (no orphaned middle task, correct `CancelledError`
+  on cancel).
+- `ocabox_bases.__version__` read from package metadata; `pyproject.toml`
+  is the only place the version is edited.
+
 ## [2.7.6]
 ### Fixed
 - `OcaboxStaleValueError` names the missing freshness witness — not subscribed
