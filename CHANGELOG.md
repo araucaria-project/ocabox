@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 ....
 
+## [2.7.5]
+### Fixed
+- A reply that arrived while the consumer's event loop was blocked is
+  delivered instead of reported as a router timeout (false `4002`).
+
 ## [2.7.4]
 ### Changed
 - ocabox-common pinned to the 1.4.0 release (git tag/rev) and checked at import
