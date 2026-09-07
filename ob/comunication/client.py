@@ -195,7 +195,6 @@ class Client(BaseZmqCommunicationObject):
 
     async def _receive_msgs(self):
         try:
-            self._is_working_receive_task = True
             while True:
                 multipart = await self._front_socket.recv_multipart()
                 try:
@@ -245,6 +244,9 @@ class Client(BaseZmqCommunicationObject):
         """
         loop = self._get_loop()
         self._receive_task = loop.create_task(self._receive_msgs())
+        # alive from creation: the first requester checks this flag in the same loop turn,
+        # before the task has run its first step (it is cleared by the task's `finally`)
+        self._is_working_receive_task = True
         logger.debug(f"<{self.TYPE}><{self.name}> run receiver")
 
     async def _stop_receiver(self):

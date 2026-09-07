@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 ....
 
+## [2.8.2]
+### Fixed
+- Client: the first request after the receiver task is (re)started no longer fails with "The receive task was stopped" — the alive flag is set when the task is created, not on its first step (regression of 2.8.0).
+
 ## [2.8.1]
 ### Changed
 - `ocabox-common` dependency follows git master again (no tag pin); the import guard requires >= 1.5.0.
