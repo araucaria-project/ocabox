@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 ....
 
+## [2.7.6]
+### Fixed
+- `OcaboxStaleValueError` names the missing freshness witness — not subscribed
+  / subscription stopped / subscription lost contact — instead of advising an
+  `aget_…()` refresh that would not have helped.
+
 ## [2.7.5]
 ### Fixed
 - A reply that arrived while the consumer's event loop was blocked is

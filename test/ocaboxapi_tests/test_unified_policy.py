@@ -231,6 +231,49 @@ class SyncPropertyAgeTest(unittest.TestCase):
         finally:
             tertiary.subscribed.clear()
 
+    def _raise_message(self, cq):
+        observatory = Observatory(client_name='t', policy='interactive',
+                                  time_of_data_tolerance=0.5)
+        tertiary = observatory.get_telescope('jk15').get_tertiary()
+        _cache_stale(tertiary, 'moving', True, age=1000.0)
+        if cq is not None:
+            tertiary.subscribed.append(tertiary.CQHolder(cq=cq, id='moving'))
+        try:
+            with self.assertRaises(OcaboxStaleValueError) as ctx:
+                _ = tertiary.moving
+        finally:
+            tertiary.subscribed.clear()
+        return str(ctx.exception)
+
+    def test_stale_message_names_missing_subscription(self):
+        message = self._raise_message(None)
+        self.assertIn('not subscribed', message)
+        self.assertIn('aget_moving()', message)
+        self.assertNotIn('stopped', message)
+
+    def test_stale_message_names_stopped_subscription(self):
+        from types import SimpleNamespace
+        from obcom.comunication.error_policy import ErrorPolicy as EP
+        dead = SimpleNamespace(is_stopped=lambda: True,
+                               is_contact_fresh=lambda max_age=None: True,
+                               _error_policy=EP.DISPLAY)
+        message = self._raise_message(dead)
+        self.assertIn('subscription stopped', message)
+        self.assertIn('last change 1000.', message)
+        self.assertNotIn('aget_moving()', message)
+
+    def test_stale_message_names_lost_contact_with_ages(self):
+        from types import SimpleNamespace
+        from obcom.comunication.error_policy import ErrorPolicy as EP
+        lost = SimpleNamespace(is_stopped=lambda: False,
+                               is_contact_fresh=lambda max_age=None: False,
+                               last_healthy_contact_age=42.0, truth_bound=30.0,
+                               _error_policy=EP.DISPLAY)
+        message = self._raise_message(lost)
+        self.assertIn('lost contact 42.0s ago', message)
+        self.assertIn('bound 30.0s', message)
+        self.assertNotIn('aget_moving()', message)
+
     def test_old_obcom_without_contact_clock_keeps_historical_exemption(self):
         from types import SimpleNamespace
         from obcom.comunication.error_policy import ErrorPolicy as EP

@@ -65,9 +65,12 @@ class OcaboxError(Exception):
 
 
 class OcaboxStaleValueError(OcaboxError):
-    """A sync property read found only a value older than the freshness bound
-    (Staleness Contract, value_policy=RAISE). No I/O happened — refresh with
-    the async getter, subscribe, or declare a LAST_GOOD/NONE policy."""
+    """A sync property read found no freshness witness for the cached value:
+    no live subscription vouches for it and its local stamp is older than the
+    freshness bound (Staleness Contract, value_policy=RAISE). No I/O happened.
+    The message names the missing witness (not subscribed / subscription
+    stopped / lost contact). Clients that prefer a value or None to an
+    exception declare a LAST_GOOD / NONE value policy."""
     pass
 
 
