@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 ....
 
+## [2.8.1]
+### Changed
+- `ocabox-common` dependency follows git master again (no tag pin); the import guard requires >= 1.5.0.
+
 ## [2.8.0]
 ### Changed
 - Python floor 3.11; `wait_for_psce()` retired, all waits use

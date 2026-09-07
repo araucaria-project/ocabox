@@ -8,12 +8,12 @@ class ImportGuardTest(unittest.TestCase):
 
     def test_rejects_old_obcom(self):
         with self.assertRaises(ImportError) as ctx:
-            check_dependency_versions(installed=lambda dist: '1.3.4')
-        self.assertIn('1.4.0', str(ctx.exception))
+            check_dependency_versions(installed=lambda dist: '1.4.0')
+        self.assertIn('1.5.0', str(ctx.exception))
 
     def test_accepts_required_and_newer(self):
-        check_dependency_versions(installed=lambda dist: '1.4.0')
         check_dependency_versions(installed=lambda dist: '1.5.0')
+        check_dependency_versions(installed=lambda dist: '1.6.0')
 
     def test_missing_distribution_is_import_error(self):
         def _missing(_dist):
