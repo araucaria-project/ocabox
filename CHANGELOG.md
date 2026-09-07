@@ -6,18 +6,11 @@ All notable changes to this project will be documented in this file.
 
 ## [2.8.0]
 ### Changed
-- Python floor raised to 3.11; `wait_for_psce()` retired in favor of
-  `asyncio.timeout()` (fixed upstream in CPython 3.12's `wait_for`
-  reimplementation, made usable here via the 3.11 floor). The
-  `shield(wait_for(task))` sandwich created orphanable middle tasks — a
-  TOI run on 2.7.6 logged 22 "Task exception was never retrieved:
-  TimeoutError" tracebacks in three minutes, all from that middle task
-  firing after the outer awaiter was cancelled — and could replace a
-  `CancelledError` with the inner task's real exception on the cancel
-  path.
-- `ocabox_bases.__version__` now sourced from installed package metadata
-  (`importlib.metadata.version("ocabox")`) instead of a separate copy;
-  `pyproject.toml` is now the only place the version is edited.
+- Python floor 3.11; `wait_for_psce()` retired, all waits use
+  `asyncio.timeout()` (no orphaned middle task, correct `CancelledError`
+  on cancel).
+- `ocabox_bases.__version__` read from package metadata; `pyproject.toml`
+  is the only place the version is edited.
 
 ## [2.7.6]
 ### Fixed
