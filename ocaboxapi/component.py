@@ -4,7 +4,7 @@ import asyncio
 import dataclasses
 import logging
 import time
-from typing import Any, List
+from typing import Any, List, Optional
 
 import param
 from obcom.comunication.cycle_query import BaseCycleQuery
@@ -296,42 +296,64 @@ class Component(param.Parameterized):
         # moved by every successful refresh or change, is judged against T2.
         # Only when neither witness holds does the value policy decide.
         value = getattr(self, f'_{param_name}_value')
-        if value is None or self._subscription_vouches(param_name):
+        if value is None:
             return value
-        ts = getattr(self, f'_{param_name}_timestamp')
-        if ts + self.observatory.max_data_age >= time.time():
+        missing = self._missing_witness(param_name)
+        if missing is None:
+            return value
+        age = time.time() - getattr(self, f'_{param_name}_timestamp')
+        bound = self.observatory.max_data_age
+        if age <= bound:
             return value
         vp = self.observatory.value_policy
         if vp is ValuePolicy.LAST_GOOD:
             return value
         if vp is ValuePolicy.NONE:
             return None
-        raise OcaboxStaleValueError(
-            f'{self.id}.{param_name}: cached value is {time.time() - ts:.1f}s old, older than '
-            f'max_data_age ({self.observatory.max_data_age}s), and no live subscription vouches '
-            f'for it. Use aget_{param_name}() to refresh, subscribe, or declare a '
-            f'LAST_GOOD/NONE policy.')
+        raise OcaboxStaleValueError(self._stale_message(param_name, missing, age, bound))
 
-    def _subscription_vouches(self, param_name) -> bool:
-        """True when a live cycle query owning ``param_name`` has had healthy
-        contact with the source within its ``truth_bound``. A stopped query or
-        one that lost contact is simply no evidence — never a veto over a value
-        the client refreshed itself. obcom without the contact accessors keeps
-        the historical exemption for a live query."""
+    def _missing_witness(self, param_name) -> Optional[str]:
+        """None when a live cycle query owning ``param_name`` has had healthy
+        contact with the source within its ``truth_bound``; otherwise the
+        diagnosis of why no subscription vouches. A stopped query or one that
+        lost contact is simply no evidence — never a veto over a value the
+        client refreshed itself. obcom without the contact accessors keeps the
+        historical exemption for a live query. With several holders the most
+        telling diagnosis wins: lost contact over stopped over not subscribed."""
+        diagnosis = 'not subscribed'
         for holder in self.subscribed:
             if holder.id != param_name:
                 continue
             cq = holder.cq
             if cq is None or not hasattr(cq, 'is_stopped'):
-                return True  # test stubs / exotic holders: assume live
+                return None  # test stubs / exotic holders: assume live
             try:
                 if cq.is_stopped():
+                    if diagnosis == 'not subscribed':
+                        diagnosis = 'subscription stopped'
                     continue
             except Exception:
-                return True  # liveness unknown — keep the historical exemption
+                return None  # liveness unknown — keep the historical exemption
             if not hasattr(cq, 'is_contact_fresh') or cq.is_contact_fresh():
-                return True
-        return False
+                return None
+            contact_age = getattr(cq, 'last_healthy_contact_age', None)
+            contact_bound = getattr(cq, 'truth_bound', None)
+            if contact_age is None or contact_bound is None:
+                diagnosis = 'subscription lost contact'
+            else:
+                diagnosis = (f'subscription lost contact {contact_age:.1f}s ago '
+                             f'(bound {contact_bound:.1f}s)')
+        return diagnosis
+
+    def _stale_message(self, param_name, missing: str, age: float, bound: float) -> str:
+        head = f'{self.id}.{param_name}: no freshness witness ({missing});'
+        if missing == 'not subscribed':
+            return (f'{head} last refresh {age:.1f}s ago, bound {bound}s. '
+                    f'Refresh with aget_{param_name}() or subscribe.')
+        if missing == 'subscription stopped':
+            return (f'{head} last change {age:.1f}s ago, bound {bound}s. '
+                    f'Read after unsubscribe or during shutdown?')
+        return f'{head} last change {age:.1f}s ago, bound {bound}s. Source or transport silent.'
 
     async def _apull_value(self, param_name, request_timeout: float | None = None,
                            time_of_data_tolerance: float | None = None,
