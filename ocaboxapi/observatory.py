@@ -16,7 +16,6 @@ from typing import TYPE_CHECKING, Optional
 
 from ob.comunication.client import Client
 from ob.comunication.nats_cfg_loader import NatsCfgLoader
-from ob.util_functions.asyncio_util_functions import wait_for_psce
 from obcom.comunication.comunication_error import CommunicationTimeoutError, CommunicationRuntimeError
 
 from ocaboxapi import ClientAPI
@@ -411,12 +410,9 @@ class Observatory:
         cq.stop()
         time_to_close = 0.5
         try:
-
-            await wait_for_psce(
-                cq.stop_and_wait(),
-                timeout=time_to_close
-            )  # the task should finish in less than 0.5 seconds
-        except asyncio.TimeoutError:
+            async with asyncio.timeout(time_to_close):
+                await cq.stop_and_wait()  # the task should finish in less than 0.5 seconds
+        except TimeoutError:
             pass
 
     async def is_tic_server_available(self, request_timeout: float = None):

@@ -9,8 +9,6 @@ from obcom.comunication.comunication_error import CommunicationRuntimeError, Com
 from obcom.comunication.message_serializer import MessageSerializer
 from obcom.comunication.multipart_structure import MultipartStructure
 
-from ob.util_functions.asyncio_util_functions import wait_for_psce
-
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
@@ -127,10 +125,9 @@ class Client(BaseZmqCommunicationObject):
             try:
                 await self._stand_in_line()  # can raise CommunicationRuntimeError
                 try:
-                    # WARNING: do not use the 'asyncio.wait_for()' method, instead use 'wait_for_psce()'
-                    # read more in the method description !!!
-                    return await wait_for_psce(self._wait_for_response(ms.create_time, ms.id_), timeout=time_to_expire)
-                except asyncio.TimeoutError:
+                    async with asyncio.timeout(time_to_expire):
+                        return await self._wait_for_response(ms.create_time, ms.id_)
+                except TimeoutError:
                     # The timer and the receiver's callbacks can be due at the same wake-up if the local event
                     # loop was blocked (busy TOI/Qt work, image rendering, etc.). In that case the reply may
                     # already be sitting in the mailbox even though the timer fired first. Yield one loop turn
@@ -178,8 +175,7 @@ class Client(BaseZmqCommunicationObject):
                     await asyncio.sleep(0)  # this will allow other tasks to do something
         except RuntimeError as error:
             current_task = asyncio.current_task()
-            current_task_cancelling = getattr(current_task, "cancelling", None)
-            if current_task is not None and callable(current_task_cancelling) and current_task_cancelling() > 0:
+            if current_task is not None and current_task.cancelling() > 0:
                 raise asyncio.CancelledError() from error
             raise
         return message
