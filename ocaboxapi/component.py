@@ -4,7 +4,7 @@ import asyncio
 import dataclasses
 import logging
 import time
-from typing import Any, List
+from typing import Any, List, Optional
 
 import param
 from obcom.comunication.cycle_query import BaseCycleQuery
@@ -13,6 +13,8 @@ from obcom.data_colection.value_call import ValueResponse
 from obcom.comunication.error_policy import ValuePolicy
 
 from ocaboxapi import Observatory
+from obcom.data_colection.value_call import ValueRequest
+
 from ocaboxapi.exceptions import OcaboxError, OcaboxStaleValueError
 
 logger = logging.getLogger('component')
@@ -54,7 +56,8 @@ class Component(param.Parameterized):
         the preferred freshness (a fresher cached value is served without I/O;
         an older one triggers a refresh; the TIC default is 60 s — pass an
         explicit tolerance when observing changing state). ``max_data_age`` is
-        T2 — the truth bound (default ``2 * T1``): when a refresh FAILS, a
+        T2 — the truth bound (default ``ValueRequest.default_max_age(T1)``):
+        when a refresh FAILS, a
         cached value younger than T2 is still an acceptable answer and is
         served regardless of policy; only past T2 does the truth axis decide:
         ``RAISE`` propagates the exception (the honest default); ``NONE``
@@ -106,7 +109,7 @@ class Component(param.Parameterized):
 
     def _effective_max_age(self, time_of_data_tolerance: float | None,
                            max_data_age: float | None) -> float:
-        """T2 for this read: explicit per-call > 2x the per-call T1 > observatory T2.
+        """T2 for this read: explicit per-call > default from the per-call T1 > observatory T2.
 
         The T2 >= T1 invariant is preserved (same clamp as the Observatory
         constructor and the wire): a T2 below the refresh threshold would
@@ -117,7 +120,7 @@ class Component(param.Parameterized):
         if max_data_age is not None:
             return max(float(max_data_age), t1)
         if time_of_data_tolerance is not None:
-            return 2 * time_of_data_tolerance
+            return ValueRequest.default_max_age(time_of_data_tolerance)
         return self.observatory.max_data_age
 
     async def aput_value(self, param_name, **kwargs):
@@ -286,57 +289,71 @@ class Component(param.Parameterized):
                 or getattr(self, f'_{param_name}_value') is None)
 
     def _ensure_value(self, param_name):
-        # Sync property read: no I/O is possible here, so this is a pure age
-        # judgment (Staleness Contract). A param with a live subscription is
-        # exempt: the server + cycle-query already enforce the contract and
-        # push a rich None when the truth expires — the local value IS the
-        # contract-compliant view (its ts only moves on change, which says
-        # nothing about freshness).
+        # Sync property read: no I/O possible, pure freshness judgment with two
+        # independent witnesses. A live subscription with healthy contact
+        # vouches for the value however old its local change-stamp is (a
+        # stationary value never moves that stamp). Otherwise the local stamp,
+        # moved by every successful refresh or change, is judged against T2.
+        # Only when neither witness holds does the value policy decide.
         value = getattr(self, f'_{param_name}_value')
-        if value is None or self._is_subscribed(param_name):
+        if value is None:
             return value
-        ts = getattr(self, f'_{param_name}_timestamp')
-        if ts + self.observatory.max_data_age >= time.time():
+        missing = self._missing_witness(param_name)
+        if missing is None:
+            return value
+        age = time.time() - getattr(self, f'_{param_name}_timestamp')
+        bound = self.observatory.max_data_age
+        if age <= bound:
             return value
         vp = self.observatory.value_policy
         if vp is ValuePolicy.LAST_GOOD:
             return value
         if vp is ValuePolicy.NONE:
             return None
-        raise OcaboxStaleValueError(
-            f'{self.id}.{param_name}: cached value is {time.time() - ts:.1f}s old, older than '
-            f'max_data_age ({self.observatory.max_data_age}s). Use aget_{param_name}() '
-            f'to refresh, subscribe, or declare a LAST_GOOD/NONE policy.')
+        raise OcaboxStaleValueError(self._stale_message(param_name, missing, age, bound))
 
-    def _is_subscribed(self, param_name) -> bool:
-        """True when a LIVE, CONTRACT-ENFORCING subscription owns this param.
-
-        Two conditions, both required for the age-judgment exemption:
-
-        * the cycle query is still running — a STOP-terminated query never
-          leaves ``self.subscribed``, and its params must fall back to the
-          local judgment instead of serving an aging value forever;
-        * the query *declared a value policy* — only then does the server
-          (or the client library) push a rich ``Value(None)`` past T2. An
-          undeclared (INTERACTIVE/SERVICE-style) subscription retries
-          silently through an outage, so the local value it feeds says
-          nothing about freshness and must still be judged here.
-        """
+    def _missing_witness(self, param_name) -> Optional[str]:
+        """None when a live cycle query owning ``param_name`` has had healthy
+        contact with the source within its ``truth_bound``; otherwise the
+        diagnosis of why no subscription vouches. A stopped query or one that
+        lost contact is simply no evidence — never a veto over a value the
+        client refreshed itself. obcom without the contact accessors keeps the
+        historical exemption for a live query. With several holders the most
+        telling diagnosis wins: lost contact over stopped over not subscribed."""
+        diagnosis = 'not subscribed'
         for holder in self.subscribed:
             if holder.id != param_name:
                 continue
             cq = holder.cq
             if cq is None or not hasattr(cq, 'is_stopped'):
-                return True  # test stubs / exotic holders: assume live
-            policy = getattr(cq, '_error_policy', None)
-            if policy is None or getattr(policy, 'value_policy', None) is None:
-                continue  # live but not contract-enforcing — no exemption
+                return None  # test stubs / exotic holders: assume live
             try:
-                if not cq.is_stopped():
-                    return True
+                if cq.is_stopped():
+                    if diagnosis == 'not subscribed':
+                        diagnosis = 'subscription stopped'
+                    continue
             except Exception:
-                return True  # liveness unknown — keep the historical exemption
-        return False
+                return None  # liveness unknown — keep the historical exemption
+            if not hasattr(cq, 'is_contact_fresh') or cq.is_contact_fresh():
+                return None
+            contact_age = getattr(cq, 'last_healthy_contact_age', None)
+            contact_bound = getattr(cq, 'truth_bound', None)
+            if contact_age is None or contact_bound is None:
+                diagnosis = 'subscription lost contact'
+            else:
+                diagnosis = (f'subscription lost contact {contact_age:.1f}s ago '
+                             f'(bound {contact_bound:.1f}s)')
+        return diagnosis
+
+    def _stale_message(self, param_name, missing: str, age: float, bound: float) -> str:
+        head = f'{self.id}.{param_name}: no freshness witness ({missing});'
+        if missing == 'not subscribed':
+            return (f'{head} last refresh {age:.1f}s ago, bound {bound}s. '
+                    f'Refresh with aget_{param_name}() or subscribe.')
+        if missing == 'subscription stopped':
+            return (f'{head} last change {age:.1f}s ago, bound {bound}s. '
+                    f'Read after unsubscribe or during shutdown?')
+        return f'{head} last change {age:.1f}s ago, bound {bound}s. Source or transport silent.'
 
     async def _apull_value(self, param_name, request_timeout: float | None = None,
                            time_of_data_tolerance: float | None = None,

@@ -7,6 +7,7 @@ import warnings
 
 from obcom.comunication.base_client_api import BaseClientAPI
 from obcom.comunication.error_policy import ErrorPolicy, ValuePolicy
+from obcom.data_colection.value_call import ValueRequest
 from time import time
 import os
 import pwd
@@ -15,7 +16,6 @@ from typing import TYPE_CHECKING, Optional
 
 from ob.comunication.client import Client
 from ob.comunication.nats_cfg_loader import NatsCfgLoader
-from ob.util_functions.asyncio_util_functions import wait_for_psce
 from obcom.comunication.comunication_error import CommunicationTimeoutError, CommunicationRuntimeError
 
 from ocaboxapi import ClientAPI
@@ -100,14 +100,15 @@ class Observatory:
         # Temporal model (Staleness Contract): T1 = time_of_data_tolerance —
         # preferred freshness / refresh threshold where no per-call tolerance
         # exists; T2 = max_data_age — the truth bound: data older than T2 must
-        # not be presented. Defaults: T1 0.5 s (historical), T2 = 2*T1.
+        # not be presented. Defaults: T1 0.5 s (historical), T2 by the family
+        # rule ``ValueRequest.default_max_age`` (2*T1, floored).
         self._time_of_data_tolerance = 0.5 if time_of_data_tolerance is None else float(time_of_data_tolerance)
         # An EXPLICIT observatory-wide T2 is inherited by subscriptions; the
-        # derived default (2*T1, tuned to property reads) is not — each
+        # derived default is not — each
         # subscription then gets 2x its own tolerance from the library.
         self._max_data_age_explicit = max_data_age is not None
         if max_data_age is None:
-            self._max_data_age = 2 * self._time_of_data_tolerance
+            self._max_data_age = ValueRequest.default_max_age(self._time_of_data_tolerance)
         else:
             self._max_data_age = max(float(max_data_age), self._time_of_data_tolerance)
         self.telescopes = {}
@@ -409,12 +410,9 @@ class Observatory:
         cq.stop()
         time_to_close = 0.5
         try:
-
-            await wait_for_psce(
-                cq.stop_and_wait(),
-                timeout=time_to_close
-            )  # the task should finish in less than 0.5 seconds
-        except asyncio.TimeoutError:
+            async with asyncio.timeout(time_to_close):
+                await cq.stop_and_wait()  # the task should finish in less than 0.5 seconds
+        except TimeoutError:
             pass
 
     async def is_tic_server_available(self, request_timeout: float = None):

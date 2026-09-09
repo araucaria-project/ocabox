@@ -4,6 +4,59 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 ....
 
+## [2.8.2]
+### Fixed
+- Client: the first request after the receiver task is (re)started no longer fails with "The receive task was stopped" — the alive flag is set when the task is created, not on its first step (regression of 2.8.0).
+
+## [2.8.1]
+### Changed
+- `ocabox-common` dependency follows git master again (no tag pin); the import guard requires >= 1.5.0.
+
+## [2.8.0]
+### Changed
+- Python floor 3.11; `wait_for_psce()` retired, all waits use
+  `asyncio.timeout()` (no orphaned middle task, correct `CancelledError`
+  on cancel).
+- `ocabox_bases.__version__` read from package metadata; `pyproject.toml`
+  is the only place the version is edited.
+
+## [2.7.6]
+### Fixed
+- `OcaboxStaleValueError` names the missing freshness witness — not subscribed
+  / subscription stopped / subscription lost contact — instead of advising an
+  `aget_…()` refresh that would not have helped.
+
+## [2.7.5]
+### Fixed
+- A reply that arrived while the consumer's event loop was blocked is
+  delivered instead of reported as a router timeout (false `4002`).
+
+## [2.7.4]
+### Changed
+- ocabox-common pinned to the 1.4.0 release (git tag/rev) and checked at import
+  time (ImportError names the found version).
+
+## [2.7.3]
+### Fixed
+- Sync property reads: a subscription is a freshness witness, not a veto. A
+  value refreshed within T2 is served even if its subscription is stopped or
+  has lost contact; only when neither the subscription nor the local refresh
+  age vouches does the value policy apply
+
+## [2.7.2]
+### Changed
+- Default T2 (`Observatory(max_data_age=)` unset, per-call `aget_*` with only
+  a tolerance) comes from the shared `ValueRequest.default_max_age` rule
+  (2*T1 floored at 5 s; requires ocabox-common >= 1.4.0). Explicit T2 unchanged
+
+## [2.7.1]
+### Fixed
+- Sync property reads of a subscribed param are judged by the cycle query's
+  contact clock (`is_contact_fresh()`, obcom >= 1.3.4), not by the local
+  change-stamp, which a stationary value never moves (undeclared clients
+  raised `OcaboxStaleValueError` on such params after T2). Stopped
+  subscriptions do not vouch; older obcom keeps the historical exemption
+
 ## [2.7.0]
 ### Changed
 - **Staleness Contract, phase 3**: unified read policy `Observatory(policy=

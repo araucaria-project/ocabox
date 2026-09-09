@@ -1,3 +1,7 @@
+from ocaboxapi.dependency_guard import check_dependency_versions
+
+check_dependency_versions()
+
 from ocaboxapi.client_api import ClientAPI
 from ocaboxapi.observatory import Observatory
 from ocaboxapi.telescope import Telescope

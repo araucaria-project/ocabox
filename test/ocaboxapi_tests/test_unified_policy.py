@@ -9,6 +9,7 @@ import unittest
 from unittest.mock import AsyncMock
 
 from obcom.comunication.error_policy import ErrorPolicy, ValuePolicy
+from obcom.data_colection.value_call import ValueRequest
 
 from ocaboxapi import Observatory
 from ocaboxapi.exceptions import OcaboxDeviceError, OcaboxStaleValueError
@@ -71,12 +72,13 @@ class AgetMaxAgeTest(unittest.IsolatedAsyncioTestCase):
     async def test_failed_refresh_inside_repair_window_serves_cache_even_for_raise(self):
         tertiary = _tertiary(policy='interactive')  # RAISE
         _cache_stale(tertiary, 'moving', True, age=0.15)
-        # T1=0.1 → refresh due and failing; T2 default 2*T1=0.2 ≥ age 0.15
+        # T1=0.1 → refresh due and failing; the default T2 (floored) covers age 0.15
         self.assertIs(await tertiary.aget_value('moving', time_of_data_tolerance=0.1), True)
 
     async def test_failed_refresh_past_max_age_raises(self):
         tertiary = _tertiary(policy='interactive')
-        _cache_stale(tertiary, 'moving', True, age=0.5)
+        _cache_stale(tertiary, 'moving', True,
+                     age=ValueRequest.default_max_age(0.1) + 0.5)
         with self.assertRaises(OcaboxDeviceError):
             await tertiary.aget_value('moving', time_of_data_tolerance=0.1)
 
@@ -138,50 +140,149 @@ class SyncPropertyAgeTest(unittest.TestCase):
         _cache_stale(tertiary, 'moving', True)
         self.assertIs(tertiary.moving, True)
 
-    def test_live_undeclared_subscription_does_not_exempt(self):
-        """A live INTERACTIVE/SERVICE-style subscription (no value_policy)
-        never pushes a rich None — its params must still be age-judged."""
+    def test_live_subscription_with_fresh_contact_vouches_for_any_policy(self):
+        """A stationary value never moves its change-stamp; a live query with
+        healthy contact vouches for it regardless of declared value_policy."""
+        from types import SimpleNamespace
+        from obcom.comunication.error_policy import ErrorPolicy as EP
+        for policy in (EP.SERVICE, EP.INTERACTIVE, EP.DISPLAY):
+            observatory = Observatory(client_name='t', policy='interactive',
+                                      time_of_data_tolerance=0.5)
+            tertiary = observatory.get_telescope('jk15').get_tertiary()
+            _cache_stale(tertiary, 'moving', True)
+            live = SimpleNamespace(is_stopped=lambda: False,
+                                   is_contact_fresh=lambda max_age=None: True,
+                                   _error_policy=policy)
+            tertiary.subscribed.append(tertiary.CQHolder(cq=live, id='moving'))
+            try:
+                self.assertIs(tertiary.moving, True, policy)
+            finally:
+                tertiary.subscribed.clear()
+
+    def test_lost_contact_does_not_veto_a_fresh_local_refresh(self):
+        """The subscription is a witness, not a veto: a value the client just
+        refreshed itself is fresh even if its subscription lost contact."""
+        from types import SimpleNamespace
+        from obcom.comunication.error_policy import ErrorPolicy as EP
+        lost = SimpleNamespace(is_stopped=lambda: False,
+                               is_contact_fresh=lambda max_age=None: False,
+                               _error_policy=EP.INTERACTIVE)
+        observatory = Observatory(client_name='t', policy='interactive',
+                                  time_of_data_tolerance=0.5)
+        tertiary = observatory.get_telescope('jk15').get_tertiary()
+        _cache_stale(tertiary, 'moving', True, age=0.0)
+        tertiary.subscribed.append(tertiary.CQHolder(cq=lost, id='moving'))
+        try:
+            self.assertIs(tertiary.moving, True)
+        finally:
+            tertiary.subscribed.clear()
+
+    def test_lost_contact_and_old_stamp_applies_policy(self):
+        from types import SimpleNamespace
+        from obcom.comunication.error_policy import ErrorPolicy as EP
+        lost = SimpleNamespace(is_stopped=lambda: False,
+                               is_contact_fresh=lambda max_age=None: False,
+                               _error_policy=EP.SERVICE)
+        for policy, expect in (('interactive', OcaboxStaleValueError), ('display', None)):
+            observatory = Observatory(client_name='t', policy=policy,
+                                      time_of_data_tolerance=0.5)
+            tertiary = observatory.get_telescope('jk15').get_tertiary()
+            _cache_stale(tertiary, 'moving', True)  # stamp far past T2
+            tertiary.subscribed.append(tertiary.CQHolder(cq=lost, id='moving'))
+            try:
+                if expect is None:
+                    self.assertIsNone(tertiary.moving)
+                else:
+                    with self.assertRaises(expect):
+                        _ = tertiary.moving
+            finally:
+                tertiary.subscribed.clear()
+
+    def test_stopped_subscription_does_not_veto_a_fresh_local_refresh(self):
+        from types import SimpleNamespace
+        from obcom.comunication.error_policy import ErrorPolicy as EP
+        dead = SimpleNamespace(is_stopped=lambda: True,
+                               is_contact_fresh=lambda max_age=None: True,
+                               _error_policy=EP.DISPLAY)
+        observatory = Observatory(client_name='t', policy='interactive',
+                                  time_of_data_tolerance=0.5)
+        tertiary = observatory.get_telescope('jk15').get_tertiary()
+        _cache_stale(tertiary, 'moving', True, age=0.0)
+        tertiary.subscribed.append(tertiary.CQHolder(cq=dead, id='moving'))
+        try:
+            self.assertIs(tertiary.moving, True)
+        finally:
+            tertiary.subscribed.clear()
+
+    def test_stopped_subscription_does_not_vouch(self):
         from types import SimpleNamespace
         from obcom.comunication.error_policy import ErrorPolicy as EP
         observatory = Observatory(client_name='t', policy='interactive',
                                   time_of_data_tolerance=0.5)
         tertiary = observatory.get_telescope('jk15').get_tertiary()
-        _cache_stale(tertiary, 'moving', True)
-        live_undeclared = SimpleNamespace(is_stopped=lambda: False,
-                                          _error_policy=EP.SERVICE)
-        tertiary.subscribed.append(tertiary.CQHolder(cq=live_undeclared, id='moving'))
+        _cache_stale(tertiary, 'moving', True)  # stamp far past T2
+        dead = SimpleNamespace(is_stopped=lambda: True,
+                               is_contact_fresh=lambda max_age=None: True,
+                               _error_policy=EP.DISPLAY)
+        tertiary.subscribed.append(tertiary.CQHolder(cq=dead, id='moving'))
         try:
             with self.assertRaises(OcaboxStaleValueError):
                 _ = tertiary.moving
         finally:
             tertiary.subscribed.clear()
 
-    def test_stopped_declared_subscription_does_not_exempt(self):
-        from types import SimpleNamespace
-        from obcom.comunication.error_policy import ErrorPolicy as EP
+    def _raise_message(self, cq):
         observatory = Observatory(client_name='t', policy='interactive',
                                   time_of_data_tolerance=0.5)
         tertiary = observatory.get_telescope('jk15').get_tertiary()
-        _cache_stale(tertiary, 'moving', True)
-        dead_declared = SimpleNamespace(is_stopped=lambda: True,
-                                        _error_policy=EP.DISPLAY)
-        tertiary.subscribed.append(tertiary.CQHolder(cq=dead_declared, id='moving'))
+        _cache_stale(tertiary, 'moving', True, age=1000.0)
+        if cq is not None:
+            tertiary.subscribed.append(tertiary.CQHolder(cq=cq, id='moving'))
         try:
-            with self.assertRaises(OcaboxStaleValueError):
+            with self.assertRaises(OcaboxStaleValueError) as ctx:
                 _ = tertiary.moving
         finally:
             tertiary.subscribed.clear()
+        return str(ctx.exception)
 
-    def test_live_declared_subscription_exempts(self):
+    def test_stale_message_names_missing_subscription(self):
+        message = self._raise_message(None)
+        self.assertIn('not subscribed', message)
+        self.assertIn('aget_moving()', message)
+        self.assertNotIn('stopped', message)
+
+    def test_stale_message_names_stopped_subscription(self):
+        from types import SimpleNamespace
+        from obcom.comunication.error_policy import ErrorPolicy as EP
+        dead = SimpleNamespace(is_stopped=lambda: True,
+                               is_contact_fresh=lambda max_age=None: True,
+                               _error_policy=EP.DISPLAY)
+        message = self._raise_message(dead)
+        self.assertIn('subscription stopped', message)
+        self.assertIn('last change 1000.', message)
+        self.assertNotIn('aget_moving()', message)
+
+    def test_stale_message_names_lost_contact_with_ages(self):
+        from types import SimpleNamespace
+        from obcom.comunication.error_policy import ErrorPolicy as EP
+        lost = SimpleNamespace(is_stopped=lambda: False,
+                               is_contact_fresh=lambda max_age=None: False,
+                               last_healthy_contact_age=42.0, truth_bound=30.0,
+                               _error_policy=EP.DISPLAY)
+        message = self._raise_message(lost)
+        self.assertIn('lost contact 42.0s ago', message)
+        self.assertIn('bound 30.0s', message)
+        self.assertNotIn('aget_moving()', message)
+
+    def test_old_obcom_without_contact_clock_keeps_historical_exemption(self):
         from types import SimpleNamespace
         from obcom.comunication.error_policy import ErrorPolicy as EP
         observatory = Observatory(client_name='t', policy='interactive',
                                   time_of_data_tolerance=0.5)
         tertiary = observatory.get_telescope('jk15').get_tertiary()
         _cache_stale(tertiary, 'moving', True)
-        live_declared = SimpleNamespace(is_stopped=lambda: False,
-                                        _error_policy=EP.DISPLAY)
-        tertiary.subscribed.append(tertiary.CQHolder(cq=live_declared, id='moving'))
+        legacy = SimpleNamespace(is_stopped=lambda: False, _error_policy=EP.INTERACTIVE)
+        tertiary.subscribed.append(tertiary.CQHolder(cq=legacy, id='moving'))
         try:
             self.assertIs(tertiary.moving, True)
         finally:

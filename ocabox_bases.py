@@ -1,9 +1,13 @@
+from importlib.metadata import PackageNotFoundError, version
+
 __author__ = " Ernest Lasek (elasek@akond.com), Mikołaj Kałuszyński (mkalusz@camk.edu.pl)"
 __copyright__ = ""
 __credits__ = ["Ernest Lasek (elasek@akond.com)", "Mikołaj Kałuszyński (mkalusz@camk.edu.pl)"]
 __license__ = "MIT"
-__version_num__ = [2, 7, 0] # Change version also in pyproject.py and CHANGELOG.md
-__version__ = "{}.{}.{}".format(*__version_num__)
+try:
+    __version__ = version("ocabox")
+except PackageNotFoundError:
+    __version__ = "0.0.0+uninstalled"
 __maintainer__ = "Mikołaj Kałuszyński (mkalusz@camk.edu.pl)"
 __email__ = "mkalusz@camk.edu.pl"
 __status__ = "Development"
