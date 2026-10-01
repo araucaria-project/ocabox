@@ -193,7 +193,7 @@ class Mount(TelescopeComponent):
         logger.debug(f'Putting telescope selectnasmythport to {self.tel_addr}')
         await self.aput_value('action', Action='selectnasmythport', Parameters=nasmyth_port)
 
-    async def aput_errorstring(self, nasmyth_port: int) -> None:
+    async def aput_errorstring(self) -> None:
         logger.debug(f'Putting telescope:errorstring to {self.tel_addr}')
         await self.aput_value('action', Action='telescope:errorstring', Parameters="")
 

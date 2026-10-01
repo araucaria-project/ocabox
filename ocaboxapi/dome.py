@@ -1,7 +1,9 @@
 from __future__ import annotations
 import logging
-from typing import Callable, Optional
+from typing import Callable, Optional, Dict, Tuple
+from serverish.messenger.msg_journal_pub import MsgJournalPublisher
 
+from ob.comunication.nats_bus import rpc_request, rpc_subscribe
 from ocaboxapi.telescopecomponent import TelescopeComponent, OcaBoxParam
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -126,3 +128,71 @@ class Dome(TelescopeComponent):
         return await self.subscribe('domefansrunning',
                                     callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
+
+    async def aput_dome_follower_on(
+            self, journal: Optional[MsgJournalPublisher] = None, timeout: float = 30
+    ) -> bool:
+        logger.debug(f'Putting dome follower on')
+        dat, met = await rpc_request(
+            subject=f'tic.rpc.{self.telescope.id}.dome.follower.on',
+            data={},
+            journal=journal,
+            timeout=timeout
+        )
+        try:
+            if dat is not None and dat['status'] == 'ok':
+                return True
+            else:
+                return False
+        except (LookupError, TypeError, ValueError):
+            return False
+
+    async def aput_dome_follower_off(
+            self, journal: Optional[MsgJournalPublisher] = None, timeout: float = 30
+    ) -> bool:
+        logger.debug(f'Putting dome follower off')
+        dat, met = await rpc_request(
+            subject=f'tic.rpc.{self.telescope.id}.dome.follower.off',
+            data={},
+            journal=journal,
+            timeout=timeout
+        )
+        try:
+            if dat is not None and dat['status'] == 'ok':
+                return True
+            else:
+                return False
+        except (LookupError, TypeError, ValueError):
+            return False
+
+    async def aget_dome_follower_follow_on(
+            self, journal: Optional[MsgJournalPublisher] = None, timeout: float = 30
+    ) -> Optional[bool]:
+        logger.debug(f'Getting dome follower state')
+        dat, met = await rpc_request(
+            subject=f'tic.rpc.{self.telescope.id}.dome.follower.state',
+            data={},
+            journal=journal,
+            timeout=timeout
+        )
+        try:
+            if dat is not None and dat['status'] == 'ok':
+                return dat['follow_on']
+            else:
+                return None
+        except (LookupError, TypeError, ValueError):
+            return None
+
+    async def asubscribe_dome_follower_follow_on(
+            self, callback: Callable, interval: float = 1,
+            journal: Optional[MsgJournalPublisher] = None, timeout: float = 30
+    ) -> None:
+        logger.debug(f'Subscribing dome follower state')
+        await rpc_subscribe(
+            callback=callback,
+            subject=f'tic.rpc.{self.telescope.id}.dome.follower.state',
+            data={},
+            interval=interval,
+            journal=journal,
+            timeout=timeout
+        )
