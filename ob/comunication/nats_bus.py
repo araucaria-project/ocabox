@@ -6,8 +6,7 @@ from typing import Callable, Optional, Dict, Tuple
 from serverish.messenger import request
 from serverish.base.exceptions import MessengerRequestNoResponders, MessengerRequestTimeout, MessengerRequestCanceled
 from serverish.messenger.msg_journal_pub import MsgJournalPublisher
-from serverish.base.task_manager import create_task
-
+from serverish.base.task_manager import create_task, Task
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -62,10 +61,10 @@ async def _rpc_subscribe(
 async def rpc_subscribe(
         callback: Callable, subject: str, data: Dict, interval: float = 1,
         journal: Optional[MsgJournalPublisher] = None, timeout: float = 30
-) -> None:
+) -> Task:
 
     logger.info(f"Starting rpc subscription to {subject}")
-    await create_task(
+    return await create_task(
         _rpc_subscribe(
             callback=callback,
             subject=subject,
