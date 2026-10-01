@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 async def rpc_request(
-        subject: str, data: Dict, journal: Optional[MsgJournalPublisher] = None, timeout: float = 120
+        subject: str, data: Dict, journal: Optional[MsgJournalPublisher] = None, timeout: float = 30
 ) -> Tuple[Optional[Dict], Optional[Dict]]:
 
     try:
@@ -45,7 +45,7 @@ async def rpc_request(
 
 async def _rpc_subscribe(
         callback: Callable, subject: str, data: Dict, interval: float = 1,
-        journal: Optional[MsgJournalPublisher] = None, timeout: float = 120
+        journal: Optional[MsgJournalPublisher] = None, timeout: float = 30
 ) -> Tuple[Optional[Dict], Optional[Dict]]:
 
     while True:
@@ -61,7 +61,7 @@ async def _rpc_subscribe(
 
 async def rpc_subscribe(
         callback: Callable, subject: str, data: Dict, interval: float = 1,
-        journal: Optional[MsgJournalPublisher] = None, timeout: float = 120
+        journal: Optional[MsgJournalPublisher] = None, timeout: float = 30
 ) -> None:
 
     logger.info(f"Starting rpc subscription to {subject}")

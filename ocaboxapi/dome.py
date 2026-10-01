@@ -130,7 +130,7 @@ class Dome(TelescopeComponent):
                                     time_of_data_tolerance=time_of_data_tolerance)
 
     async def aput_dome_follower_on(
-            self, journal: Optional[MsgJournalPublisher] = None, timeout: float = 120
+            self, journal: Optional[MsgJournalPublisher] = None, timeout: float = 30
     ) -> bool:
         logger.debug(f'Putting dome follower on')
         dat, met = await rpc_request(
@@ -148,7 +148,7 @@ class Dome(TelescopeComponent):
             return False
 
     async def aput_dome_follower_off(
-            self, journal: Optional[MsgJournalPublisher] = None, timeout: float = 120
+            self, journal: Optional[MsgJournalPublisher] = None, timeout: float = 30
     ) -> bool:
         logger.debug(f'Putting dome follower off')
         dat, met = await rpc_request(
@@ -166,7 +166,7 @@ class Dome(TelescopeComponent):
             return False
 
     async def aget_dome_follower_on(
-            self, journal: Optional[MsgJournalPublisher] = None, timeout: float = 120
+            self, journal: Optional[MsgJournalPublisher] = None, timeout: float = 30
     ) -> Optional[bool]:
         logger.debug(f'Getting dome follower state')
         dat, met = await rpc_request(
@@ -184,14 +184,14 @@ class Dome(TelescopeComponent):
             return None
 
     async def asubscribe_dome_follower_on(
-            self, callback: Callable, subject: str, data: Dict, interval: float = 1,
-            journal: Optional[MsgJournalPublisher] = None, timeout: float = 120
+            self, callback: Callable, interval: float = 1,
+            journal: Optional[MsgJournalPublisher] = None, timeout: float = 30
     ) -> None:
         logger.debug(f'Subscribing dome follower state')
         await rpc_subscribe(
             callback=callback,
             subject=f'tic.rpc.{self.telescope.id}.dome.follower.state',
-            data=data,
+            data={},
             interval=interval,
             journal=journal,
             timeout=timeout
