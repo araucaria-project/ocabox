@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 ....
 
 
-## [2.8.4]
+## [2.8.5]
 ### Added
 - Dome: introduced dome follower
 - Nats bus: introduced Nats driver

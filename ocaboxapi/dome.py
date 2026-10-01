@@ -167,9 +167,9 @@ class Dome(TelescopeComponent):
         except (LookupError, TypeError, ValueError):
             return False
 
-    async def aget_dome_follower_follow_on(
+    async def aget_dome_follower_status(
             self, journal: Optional[MsgJournalPublisher] = None, timeout: float = 30
-    ) -> Optional[bool]:
+    ) -> Optional[Dict]:
         logger.debug(f'Getting dome follower state')
         dat, met = await rpc_request(
             subject=f'tic.rpc.{self.telescope.id}.dome.follower.state',
@@ -177,15 +177,9 @@ class Dome(TelescopeComponent):
             journal=journal,
             timeout=timeout
         )
-        try:
-            if dat is not None and dat['status'] == 'ok':
-                return dat['follow_on']
-            else:
-                return None
-        except (LookupError, TypeError, ValueError):
-            return None
+        return dat
 
-    async def asubscribe_dome_follower_follow_on(
+    async def asubscribe_dome_follower_status(
             self, callback: Callable, interval: float = 1,
             journal: Optional[MsgJournalPublisher] = None, timeout: float = 30
     ) -> Task:
