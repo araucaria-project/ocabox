@@ -1,6 +1,8 @@
 from __future__ import annotations
 import logging
 from typing import Callable, Optional, Dict, Tuple
+
+from serverish.base import Task
 from serverish.messenger.msg_journal_pub import MsgJournalPublisher
 
 from ob.comunication.nats_bus import rpc_request, rpc_subscribe
@@ -186,9 +188,9 @@ class Dome(TelescopeComponent):
     async def asubscribe_dome_follower_follow_on(
             self, callback: Callable, interval: float = 1,
             journal: Optional[MsgJournalPublisher] = None, timeout: float = 30
-    ) -> None:
+    ) -> Task:
         logger.debug(f'Subscribing dome follower state')
-        await rpc_subscribe(
+        return await rpc_subscribe(
             callback=callback,
             subject=f'tic.rpc.{self.telescope.id}.dome.follower.state',
             data={},
