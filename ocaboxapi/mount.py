@@ -1,6 +1,6 @@
 from __future__ import annotations
 import logging
-from typing import Callable, Dict
+from typing import Callable
 from ocaboxapi.telescopecomponent import TelescopeComponent, OcaBoxParam
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -21,8 +21,6 @@ class Mount(TelescopeComponent):
     commandstring = OcaBoxParam(default='', doc="Mount motorstatus")
     errorstring = OcaBoxParam(default='', doc="Telescope errorstring")
     sideofpier = OcaBoxParam(default=0, doc="Telescope eq side of pier")
-    nasmythport = OcaBoxParam(default=1, doc="Tertriary nasmyth port")
-    tertiarystatus = OcaBoxParam(default='', doc="Tertriary status")
 
     async def aget_ra(self) -> float:
         logger.debug(f'Getting mount RA from {self.tel_addr}')
@@ -151,58 +149,6 @@ class Mount(TelescopeComponent):
         return await self.subscribe('sideofpier', callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_nasmythport(self) -> int:
-        """
-        data ={"Action" :"getcurrentnasmythport" ,"Parameters" :"true"}
-        quest ="http://192.168.7.110:11111/api/v1/telescope/0/action"
-        r = requests.put(quest ,data=data).json()
-        r= r['Value']
-        print(f"ALPACA: {quest}\n {r}\n")
-        """
-        logger.debug(f'Getting nasmythport from {self.tel_addr}')
-        ret = await self.aget_value(
-            param_name='nasmythport',
-            # request_timeout=None,
-            # parameters_dict={"Action" :"getcurrentnasmythport" ,"Parameters" :"true"}
-        )
-        return ret
-
-    async def asubscribe_nasmythport(self, callback: Callable | None = None,
-                                    time_of_data_tolerance: float | None = None):
-        logger.debug(f'Subscribing nasmythport from {self.tel_addr}')
-        return await self.subscribe(
-            param_name='nasmythport',
-            callback=callback,
-            time_of_data_tolerance=time_of_data_tolerance,
-            # parameters_dict={"Action" :"getcurrentnasmythport" ,"Parameters" :"true"}
-        )
-
-    async def aget_tertiarystatus(self) -> Dict:
-        """
-        data ={"Action" :"tertiarystatus" ,"Parameters" :"true"}
-        quest ="http://192.168.7.110:11111/api/v1/telescope/0/action"
-        r = requests.put(quest ,data=data).json()
-        r= r['Value']
-        print(f"ALPACA: {quest}\n {r}\n")
-        """
-        logger.debug(f'Getting tertiarystatus from {self.tel_addr}')
-        ret = await self.aget_value(
-            param_name='tertiarystatus',
-            # request_timeout=None,
-            # parameters_dict={"Action" :"tertiarystatus" ,"Parameters" :"true"}
-        )
-        return ret
-
-    async def asubscribe_tertiarystatus(self, callback: Callable | None = None,
-                                    time_of_data_tolerance: float | None = None):
-        logger.debug(f'Subscribing tertiarystatus from {self.tel_addr}')
-        return await self.subscribe(
-            param_name='tertiarystatus',
-            callback=callback,
-            time_of_data_tolerance=time_of_data_tolerance,
-            # parameters_dict={"Action": "tertiarystatus", "Parameters": "true"}
-        )
-
     async def aput_slewtocoo(self, ra: float, dec: float) -> None:
         logger.debug(f'Putting slew coo to {self.tel_addr}')
         await self.aput_value('slewtocoordinates', RightAscension=ra, Declination=dec)
@@ -244,13 +190,6 @@ class Mount(TelescopeComponent):
         await self.aput_value('action', Action=action, Parameters=param)
 
     async def aput_selectnasmythport(self, nasmyth_port: int) -> None:
-        """
-        data = {"Action":"selectnasmythport","Parameters":"1"}
-        quest = "http://192.168.7.110:11111/api/v1/telescope/0/action"
-        r = requests.put(quest, data=data).json()
-        r = r['Value']
-        print(f"ALPACA: {quest}\n {r}\n")
-        """
         logger.debug(f'Putting telescope selectnasmythport to {self.tel_addr}')
         await self.aput_value('action', Action='selectnasmythport', Parameters=nasmyth_port)
 
