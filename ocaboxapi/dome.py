@@ -134,7 +134,7 @@ class Dome(TelescopeComponent):
     ) -> bool:
         logger.debug(f'Putting dome follower on')
         dat, met = await rpc_request(
-            subject=f'tic.rpc.{self.telescope.id}.dome.follower.state',
+            subject=f'tic.rpc.{self.telescope.id}.dome.follower.on',
             data={},
             journal=journal,
             timeout=timeout
@@ -152,7 +152,7 @@ class Dome(TelescopeComponent):
     ) -> bool:
         logger.debug(f'Putting dome follower off')
         dat, met = await rpc_request(
-            subject=f'tic.rpc.{self.telescope.id}.dome.follower.state',
+            subject=f'tic.rpc.{self.telescope.id}.dome.follower.off',
             data={},
             journal=journal,
             timeout=timeout
@@ -165,7 +165,7 @@ class Dome(TelescopeComponent):
         except (LookupError, TypeError, ValueError):
             return False
 
-    async def aget_dome_follower_on(
+    async def aget_dome_follower_follow_on(
             self, journal: Optional[MsgJournalPublisher] = None, timeout: float = 30
     ) -> Optional[bool]:
         logger.debug(f'Getting dome follower state')
@@ -183,7 +183,7 @@ class Dome(TelescopeComponent):
         except (LookupError, TypeError, ValueError):
             return None
 
-    async def asubscribe_dome_follower_on(
+    async def asubscribe_dome_follower_follow_on(
             self, callback: Callable, interval: float = 1,
             journal: Optional[MsgJournalPublisher] = None, timeout: float = 30
     ) -> None:
