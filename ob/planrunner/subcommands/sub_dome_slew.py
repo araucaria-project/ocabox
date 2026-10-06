@@ -8,7 +8,6 @@ from pyaraucaria.dome_eq import dome_eq_azimuth
 from ob.planrunner.base_subcommand import BaseSubCommand
 from typing import Callable, Dict, Any, Optional
 from ob.planrunner.status import PlanStatusEnum
-from ocaboxapi import Dome
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
