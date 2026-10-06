@@ -8,7 +8,7 @@ from pyaraucaria.dome_eq import dome_eq_azimuth
 from ob.planrunner.base_subcommand import BaseSubCommand
 from typing import Callable, Dict, Any, Optional
 from ob.planrunner.status import PlanStatusEnum
-
+from ocaboxapi import Dome
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -72,6 +72,17 @@ class DomeSlew(BaseSubCommand):
         self.slew_tolerance = self.param['cfg_gen'].get_value(seq=[
             'telescopes', self.telescope.id, 'observatory', 'components', 'dome', 'slew_tolerance'
         ], source='nats')
+
+    async def dome_follower_is_on(self) -> bool:
+        _status = await self.dome.aget_dome_follower_status(journal=self.journal)
+        try:
+            if _status is not None and _status['status'] == 'ok' and _status['follow_on'] is True:
+                logger.info(f"Dome follower is on - no plan runner dome az slew")
+                return True
+            else:
+                return False
+        except (LookupError, TypeError, ValueError):
+            return False
 
     async def arun(self, step_id: Optional[str] = None) -> int:
         self.started = True
@@ -170,22 +181,24 @@ class DomeSlew(BaseSubCommand):
                 return 0
             else:
                 az = mount_az
-        inf = f"{self.id} {self.name} slewing az: {az}"
-        await self.journal.info(inf)
-        await self.journal.debug(f'msg: {inf}, uid: {pwd.getpwuid(os.getuid())[0]}.')
-        ds = await self.proof_put(awaitab=self.dome.aput_slewtoazimuth, az=az)
-        if not ds:
-            self.skipped = True
-            await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
-            inf = f'Can not execute dome slew to azimuth, program stopping'
-            logger.error(inf)
-            await self.journal.error(inf)
-            await self.status_error_publish(
-                level='critical',
-                description=inf,
-                plan_runner_quits=True
-            )
-            return 2
+
+        if not await self.dome_follower_is_on():
+            inf = f"{self.id} {self.name} plan runner is slewing az: {az} (dome follower is off)"
+            await self.journal.info(inf)
+            await self.journal.debug(f'msg: {inf}, uid: {pwd.getpwuid(os.getuid())[0]}.')
+            ds = await self.proof_put(awaitab=self.dome.aput_slewtoazimuth, az=az)
+            if not ds:
+                self.skipped = True
+                await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
+                inf = f'Can not execute dome slew to azimuth, program stopping'
+                logger.error(inf)
+                await self.journal.error(inf)
+                await self.status_error_publish(
+                    level='critical',
+                    description=inf,
+                    plan_runner_quits=True
+                )
+                return 2
         wait_slew_ok = await self._wait_to_slew(az)
         if not wait_slew_ok:
             self.skipped = True
