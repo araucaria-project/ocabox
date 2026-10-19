@@ -55,12 +55,19 @@ class OpticsClientApiTest(unittest.IsolatedAsyncioTestCase):
     async def test_state_reads_and_subscriptions(self):
         state = _mocked(_telescope().get_optics())
         callback = MagicMock()
-        for item in ('selectors', 'busy', 'operation'):
+        for item in ('selectors', 'declared', 'busy', 'operation'):
             with self.subTest(item=item):
                 await getattr(state, f'aget_{item}')()
                 state.aget_value.assert_awaited_with(item, time_of_data_tolerance=None)
                 await getattr(state, f'asubscribe_{item}')(callback=callback, time_of_data_tolerance=1.0)
                 state.subscribe.assert_awaited_with(item, callback=callback, time_of_data_tolerance=1.0)
+
+    async def test_declare_sends_key_and_position(self):
+        state = _mocked(_telescope().get_optics())
+        await state.aput_declare('dome', 'open')
+        state.aput_value.assert_awaited_once_with('declare', key='dome', position='open')
+        await state.aput_declare('dome', None)
+        state.aput_value.assert_awaited_with('declare', key='dome', position=None)
 
     def test_setpath_is_a_human_command(self):
         """The permission is the human's, checked by TIC's blocker — no service bypass by default."""

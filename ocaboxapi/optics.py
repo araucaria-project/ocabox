@@ -6,8 +6,10 @@ subscribes and errors like any device (addresses ``<tel>.optics.<detector>.<item
 
 - :class:`OpticalDetector` — one instrument: what it ``sees`` now, the verdict of each of its
   ``functions`` (object, dark, flat, …), and ``aput_setpath(function)`` to switch the light path.
-- :class:`OpticsState` — the telescope's selectors, the detectors whose path must not change
-  (``busy``), and the last path change (``operation``: moving → done | failed).
+- :class:`OpticsState` — every selector axis (position, why it is unknown, its label), the
+  positions people vouch for (``declared``), the detectors whose path must not change (``busy``),
+  and the last path change (``operation``: moving → done | failed); ``aput_declare`` to vouch for
+  what no reading proves (a shutter opened by hand while its sensor reports an error).
 
 ``aput_setpath`` returns as soon as the service accepts (``{'accepted': True, 'moves': {...}}``)
 and the switch runs like a slew: follow ``operation``. A refusal raises the server error with the
@@ -53,7 +55,8 @@ class OpticalDetector(TelescopeComponent):
 class OpticsState(TelescopeComponent):
     """The telescope-wide state of the optics service (``Telescope.get_optics()``)."""
 
-    selectors = OcaBoxParam(default=None, doc="Proven selector positions: {key: {position, moving}}")
+    selectors = OcaBoxParam(default=None, doc="Every state axis, selectors and sources (sky, lamps): {key: {position, origin, moving, cause, by, label}}")
+    declared = OcaBoxParam(default=None, doc="Positions people vouch for: {key: {position, by, at}}")
     busy = OcaBoxParam(default=None, doc="Detectors whose light path must not change: {detector: why}")
     operation = OcaBoxParam(default=None, doc="Last path change: {state, detector, function, moves, caller, message}")
 
@@ -63,6 +66,20 @@ class OpticsState(TelescopeComponent):
     async def asubscribe_selectors(self, callback: Optional[Callable] = None,
                                    time_of_data_tolerance: float | None = None):
         return await self.subscribe('selectors', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
+
+    async def aget_declared(self, time_of_data_tolerance: float | None = None) -> dict | None:
+        return await self.aget_value('declared', time_of_data_tolerance=time_of_data_tolerance)
+
+    async def asubscribe_declared(self, callback: Optional[Callable] = None,
+                                  time_of_data_tolerance: float | None = None):
+        return await self.subscribe('declared', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
+
+    async def aput_declare(self, key: str, position: str | None) -> dict:
+        """Vouch for selector ``key`` (``dome``) being at ``position`` when no reading can prove it;
+        ``None`` withdraws. Refused (4009) while a reading proves the axis; withdrawn by the service
+        as soon as one does, and after the night. Returns the live declarations."""
+        logger.info(f'{self.my_address()}: declare {key} {position}')
+        return await self.aput_value('declare', key=key, position=position)
 
     async def aget_busy(self, time_of_data_tolerance: float | None = None) -> dict | None:
         return await self.aget_value('busy', time_of_data_tolerance=time_of_data_tolerance)
