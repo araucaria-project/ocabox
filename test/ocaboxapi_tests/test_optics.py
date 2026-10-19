@@ -80,5 +80,19 @@ class OpticsClientApiTest(unittest.IsolatedAsyncioTestCase):
             component.unwatch_all.assert_called_once()
 
 
+class TelescopeCleanupTest(unittest.TestCase):
+
+    def test_unwatch_all_component_unwatches_m3_and_keeps_its_subscriptions(self):
+        """unwatch_all_component removes local watchers only; it used to unsubscribe M3 instead."""
+        tertiary = _telescope().get_tertiary()
+        tel = tertiary.telescope
+        tertiary.unsubscribe_all = MagicMock()
+        tertiary.unwatch_all = MagicMock()
+        tertiary.reset_params_values = MagicMock()
+        tel.unwatch_all_component()
+        tertiary.unwatch_all.assert_called_once()
+        tertiary.unsubscribe_all.assert_not_called()
+
+
 if __name__ == '__main__':
     unittest.main()

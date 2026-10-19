@@ -21,6 +21,7 @@ from obcom.comunication.comunication_error import CommunicationTimeoutError, Com
 
 from ocaboxapi.tertiary import Tertiary
 from ocaboxapi.mirrorcell import MirrorCell
+from ocaboxapi.optics import OpticalDetector, OpticsState
 
 logger = logging.getLogger("telescope")
 
@@ -44,6 +45,8 @@ class Telescope(AbstractTelescope):
         self.covercalibrators = {}
         self.tertiarys = {}
         self.mirrorcells = {}
+        self.optical_detectors = {}
+        self._optics = None
         self._access_grantor = None
         self._observation_plan = None
         self._cycle_time_calculator = None
@@ -90,6 +93,21 @@ class Telescope(AbstractTelescope):
             dev = MirrorCell(id=id, telescope=self)
             self.mirrorcells[id] = dev
             return dev
+
+    def get_optical_detector(self, detector: str) -> OpticalDetector:
+        """The light path of ``detector`` (a component name, e.g. ``camera``), served by the optics service."""
+        try:
+            return self.optical_detectors[detector]
+        except LookupError:
+            dev = OpticalDetector(id=f'optics.{detector}', telescope=self)
+            self.optical_detectors[detector] = dev
+            return dev
+
+    def get_optics(self) -> OpticsState:
+        """The telescope-wide state of the optics service: selectors, busy detectors, last operation."""
+        if self._optics is None:
+            self._optics = OpticsState(id='optics.self', telescope=self)
+        return self._optics
 
     def get_cctv(self, id='cctv') -> CCTV:
         try:
@@ -279,6 +297,10 @@ class Telescope(AbstractTelescope):
             comp.unsubscribe_all()
         for comp in self.mirrorcells.values():
             comp.unsubscribe_all()
+        for comp in self.optical_detectors.values():
+            comp.unsubscribe_all()
+        if self._optics:
+            self._optics.unsubscribe_all()
         if self._access_grantor:
             self._access_grantor.unsubscribe_all()
         if self._guiding_controller:
@@ -310,11 +332,17 @@ class Telescope(AbstractTelescope):
             comp.unwatch_all()
             comp.reset_params_values()
         for comp in self.tertiarys.values():
-            comp.unsubscribe_all()
+            comp.unwatch_all()
             comp.reset_params_values()
         for comp in self.mirrorcells.values():
             comp.unwatch_all()
             comp.reset_params_values()
+        for comp in self.optical_detectors.values():
+            comp.unwatch_all()
+            comp.reset_params_values()
+        if self._optics:
+            self._optics.unwatch_all()
+            self._optics.reset_params_values()
         if self._access_grantor:
             self._access_grantor.unwatch_all()
             self._access_grantor.reset_params_values()
