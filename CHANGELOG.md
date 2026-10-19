@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 ....
 
+## [2.9.0]
+### Added
+- Optics: `Telescope.get_optical_detector(name)` (`sees`, `functions`, `aput_setpath(function)`) and
+  `Telescope.get_optics()` (`selectors`, `busy`, `operation`) — the optics service of ocabox-tcs as
+  TIC serves it (`<tel>.optics.<detector>.<item>`, ocabox-server ≥ 2.10). `aput_setpath` returns
+  once the switch is accepted; follow `operation` for its outcome. Refusals arrive as server errors
+  with the service's code (4007/4008/4009).
+### Fixed
+- `Telescope.unwatch_all_component` unwatches the tertiary (M3) instead of unsubscribing it.
+
 
 ## [2.8.6]
 ### Added
