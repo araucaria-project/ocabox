@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 ....
 
+## [2.10.0]
+### Added
+- Optics: `OpticsState.declared` and `aput_declare(key, position)` — vouch for a selector no reading
+  proves (the dome while its shutter sensor reports an error); `None` withdraws (optics service ≥ 1.5).
+### Changed
+- `OpticsState.selectors` carries every selector axis with `origin`, `cause` (why it is unknown) and
+  `label` (what people call it).
+
 ## [2.9.0]
 ### Added
 - Optics: `Telescope.get_optical_detector(name)` (`sees`, `functions`, `aput_setpath(function)`) and
