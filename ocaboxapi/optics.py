@@ -68,14 +68,14 @@ class OpticalDetector(_OpticsComponent):
         return await self.aget_value('sees', time_of_data_tolerance=time_of_data_tolerance)
 
     async def asubscribe_sees(self, callback: ValueCallback, time_of_data_tolerance: float | None = None,
-                             max_data_age: float | None = None):
+                              max_data_age: float | None = None):
         return await self._asubscribe_value('sees', callback, time_of_data_tolerance, max_data_age)
 
     async def aget_functions(self, time_of_data_tolerance: float | None = None) -> dict | None:
         return await self.aget_value('functions', time_of_data_tolerance=time_of_data_tolerance)
 
     async def asubscribe_functions(self, callback: ValueCallback, time_of_data_tolerance: float | None = None,
-                             max_data_age: float | None = None):
+                                   max_data_age: float | None = None):
         return await self._asubscribe_value('functions', callback, time_of_data_tolerance, max_data_age)
 
     async def aput_setpath(self, function: str) -> dict:
@@ -96,14 +96,14 @@ class OpticsState(_OpticsComponent):
         return await self.aget_value('selectors', time_of_data_tolerance=time_of_data_tolerance)
 
     async def asubscribe_selectors(self, callback: ValueCallback, time_of_data_tolerance: float | None = None,
-                             max_data_age: float | None = None):
+                                   max_data_age: float | None = None):
         return await self._asubscribe_value('selectors', callback, time_of_data_tolerance, max_data_age)
 
     async def aget_declared(self, time_of_data_tolerance: float | None = None) -> dict | None:
         return await self.aget_value('declared', time_of_data_tolerance=time_of_data_tolerance)
 
     async def asubscribe_declared(self, callback: ValueCallback, time_of_data_tolerance: float | None = None,
-                             max_data_age: float | None = None):
+                                  max_data_age: float | None = None):
         return await self._asubscribe_value('declared', callback, time_of_data_tolerance, max_data_age)
 
     async def aput_declare(self, key: str, position: str | None) -> dict:
@@ -117,12 +117,12 @@ class OpticsState(_OpticsComponent):
         return await self.aget_value('busy', time_of_data_tolerance=time_of_data_tolerance)
 
     async def asubscribe_busy(self, callback: ValueCallback, time_of_data_tolerance: float | None = None,
-                             max_data_age: float | None = None):
+                              max_data_age: float | None = None):
         return await self._asubscribe_value('busy', callback, time_of_data_tolerance, max_data_age)
 
     async def aget_operation(self, time_of_data_tolerance: float | None = None) -> dict | None:
         return await self.aget_value('operation', time_of_data_tolerance=time_of_data_tolerance)
 
     async def asubscribe_operation(self, callback: ValueCallback, time_of_data_tolerance: float | None = None,
-                             max_data_age: float | None = None):
+                                   max_data_age: float | None = None):
         return await self._asubscribe_value('operation', callback, time_of_data_tolerance, max_data_age)
