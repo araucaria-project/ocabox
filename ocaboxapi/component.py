@@ -54,8 +54,8 @@ class Component(param.Parameterized):
 
         Temporal model (Staleness Contract): ``time_of_data_tolerance`` is T1 —
         the preferred freshness (a fresher cached value is served without I/O;
-        an older one triggers a refresh; the TIC default is 60 s — pass an
-        explicit tolerance when observing changing state). ``max_data_age`` is
+        an older one triggers a refresh; default the observatory's T1, 0.5 s —
+        pass an explicit tolerance when a different cadence is wanted). ``max_data_age`` is
         T2 — the truth bound (default ``ValueRequest.default_max_age(T1)``):
         when a refresh FAILS, a
         cached value younger than T2 is still an acceptable answer and is
