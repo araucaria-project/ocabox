@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 ....
 
+## [2.11.0]
+### Changed
+- Optics subscriptions (`asubscribe_sees`, `_functions`, `_selectors`, `_declared`, `_busy`,
+  `_operation`) hand the callback the value itself — `callback(value)`, a coroutine function too —
+  as TIC delivers it, `None` when TIC has no truthful one (past `max_data_age`, the Staleness
+  Contract); no more param events to read the value back from the component. They stay the
+  component's own subscriptions, so `Telescope.unsubscribe_all_component` ends them.
+
 ## [2.10.1]
 ### Changed
 - One T1: a GET or subscription without `time_of_data_tolerance` in the call or in the client's
