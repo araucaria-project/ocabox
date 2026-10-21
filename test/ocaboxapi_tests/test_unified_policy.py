@@ -395,5 +395,50 @@ class ObservatoryT2InheritanceTest(unittest.IsolatedAsyncioTestCase):
                           'the 2*T1 property-read default must not override per-subscription defaults')
 
 
+class ObservatoryT1Test(unittest.IsolatedAsyncioTestCase):
+    """One T1: without a per-call tolerance or a client-config key, the wire gets the observatory's
+    own T1 (never ``None``, which obcom once read as 60 s while the local cache refreshed at 0.5 s)."""
+
+    @staticmethod
+    def _fake_client(captured):
+        from types import SimpleNamespace
+
+        async def fake(address, **kwargs):
+            captured.update(kwargs)
+            return SimpleNamespace(status=True, error=None, value=SimpleNamespace(v=1, ts=0.0, tags={}))
+
+        class FakeClient:
+            subscribe_with_callback = staticmethod(fake)
+            get_async = staticmethod(fake)
+        return FakeClient()
+
+    async def test_default_t1_rides_on_the_wire(self):
+        from obcom.comunication import timing
+        observatory = Observatory(client_name='t', policy='display')
+        captured = {}
+        observatory._client = self._fake_client(captured)
+        await observatory.subscribe_async('jk15.tertiary.moving')
+        self.assertEqual(captured['time_of_data_tolerance'], timing.DEFAULT_REFRESH_AFTER)
+        self.assertEqual(observatory.time_of_data_tolerance, timing.DEFAULT_REFRESH_AFTER)
+
+    async def test_observatory_t1_rides_on_the_wire_for_subscribe_and_get(self):
+        observatory = Observatory(client_name='t', policy='interactive', time_of_data_tolerance=2.0)
+        captured = {}
+        observatory._client = self._fake_client(captured)
+        await observatory.subscribe_async('jk15.tertiary.moving')
+        self.assertEqual(captured['time_of_data_tolerance'], 2.0)
+        captured.clear()
+        await observatory.get_async('jk15.tertiary.moving')
+        self.assertEqual(captured['time_of_data_tolerance'], 2.0)
+
+    async def test_client_config_still_wins(self):
+        observatory = Observatory(client_name='t', policy='interactive', time_of_data_tolerance=2.0)
+        observatory._get_client_config = lambda: {'time_of_data_tolerance': 0.25}
+        captured = {}
+        observatory._client = self._fake_client(captured)
+        await observatory.subscribe_async('jk15.tertiary.moving')
+        self.assertEqual(captured['time_of_data_tolerance'], 0.25)
+
+
 if __name__ == '__main__':
     unittest.main()

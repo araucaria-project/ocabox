@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 ....
 
+## [2.10.1]
+### Changed
+- One T1: a GET or subscription without `time_of_data_tolerance` in the call or in the client's
+  NATS config now carries the observatory's own T1 (`Observatory(time_of_data_tolerance=)`, default
+  `timing.DEFAULT_REFRESH_AFTER` 0.5 s) on the wire instead of `None` — which obcom used to read as
+  60 s, so a bare client refreshed its cache every 0.5 s and could be served values up to a minute
+  old. Requires ocabox-common >= 1.11.0 (import guard), where T0 `delay` also defaults to T1.
+
 ## [2.10.0]
 ### Added
 - Optics: `OpticsState.declared` and `aput_declare(key, position)` — vouch for a selector no reading

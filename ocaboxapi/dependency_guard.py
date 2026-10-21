@@ -3,7 +3,7 @@ from importlib.metadata import PackageNotFoundError, version
 
 from packaging.version import Version
 
-REQUIRED = {'ocabox-common': '1.5.0'}
+REQUIRED = {'ocabox-common': '1.11.0'}
 
 
 def check_dependency_versions(installed=version) -> None:

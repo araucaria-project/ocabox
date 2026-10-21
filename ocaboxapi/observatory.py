@@ -6,6 +6,7 @@ import asyncio
 import warnings
 
 from obcom.comunication.base_client_api import BaseClientAPI
+from obcom.comunication import timing
 from obcom.comunication.error_policy import ErrorPolicy, ValuePolicy
 from obcom.data_colection.value_call import ValueRequest
 from time import time
@@ -100,9 +101,13 @@ class Observatory:
         # Temporal model (Staleness Contract): T1 = time_of_data_tolerance —
         # preferred freshness / refresh threshold where no per-call tolerance
         # exists; T2 = max_data_age — the truth bound: data older than T2 must
-        # not be presented. Defaults: T1 0.5 s (historical), T2 by the family
-        # rule ``ValueRequest.default_max_age`` (2*T1, floored).
-        self._time_of_data_tolerance = 0.5 if time_of_data_tolerance is None else float(time_of_data_tolerance)
+        # not be presented. Defaults: T1 ``timing.DEFAULT_REFRESH_AFTER`` (the one
+        # family default, cache and wire alike), T2 by the family rule
+        # ``ValueRequest.default_max_age`` (2*T1, floored). The client config
+        # (``client.<name>.time_of_data_tolerance``) overrides T1 on the wire;
+        # without it the wire gets this very T1, never a library default.
+        self._time_of_data_tolerance = (timing.DEFAULT_REFRESH_AFTER if time_of_data_tolerance is None
+                                        else float(time_of_data_tolerance))
         # An EXPLICIT observatory-wide T2 is inherited by subscriptions; the
         # derived default is not — each
         # subscription then gets 2x its own tolerance from the library.
@@ -292,7 +297,8 @@ class Observatory:
         """
 
         if time_of_data_tolerance is None:
-            time_of_data_tolerance = self._get_client_config().get('time_of_data_tolerance', None)
+            time_of_data_tolerance = self._get_client_config().get('time_of_data_tolerance',
+                                                                   self._time_of_data_tolerance)
         if request_timeout is None:
             request_timeout = time() + self._get_client_config().get('request_timeout', 2.02)
 
@@ -367,7 +373,8 @@ class Observatory:
             error_policy = self._policy
 
         if time_of_data_tolerance is None:
-            time_of_data_tolerance = self._get_client_config().get('time_of_data_tolerance', None)
+            time_of_data_tolerance = self._get_client_config().get('time_of_data_tolerance',
+                                                                   self._time_of_data_tolerance)
         if max_data_age is None and self._max_data_age_explicit:
             # inherit the client-wide truth bound (the wire clamps T2 >= T1)
             max_data_age = self._max_data_age
@@ -440,7 +447,8 @@ class Observatory:
         """
 
         if time_of_data_tolerance is None:
-            time_of_data_tolerance = self._get_client_config().get('time_of_data_tolerance', None)
+            time_of_data_tolerance = self._get_client_config().get('time_of_data_tolerance',
+                                                                   self._time_of_data_tolerance)
         if delay is None:
             delay = self._get_client_config().get('delay', None)
         if name is None:
