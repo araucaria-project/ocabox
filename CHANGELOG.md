@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 ....
 
+## [2.11.0]
+### Changed
+- **Breaking (optics only):** `asubscribe_sees`, `_functions`, `_selectors`, `_declared`, `_busy`,
+  `_operation` take a required `callback` and hand it what TIC delivered, the obcom `Value` — no
+  more param events to read the value back from the component (the direction of #294). `value.v` is
+  the document; a `None` is a verdict: `value.tags['reason']` is the code of the Staleness
+  Contract's rich None (with `last_good`/`last_good_ts`) or of the error TIC answered with, its text
+  in `tags['message']` — "TIC unreachable" and "optics service silent" stay distinguishable. A
+  coroutine callback is awaited by the subscription itself, in delivery order, its failure logged.
+  The component's cache follows the deliveries (the subscription is its freshness witness), so the
+  sync properties and `value_tags()` agree with the callback. `max_data_age` (T2) can be given. The
+  other `asubscribe_*` of the API are unchanged.
+
 ## [2.10.1]
 ### Changed
 - One T1: a GET or subscription without `time_of_data_tolerance` in the call or in the client's
