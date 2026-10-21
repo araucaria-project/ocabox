@@ -9,6 +9,7 @@ import time
 import unittest
 from unittest.mock import AsyncMock, MagicMock
 
+from obcom.data_colection.response_error import ResponseError
 from obcom.data_colection.value import Value
 from obcom.data_colection.value_call import ValueResponse
 from ocaboxapi import Observatory
@@ -27,12 +28,20 @@ def _mocked(component):
     return component
 
 
-def _delivered(component, value):
-    """Hand the last subscription's callback what TIC delivers: ``value``, or the Staleness
-    Contract's ``None`` when ``value`` is ``None``."""
-    deliver = component.observatory.subscribe_async.await_args.kwargs['callback_method']
+def _answer(component, response: ValueResponse):
+    """Run the last subscription's callback on ``response`` as the cycle query does: the sync one is
+    called, the async one awaited (the caller awaits what this returns)."""
+    kwargs = component.observatory.subscribe_async.await_args.kwargs
+    if 'async_callback_method' in kwargs:
+        return kwargs['async_callback_method']([response])
+    kwargs['callback_method']([response])
+
+
+def _delivered(component, value, tags=None):
+    """What TIC delivers: ``value``, or the Staleness Contract's rich None when ``value`` is None."""
     address = component.observatory.subscribe_async.await_args.args[0]
-    deliver([ValueResponse(address, value=Value(value, time.time(), tags={} if value is not None else {'reason': 2003}))])
+    tags = tags if tags is not None else ({} if value is not None else {'reason': 2003})
+    return _answer(component, ValueResponse(address, value=Value(value, time.time(), tags=tags)))
 
 
 class OpticsClientApiTest(unittest.IsolatedAsyncioTestCase):
@@ -67,21 +76,57 @@ class OpticsClientApiTest(unittest.IsolatedAsyncioTestCase):
         callback = MagicMock()
         await detector.asubscribe_sees(callback)
         _delivered(detector, [{'class': 'sky.science', 'terminal': 'sky', 'via': []}])
-        callback.assert_called_once_with([{'class': 'sky.science', 'terminal': 'sky', 'via': []}])
-        _delivered(detector, None)  # past its max_data_age: no truthful value
-        callback.assert_called_with(None)
+        self.assertEqual(callback.call_args.args[0].v, [{'class': 'sky.science', 'terminal': 'sky', 'via': []}])
 
-    async def test_a_coroutine_callback_is_scheduled(self):
+    async def test_none_says_why(self):
+        """A rich None keeps its reason and last good value: the panel can say why it went blank."""
+        detector = _mocked(_telescope().get_optical_detector('camera'))
+        callback = MagicMock()
+        await detector.asubscribe_sees(callback)
+        _delivered(detector, None, tags={'reason': 4005, 'last_good': [], 'last_good_ts': 1.0})
+        value = callback.call_args.args[0]
+        self.assertIsNone(value.v)
+        self.assertEqual(value.tags, {'reason': 4005, 'last_good': [], 'last_good_ts': 1.0})
+
+    async def test_an_error_answer_is_a_none_with_its_code(self):
         state = _mocked(_telescope().get_optics())
-        received = asyncio.Event()
+        callback = MagicMock()
+        await state.asubscribe_selectors(callback)
+        _delivered(state, {'dome': {'position': 'open'}})
+        error = ResponseError(code=4002, message='TIC unreachable', component_name='jk15.optics.self')
+        _answer(state, ValueResponse('jk15.optics.self.selectors', value=None, status=False, error=error))
+        value = callback.call_args.args[0]
+        self.assertIsNone(value.v)
+        self.assertEqual(value.tags, {'reason': 4002, 'message': 'TIC unreachable'})
+        self.assertEqual(state.selectors, {'dome': {'position': 'open'}})  # an error leaves the cache alone
+
+    async def test_the_cache_follows_the_deliveries(self):
+        """The subscription is the cache's freshness witness, so it feeds it: a sync read and
+        ``value_tags`` agree with what the callback saw, not with an older ``aget``."""
+        detector = _mocked(_telescope().get_optical_detector('camera'))
+        detector.param.update(_sees_value=[{'class': 'dark', 'terminal': 'covercalibrator', 'via': []}])
+        await detector.asubscribe_sees(MagicMock())
+        _delivered(detector, [{'class': 'sky.science', 'terminal': 'sky', 'via': []}])
+        self.assertEqual(detector.sees, [{'class': 'sky.science', 'terminal': 'sky', 'via': []}])
+        _delivered(detector, None, tags={'reason': 2003})
+        self.assertIsNone(detector.sees)
+        self.assertEqual(detector.value_tags('sees'), {'reason': 2003})
+
+    async def test_a_coroutine_callback_is_awaited_by_the_subscription(self):
+        """Registered as the cycle query's async callback: awaited in delivery order inside its
+        containment, never a task of our own that nobody awaits."""
+        state = _mocked(_telescope().get_optics())
+        received = []
 
         async def callback(value):
-            self.assertEqual(value, {'state': 'done'})
-            received.set()
+            await asyncio.sleep(0)
+            received.append(value.v)
 
         await state.asubscribe_operation(callback)
-        _delivered(state, {'state': 'done'})
-        await asyncio.wait_for(received.wait(), 1.0)
+        self.assertNotIn('callback_method', state.observatory.subscribe_async.await_args.kwargs)
+        await _delivered(state, {'state': 'moving'})
+        await _delivered(state, {'state': 'done'})
+        self.assertEqual(received, [{'state': 'moving'}, {'state': 'done'}])
 
     async def test_setpath_sends_the_function(self):
         detector = _mocked(_telescope().get_optical_detector('camera'))

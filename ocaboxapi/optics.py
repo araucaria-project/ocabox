@@ -11,10 +11,16 @@ subscribes and errors like any device (addresses ``<tel>.optics.<detector>.<item
   and the last path change (``operation``: moving → done | failed); ``aput_declare`` to vouch for
   what no reading proves (a shutter opened by hand while its sensor reports an error).
 
-Subscriptions hand the callback the value itself — ``callback(value)``, a coroutine function too —
-as TIC delivers it, and ``None`` when TIC has no truthful one (older than the subscription's
-``max_data_age``, the Staleness Contract); they are the component's own, so
-``Telescope.unsubscribe_all_component`` ends them.
+Subscriptions hand the callback what TIC delivered, the obcom ``Value`` — ``callback(value)``, a
+coroutine function too (awaited by the subscription in delivery order). ``value.v`` is the document;
+``None`` is a verdict, not a blank: ``value.tags['reason']`` says why there is no truthful one — the
+code of the Staleness Contract's rich None (older than the subscription's ``max_data_age``, with
+``last_good``/``last_good_ts`` when one was ever seen) or of the error TIC answered with, its text in
+``tags['message']`` (TIC unreachable, the optics service silent, …). Under a policy without the
+value axis (``value_policy`` other than NONE, e.g. INTERACTIVE) a server's None stops the
+subscription: it is the last delivery. The component's cache follows the deliveries, so the sync
+properties and ``value_tags()`` agree with what the callback saw; the subscriptions are the
+component's own, so ``Telescope.unsubscribe_all_component`` ends them.
 
 ``aput_setpath`` returns as soon as the service accepts (``{'accepted': True, 'moves': {...}}``)
 and the switch runs like a slew: follow ``operation``. A refusal raises the server error with the
@@ -24,38 +30,60 @@ the light unavailable; the message says which.
 """
 from __future__ import annotations
 
-import asyncio
 import inspect
 import logging
-from typing import Any, Awaitable, Callable
+import time
+from typing import Awaitable, Callable
 
+from obcom.data_colection.value import Value
+from obcom.data_colection.value_call import ValueResponse
 from ocaboxapi.component import Component
 from ocaboxapi.telescopecomponent import TelescopeComponent, OcaBoxParam
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
-#: what a subscription hands its callback: the value, ``None`` when TIC has no truthful one
-ValueCallback = Callable[[Any], None | Awaitable[None]]
+#: what a subscription hands its callback: the delivered ``Value`` (``v`` None with ``tags['reason']``
+#: when TIC has no truthful one)
+ValueCallback = Callable[[Value], None | Awaitable[None]]
 
 
 class _OpticsComponent(TelescopeComponent):
-    """A part of the optics service as TIC serves it: subscriptions deliver values, not events."""
+    """A part of the optics service as TIC serves it: subscriptions deliver values, not events, and
+    a ``None`` is a verdict — its tags say why."""
 
     async def _asubscribe_value(self, item: str, callback: ValueCallback, time_of_data_tolerance: float | None,
                                 max_data_age: float | None):
-        """Subscribe to ``item`` and hand ``callback`` every delivered value; the cycle query."""
-        def deliver(responses):
-            response = responses[0]
-            value = response.value.v if response.status and response.value is not None else None
-            result = callback(value)
-            if inspect.isawaitable(result):
-                asyncio.ensure_future(result)
-
-        cq = await self.observatory.subscribe_async(f'{self.my_address()}.{item}', callback_method=deliver,
+        """Subscribe to ``item`` and hand ``callback`` every delivered value; the cycle query. A
+        coroutine function is awaited by the subscription's callback runner — in delivery order, its
+        failure logged — never launched as a task of its own."""
+        if inspect.iscoroutinefunction(callback):
+            async def deliver(responses):
+                await callback(self._delivered(item, responses[0]))
+            how = {'async_callback_method': deliver}
+        else:
+            def deliver(responses):
+                callback(self._delivered(item, responses[0]))
+            how = {'callback_method': deliver}
+        cq = await self.observatory.subscribe_async(f'{self.my_address()}.{item}', **how,
                                                     time_of_data_tolerance=time_of_data_tolerance, max_data_age=max_data_age)
         self.subscribed.append(Component.CQHolder(cq, item))
         return cq
+
+    def _delivered(self, item: str, response: ValueResponse) -> Value:
+        """The ``Value`` of one delivery. A value (a rich None too) also becomes the component's
+        cached ``item``: the subscription is the freshness witness of that cache, so it must feed
+        it. An error answer leaves the cache alone, as ``Component.subscribe`` does, and is told as
+        a None with the error's code and text."""
+        if response.status and response.value is not None:
+            value = response.value
+            setattr(self, f'_{item}_value_tags', dict(value.tags or {}))
+            self.param.update(**{f'_{item}_value': value.v})
+            return value
+        error = response.error
+        if error is None:
+            return Value(None, time.time(), tags={'reason': None, 'message': 'no value in the answer'})
+        return Value(None, time.time(), tags={'reason': error.code, 'message': error.message})
 
 
 class OpticalDetector(_OpticsComponent):
