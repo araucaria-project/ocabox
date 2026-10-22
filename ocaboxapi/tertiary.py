@@ -15,8 +15,9 @@ class Tertiary(TelescopeComponent):
     (ocabox-server ≥ 2.3.18; which hardware implementation serves it is the
     server's concern): ``nasmythport`` and the ``tertiarystatus`` dict plus
     its decomposed fields. Port numbers are the physical mount ports — NOT
-    0-based; the observatory config maps them to instruments via
-    ``tertiary_position``.
+    0-based; the observatory config names them in the tertiary's
+    ``positions:`` (``beso: {port: 1}``), the optical graph's selector
+    vocabulary.
 
     A controller fault surfaces through the standard error model: every
     decomposed read raises ``OcaboxDeviceError`` (server code 4009) while the
