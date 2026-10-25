@@ -12,7 +12,7 @@ from unittest.mock import AsyncMock, MagicMock
 from obcom.data_colection.response_error import ResponseError
 from obcom.data_colection.value import Value
 from obcom.data_colection.value_call import ValueResponse
-from ocaboxapi import Observatory
+from ocaboxapi import Camera, Observatory
 from ocaboxapi.optics import OpticalDetector, OpticsState
 
 
@@ -145,6 +145,15 @@ class OpticsClientApiTest(unittest.IsolatedAsyncioTestCase):
                 kwargs = state.observatory.subscribe_async.await_args.kwargs
                 self.assertEqual((state.observatory.subscribe_async.await_args.args[0], kwargs['max_data_age']), (f'jk15.optics.self.{item}', 4.0))
 
+    async def test_confirm_reject_abort_name_the_operation(self):
+        state = _mocked(_telescope().get_optics())
+        await state.aput_confirm('a1b2c3')
+        state.aput_value.assert_awaited_with('confirm', operation='a1b2c3')
+        await state.aput_reject('a1b2c3', reason='people in the dome')
+        state.aput_value.assert_awaited_with('reject', operation='a1b2c3', reason='people in the dome')
+        await state.aput_abort('a1b2c3')
+        state.aput_value.assert_awaited_with('abort', operation='a1b2c3')
+
     async def test_declare_sends_key_and_position(self):
         state = _mocked(_telescope().get_optics())
         await state.aput_declare('dome', 'open')
@@ -186,3 +195,53 @@ class TelescopeCleanupTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class InstrumentsTest(unittest.TestCase):
+    """The telescope's detectors and the parts in front of them, from the published configuration."""
+
+    def setUp(self):
+        import copy
+        from obcom.optics.conformance import JK15_WITH_MOUNT
+        components = copy.deepcopy(JK15_WITH_MOUNT)
+        components['camera']['flags'] = ['scientific']
+        components['camera']['camera_model'] = 'Andor iKon-XL 231'
+        self.tel = _telescope()
+        self.tel.observatory.get_telescopes_configuration = lambda: {'jk15': {'observatory': {'components': components}}}
+        self.components = components
+
+    def test_every_detector_with_its_configuration(self):
+        detectors = self.tel.get_detectors()
+        self.assertEqual([d.name for d in detectors], list(self.tel.optical_graph.detectors))
+        camera = self.tel.get_optical_detector('camera')
+        self.assertEqual((camera.kind, camera.flags, camera.config['camera_model']), ('camera', ('scientific',), 'Andor iKon-XL 231'))
+        self.assertIn('object', camera.function_names)
+        self.assertEqual(self.tel.get_optical_detector('guider').function_names, ())
+        self.assertEqual([d.name for d in self.tel.get_detectors(flag='scientific')], ['camera'])
+
+    def test_the_device_and_the_parts_in_front(self):
+        camera = self.tel.get_optical_detector('camera')
+        self.assertIsInstance(camera.device, Camera)
+        self.assertEqual([(type(p).__name__, p.id) for p in camera.upstream('filterwheel')], [('FilterWheel', 'filterwheel')])
+        self.assertEqual([(type(p).__name__, p.id) for p in camera.upstream('rotator')], [('Rotator', 'derotator')])
+        self.assertEqual(self.tel.get_optical_detector('guider_beso').upstream('rotator'), [])
+        self.assertEqual(self.tel.get_filterwheel('filterwheel').kind, 'filterwheel')  # every component knows its config
+
+    def test_station_and_default(self):
+        camera = self.tel.get_optical_detector('camera')
+        self.assertEqual(sorted(d.name for d in camera.station), ['camera', 'guider'])
+        self.assertIs(self.tel.default_detector({'tertiary': {'position': 'andor'}}), camera)
+        self.assertEqual(self.tel.default_detector({'tertiary': {'position': 'beso'}}).name, 'guider_beso')
+        self.assertIsNone(self.tel.default_detector({'tertiary': {'position': None}}))
+
+    def test_unknown_names_and_kinds_without_a_device(self):
+        with self.assertRaisesRegex(LookupError, 'no component'):
+            self.tel.get_component('nosuch')
+        with self.assertRaisesRegex(LookupError, "kind 'splitter' has no device"):
+            self.tel.get_component('pickoff')
+
+    def test_the_graph_follows_the_configuration(self):
+        first = self.tel.optical_graph
+        self.assertIs(self.tel.optical_graph, first)  # parsed once
+        self.components['camera']['flags'] = []
+        self.assertIsNot(self.tel.optical_graph, first)  # republished: parsed again

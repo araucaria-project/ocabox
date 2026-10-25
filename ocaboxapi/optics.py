@@ -8,8 +8,10 @@ subscribes and errors like any device (addresses ``<tel>.optics.<detector>.<item
   ``functions`` (object, dark, flat, …), and ``aput_setpath(function)`` to switch the light path.
 - :class:`OpticsState` — every selector axis (position, why it is unknown, its label), the
   positions people vouch for (``declared``), the detectors whose path must not change (``busy``),
-  and the last path change (``operation``: moving → done | failed); ``aput_declare`` to vouch for
-  what no reading proves (a shutter opened by hand while its sensor reports an error).
+  and the last path change (``operation``: awaiting_confirmation → moving → done | failed, or
+  rejected | expired | superseded); ``aput_declare`` to vouch for what no reading proves (a shutter
+  opened by hand while its sensor reports an error); ``aput_confirm``/``aput_reject``/``aput_abort``
+  for a change that waits for a person (optics service ≥ 1.7).
 
 Subscriptions hand the callback what TIC delivered, the obcom ``Value`` — ``callback(value)``, a
 coroutine function too (awaited by the subscription in delivery order). ``value.v`` is the document;
@@ -27,6 +29,12 @@ and the switch runs like a slew: follow ``operation``. A refusal raises the serv
 service's code — 4007 no such detector or function, 4008 (``CameraBusy``-like, temporary) a busy
 detector's path or another switch in progress, 4009 (``OcaboxDeviceError``) a manual move needed or
 the light unavailable; the message says which.
+
+Some moves wait for a person (the telescope and the dome to the flat screen; the covers by day): the
+verdict names them in ``confirm``, ``aput_setpath`` answers ``awaiting_confirmation`` with the
+``operation`` id, what will move in words (``says``) and ``expires_at``, and nothing moves until
+``aput_confirm(operation)``. For light still to come (the sky at dusk) the answer carries ``awaits``
+and the moves prepare the path for it.
 """
 from __future__ import annotations
 
@@ -37,6 +45,7 @@ from typing import Awaitable, Callable
 
 from obcom.data_colection.value import Value
 from obcom.data_colection.value_call import ValueResponse
+from obcom.optics import component_label, station
 from ocaboxapi.component import Component
 from ocaboxapi.telescopecomponent import TelescopeComponent, OcaBoxParam
 
@@ -87,10 +96,57 @@ class _OpticsComponent(TelescopeComponent):
 
 
 class OpticalDetector(_OpticsComponent):
-    """The light path of one detector (``Telescope.get_optical_detector('camera')``)."""
+    """One detector of the telescope (``Telescope.get_optical_detector('camera')``, every one:
+    ``Telescope.get_detectors()``): what the configuration says of it — its ``config``, ``kind``,
+    ``flags``, ``function_names``, the device that drives it, the parts in front of it
+    (:meth:`upstream`) and the detectors selected with it (:attr:`station`) — and its light path as
+    the optics service serves it (``sees``, ``functions`` verdicts, ``aput_setpath``)."""
 
     sees = OcaBoxParam(default=None, doc="What the detector sees now: list of {class, terminal, via}")
     functions = OcaBoxParam(default=None, doc="Verdict per declared function: {function: {kind, ...}}")
+
+    @property
+    def component_name(self) -> str:
+        """The detector's component name (``camera``, also its ``name``); its address is ``<tel>.optics.camera``."""
+        return self.id.partition('.')[2]
+
+    @property
+    def label(self) -> str:
+        """What people call it (``display.label``: "BESO guider"), else its name."""
+        graph = self.telescope.optical_graph
+        return component_label(graph, self.name) if graph is not None and self.name in graph.nodes else self.name
+
+    @property
+    def function_names(self) -> tuple[str, ...]:
+        """The functions it performs (``paths:``: object, dark, arc …); none for a guider."""
+        return tuple(self.config.get('paths') or ())
+
+    @property
+    def device(self):
+        """The device that drives it (``Camera('camera')``); ``None`` when TIC serves none for its kind
+        (BESO is driven by its own server)."""
+        try:
+            return self.telescope.get_component(self.name)
+        except LookupError:
+            return None
+
+    def upstream(self, kind: str) -> list:
+        """The devices of ``kind`` light can reach it through, nearest first, by configuration — the
+        same at every M3 position: ``upstream('filterwheel')`` is its filter wheel, ``upstream('rotator')``
+        its rotator (shared with its guider); empty when it has none."""
+        graph = self.telescope.optical_graph
+        if graph is None or self.name not in graph.nodes:
+            return []
+        return [self.telescope.get_component(name) for name in graph.upstream_of(self.name, kind)]
+
+    @property
+    def station(self) -> list[OpticalDetector]:
+        """The detectors the routing selectors (M3) select together with it, itself included, in
+        configuration order: the camera and its guider."""
+        graph = self.telescope.optical_graph
+        if graph is None or self.name not in graph.nodes:
+            return [self]
+        return [self.telescope.get_optical_detector(name) for name in station(graph, self.name)]
 
     async def aget_sees(self, time_of_data_tolerance: float | None = None) -> list[dict] | None:
         return await self.aget_value('sees', time_of_data_tolerance=time_of_data_tolerance)
@@ -140,6 +196,24 @@ class OpticsState(_OpticsComponent):
         as soon as one does, and after the night. Returns the live declarations."""
         logger.info(f'{self.my_address()}: declare {key} {position}')
         return await self.aput_value('declare', key=key, position=position)
+
+    async def aput_confirm(self, operation: str) -> dict:
+        """A person confirms the light-path change ``operation`` that waits for one (the telescope and
+        the dome to the flat screen; the covers by day) — exactly as ``operation`` shows it. Refused
+        (4008) when the state changed since it was asked: ask again; 4007 when it does not wait."""
+        logger.info(f'{self.my_address()}: confirm {operation}')
+        return await self.aput_value('confirm', operation=operation)
+
+    async def aput_reject(self, operation: str, reason: str | None = None) -> dict:
+        """A person turns the waiting change ``operation`` down; nothing moves."""
+        logger.info(f'{self.my_address()}: reject {operation}' + (f' ({reason})' if reason else ''))
+        return await self.aput_value('reject', operation=operation, reason=reason)
+
+    async def aput_abort(self, operation: str) -> dict:
+        """Stop ``operation``: a waiting one is turned down, a running one stops the telescope and the
+        dome where they are."""
+        logger.info(f'{self.my_address()}: abort {operation}')
+        return await self.aput_value('abort', operation=operation)
 
     async def aget_busy(self, time_of_data_tolerance: float | None = None) -> dict | None:
         return await self.aget_value('busy', time_of_data_tolerance=time_of_data_tolerance)
