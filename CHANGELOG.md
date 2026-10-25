@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 ....
 
+## [2.12.0]
+### Added
+- Optics: `OpticsState.aput_confirm(operation)`, `aput_reject(operation, reason)` and
+  `aput_abort(operation)` — a person answers a light-path change that waits for one (the telescope
+  and the dome to the flat screen, the covers by day; optics service ≥ 1.7, ocabox-tcs#33), or stops
+  a running one. The `setpath` answer and `operation` carry the waiting change (`operation` id,
+  `confirm`, `says`, `expires_at`) and the light a dusk path is prepared for (`awaits`).
+- Instruments from the published configuration: `Telescope.get_detectors(flag=None)` (every detector of
+  the optical graph — cameras, guiders, BESO — in configuration order), `get_component(name)` (the
+  client class of its `kind`), `optical_graph` (parsed again only when TIC republishes a changed
+  configuration), `default_detector(selectors)` / `adefault_detector()` (the one M3 is set up for, an
+  instrument before its guider; `None` while not known). `OpticalDetector.name`, `label`,
+  `function_names`, `device` (`None` when TIC serves no device for it), `upstream(kind)` (its filter
+  wheel, its rotator — nearest first, by configuration) and `station` (the detectors selected with
+  it: an instrument and its guider). Every telescope component has `config`, `kind` and `flags`.
+### Changed
+- Requires ocabox-common >= 1.13.0 (import guard): `upstream_of`, stations.
+
 ## [2.11.0]
 ### Changed
 - **Breaking (optics only):** `asubscribe_sees`, `_functions`, `_selectors`, `_declared`, `_busy`,

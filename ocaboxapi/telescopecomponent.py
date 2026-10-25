@@ -34,6 +34,26 @@ class TelescopeComponent(Component):
         """ Return address of this component """
         return f'{self.tel_addr}.{self.id}'
 
+    @property
+    def component_name(self) -> str:
+        """The component's name in the telescope configuration."""
+        return self.id
+
+    @property
+    def config(self) -> dict:
+        """This component's configuration as TIC publishes it: ``tel.get_camera().config['camera_model']``."""
+        return self.telescope.component_config(self.component_name)
+
+    @property
+    def kind(self) -> str | None:
+        """``kind:`` of the component in the configuration (``camera``, ``filterwheel``, ``rotator`` …)."""
+        return self.config.get('kind')
+
+    @property
+    def flags(self) -> tuple[str, ...]:
+        """``flags:`` of the component in the configuration; empty when it has none."""
+        return tuple(self.config.get('flags') or ())
+
     async def asubscribe_connected(self, callback: Optional[Callable] = None,
                                    time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing connected from {self.tel_addr}')

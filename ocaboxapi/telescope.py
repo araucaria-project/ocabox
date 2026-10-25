@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import time
 
@@ -22,6 +23,7 @@ from obcom.comunication.comunication_error import CommunicationTimeoutError, Com
 from ocaboxapi.tertiary import Tertiary
 from ocaboxapi.mirrorcell import MirrorCell
 from ocaboxapi.optics import OpticalDetector, OpticsState
+from obcom.optics import GraphInvalid, OpticalGraph, default_detector, parse_graph, positions_of
 
 logger = logging.getLogger("telescope")
 
@@ -51,8 +53,70 @@ class Telescope(AbstractTelescope):
         self._observation_plan = None
         self._cycle_time_calculator = None
         self._guiding_controller = None
+        self._graph: tuple[str, OpticalGraph | None] | None = None  #: (the configuration it was parsed from, the graph)
         # !!! po dodaniu nowego komponentu który dziedziczy po TelescopeComponent lub Component należy uzupełnić
         # metody unwatch_all_component() i unsubscribe_all_component()
+
+    # ------------------------------------------------------------------ components by configuration
+
+    #: the getter of each configured ``kind`` that has a client class
+    KIND_GETTERS = {'telescope': 'get_mount', 'dome': 'get_dome', 'camera': 'get_camera', 'tertiaryOCA': 'get_tertiary',
+                    'tertiary': 'get_tertiary', 'mirrorcellACC': 'get_mirrorcell', 'filterwheel': 'get_filterwheel',
+                    'focuser': 'get_focuser', 'covercalibrator': 'get_covercalibrator', 'rotator': 'get_rotator'}
+
+    def get_component(self, name: str):
+        """Component ``name`` of the configuration, with the client class of its ``kind``:
+        ``get_component('derotator')`` is a :class:`Rotator`. ``LookupError`` for a name the
+        configuration does not have, or a kind TIC serves no device for (a splitter, BESO)."""
+        kind = self.component_config(name).get('kind')
+        if kind is None:
+            raise LookupError(f'{self.id}: no component {name!r} in the configuration')
+        getter = self.KIND_GETTERS.get(kind)
+        if getter is None:
+            raise LookupError(f'{self.id}.{name}: kind {kind!r} has no device in TIC')
+        return getattr(self, getter)(name)
+
+    @property
+    def optical_graph(self) -> OpticalGraph | None:
+        """The optical graph of this telescope from the published configuration — what light reaches
+        which detector through what; ``None`` without one (no detector declares ``paths:``) or when
+        it is invalid (logged). Parsed again only when the configuration changes."""
+        components = (self.get_config().get('observatory') or {}).get('components') or {}
+        authored = json.dumps(components, sort_keys=True, default=str)
+        if self._graph is None or self._graph[0] != authored:
+            graph = None
+            if any(isinstance(spec, dict) and spec.get('paths') for spec in components.values()):
+                try:
+                    graph = parse_graph(components, telescope=self.id)
+                except GraphInvalid as e:
+                    logger.error(f'{self.id}: optical graph invalid: {"; ".join(err.message for err in e.errors)}')
+            self._graph = (authored, graph)
+        return self._graph[1]
+
+    def get_detectors(self, flag: str | None = None) -> list[OpticalDetector]:
+        """Every detector of the optical graph — cameras, guiders, spectrographs — in configuration
+        order; with ``flag`` only those whose configuration lists it (``flag='scientific'``)."""
+        graph = self.optical_graph
+        if graph is None:
+            return []
+        detectors = [self.get_optical_detector(name) for name in graph.detectors]
+        return [d for d in detectors if flag is None or flag in d.flags]
+
+    def default_detector(self, selectors: dict | None) -> OpticalDetector | None:
+        """The detector to show first, from what the optics service publishes as ``selectors``: the
+        one the routing selectors (M3) are set up for, an instrument before its guider; ``None``
+        while that is not known. Pure — call it from a ``selectors`` subscription."""
+        graph = self.optical_graph
+        if graph is None:
+            return None
+        name = default_detector(graph, positions_of(selectors))
+        return None if name is None else self.get_optical_detector(name)
+
+    async def adefault_detector(self, time_of_data_tolerance: float | None = None) -> OpticalDetector | None:
+        """:meth:`default_detector` from the optics service's current ``selectors``."""
+        return self.default_detector(await self.get_optics().aget_selectors(time_of_data_tolerance=time_of_data_tolerance))
+
+    # ------------------------------------------------------------------ components
 
     def get_mount(self, id='mount') -> Mount:
         try:
@@ -99,7 +163,7 @@ class Telescope(AbstractTelescope):
         try:
             return self.optical_detectors[detector]
         except LookupError:
-            dev = OpticalDetector(id=f'optics.{detector}', telescope=self)
+            dev = OpticalDetector(id=f'optics.{detector}', name=detector, telescope=self)
             self.optical_detectors[detector] = dev
             return dev
 
