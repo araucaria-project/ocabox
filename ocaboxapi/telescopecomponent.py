@@ -54,6 +54,36 @@ class TelescopeComponent(Component):
         """``flags:`` of the component in the configuration; empty when it has none."""
         return tuple(self.config.get('flags') or ())
 
+    @property
+    def dir(self) -> str | None:
+        return self.config.get('dir')
+
+    @property
+    def fits_prefix(self) -> str | None:
+        return self.config.get('fits_prefix')
+
+    @property
+    def resolution(self) -> tuple | None:
+        value = self.config.get('resolution')
+        return tuple(value) if value is not None else None
+
+    @property
+    def fov(self) -> tuple | None:
+        value = self.config.get('fov')
+        return tuple(value) if value is not None else None
+
+    @property
+    def dither_distance(self):
+        return self.config.get('dither_distance')
+
+    @property
+    def operation_temperature(self):
+        return self.config.get('operation_temperature')
+
+    @property
+    def readout_modes(self) -> dict:
+        return self.config.get('readout_modes') or {}
+
     async def asubscribe_connected(self, callback: Optional[Callable] = None,
                                    time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing connected from {self.tel_addr}')
@@ -87,4 +117,3 @@ class TelescopeComponent(Component):
         logger.debug(f'Getting  description from {self.tel_addr}')
         ret = await self.aget_value('description')
         return ret
-
