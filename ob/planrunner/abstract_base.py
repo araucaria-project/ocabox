@@ -28,7 +28,7 @@ class AbstractBase(ABC):
     COMMAND_NAMES = ['SKYFLAT', 'FOCUS', 'DOMEFLAT', 'DARK', 'ZERO', 'OBJECT', 'WAIT', 'STOP', 'SNAP', 'SEQUENCE']
     KWARGS = ['uobi', 'dome_follow', 'epoch', 'mirror_cover', 'observer', 'screen_light', 'az', 'alt', 'seq',
               'pos', 'dither', 'sec', 'ut', 'tracking', 'comment', 'sunrise', 'sunset', 'auto_focus', 'read_mod',
-              'test', 'pi', 'sciprog', 'tag']
+              'test', 'pi', 'sciprog', 'tag', 'rotator_abs', 'rotator_mech', 'mount_slew']
     WEATHER_READER_WAIT = 5
 
     def __init__(self, id: str, name: str, telescope: 'Telescope',
