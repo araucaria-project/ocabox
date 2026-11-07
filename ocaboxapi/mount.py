@@ -1,5 +1,6 @@
 from __future__ import annotations
 import logging
+import warnings
 from typing import Callable
 from ocaboxapi.telescopecomponent import TelescopeComponent, OcaBoxParam
 
@@ -210,10 +211,17 @@ class Mount(TelescopeComponent):
         await self.aput_value('motoroff')
 
     async def aput_domelamp_on(self) -> None:
+        """Deprecated: ``Telescope.get_flatscreen().aput_lampon()`` (the server switches through the flat screen
+        device when there is one, so the command is remembered either way)."""
+        warnings.warn("Mount.aput_domelamp_on is deprecated; use Telescope.get_flatscreen().aput_lampon()",
+                      DeprecationWarning, stacklevel=2)
         logger.debug(f'Putting dome lamp on to {self.tel_addr}')
         await self.aput_value('domeflatlampon')
 
     async def aput_domelamp_off(self) -> None:
+        """Deprecated: ``Telescope.get_flatscreen().aput_lampoff()``."""
+        warnings.warn("Mount.aput_domelamp_off is deprecated; use Telescope.get_flatscreen().aput_lampoff()",
+                      DeprecationWarning, stacklevel=2)
         logger.debug(f'Putting dome lamp off to {self.tel_addr}')
         await self.aput_value('domeflatlampoff')
 

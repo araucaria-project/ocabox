@@ -1,7 +1,7 @@
 """Tertiary (M3) client API.
 
 Getters/subscriptions map 1:1 onto the server-side tertiary attribute names
-(ocabox-server ``TertiaryOCA``): ``nasmythport``, ``tertiarystatus`` and its
+(ocabox-server ``tertiary`` interface): ``nasmythport``, ``tertiarystatus`` and its
 decomposed fields. The wire contract is the *param_name* passed to
 ``aget_value``/``subscribe`` — these tests pin it so a rename on either side
 fails loudly here instead of 400-ing against production.
