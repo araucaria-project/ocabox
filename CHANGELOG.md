@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 ....
 
+## [2.13.0]
+### Added
+- `FlatScreen` (`Telescope.get_flatscreen()`, kind `flatscreen` in `get_component`): the flat screen in the dome
+  and its lamp, served by ocabox-server >= 2.11 when the configuration gives the `flatscreen` a `driver`.
+  `aput_lampon()` / `aput_lampoff()`; `aget_lamp()` = the reading, `'on'` / `'off'` (the optical graph's lamp
+  values); `aget_commanded()` = the last command the server sent, `{lamp: 'on'|'off'|None, at}` — on OCM the
+  lamp cannot be read (it hangs on the ASA mount's fan output), so the server answers `lamp` with 3002 and
+  `commanded` is what there is. A command is not a reading. Subscriptions for both.
+- `get_component` knows the generic kind `mirrorcell` (next to `mirrorcellACC`): ocabox-server 2.11 configures
+  vendor mechanisms with `driver`, not with vendor kinds.
+### Deprecated
+- `Mount.aput_domelamp_on()` / `aput_domelamp_off()` (DeprecationWarning): use the flat screen. They keep working;
+  the server switches through the flat screen device when there is one, so the command is remembered.
+
 ## [2.12.0]
 ### Added
 - Optics: `OpticsState.aput_confirm(operation)`, `aput_reject(operation, reason)` and
