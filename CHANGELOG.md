@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 ....
 
-## [2.13.0]
+## [2.14.0]
 ### Added
 - Planrunner DOMEFLAT: `rotator_abs=<deg>` / `rotator_mech=<deg>` move the rotator (absolute /
   mechanical position) before the exposures (new subcommand `RotatorMove`).
