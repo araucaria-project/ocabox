@@ -13,9 +13,9 @@ class FilterWheel(TelescopeComponent):
     focusoffsets = OcaBoxParam(default=None, doc="Filter focus offsets")
     names = OcaBoxParam(default=None, doc="Filter names")
 
-    async def aget_focusoffsets(self) -> List[int]:
+    async def aget_focusoffsets(self, time_of_data_tolerance: float | None = None) -> List[int]:
         logger.debug(f'Getting filtrers focus offsets from {self.tel_addr}')
-        ret = await self.aget_value('focusoffsets')
+        ret = await self.aget_value('focusoffsets', time_of_data_tolerance=time_of_data_tolerance)
         return ret
 
     async def asubscribe_focusoffsets(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
@@ -23,18 +23,18 @@ class FilterWheel(TelescopeComponent):
         return await self.subscribe('focusoffsets', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
     """
-    async def aget_names(self) -> List[str]:
+    async def aget_names(self, time_of_data_tolerance: float | None = None) -> List[str]:
         logger.debug(f'Getting filter names from {self.tel_addr}')
-        ret = await self.aget_value('names')
+        ret = await self.aget_value('names', time_of_data_tolerance=time_of_data_tolerance)
         return ret"""
 
     async def asubscribe_names(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing filter names from {self.tel_addr}')
         return await self.subscribe('names', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_position(self) -> int:
+    async def aget_position(self, time_of_data_tolerance: float | None = None) -> int:
         logger.debug(f'Getting filterwheel position from {self.tel_addr}')
-        ret = await self.aget_value('position')
+        ret = await self.aget_value('position', time_of_data_tolerance=time_of_data_tolerance)
         return ret
 
     async def asubscribe_position(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
@@ -47,7 +47,7 @@ class FilterWheel(TelescopeComponent):
 
     # I would not name it `aget_names_temp`, just `aget_names`. Then everybody can use it and will not notice
     # the change in the implementation.
-    async def aget_names(self) -> Dict:
+    async def aget_names(self, time_of_data_tolerance: float | None = None) -> Dict:
         # TODO BTW, in certain moment we have to rename and define properly slots in filterwheel.
         # Maybe at that moment we will get rid of hardcoded filters in here.
         logger.debug(f'Getting filter names from {self.tel_addr}')
@@ -55,7 +55,7 @@ class FilterWheel(TelescopeComponent):
         # see: https://github.com/araucaria-project/oca-problems/issues/38
         if self.telescope.id == 'dev':
             dev_dict = {}
-            dev_list = await self.aget_value('names')
+            dev_list = await self.aget_value('names', time_of_data_tolerance=time_of_data_tolerance)
             for n, m in enumerate(dev_list):
                 dev_dict[f'{m}'] = n
         else:

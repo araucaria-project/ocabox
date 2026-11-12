@@ -16,18 +16,18 @@ class Rotator(TelescopeComponent):
     stepsize = OcaBoxParam(default=0, doc="Rotator stepsize")
     targetposition = OcaBoxParam(default=0, doc="Rotator target position")
 
-    async def aget_ismoving(self) -> bool:
+    async def aget_ismoving(self, time_of_data_tolerance: float | None = None) -> bool:
         logger.debug(f'Getting rotator is moving from {self.tel_addr}')
-        ret = await self.aget_value('ismoving')
+        ret = await self.aget_value('ismoving', time_of_data_tolerance=time_of_data_tolerance)
         return ret
 
     async def asubscribe_ismoving(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing rotator is moving from {self.tel_addr}')
         return await self.subscribe('ismoving', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_mechanicalposition(self):
+    async def aget_mechanicalposition(self, time_of_data_tolerance: float | None = None):
         logger.debug(f'Getting rotator mechanical position from {self.tel_addr}')
-        ret = await self.aget_value('mechanicalposition')
+        ret = await self.aget_value('mechanicalposition', time_of_data_tolerance=time_of_data_tolerance)
         return ret
 
     async def asubscribe_mechanicalposition(self,
@@ -38,9 +38,9 @@ class Rotator(TelescopeComponent):
                                     callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_position(self) -> float:
+    async def aget_position(self, time_of_data_tolerance: float | None = None) -> float:
         logger.debug(f'Getting rotator position from {self.tel_addr}')
-        ret = await self.aget_value('position')
+        ret = await self.aget_value('position', time_of_data_tolerance=time_of_data_tolerance)
         return ret
 
     async def asubscribe_position(self,
@@ -51,18 +51,18 @@ class Rotator(TelescopeComponent):
                                     callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_reverse(self) -> bool:
+    async def aget_reverse(self, time_of_data_tolerance: float | None = None) -> bool:
         logger.debug(f'Getting rotator reverse state from {self.tel_addr}')
-        ret = await self.aget_value('reverse')
+        ret = await self.aget_value('reverse', time_of_data_tolerance=time_of_data_tolerance)
         return ret
 
     async def asubscribe_reverse(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
         logger.debug(f'Subscribing rotator reverse state from {self.tel_addr}')
         return await self.subscribe('reverse', callback=callback, time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_stepsize(self) -> float:
+    async def aget_stepsize(self, time_of_data_tolerance: float | None = None) -> float:
         logger.debug(f'Getting rotator stepsize from {self.tel_addr}')
-        ret = await self.aget_value('stepsize')
+        ret = await self.aget_value('stepsize', time_of_data_tolerance=time_of_data_tolerance)
         return ret
 
     async def asubscribe_stepsize(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
@@ -71,9 +71,9 @@ class Rotator(TelescopeComponent):
                                     callback=callback,
                                     time_of_data_tolerance=time_of_data_tolerance)
 
-    async def aget_targetposition(self) -> float:
+    async def aget_targetposition(self, time_of_data_tolerance: float | None = None) -> float:
         logger.debug(f'Getting rotator target position from {self.tel_addr}')
-        ret = await self.aget_value('targetposition')
+        ret = await self.aget_value('targetposition', time_of_data_tolerance=time_of_data_tolerance)
         return ret
 
     async def asubscribe_targetposition(self,

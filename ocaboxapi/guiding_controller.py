@@ -17,29 +17,29 @@ class GuidingController(TelescopeComponent):
 
     #TODO get info about darks collection
 
-    async def aget_status(self) -> str:
+    async def aget_status(self, time_of_data_tolerance: float | None = None) -> str:
         logger.debug(f'Getting guiding status {self.tel_addr}')
-        ret = await self.aget_value(param_name='status')
+        ret = await self.aget_value(param_name='status', time_of_data_tolerance=time_of_data_tolerance)
         return ret
 
-    async def aget_exposure(self) -> float:
+    async def aget_exposure(self, time_of_data_tolerance: float | None = None) -> float:
         logger.debug(f'Getting guiding exposure {self.tel_addr}')
-        ret = await self.aget_value(param_name='exposure')
+        ret = await self.aget_value(param_name='exposure', time_of_data_tolerance=time_of_data_tolerance)
         return ret
 
-    async def aget_period(self) -> float:
+    async def aget_period(self, time_of_data_tolerance: float | None = None) -> float:
         logger.debug(f'Getting guiding exposure {self.tel_addr}')
-        ret = await self.aget_value(param_name='period')
+        ret = await self.aget_value(param_name='period', time_of_data_tolerance=time_of_data_tolerance)
         return ret
 
-    async def aget_calib_step(self) -> float:
+    async def aget_calib_step(self, time_of_data_tolerance: float | None = None) -> float:
         logger.debug(f'Getting guiding calibration step {self.tel_addr}')
-        ret = await self.aget_value(param_name='calib_step')
+        ret = await self.aget_value(param_name='calib_step', time_of_data_tolerance=time_of_data_tolerance)
         return ret
 
-    async def aget_calib_data(self) -> Dict:
+    async def aget_calib_data(self, time_of_data_tolerance: float | None = None) -> Dict:
         logger.debug(f'Getting guiding calibration data {self.tel_addr}')
-        ret = await self.aget_value(param_name='calib_data')
+        ret = await self.aget_value(param_name='calib_data', time_of_data_tolerance=time_of_data_tolerance)
         return ret
 
     async def asubscribe_status(self, callback: Callable | None = None,

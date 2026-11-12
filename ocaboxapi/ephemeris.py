@@ -12,10 +12,10 @@ class Ephemeris(Component):
 
     utc = OcaBoxParam(default=None, doc="UTC time touple")
 
-    async def aget_utc(self) -> float:
+    async def aget_utc(self, time_of_data_tolerance: float | None = None) -> float:
         """Retuens timestamp of utc time"""
         logger.debug(f'Getting utc from {self.my_address()}')
-        ret = await self.aget_value('utc')
+        ret = await self.aget_value('utc', time_of_data_tolerance=time_of_data_tolerance)
         return ret
 
     async def asubscribe_utc(self, callback: Callable | None = None, time_of_data_tolerance: float | None = None):
