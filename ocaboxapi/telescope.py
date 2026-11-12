@@ -25,6 +25,7 @@ from obcom.comunication.comunication_error import CommunicationTimeoutError, Com
 
 from ocaboxapi.tertiary import Tertiary
 from ocaboxapi.mirrorcell import MirrorCell
+from ocaboxapi.flatscreen import FlatScreen
 from ocaboxapi.optics import OpticalDetector, OpticsState
 from obcom.optics import GraphInvalid, OpticalGraph, default_detector, parse_graph, positions_of
 
@@ -50,6 +51,7 @@ class Telescope(AbstractTelescope):
         self.covercalibrators = {}
         self.tertiarys = {}
         self.mirrorcells = {}
+        self.flatscreens = {}
         self.optical_detectors = {}
         self._optics = None
         self._access_grantor = None
@@ -65,7 +67,8 @@ class Telescope(AbstractTelescope):
     #: the getter of each configured ``kind`` that has a client class
     KIND_GETTERS = {'telescope': 'get_mount', 'dome': 'get_dome', 'camera': 'get_camera', 'tertiaryOCA': 'get_tertiary',
                     'tertiary': 'get_tertiary', 'mirrorcellACC': 'get_mirrorcell', 'filterwheel': 'get_filterwheel',
-                    'focuser': 'get_focuser', 'covercalibrator': 'get_covercalibrator', 'rotator': 'get_rotator'}
+                    'focuser': 'get_focuser', 'covercalibrator': 'get_covercalibrator', 'rotator': 'get_rotator',
+                    'mirrorcell': 'get_mirrorcell', 'flatscreen': 'get_flatscreen'}
 
     def get_component(self, name: str):
         """Component ``name`` of the configuration, with the client class of its ``kind``:
@@ -159,6 +162,15 @@ class Telescope(AbstractTelescope):
         except LookupError:
             dev = MirrorCell(id=id, telescope=self)
             self.mirrorcells[id] = dev
+            return dev
+
+    def get_flatscreen(self, id='flatscreen') -> FlatScreen:
+        """The flat screen and its lamp; served when the configuration gives the ``flatscreen`` a driver."""
+        try:
+            return self.flatscreens[id]
+        except LookupError:
+            dev = FlatScreen(id=id, telescope=self)
+            self.flatscreens[id] = dev
             return dev
 
     def get_optical_detector(self, detector: str) -> OpticalDetector:
@@ -444,6 +456,8 @@ class Telescope(AbstractTelescope):
             comp.unsubscribe_all()
         for comp in self.mirrorcells.values():
             comp.unsubscribe_all()
+        for comp in self.flatscreens.values():
+            comp.unsubscribe_all()
         for comp in self.optical_detectors.values():
             comp.unsubscribe_all()
         if self._optics:
@@ -482,6 +496,9 @@ class Telescope(AbstractTelescope):
             comp.unwatch_all()
             comp.reset_params_values()
         for comp in self.mirrorcells.values():
+            comp.unwatch_all()
+            comp.reset_params_values()
+        for comp in self.flatscreens.values():
             comp.unwatch_all()
             comp.reset_params_values()
         for comp in self.optical_detectors.values():
