@@ -23,7 +23,7 @@ async def rpc_request(
         )
         return dat, met
     except ServerishError as e:  # no responders, timeout, canceled, no connection, transport failure
-        inf = f'Rpc get {type(e).__name__} error.'
+        inf = f'Rpc get {e!r} error.'
         logger.error(inf)
         if journal:
             await journal.error(inf)

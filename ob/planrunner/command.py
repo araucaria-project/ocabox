@@ -1011,7 +1011,7 @@ class Command(BaseSequence):
         try:
             await self.command_log_pub.publish(data=data, timeout=60)
         except ServerishError as e:
-            logger.error(f'Nats publish of the command log failed: {type(e).__name__}: {e}')
+            logger.error(f'Nats publish of the command log failed: {e!r}')
 
     async def arun(self, step_id: Optional[str] = None) -> int:
         self.info_callback['stream_1'](f'Command {self.id} {self.name} started.')

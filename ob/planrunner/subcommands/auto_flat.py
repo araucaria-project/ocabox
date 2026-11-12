@@ -324,7 +324,7 @@ class AutoFlatNoTest:
                 timeout=30
             )
         except ServerishError as e:  # no responders, timeout, no connection, transport failure
-            inf = f'{self.ce.id} {self.ce.name} nats rpc msg can not reach responder ({type(e).__name__}).'
+            inf = f'{self.ce.id} {self.ce.name} nats rpc msg can not reach responder ({e!r}).'
             logger.error(inf)
             await self.ce.journal.error(inf)
             self.ce.info_callback['stream_1'](inf)

@@ -59,7 +59,7 @@ class BaseSubCommand(AbstractBase):
                 await self.status_error_pub.publish(data=data, timeout=self.STATUS_ERROR_PUBLISH_TIMEOUT)
             logger.info(f'Done publishing status error.')
         except (ServerishError, TimeoutError) as e:  # ServerishError: every way serverish can fail to publish
-            logger.error(f'Nats status_error_publish failed, the error is not reported: {type(e).__name__}: {e}')
+            logger.error(f'Nats status_error_publish failed, the error is not reported: {e!r}')
 
     @property
     def fits_main_folder(self) -> str:

@@ -38,7 +38,7 @@ class NatsCfgLoader:
             except TimeoutError:
                 logger.warning(f"Loading configuration from nats FAILED. Receive Timeout when requesting NATS.")
             except ServerishError as e:
-                logger.warning(f"Loading configuration from nats FAILED. {type(e).__name__}: {e}")
+                logger.warning(f"Loading configuration from nats FAILED. {e!r}")
         else:
             logger.warning(f"Loading configuration from nats FAILED. Can not find opened connection to NATS server, "
                            f"or given stream name is empty string.")

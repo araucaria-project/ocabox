@@ -364,7 +364,7 @@ class CameraExposure(BaseSubCommand):
                 fits_id=self.fits_file_name, header=header, dtyp=self.array_bits(rmmode=readoutmode), timeout=120
             )
         except ServerishError as e:  # no responders, timeout, canceled, no connection, transport failure
-            inf = f'{self.id} {self.name} camera_exposure rpc to ofp downloader get {type(e).__name__}.'
+            inf = f'{self.id} {self.name} camera_exposure rpc to ofp downloader get {e!r}.'
             logger.error(inf)
             await self.journal.error(inf)
             self.info_callback['stream_1'](inf)

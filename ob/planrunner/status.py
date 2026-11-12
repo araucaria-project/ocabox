@@ -57,7 +57,7 @@ class PlanStatus:
         try:
             await publisher.publish(data=data, timeout=30)
         except ServerishError as e:
-            logger.error(f'Nats publish of the plan status failed: {type(e).__name__}: {e}')
+            logger.error(f'Nats publish of the plan status failed: {e!r}')
 
     async def upd_status(self, id: str, value: PlanStatusEnum, field: str = 'status') -> None:
         self.status_dict[id][field] = value
