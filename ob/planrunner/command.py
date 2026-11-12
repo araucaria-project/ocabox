@@ -20,7 +20,7 @@ from pyaraucaria.date import datetime_to_julian
 from ob.planrunner.seq import Seq
 from ob.planrunner.base_subcommand import BaseSubCommand
 from ob.planrunner.coded_error import SequenceTreeError
-from serverish.base import dt_utcnow_array, dt_to_array, dt_from_array
+from serverish.base import dt_utcnow_array, dt_to_array, dt_from_array, ServerishError
 
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
@@ -1010,8 +1010,8 @@ class Command(BaseSequence):
         }
         try:
             await self.command_log_pub.publish(data=data, timeout=60)
-        except TimeoutError:
-            logger.error(f'Nats publish get timeout error')
+        except ServerishError as e:
+            logger.error(f'Nats publish of the command log failed: {type(e).__name__}: {e}')
 
     async def arun(self, step_id: Optional[str] = None) -> int:
         self.info_callback['stream_1'](f'Command {self.id} {self.name} started.')

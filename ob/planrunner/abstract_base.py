@@ -5,10 +5,10 @@ from typing import Dict, List, Any, Callable, Optional
 import pwd
 import os
 
-import nats.errors
 from pyaraucaria.date import datetime_to_julian
 from datetime import datetime
 import math
+from serverish.base import ServerishError
 from serverish.messenger import get_journalpublisher, get_publisher, get_reader, get_singlereader
 from serverish.messenger.msg_journal_pub import MsgJournalPublisher
 from serverish.messenger.msg_publisher import MsgPublisher
@@ -76,7 +76,7 @@ class AbstractBase(ABC):
         try:
             data, meta = await self.reader_weather_davies.read(wait=self.WEATHER_READER_WAIT)
             return data
-        except (TimeoutError, LookupError, ValueError, TypeError, nats.errors.TimeoutError) as e:
+        except (ServerishError, TimeoutError, LookupError, ValueError, TypeError) as e:
             logger.warning(f'Weather reader for header failed: {e}')
             return None
 

@@ -1,6 +1,7 @@
+import asyncio
 import logging
 import os
-from serverish.base import dt_utcnow_array
+from serverish.base import dt_utcnow_array, ServerishError
 from ob.planrunner.abstract_base import AbstractBase
 from datetime import datetime
 from typing import Dict, List, Any, Callable
@@ -9,6 +10,12 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class BaseSubCommand(AbstractBase):
+
+    # Reporting an error must never hold up, let alone interrupt, the procedure which reports it
+    # (it may be on its way to close the dome). serverish retries a publish whose ack is late, each
+    # attempt with its own timeout - the deadline bounds the whole call.
+    STATUS_ERROR_PUBLISH_TIMEOUT = 5.0  # [s] one attempt
+    STATUS_ERROR_PUBLISH_DEADLINE = 15.0  # [s] the whole report
 
     def __init__(self, id: str, name: str, telescope: 'Telescope',
                  info_callback: Dict[str, Callable], uobi: int, param: Dict[str, Any] or None = None) -> None:
@@ -48,10 +55,11 @@ class BaseSubCommand(AbstractBase):
         logger.info(data)
         logger.info(self.status_error_pub)
         try:
-            await self.status_error_pub.publish(data=data, timeout=30)
+            async with asyncio.timeout(self.STATUS_ERROR_PUBLISH_DEADLINE):
+                await self.status_error_pub.publish(data=data, timeout=self.STATUS_ERROR_PUBLISH_TIMEOUT)
             logger.info(f'Done publishing status error.')
-        except TimeoutError:
-            logger.error(f'Nats status_error_publish get timeout error.')
+        except (ServerishError, TimeoutError) as e:  # ServerishError: every way serverish can fail to publish
+            logger.error(f'Nats status_error_publish failed, the error is not reported: {type(e).__name__}: {e}')
 
     @property
     def fits_main_folder(self) -> str:

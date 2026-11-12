@@ -1,5 +1,6 @@
 from enum import Enum
 from typing import Dict, Any
+from serverish.base import ServerishError
 from serverish.messenger.msg_publisher import MsgPublisher
 import logging
 
@@ -55,8 +56,8 @@ class PlanStatus:
     async def send_to_nats(self, publisher: MsgPublisher, data: Dict)-> None:
         try:
             await publisher.publish(data=data, timeout=30)
-        except TimeoutError:
-            logger.error(f'Nats publish get timeout error')
+        except ServerishError as e:
+            logger.error(f'Nats publish of the plan status failed: {type(e).__name__}: {e}')
 
     async def upd_status(self, id: str, value: PlanStatusEnum, field: str = 'status') -> None:
         self.status_dict[id][field] = value
