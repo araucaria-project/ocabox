@@ -28,7 +28,7 @@ All notable changes to this project will be documented in this file.
   the server switches through the flat screen device when there is one, so the command is remembered.
 
 
-## [2.12.0]
+## [2.12.1]
 ### Added
 - Optics: `OpticsState.aput_confirm(operation)`, `aput_reject(operation, reason)` and
   `aput_abort(operation)` — a person answers a light-path change that waits for one (the telescope
