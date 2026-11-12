@@ -27,7 +27,7 @@ class RotatorMove(BaseSubCommand):
         self.rotator = self.telescope.get_rotator()
         self.info_dict = {"position": position, "position_type": position_type}
         self.slew_timeout: float = 180.0
-        self.slew_tolerance: float = 0.5
+        self.slew_tolerance: float = 0.15
         self.mount_type: Optional[str] = None
         self.create_sub_command_string(**self.info_dict)
 
@@ -81,6 +81,7 @@ class RotatorMove(BaseSubCommand):
             if current_pos is not None: # and current_if_slewing is False:
                 if self._on_position(current_position=current_pos, target_position=position):
                     inf = f'Rotator {self.position_type} position on place, set: {position} current: {current_pos}'
+                    await asyncio.sleep(2) # Give time to settle
                     logger.info(inf)
                     await self.journal.debug(f'msg: {inf}, uid: {pwd.getpwuid(os.getuid())[0]}.')
                     return True
