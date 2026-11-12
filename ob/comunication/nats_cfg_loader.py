@@ -4,9 +4,9 @@ import os
 from typing import Optional
 from importlib.resources import files
 
-import nats
 import yaml
 
+from serverish.base import ServerishError
 from serverish.messenger import Messenger, get_singlereader
 
 logger = logging.getLogger("NatsCfgLoader")
@@ -35,8 +35,10 @@ class NatsCfgLoader:
                 self._cfg_all = data.get("config", {})
                 logger.debug("Loading config from nats successfully finished.")
                 return
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.warning(f"Loading configuration from nats FAILED. Receive Timeout when requesting NATS.")
+            except ServerishError as e:
+                logger.warning(f"Loading configuration from nats FAILED. {e!r}")
         else:
             logger.warning(f"Loading configuration from nats FAILED. Can not find opened connection to NATS server, "
                            f"or given stream name is empty string.")

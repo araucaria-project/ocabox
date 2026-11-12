@@ -6,7 +6,7 @@ from scipy.stats import linregress
 from typing import Dict, List, Tuple, Any, Optional, Union
 import logging
 import datetime
-from serverish.base import MessengerRequestNoResponders, MessengerRequestNoResponse, MessengerRequestTimeout
+from serverish.base import ServerishError
 from ob.planrunner.status import PlanStatusEnum
 
 
@@ -323,8 +323,8 @@ class AutoFlatNoTest:
                 req='stats_only',
                 timeout=30
             )
-        except (MessengerRequestNoResponders, MessengerRequestNoResponse, MessengerRequestTimeout):
-            inf = f'{self.ce.id} {self.ce.name} nats rpc msg can not reach responder.'
+        except ServerishError as e:  # no responders, timeout, no connection, transport failure
+            inf = f'{self.ce.id} {self.ce.name} nats rpc msg can not reach responder ({e!r}).'
             logger.error(inf)
             await self.ce.journal.error(inf)
             self.ce.info_callback['stream_1'](inf)

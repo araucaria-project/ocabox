@@ -13,7 +13,7 @@ import math
 import re
 from serverish.messenger import request
 from serverish.base.datetime import dt_utcnow_array
-from serverish.base.exceptions import MessengerRequestNoResponders, MessengerRequestTimeout, MessengerRequestCanceled
+from serverish.base import ServerishError
 from pyaraucaria.date import get_oca_jd
 from pyaraucaria.airmass import airmass
 from ob.planrunner.status import PlanStatusEnum
@@ -363,20 +363,8 @@ class CameraExposure(BaseSubCommand):
             dat = await self.rpc_request(
                 fits_id=self.fits_file_name, header=header, dtyp=self.array_bits(rmmode=readoutmode), timeout=120
             )
-        except MessengerRequestNoResponders:
-            inf = f'{self.id} {self.name} camera_exposure rpc to ofp downloader get MessengerRequestNoResponders.'
-            logger.error(inf)
-            await self.journal.error(inf)
-            self.info_callback['stream_1'](inf)
-            return False
-        except MessengerRequestCanceled:
-            inf = f'{self.id} {self.name} camera_exposure rpc to ofp downloader get MessengerRequestCanceled.'
-            logger.error(inf)
-            await self.journal.error(inf)
-            self.info_callback['stream_1'](inf)
-            return False
-        except MessengerRequestTimeout:
-            inf = f'{self.id} {self.name} camera_exposure rpc to ofp downloader get MessengerRequestTimeout.'
+        except ServerishError as e:  # no responders, timeout, canceled, no connection, transport failure
+            inf = f'{self.id} {self.name} camera_exposure rpc to ofp downloader get {e!r}.'
             logger.error(inf)
             await self.journal.error(inf)
             self.info_callback['stream_1'](inf)
