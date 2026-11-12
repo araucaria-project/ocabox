@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 ....
 
+## [2.14.0]
+### Added
+- Planrunner DOMEFLAT: `rotator_abs=<deg>` / `rotator_mech=<deg>` move the rotator (absolute /
+  mechanical position) before the exposures (new subcommand `RotatorMove`).
+- Planrunner DOMEFLAT: `mount_slew=off` skips the mount slew to the domeflat position.
+### Fixed
+- `Telescope.shutdown()` / `weather_stop()` no longer wait forever for the mirror covers or the dome
+  shutter.
+
 ## [2.13.0]
 ### Added
 - `FlatScreen` (`Telescope.get_flatscreen()`, kind `flatscreen` in `get_component`): the flat screen in the dome
@@ -17,6 +26,7 @@ All notable changes to this project will be documented in this file.
 ### Deprecated
 - `Mount.aput_domelamp_on()` / `aput_domelamp_off()` (DeprecationWarning): use the flat screen. They keep working;
   the server switches through the flat screen device when there is one, so the command is remembered.
+
 
 ## [2.12.0]
 ### Added

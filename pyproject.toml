@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ocabox"
-version = "2.13.0" # Change version also in CHANGELOG.md
+version = "2.14.0" # Change version also in CHANGELOG.md
 license = "MIT"
 description = ""
 authors = ["Ernest Lasek <elasek@akond.com>, Mikołaj Kałuszyński <mkalusz@camk.edu.pl>"]

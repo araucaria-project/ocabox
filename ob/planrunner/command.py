@@ -11,6 +11,7 @@ from ob.planrunner.subcommands.sub_camera_exposure import CameraExposure
 from ob.planrunner.subcommands.sub_mirror_cover import MirrorCover
 from ob.planrunner.subcommands.sub_dome_screenlight import DomeScreenLight
 from ob.planrunner.subcommands.sub_focusing import Focusing
+from ob.planrunner.subcommands.sub_rotator_move import RotatorMove
 from ob.planrunner.subcommands.sub_stop import Stop
 from ob.planrunner.subcommands.sub_wait import Wait
 from ctc import CycleTimeDataBuild
@@ -248,6 +249,16 @@ class Command(BaseSequence):
             return None
 
     @property
+    def mount_slew_off(self) -> bool:
+        if 'mount_slew' in self.kwargs.keys():
+            if self.kwargs['mount_slew'] == 'off':
+                return True
+            else:
+                return False
+        else:
+            return False
+
+    @property
     def plan_alt(self) -> Optional[float]:
         if 'alt' in self.kwargs.keys():
             try:
@@ -359,6 +370,32 @@ class Command(BaseSequence):
             return None
 
     @property
+    def rotator_pos(self) -> Optional[float]:
+        if 'rotator_abs' in self.kwargs.keys():
+            try:
+                return float(self.kwargs['rotator_abs'])
+            except (LookupError, ValueError, TypeError):
+                logger.error(f"Wrong rotator_abs value")
+                return None
+        elif 'rotator_mech' in self.kwargs.keys():
+            try:
+                return float(self.kwargs['rotator_mech'])
+            except (LookupError, ValueError, TypeError):
+                logger.error(f"Wrong rotator_mech value")
+                return None
+        else:
+            return None
+
+    @property
+    def rotator_pos_type(self) -> Optional[str]:
+        if 'rotator_abs' in self.kwargs.keys():
+            return 'absolute'
+        elif 'rotator_mech' in self.kwargs.keys():
+            return 'mechanical'
+        else:
+            return None
+
+    @property
     def focus_offset(self) -> bool:
         if 'focus_offset' in self.kwargs.keys():
             if self.kwargs['focus_offset'] == 'on':
@@ -461,22 +498,23 @@ class Command(BaseSequence):
                 id_next=id_next
             )
 
-        # Mount slewing to domeflat position
-        id_next = self._add_comp(
-            sub=MountSlew(
-                id=self._op_id(id_next=id_next),
-                telescope=self.telescope,
-                info_callback=self.info_callback,
-                obj_name=self.object_name,
-                alt=self.domeflat_mount_alt,
-                az=self.domeflat_mount_az,
-                tracking=self.tracking,
-                epoch=self.epoch,
-                param=self.param,
-                uobi=self.uobi
-            ),
-            id_next=id_next
-        )
+        if not self.mount_slew_off:
+            # Mount slewing to domeflat position
+            id_next = self._add_comp(
+                sub=MountSlew(
+                    id=self._op_id(id_next=id_next),
+                    telescope=self.telescope,
+                    info_callback=self.info_callback,
+                    obj_name=self.object_name,
+                    alt=self.domeflat_mount_alt,
+                    az=self.domeflat_mount_az,
+                    tracking=self.tracking,
+                    epoch=self.epoch,
+                    param=self.param,
+                    uobi=self.uobi
+                ),
+                id_next=id_next
+            )
 
         # Turn screen light on
         if self.screen_light_mode in ['auto', 'on']:
@@ -502,6 +540,21 @@ class Command(BaseSequence):
                     open=True,
                     param=self.param,
                     uobi=self.uobi
+                ),
+                id_next=id_next
+            )
+
+        # Move rotator
+        if self.rotator_pos_type is not None:
+            id_next = self._add_comp(
+                sub=RotatorMove(
+                    id=self._op_id(id_next=id_next),
+                    telescope=self.telescope,
+                    info_callback=self.info_callback,
+                    position=self.rotator_pos,
+                    position_type=self.rotator_pos_type,
+                    uobi=self.uobi,
+                    param = self.param,
                 ),
                 id_next=id_next
             )
