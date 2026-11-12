@@ -3,6 +3,9 @@ import json
 import logging
 import time
 
+from serverish.base import dt_utcnow_array, ServerishError
+from serverish.messenger import get_publisher
+
 from ocaboxapi.abstelescope import AbstractTelescope
 from ocaboxapi.access import AccessGrantor
 from ocaboxapi.cctv import CCTV
@@ -249,8 +252,32 @@ class Telescope(AbstractTelescope):
         except (CommunicationTimeoutError, CommunicationRuntimeError, OcaboxError):
             return {'alpaca': False}
 
-    async def shutdown(self, dome_park_az: Optional[float] = None) -> None:
+    async def status_error_publish(
+            self, subject: str, subcommand_name: str, level: str, description: str, plan_runner_quits: bool) -> None:
+        levels = ['minor', 'major', 'critical']
+        logger.info(f'Starting publishing status error.')
+        data = {
+            'subcommand_id': '',
+            'uobi': 0,
+            'telescope': self.id,
+            'subcommand_name': subcommand_name,
+            'error_level': level,
+            'error_description': description,
+            'plan_runner_quits': plan_runner_quits,
+            'error_time': dt_utcnow_array()
+        }
+
+        logger.info(data)
+        try:
+            subj = get_publisher(subject=subject)
+            await subj.publish(data=data, timeout=20)
+            logger.info(f'Done publishing status error.')
+        except (ServerishError, TimeoutError) as e:
+            logger.error(f'status_error_publish failed: {e}')
+
+    async def shutdown(self, dome_park_az: Optional[float] = None) -> bool:
         logger.info(f'Starting shutdown')
+        cover_err = False
         mount = self.get_mount()
         dome = self.get_dome()
         cover = self.get_covercalibrator()
@@ -267,6 +294,18 @@ class Telescope(AbstractTelescope):
         while True:
             if time.time() > t_stamp_m + self.MIRROR_COVER_TIMEOUT:
                 logger.error(f'Mirror cover close get timeout')
+                cover_err = True
+                await self.status_error_publish(
+                    subject=f'tic.planner.{self.id}.status.error',
+                    subcommand_name='shutdown',
+                    level='critical',
+                    description=(
+                        f'Mirror cover gets timeout {self.MIRROR_COVER_TIMEOUT} on shutdown, '
+                        f'WARNING: cover not closed!'
+                    ),
+                    plan_runner_quits=True
+                )
+                break
             coverstate = await cover.aget_coverstate()
             if coverstate == 1:
                 break
@@ -276,6 +315,17 @@ class Telescope(AbstractTelescope):
         while True:
             if time.time() > t_stamp_d + self.DOME_SHUTTER_TIMEOUT:
                 logger.error(f'Dome shutter close get timeout')
+                await self.status_error_publish(
+                    subject=f'tic.planner.{self.id}.status.error',
+                    subcommand_name='shutdown',
+                    level='critical',
+                    description=(
+                        f'Dome shutter gets timeout {self.DOME_SHUTTER_TIMEOUT} on shutdown, '
+                        f'WARNING: dome shutter not closed and telescope not parked!'
+                    ),
+                    plan_runner_quits=True
+                )
+                return False
             shutterstatus = await dome.aget_shutterstatus()
             if shutterstatus == 1:
                 break
@@ -285,9 +335,14 @@ class Telescope(AbstractTelescope):
             await dome.aput_slewtoazimuth(az=dome_park_az)
         else:
             await dome.aput_park()
+        if cover_err:
+            logger.warning(f'Shutdown done with cover timeout, covers is open!')
+            return False
         logger.info(f'Shutdown done')
+        return True
 
-    async def weather_stop(self, dome_park_az: Optional[float] = None) -> None:
+    async def weather_stop(self, dome_park_az: Optional[float] = None) -> bool:
+        cover_err = False
         logger.info(f'Starting weather stop')
         mount = self.get_mount()
         dome = self.get_dome()
@@ -306,6 +361,18 @@ class Telescope(AbstractTelescope):
         while True:
             if time.time() > t_stamp_m + self.MIRROR_COVER_TIMEOUT:
                 logger.error(f'Mirror cover close get timeout')
+                cover_err = True
+                await self.status_error_publish(
+                    subject=f'tic.planner.{self.id}.status.error',
+                    subcommand_name='weather_stop',
+                    level='critical',
+                    description=(
+                        f'Mirror cover gets timeout {self.MIRROR_COVER_TIMEOUT} on weather stop, '
+                        f'WARNING: cover not closed!'
+                    ),
+                    plan_runner_quits=True
+                )
+                break
             coverstate = await cover.aget_coverstate()
             if coverstate == 1:
                 break
@@ -315,6 +382,17 @@ class Telescope(AbstractTelescope):
         while True:
             if time.time() > t_stamp_d + self.DOME_SHUTTER_TIMEOUT:
                 logger.error(f'Dome shutter close get timeout')
+                await self.status_error_publish(
+                    subject=f'tic.planner.{self.id}.status.error',
+                    subcommand_name='weather_stop',
+                    level='critical',
+                    description=(
+                        f'Dome shutter gets timeout {self.DOME_SHUTTER_TIMEOUT} on weather stop, '
+                        f'WARNING: dome shutter not closed and telescope not parked!'
+                    ),
+                    plan_runner_quits=True
+                )
+                return False
             shutterstatus = await dome.aget_shutterstatus()
             if shutterstatus == 1:
                 break
@@ -323,9 +401,13 @@ class Telescope(AbstractTelescope):
             await dome.aput_slewtoazimuth(az=dome_park_az)
         else:
             await dome.aput_park()
+        if cover_err:
+            logger.warning(f'Weather stop done with cover timeout, covers is open!')
+            return False
         logger.info(f'Weather stop done')
+        return True
 
-    async def emergency_stop(self) -> None:
+    async def emergency_stop(self) -> bool:
         logger.info(f'Starting emergency stop')
         mount = self.get_mount()
         dome = self.get_dome()
@@ -339,6 +421,7 @@ class Telescope(AbstractTelescope):
         if await dome.aget_slewing():
             await dome.aput_abortslew()
         logger.info(f'Emergency stop done')
+        return True
 
     def unsubscribe_all_component(self):
         for comp in self.mounts.values():
