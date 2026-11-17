@@ -263,7 +263,7 @@ class CameraExposure(BaseSubCommand):
     @property
     def rpc_subject(self) -> str:
         r = self.param['cfg_gen'].get_value(
-            seq=['site', 'global', 'nats', 'subjects', 'rpc', 'download'],
+            seq=['site', 'global', 'nats', 'subjects', 'rpc', 'download_instr'],
             source='nats'
         )
         return r
