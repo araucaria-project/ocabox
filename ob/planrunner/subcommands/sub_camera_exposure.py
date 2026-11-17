@@ -264,8 +264,10 @@ class CameraExposure(BaseSubCommand):
     def rpc_subject(self) -> str:
         r = self.param['cfg_gen'].get_value(
             seq=['site', 'global', 'nats', 'subjects', 'rpc', 'download_instr'],
-            source='nats'
+            source='nats',
+            instr_id=self.instr_id
         )
+
         return r
 
     def rpc_data(self, fits_id: str, header: Dict, req: str, mean_points_no_stats: int, dtyp: str) -> Dict:

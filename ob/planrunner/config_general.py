@@ -17,7 +17,7 @@ class ConfigGeneral:
         else:
             return self.telescope.observatory.get_client_configuration()
 
-    def get_value(self, seq: List, source: str = 'nats') -> Any:
+    def get_value(self, seq: List, source: str = 'nats', instr_id: Optional[str] = None) -> Any:
         ret = self.config_body_nats
         for n in seq:
             try:
@@ -25,6 +25,12 @@ class ConfigGeneral:
             except (LookupError, TypeError, IndexError):
                 log.error(f'No value name {n} in config or wrong seq')
                 return None
-        if isinstance(ret, str) and '{telescope}' in ret:
+        if isinstance(ret, str) and '{telescope}' in ret and instr_id is None and not '{instrument}' in ret:
             ret = ret.format(telescope=self.telescope.id)
+        elif isinstance(ret, str) and '{telescope}' in ret and instr_id is not None and '{instrument}' in ret:
+            ret = ret.format(telescope=self.telescope.id, instrument=instr_id)
+        elif isinstance(ret, str) and '{telescope}' in ret and instr_id is None and '{instrument}' in ret:
+            raise RuntimeError
+        elif isinstance(ret, str) and '{telescope}' in ret and instr_id is not None and '{instrument}' not in ret:
+            raise RuntimeError
         return ret
