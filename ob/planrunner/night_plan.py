@@ -19,10 +19,10 @@ class NightPlan(BaseSequence):
         param = param if param is not None else {}
         param['cfg_gen'] = self.load_config_general(param=param, telescope=telescope)
         param['plan_status'] = PlanStatus(telescope=telescope)
-        super().__init__(id=id, name='NIGHTPLAN', info_callback=info_callback,
-                         telescope=telescope, sequence_dict=sequence_dict, c_type='night_plan', param=param)
-        self.mount = self.telescope.get_mount()
-        self.camera = self.telescope.get_camera()
+        super().__init__(
+            id=id, name='NIGHTPLAN', info_callback=info_callback,
+            telescope=telescope, sequence_dict=sequence_dict, c_type='night_plan', param=param
+        )
         self._cycle_time_data_build = None
         self._init_cycle_time()
         self._init_plan_status()
@@ -39,8 +39,7 @@ class NightPlan(BaseSequence):
     def _init_cycle_time(self):
         self.param['cycle_time'] = self.telescope.get_cycle_time_calculator()
         self.param['cycle_time'].reset_time()
-        self._get_rm_mode()
-        self._get_altaz()
+        self.param['cycle_time_status'] = {'set_init_alt_az': False, 'instr': {}}
         self._cycle_time_data_build = CycleTimeDataBuild(
             telescope=self.telescope.id,
             base_folder=self.telescope.observatory.get_app_cfg(key='base_cycle_time_calc_dir'))
@@ -49,22 +48,6 @@ class NightPlan(BaseSequence):
         self.param['plan_status'].plan_static_publisher = self.get_publish(stream='planner', field='data_static')
         self.param['plan_status'].plan_status_publisher = self.get_publish(stream='planner', field='data_status')
         self.param['plan_status'].plan_time_publisher = self.get_publish(stream='planner', field='data_time')
-
-    def _get_rm_mode(self):
-        crm = self.camera.readoutmode
-        if not isinstance(crm, int):
-            crm = 0
-        # logger.info(f'Ctc rm {crm}')
-        self.param['cycle_time'].set_start_rmode(rmode=crm)
-
-    def _get_altaz(self):
-        az = self.mount.azimuth
-        alt = self.mount.altitude
-        if not isinstance(az, float):
-            az = 0.0
-        if not isinstance(alt, float):
-            alt = 45.0
-        self.param['cycle_time'].set_telescope_start_az_alt(az=az, alt=alt)
 
     def _set_r_id(self) -> None:
         self._r_id =  int(round(float(self.get_julian_date(str(datetime.datetime.utcnow()))), 6) * 1000000)

@@ -13,14 +13,15 @@ class Seq:
     Class representing camera single sequence
     """
 
-    def __init__(self, seq: str, command_kwargs: Dict):
-        self.seq: str = seq
+    def __init__(self, seq: Optional[str], command_kwargs: Dict, instr_id: str) -> None:
+        self.seq = seq
         self._focus_id: Optional[int] = None
         self.command_kwargs: Dict = command_kwargs
         self.focus_folder: Optional[str] = None
         self.skip = False
         self.auto_flat: Optional[AutoFlatNoTest] = None
         self.filer_slot_before_change: Optional[int] = None
+        self.instr_id = instr_id
         self.set_focus_id()
 
     @property
@@ -91,7 +92,10 @@ class Seq:
 
     @property
     def seq_list(self) -> List[str]:
-        return list(self.seq.split('/'))
+        if self.seq is None:
+            return []
+        else:
+            return list(self.seq.split('/'))
 
     @property
     def exp_no(self) -> int:
@@ -116,7 +120,7 @@ class Seq:
     @property
     def auto_exposure(self) -> bool:
         if self.seq_list[2] == 'a':
-            self.auto_flat = AutoFlatNoTest()
+            self.auto_flat = AutoFlatNoTest(instr_id=self.instr_id)
             return True
         else:
             return False

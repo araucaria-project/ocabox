@@ -19,7 +19,7 @@ class AutoFlatNoTest:
     TEST_TIME_TOLERANCE = 240 # seconds
     LINE_FIT_LAST_POINTS = 2
 
-    def __init__(self) -> None:
+    def __init__(self, instr_id: Optional[str] = None) -> None:
         self.ce = None
         self.test_exposure_time: float = 1.0
         self.test_time_interval: float = 3.0
@@ -32,13 +32,14 @@ class AutoFlatNoTest:
         self.adu: List[float] = []
         self.auto_exp_sub_no = 0
         self.exp_type: List[str] = []
+        self.instr_id = instr_id
 
     def set_camera_exposure_parent(self, camera_exposure: Any) -> None:
         self.ce = camera_exposure
 
     async def _load_params(self) -> bool:
         sky_flat_conf = self.ce.param['cfg_gen'].get_value(seq=[
-            'telescopes', self.ce.telescope.id, 'observatory', 'components', 'camera', 'sky_flats'
+            'telescopes', self.ce.telescope.id, 'observatory', 'components', self.instr_id, 'sky_flats'
         ], source='nats')
         gain_mode = await self.ce.value_proof_get(
             name='fitsh_cam_gain', awaitab=self.ce.camera.aget_gain, expect_type=int

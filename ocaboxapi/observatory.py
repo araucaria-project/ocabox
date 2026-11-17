@@ -163,6 +163,10 @@ class Observatory:
         """"Method return configuration for all telescopes. Return section telescopes from configuration from nats"""
         return self.get_client_configuration().get("telescopes", {})
 
+    def get_site_configuration(self) -> dict:
+        """"Method return configuration for all telescopes. Return section telescopes from configuration from nats"""
+        return self.get_client_configuration().get("site", {})
+
     def _get_client_connection_cfg_from_nats(self) -> dict:
         return self._nats_cfg_loader.get_cfg_connection_client(
             self.client_name) if self._nats_cfg_loader is not None else {}

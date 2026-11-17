@@ -3,18 +3,23 @@ import os
 from serverish.base import dt_utcnow_array
 from ob.planrunner.abstract_base import AbstractBase
 from datetime import datetime
-from typing import Dict, List, Any, Callable
+from typing import Dict, List, Any, Callable, Optional
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 class BaseSubCommand(AbstractBase):
 
-    def __init__(self, id: str, name: str, telescope: 'Telescope',
-                 info_callback: Dict[str, Callable], uobi: int, param: Dict[str, Any] or None = None) -> None:
+    def __init__(
+            self, id: str, name: str, telescope: 'Telescope', info_callback: Dict[str, Callable], uobi: int,
+            instr_id: Optional[str] = None, param: Dict[str, Any] | None = None) -> None:
         self.uobi = uobi
-        super().__init__(id=id, name=name, info_callback=info_callback,
-                         telescope=telescope, c_type='subcommand', param=param)
+        self.instr_id = instr_id
+        super().__init__(
+            id=id, name=name, info_callback=info_callback,
+            telescope=telescope, c_type='subcommand', param=param
+        )
+
         self._mk_folder(self.log_night_folder)
 
     def create_sub_command_string(self, **kw):
@@ -55,8 +60,16 @@ class BaseSubCommand(AbstractBase):
 
     @property
     def fits_main_folder(self) -> str:
-        base_fits_folder = os.path.expanduser(self.telescope.observatory.get_app_cfg('base_fits_dir'))
-        return os.path.join(base_fits_folder, f'{self.telescope.id}')
+        try:
+            base_fits_folder = os.path.expanduser(
+                self.telescope.observatory.get_site_configuration()['global']['paths']['base_fits_dir']
+            )
+            tel_config = self.telescope.observatory.get_telescopes_configuration()
+            instr_dir = tel_config[self.telescope.id]['observatory']['components'][self.instr_id]['dir']
+            return os.path.join(str(base_fits_folder), str(instr_dir))
+        except (LookupError, ValueError, TypeError) as e:
+            logger.error(f'Can not get fits main folder: {e}')
+            raise RuntimeError
 
     @property
     def fits_raw_folder_name(self) -> str:

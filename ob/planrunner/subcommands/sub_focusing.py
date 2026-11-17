@@ -17,15 +17,18 @@ class Focusing(BaseSubCommand):
 
 
     def __init__(
-            self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable],
-            uobi: int, position: float = None, auto: bool = False, name: str = 'focusing',
-            param: Optional[Dict[str, Any]] = None, filter_offset: bool = False,
+            self, id: str, telescope: 'Telescope', info_callback: Dict[str, Callable],
+            uobi: int, instr_id: str, position: float = None, auto: bool = False,
+            name: str = 'focusing', param: Optional[Dict[str, Any]] = None, filter_offset: bool = False,
             seq_data: Optional['Seq']= None) -> None:
 
         self.position = position
         self.filter_offset = filter_offset
         self.seq_data = seq_data
-        super().__init__(id=id, info_callback=info_callback, telescope=telescope, name=name, uobi=uobi, param=param)
+        super().__init__(
+            id=id, info_callback=info_callback, telescope=telescope, name=name,
+            uobi=uobi, instr_id=instr_id, param=param
+        )
         self.focuser = self.telescope.get_focuser()
         self.auto = auto
         self.info_dict = {'position': self.position, 'auto_focus': self.auto}
@@ -77,6 +80,16 @@ class Focusing(BaseSubCommand):
             new_position = None
         return new_position
 
+    async def mandatory_data_ok(self) -> bool:
+        try:
+            _ = self.fits_main_folder
+            _ = self.fits_focus_folder
+            _ = self.fits_focus_folder_actual
+        except RuntimeError:
+            logger.error(f"Fits_main_folder is None, put dir to config")
+            return False
+        return True
+
     async def arun(self, step_id: Optional[str] = None) -> int:
         self.started = True
         await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.running)
@@ -84,6 +97,20 @@ class Focusing(BaseSubCommand):
         logger.info(inf)
         self.info_callback['exec_json'](self.exec_json(**self.info_dict))
         await self.journal.info(inf)
+
+        data_ok = await self.mandatory_data_ok()
+        if not data_ok:
+            self.skipped = True
+            await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
+            inf = f'Data in config is missing'
+            logger.error(inf)
+            await self.journal.error(inf)
+            await self.status_error_publish(
+                level='critical',
+                description=inf,
+                plan_runner_quits=True
+            )
+            return 2
 
         # Simple focus change
         if self.position is not None and self.auto is False and self.filter_offset is False:

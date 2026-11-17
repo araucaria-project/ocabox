@@ -27,12 +27,13 @@ class CameraExposure(BaseSubCommand):
     FORCED_RM_MODE_SETTLE_TIME = 5 # seconds
 
     def __init__(
-            self, id: str, telescope: 'Telescope',  info_callback: Dict[str, Callable], seq_data: 'Seq', uobi: int,
-            exp_type: str, filter_: str, light: bool, sub_exp: int, exp_no: int, auto_exposure: bool,
-            epoch: str, observer: str, obj_name: str, seq_dataset: Dict, req_ra: Optional[Union[float, str]] = None,
-            req_dec: Optional[Union[float, str]] = None, test: int = 0, forced_read_mod: Optional[int] = None,
-            pi: Optional[str] = None, sciprog: Optional[str] = None, tag: Optional[str] = None,
-            name: str = 'camera-exposure', param: Optional[Dict[str, Any]] = None) -> None:
+            self, id: str, telescope: 'Telescope', instr_id: str,  info_callback: Dict[str, Callable],
+            seq_data: 'Seq', uobi: int, exp_type: str, filter_: str, light: bool, sub_exp: int, exp_no: int,
+            auto_exposure: bool, epoch: str, observer: str, obj_name: str, seq_dataset: Dict,
+            req_ra: Optional[Union[float, str]] = None, req_dec: Optional[Union[float, str]] = None,
+            test: int = 0, forced_read_mod: Optional[int] = None, pi: Optional[str] = None,
+            sciprog: Optional[str] = None, tag: Optional[str] = None, name: str = 'camera-exposure',
+            param: Optional[Dict[str, Any]] = None) -> None:
 
         self.seq_data = seq_data
         self.exp_type = exp_type
@@ -58,9 +59,12 @@ class CameraExposure(BaseSubCommand):
         self.exp_time_start: Optional[datetime] = None
         self.fits_file_name: Optional[str] = None
         self.seq_dataset = seq_dataset
-        super().__init__(id=id, info_callback=info_callback, telescope=telescope, name=name, uobi=uobi, param=param)
+        super().__init__(
+            id=id, info_callback=info_callback, telescope=telescope, name=name,
+            uobi=uobi, instr_id=instr_id, param=param
+        )
         self.mount = self.telescope.get_mount()
-        self.camera = self.telescope.get_camera()
+        self.camera = self.telescope.get_camera(id=instr_id)
         self.cover = self.telescope.get_covercalibrator()
         self.filter_wheel = self.telescope.get_filterwheel()
         self.focuser = self.telescope.get_focuser()
@@ -89,7 +93,7 @@ class CameraExposure(BaseSubCommand):
 
     async def gain_value(self, gain_mode: int) -> float | str:
         _gain = self.param['cfg_gen'].get_value(seq=[
-            'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'gain_modes', str(gain_mode)
+            'telescopes', self.telescope.id, 'observatory', 'components', self.instr_id, 'gain_modes', str(gain_mode)
         ], source='nats')
         try:
             return _gain['gain']
@@ -110,7 +114,7 @@ class CameraExposure(BaseSubCommand):
 
     async def readout_noise_value(self, rmmode: int) -> float | str:
         _gain = self.param['cfg_gen'].get_value(seq=[
-            'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'readout_modes', str(rmmode)
+            'telescopes', self.telescope.id, 'observatory', 'components', self.instr_id, 'readout_modes', str(rmmode)
         ], source='nats')
         try:
             return _gain['ron']
@@ -120,7 +124,7 @@ class CameraExposure(BaseSubCommand):
 
     async def pixel_scale(self) -> float | str:
         _cam = self.param['cfg_gen'].get_value(seq=[
-            'telescopes', self.telescope.id, 'observatory', 'components', 'camera'
+            'telescopes', self.telescope.id, 'observatory', 'components', self.instr_id
         ], source='nats')
         try:
             return _cam['pixel_scale']
@@ -130,7 +134,7 @@ class CameraExposure(BaseSubCommand):
 
     async def vertical_shift_speed(self) -> float | str:
         _cam = self.param['cfg_gen'].get_value(seq=[
-            'telescopes', self.telescope.id, 'observatory', 'components', 'camera'
+            'telescopes', self.telescope.id, 'observatory', 'components', self.instr_id
         ], source='nats')
         try:
             return _cam['vertical_shift_speed']
@@ -140,7 +144,7 @@ class CameraExposure(BaseSubCommand):
 
     async def zero_era(self) -> int | str:
         _era = self.param['cfg_gen'].get_value(seq=[
-            'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'zero'
+            'telescopes', self.telescope.id, 'observatory', 'components', self.instr_id, 'zero'
         ], source='nats')
         try:
             return _era['era']
@@ -150,7 +154,7 @@ class CameraExposure(BaseSubCommand):
 
     async def dark_era(self) -> int | str:
         _era = self.param['cfg_gen'].get_value(seq=[
-            'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'dark'
+            'telescopes', self.telescope.id, 'observatory', 'components', self.instr_id, 'dark'
         ], source='nats')
         try:
             return _era['era']
@@ -160,7 +164,7 @@ class CameraExposure(BaseSubCommand):
 
     async def sky_flats_era(self) -> int | str:
         _era = self.param['cfg_gen'].get_value(seq=[
-            'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'sky_flats'
+            'telescopes', self.telescope.id, 'observatory', 'components', self.instr_id, 'sky_flats'
         ], source='nats')
         try:
             return _era['era']
@@ -170,7 +174,7 @@ class CameraExposure(BaseSubCommand):
 
     async def baseline_clamp(self) -> float | str:
         _cam = self.param['cfg_gen'].get_value(seq=[
-            'telescopes', self.telescope.id, 'observatory', 'components', 'camera'
+            'telescopes', self.telescope.id, 'observatory', 'components', self.instr_id
         ], source='nats')
         try:
             if _cam['baseline_clamp']:
@@ -183,7 +187,7 @@ class CameraExposure(BaseSubCommand):
 
     async def sensor_port(self) -> float | str:
         _cam = self.param['cfg_gen'].get_value(seq=[
-            'telescopes', self.telescope.id, 'observatory', 'components', 'camera'
+            'telescopes', self.telescope.id, 'observatory', 'components', self.instr_id
         ], source='nats')
         try:
             return _cam['sensor_port']
@@ -193,7 +197,7 @@ class CameraExposure(BaseSubCommand):
 
     async def sensor_compensation(self) -> float | str:
         _cam = self.param['cfg_gen'].get_value(seq=[
-            'telescopes', self.telescope.id, 'observatory', 'components', 'camera'
+            'telescopes', self.telescope.id, 'observatory', 'components', self.instr_id
         ], source='nats')
         try:
             if _cam['sensor_compensation']:
@@ -206,7 +210,7 @@ class CameraExposure(BaseSubCommand):
 
     def array_bits(self, rmmode: int) -> str:
         rm = self.param['cfg_gen'].get_value(seq=[
-            'telescopes', self.telescope.id, 'observatory', 'components', 'camera', 'readout_modes', str(rmmode)
+            'telescopes', self.telescope.id, 'observatory', 'components', self.instr_id, 'readout_modes', str(rmmode)
         ], source='nats')
         try:
             bit = rm['bits']
@@ -248,7 +252,13 @@ class CameraExposure(BaseSubCommand):
         else:
             jd = self.get_julian_date(self.exp_time_start)
             jd_oca = f"{get_oca_jd(jd):010.5f}"
-            self.fits_file_name = f'{self.telescope.id}c_{jd_oca.split(".")[0]}_{jd_oca.split(".")[1]}'
+            fits_suffix = self.param['cfg_gen'].get_value(seq=[
+                'telescopes', self.telescope.id, 'observatory', 'components', self.instr_id, 'fits_suffix'
+            ], source='nats')
+            if fits_suffix is None:
+                logger.error(f'Fits suffix can not be None')
+                raise RuntimeError
+            self.fits_file_name = f'{self.telescope.id}{fits_suffix}_{jd_oca.split(".")[0]}_{jd_oca.split(".")[1]}'
 
     @property
     def rpc_subject(self) -> str:
@@ -706,6 +716,20 @@ class CameraExposure(BaseSubCommand):
             "biny": biny
         }
 
+    async def mandatory_data_ok(self) -> bool:
+        fits_suffix = self.param['cfg_gen'].get_value(seq=[
+            'telescopes', self.telescope.id, 'observatory', 'components', self.instr_id, 'fits_suffix'
+        ], source='nats')
+        if fits_suffix is None:
+            logger.error(f"Fits suffix is None, put to config")
+            return False
+        try:
+            _ = self.fits_main_folder
+        except RuntimeError:
+            logger.error(f"Fits_main_folder is None, put dir to config")
+            return False
+        return True
+
     async def arun(self, step_id: Optional[str] = None) -> int:
 
         self.started = True
@@ -752,8 +776,22 @@ class CameraExposure(BaseSubCommand):
             **self.info_dict, exp_time=float(exposure_time))
         )
         instrument_data = await self.get_instrument_data()
+        data_ok = await self.mandatory_data_ok()
+        if not data_ok:
+            self.skipped = True
+            await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
+            inf = f'Data in config is missing'
+            logger.error(inf)
+            await self.journal.error(inf)
+            await self.status_error_publish(
+                level='critical',
+                description=inf,
+                plan_runner_quits=True
+            )
+            return 2
         self.readout_time_start = time.time()
         self.exp_time_start = datetime.datetime.utcnow()
+        # self.exp_time_start = datetime.datetime.now(datetime.timezone.utc)
         exe = await self.proof_put_startexposure(
             camera=self.camera, duration=float(exposure_time), light=self.light
         )
