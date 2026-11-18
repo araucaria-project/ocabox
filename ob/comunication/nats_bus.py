@@ -4,7 +4,7 @@ import asyncio
 import logging
 from typing import Callable, Optional, Dict, Tuple
 from serverish.messenger import request
-from serverish.base.exceptions import MessengerRequestNoResponders, MessengerRequestTimeout, MessengerRequestCanceled
+from serverish.base import ServerishError
 from serverish.messenger.msg_journal_pub import MsgJournalPublisher
 from serverish.base.task_manager import create_task, Task
 
@@ -22,20 +22,8 @@ async def rpc_request(
             timeout=timeout
         )
         return dat, met
-    except MessengerRequestNoResponders:
-        inf = f'Rpc get MessengerRequestNoResponders error.'
-        logger.error(inf)
-        if journal:
-            await journal.error(inf)
-        return None, None
-    except MessengerRequestCanceled:
-        inf = f'Rpc get MessengerRequestCanceled error.'
-        logger.error(inf)
-        if journal:
-            await journal.error(inf)
-        return None, None
-    except MessengerRequestTimeout:
-        inf = f'Rpc get MessengerRequestTimeout error.'
+    except ServerishError as e:  # no responders, timeout, canceled, no connection, transport failure
+        inf = f'Rpc get {e!r} error.'
         logger.error(inf)
         if journal:
             await journal.error(inf)

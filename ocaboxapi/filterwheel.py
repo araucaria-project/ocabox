@@ -68,7 +68,7 @@ class FilterWheel(TelescopeComponent):
                                  'u': 9, 'g': 10, 'r': 11, 'i': 12, 'z': 13, 'B': 14, 'V': 15, 'Ic': 16},
                         'wk06': {'u_s': 0, 'b_s': 1, 'v_s': 2, 'y_s': 3, 'Hb_w': 4, 'Hb_n': 5, 'B': 6,
                                  'V': 7, 'Ic': 8, 'empty': 9},
-                        'iris': {'1': 1},
+                        'iris': {'J': 8, 'H': 7, 'K': 5},
                         'wg25': {'1': 1},
                         'dev': dev_dict
                         }

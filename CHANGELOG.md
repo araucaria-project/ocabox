@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 ....
 
+## [2.14.2]
+### Fixed
+- Planrunner: reporting an error (`status_error_publish`, used by the dome and screen-light subcommands) can no
+  longer interrupt the procedure that reports it. Only a timeout was caught, so a missing NATS connection or any
+  other publish failure propagated out of the subcommand. Every serverish failure is now caught and logged, and
+  the whole report is bounded to 15 s (it could block ~90 s: 30 s per attempt, retried twice).
+- The same for the command log and plan status publishes, and for RPC requests (`nats_bus.rpc_request`, the
+  exposure download request, auto-flat statistics): a closed or missing NATS connection is handled like
+  "no responders" / "timeout" instead of escaping.
+- Loading the configuration from NATS falls back to the file on any serverish failure, not only on a timeout.
+### Changed
+- Requires serverish >= 2.3.0 (error contract: every messenger failure is a `ServerishError`). No direct nats-py
+  imports are left; handlers catch `ServerishError` instead of listing individual exceptions.
+
 ## [2.14.0]
 ### Added
 - Planrunner DOMEFLAT: `rotator_abs=<deg>` / `rotator_mech=<deg>` move the rotator (absolute /
