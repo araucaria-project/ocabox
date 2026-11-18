@@ -60,8 +60,6 @@ class CameraExposure(BaseSubCommand):
         self.fits_file_name: Optional[str] = None
         self.seq_dataset = seq_dataset
         self.fits_suffix: Optional[str] = None
-        self.source_array_transpose: Optional[bool] = None
-        self.source_array_rotate: Optional[float] = None
         super().__init__(
             id=id, info_callback=info_callback, telescope=telescope, name=name,
             uobi=uobi, instr_id=instr_id, param=param
@@ -280,9 +278,7 @@ class CameraExposure(BaseSubCommand):
             'dtyp': dtyp,
             'mean_points_no_stats': mean_points_no_stats,
             'symlinks': self.symlinks,
-            'header': header,
-            'transpose': self.source_array_transpose,
-            'rotate': self.source_array_rotate
+            'header': header
         }
 
     async def rpc_request(
@@ -735,17 +731,6 @@ class CameraExposure(BaseSubCommand):
         except RuntimeError:
             logger.error(f"Fits_main_folder is None, put dir to config")
             return False
-        self.source_array_transpose = self.param['cfg_gen'].get_value(seq=[
-            'telescopes', self.telescope.id, 'observatory',
-            'components', self.instr_id, 'source_array', 'transpose'
-        ], source='nats')
-        self.source_array_rotate = self.param['cfg_gen'].get_value(seq=[
-            'telescopes', self.telescope.id, 'observatory',
-            'components', self.instr_id, 'source_array', 'rotate'
-        ], source='nats')
-        if not isinstance(self.source_array_transpose, bool) or not isinstance(self.source_array_rotate, (int, float)):
-            logger.error(f"source_array_transpose or source_array_rotate is wrong/missing, put to config")
-            return False
         return True
 
     async def arun(self, step_id: Optional[str] = None) -> int:
@@ -773,20 +758,6 @@ class CameraExposure(BaseSubCommand):
 
         exposure_time = self.seq_data.exp_time
 
-        mandatory_data_ok = await self.get_mandatory_data()
-        if not mandatory_data_ok:
-            self.skipped = True
-            await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
-            inf = f'Data in config is missing'
-            logger.error(inf)
-            await self.journal.error(inf)
-            await self.status_error_publish(
-                level='critical',
-                description=inf,
-                plan_runner_quits=True
-            )
-            return 2
-
         if self.auto_exposure:
             self.seq_data.auto_flat.set_camera_exposure_parent(camera_exposure=self)
             exposure_time, _exit = await self.seq_data.auto_flat.exec()
@@ -808,6 +779,19 @@ class CameraExposure(BaseSubCommand):
             **self.info_dict, exp_time=float(exposure_time))
         )
         instrument_data = await self.get_instrument_data()
+        data_ok = await self.get_mandatory_data()
+        if not data_ok:
+            self.skipped = True
+            await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
+            inf = f'Data in config is missing'
+            logger.error(inf)
+            await self.journal.error(inf)
+            await self.status_error_publish(
+                level='critical',
+                description=inf,
+                plan_runner_quits=True
+            )
+            return 2
         self.readout_time_start = time.time()
         self.exp_time_start = datetime.datetime.utcnow()
         # self.exp_time_start = datetime.datetime.now(datetime.timezone.utc)
