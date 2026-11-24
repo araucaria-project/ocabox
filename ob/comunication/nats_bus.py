@@ -12,7 +12,8 @@ logger = logging.getLogger(__name__.rsplit('.')[-1])
 
 
 async def rpc_request(
-        subject: str, data: Dict, journal: Optional[MsgJournalPublisher] = None, timeout: float = 30
+        subject: str, data: Dict, journal: Optional[MsgJournalPublisher] = None, timeout: float = 30,
+        log_silent: bool = False
 ) -> Tuple[Optional[Dict], Optional[Dict]]:
 
     try:
@@ -23,16 +24,17 @@ async def rpc_request(
         )
         return dat, met
     except ServerishError as e:  # no responders, timeout, canceled, no connection, transport failure
-        inf = f'Rpc get {e!r} error.'
-        logger.error(inf)
-        if journal:
-            await journal.error(inf)
+        if not log_silent:
+            inf = f'Rpc get {e!r} error.'
+            logger.error(inf)
+            if journal:
+                await journal.error(inf)
         return None, None
 
 
 async def _rpc_subscribe(
         callback: Callable, subject: str, data: Dict, interval: float = 1,
-        journal: Optional[MsgJournalPublisher] = None, timeout: float = 30
+        journal: Optional[MsgJournalPublisher] = None, timeout: float = 30, log_silent: bool = False
 ) -> Tuple[Optional[Dict], Optional[Dict]]:
 
     while True:
@@ -40,7 +42,8 @@ async def _rpc_subscribe(
             subject=subject,
             data=data,
             journal=journal,
-            timeout=timeout
+            timeout=timeout,
+            log_silent=log_silent
         )
         await callback(dat, met)
         await asyncio.sleep(interval)
@@ -48,7 +51,7 @@ async def _rpc_subscribe(
 
 async def rpc_subscribe(
         callback: Callable, subject: str, data: Dict, interval: float = 1,
-        journal: Optional[MsgJournalPublisher] = None, timeout: float = 30
+        journal: Optional[MsgJournalPublisher] = None, timeout: float = 30, log_silent: bool = False
 ) -> Task:
 
     logger.info(f"Starting rpc subscription to {subject}")
@@ -59,7 +62,8 @@ async def rpc_subscribe(
             data=data,
             interval=interval,
             journal=journal,
-            timeout=timeout
+            timeout=timeout,
+            log_silent=log_silent
         ),
         name=f'rpc_subscribe_{subject}'
     )

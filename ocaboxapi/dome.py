@@ -168,20 +168,21 @@ class Dome(TelescopeComponent):
             return False
 
     async def aget_dome_follower_status(
-            self, journal: Optional[MsgJournalPublisher] = None, timeout: float = 30
+            self, journal: Optional[MsgJournalPublisher] = None, timeout: float = 30, log_silent: bool = False
     ) -> Optional[Dict]:
         logger.debug(f'Getting dome follower state')
         dat, met = await rpc_request(
             subject=f'tic.rpc.{self.telescope.id}.dome.follower.state',
             data={},
             journal=journal,
-            timeout=timeout
+            timeout=timeout,
+            log_silent=log_silent
         )
         return dat
 
     async def asubscribe_dome_follower_status(
             self, callback: Callable, interval: float = 1,
-            journal: Optional[MsgJournalPublisher] = None, timeout: float = 30
+            journal: Optional[MsgJournalPublisher] = None, timeout: float = 30, log_silent: bool = False
     ) -> Task:
         logger.debug(f'Subscribing dome follower state')
         return await rpc_subscribe(
@@ -190,5 +191,6 @@ class Dome(TelescopeComponent):
             data={},
             interval=interval,
             journal=journal,
-            timeout=timeout
+            timeout=timeout,
+            log_silent=log_silent
         )
