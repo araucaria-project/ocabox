@@ -206,6 +206,15 @@ class InstrumentsTest(unittest.TestCase):
         components = copy.deepcopy(JK15_WITH_MOUNT)
         components['camera']['flags'] = ['scientific']
         components['camera']['camera_model'] = 'Andor iKon-XL 231'
+        components['camera'].update({
+            'dir': 'jk15',
+            'fits_prefix': 'c',
+            'resolution': [4096, 4112],
+            'fov': [23.5, 23.5],
+            'dither_distance': 8.0,
+            'operation_temperature': -70,
+            'readout_modes': {'0': {'val_mhz': 1.0}},
+        })
         self.tel = _telescope()
         self.tel.observatory.get_telescopes_configuration = lambda: {'jk15': {'observatory': {'components': components}}}
         self.components = components
@@ -218,6 +227,26 @@ class InstrumentsTest(unittest.TestCase):
         self.assertIn('object', camera.function_names)
         self.assertEqual(self.tel.get_optical_detector('guider').function_names, ())
         self.assertEqual([d.name for d in self.tel.get_detectors(flag='scientific')], ['camera'])
+
+    def test_detector_configuration_properties(self):
+        detector = self.tel.get_optical_detector('camera')
+        self.assertEqual(
+            (detector.dir, detector.fits_prefix, detector.resolution, detector.fov,
+             detector.dither_distance, detector.operation_temperature, detector.readout_modes),
+            ('jk15', 'c', (4096, 4112), (23.5, 23.5), 8.0, -70, {'0': {'val_mhz': 1.0}})
+        )
+        self.assertEqual(self.tel.get_component('camera').dir, 'jk15')
+        self.assertEqual(self.tel.get_camera().readout_modes, detector.readout_modes)
+
+    def test_missing_detector_configuration_is_safe(self):
+        detector = self.tel.get_optical_detector('guider')
+        self.assertIsNone(detector.dir)
+        self.assertIsNone(detector.fits_prefix)
+        self.assertIsNone(detector.resolution)
+        self.assertIsNone(detector.fov)
+        self.assertIsNone(detector.dither_distance)
+        self.assertIsNone(detector.operation_temperature)
+        self.assertEqual(detector.readout_modes, {})
 
     def test_the_device_and_the_parts_in_front(self):
         camera = self.tel.get_optical_detector('camera')

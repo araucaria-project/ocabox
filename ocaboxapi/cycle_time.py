@@ -3,6 +3,7 @@ from typing import Dict, Tuple, List
 from ctc.cycle_time_calc import CycleTimeCalc
 from ctc.cycle_time_data_clean import CycleTimeDataClean
 from ctc import CycleTimeTrain
+from ocaboxapi.abstelescope import component_config_from_telescope_config
 
 logger = logging.getLogger(__name__.rsplit('.')[-1])
 
@@ -29,8 +30,10 @@ class CycleTime(CycleTimeCalc):
     def provide_rm_modes(
             self, telescope_id: str = None, client_config_dict: Dict or None = None) -> None:
         try:
-            _rm_mod = \
-                client_config_dict['telescopes'][telescope_id]['observatory']['components']['camera']['readout_modes']
+            telescope_config = ((client_config_dict or {}).get('telescopes') or {}).get(telescope_id) or {}
+            _rm_mod = component_config_from_telescope_config(telescope_config, 'camera').get('readout_modes') or {}
+            if not _rm_mod:
+                return
             if self._rm_modes is None:
                 self._rm_modes = {}
             self._rm_modes[telescope_id] = [mod['val_mhz'] for _, mod in _rm_mod.items()]

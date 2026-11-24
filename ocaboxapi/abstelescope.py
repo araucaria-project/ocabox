@@ -1,6 +1,12 @@
 from ocaboxapi.observatory import Observatory
 
 
+def component_config_from_telescope_config(telescope_config: dict, name: str) -> dict:
+    """The configuration of component ``name`` in one telescope's TIC configuration."""
+    telescope_config = telescope_config or {}
+    return ((telescope_config.get('observatory') or {}).get('components') or {}).get(name) or {}
+
+
 
 class AbstractTelescope:
     def __init__(self, id: str,  observatory: Observatory) -> None:
@@ -23,4 +29,4 @@ class AbstractTelescope:
     def component_config(self, name: str) -> dict:
         """The configuration of component ``name`` as TIC publishes it (``observatory.components``);
         empty when the telescope has no such component. Read live: TIC republishes on restart."""
-        return ((self.get_config().get('observatory') or {}).get('components') or {}).get(name) or {}
+        return component_config_from_telescope_config(self.get_config(), name)

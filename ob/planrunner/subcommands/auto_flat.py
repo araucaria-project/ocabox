@@ -37,9 +37,7 @@ class AutoFlatNoTest:
         self.ce = camera_exposure
 
     async def _load_params(self) -> bool:
-        sky_flat_conf = self.ce.param['cfg_gen'].get_value(seq=[
-            'telescopes', self.ce.telescope.id, 'observatory', 'components', 'camera', 'sky_flats'
-        ], source='nats')
+        sky_flat_conf = self.ce.camera.sky_flats
         gain_mode = await self.ce.value_proof_get(
             name='fitsh_cam_gain', awaitab=self.ce.camera.aget_gain, expect_type=int
         )

@@ -41,6 +41,42 @@ class Camera(TelescopeComponent):
     cameraxsize = OcaBoxParam(default=0, doc="Camera xsize")
     cameraysize = OcaBoxParam(default=0, doc="Camera ysize")
 
+    @property
+    def gain_modes(self) -> dict:
+        return self.config.get('gain_modes') or {}
+
+    @property
+    def pixel_scale(self):
+        return self.config.get('pixel_scale')
+
+    @property
+    def vertical_shift_speed(self):
+        return self.config.get('vertical_shift_speed')
+
+    @property
+    def zero(self) -> dict:
+        return self.config.get('zero') or {}
+
+    @property
+    def dark(self) -> dict:
+        return self.config.get('dark') or {}
+
+    @property
+    def sky_flats(self) -> dict:
+        return self.config.get('sky_flats') or {}
+
+    @property
+    def baseline_clamp(self):
+        return self.config.get('baseline_clamp')
+
+    @property
+    def sensor_port(self):
+        return self.config.get('sensor_port')
+
+    @property
+    def sensor_compensation(self):
+        return self.config.get('sensor_compensation')
+
 
     camerastate_to_code = {
         'cameraidle': 0,
