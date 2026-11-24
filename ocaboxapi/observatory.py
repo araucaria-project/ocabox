@@ -409,7 +409,10 @@ class Observatory:
             self.unsubscribe(cq)
 
     def unsubscribe(self, cq):
-        del self._subscribers[self._subscribers.index(cq)]
+        try:
+            del self._subscribers[self._subscribers.index(cq)]
+        except ValueError:
+            pass
         cq.stop()
 
     async def aunsubscribe_all(self):
