@@ -91,10 +91,15 @@ class ChangeFilter(BaseSubCommand):
             self.info_callback['exec_json'](self.exec_json(**self.info_dict))
             return 0
         logger.info(f'Put position')
+        if self.telescope.id == 'iris':
+            wait = 30
+        else:
+            wait = 3
         fp = await self.proof_put(
             name=f'Put filter position {ordered_filter_slot} for {self.telescope.id}',
             awaitab=self.filterwheel.aput_position,
-            pos=ordered_filter_slot
+            pos=ordered_filter_slot,
+            wait=wait
         )
         if not fp:
             self.skipped = True
