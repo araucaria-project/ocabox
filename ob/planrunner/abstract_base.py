@@ -158,7 +158,7 @@ class AbstractBase(ABC):
     async def proof_put(self, awaitab: Callable, name: str = '', n_times: int = 5, wait: float = 3.0, **kwargs) -> bool:
         async for n in AsyncRangeIter(start=1, end=n_times):
             try:
-                logger.info(f'Proof put {name} start.')
+                logger.info(f'Proof put {name} {awaitab} {kwargs} start.')
                 await awaitab(**kwargs)
                 # logger.info(f'Sending proof put request {name} req no. {n}/{n_times}')
                 return True
@@ -167,29 +167,29 @@ class AbstractBase(ABC):
                 # "Telescope is not ready, please clear Error"). A latched device
                 # state won't clear on retry — fail fast so the operator acts
                 # instead of hammering the device with the same command.
-                inf = f'Device error on {name} proof_put (errno={e.device_errno}): {e} - not retrying'
+                inf = f'Device error on  {name} {awaitab} {kwargs} proof_put (errno={e.device_errno}): {e} - not retrying'
                 logger.error(inf)
                 await self.journal.error(f'msg: {inf}, uid: {pwd.getpwuid(os.getuid())[0]}.')
                 return False
             except OcaboxAccessDenied as e:
                 # A denied request won't be granted by repeating it — fail fast.
-                inf = f'Access denied on {name} proof_put: {e} - not retrying'
+                inf = f'Access denied on  {name} {awaitab} {kwargs} proof_put: {e} - not retrying'
                 logger.error(inf)
                 await self.journal.error(f'msg: {inf}, uid: {pwd.getpwuid(os.getuid())[0]}.')
                 return False
             except OcaboxServerError:
-                inf = f'Tic OcaboxServerError proof_put {name}'
+                inf = f'Tic OcaboxServerError proof_put {name} {awaitab} {kwargs}'
                 logger.warning(inf)
                 await self.journal.warning(f'msg: {inf}, uid: {pwd.getpwuid(os.getuid())[0]}.')
                 await asyncio.sleep(wait)
                 continue
             except CommunicationTimeoutError:
-                inf = f'Tic CommunicationTimeoutError proof_put {name}'
+                inf = f'Tic CommunicationTimeoutError proof_put  {name} {awaitab} {kwargs}'
                 logger.warning(inf)
                 await self.journal.warning(f'msg: {inf}, uid: {pwd.getpwuid(os.getuid())[0]}.')
                 await asyncio.sleep(wait)
                 continue
-        logger.error(f'Sending {name} failed')
+        logger.error(f'Sending {name} {awaitab} {kwargs} failed')
         return False
 
     async def proof_put_startexposure(self, camera, duration: float, light: bool,
