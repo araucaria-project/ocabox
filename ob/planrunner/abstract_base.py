@@ -103,17 +103,17 @@ class AbstractBase(ABC):
             # incl. CameraBusy — device/driver reported a fault; a read can't fix it
             logger.warning(f'Tic OcaboxDeviceError (errno={e.device_errno}): {e}')
             return None
-        except OcaboxServerError:
-            logger.warning(f'Tic OcaboxServerError.')
+        except OcaboxServerError as e:
+            logger.warning(f'Tic OcaboxServerError: {e}')
             return None
-        except CommunicationTimeoutError:
-            logger.warning(f'Tic CommunicationTimeoutError')
+        except CommunicationTimeoutError as e:
+            logger.warning(f'Tic CommunicationTimeoutError: {e}')
             return None
-        except CommunicationRuntimeError:
-            logger.warning(f'Tic CommunicationRuntimeError')
+        except CommunicationRuntimeError as e:
+            logger.warning(f'Tic CommunicationRuntimeError: {e}')
             return None
-        except OcaboxAccessDenied:
-            logger.warning(f'Tic OcaboxAccessDenied')
+        except OcaboxAccessDenied as e:
+            logger.warning(f'Tic OcaboxAccessDenied: {e}')
             return None
         if expect_type == float and isinstance(res, int):
             try:
