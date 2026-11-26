@@ -91,7 +91,11 @@ class ChangeFilter(BaseSubCommand):
             self.info_callback['exec_json'](self.exec_json(**self.info_dict))
             return 0
         logger.info(f'Put position')
-        fp = await self.proof_put(awaitab=self.filterwheel.aput_position, pos=ordered_filter_slot)
+        fp = await self.proof_put(
+            name=f'Put filter position {ordered_filter_slot} for {self.telescope.id}',
+            awaitab=self.filterwheel.aput_position,
+            pos=ordered_filter_slot
+        )
         if not fp:
             self.skipped = True
             await self.param['plan_status'].upd_status(id=self.id, value=PlanStatusEnum.error)
